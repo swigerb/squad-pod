@@ -1,4 +1,4 @@
-![Squad](https://bradygaster.github.io/squad/assets/squad-logo.png)
+<img src="https://bradygaster.github.io/squad/assets/squad-logo.png" alt="Squad" width="100" align="left" style="margin-right: 12px;" />
 
 # Squad Pod
 
