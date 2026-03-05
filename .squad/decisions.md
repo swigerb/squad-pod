@@ -241,6 +241,36 @@ Implemented the webview side of the "Desk-as-directory" feature using a click de
 - Animation on card appearance/dismissal for polish
 - Could cache recent detail loads to reduce extension → webview round-trips
 
+### 5. Unit Test Suite for Extension Host Code
+
+**Decision Date:** 2026-07-24  
+**Author:** Lisa Simpson  
+**Status:** Implemented  
+
+#### Context
+
+The extension host code had no unit tests. Five core modules — teamParser, timerManager, agentManager, squadWatcher, and layoutPersistence — needed coverage to catch regressions as the codebase evolves.
+
+#### Decision
+
+- **37 test cases** across 5 test files using Vitest with `globals: true` and `environment: 'node'`
+- Module-level state is cleaned between tests via `cancelAllTimers()` and `disposeAgentManager()`
+- agentManager tests mock `teamParser.js` and `timerManager.js` to isolate unit behavior
+- layoutPersistence tests use real temp directories for integration-level confidence
+- Timer tests use `vi.useFakeTimers()` for deterministic time control
+
+#### Consequences
+
+**Positive:**
+- All team members can now run `npx vitest run` to verify extension host behavior
+- New features touching these modules should add corresponding test cases
+- Strong regression detection for core functionality
+
+#### Team Impact
+
+- **Lisa (Core Dev):** Established testing pattern for extension host
+- **All team members:** Can run tests locally and in CI/CD
+
 ## Governance
 
 - All meaningful changes require team consensus

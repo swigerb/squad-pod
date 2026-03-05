@@ -282,3 +282,101 @@ Fixed TypeScript errors in rendering/component files to match Lisa's updated int
 - Bart updated all rendering/component consumers to match new interfaces
 - Parallel work avoided merge conflicts by strict file ownership boundaries
 - Shared understanding of renamed properties via CRITICAL CONTEXT in task charter
+
+### Comprehensive Unit Test Suite (2025-01-21)
+
+Wrote comprehensive unit tests for all Squad Pod webview engine and editor code using Vitest with jsdom environment:
+
+**Test Files Created (5 files, 75 tests total):**
+
+1. **pathfinding.test.ts (10 tests):**
+   - Basic pathfinding on 5x5 grid with BFS verification
+   - Path routing around blocked tiles
+   - No path detection for walled-off destinations
+   - Same tile edge case (start === end)
+   - Adjacent tile single-step paths
+   - Destination blocking via blockedTiles set and TileType.WALL
+   - getWalkableTiles filtering (excludes walls, voids, blocked tiles)
+
+2. **officeState.test.ts (18 tests):**
+   - Constructor with empty/provided layouts
+   - addAgent with seat assignment, palette allocation, duplicate prevention
+   - removeAgent with seat freeing and selection clearing
+   - reassignSeat moving agent between seats and freeing old occupancy
+   - getSeatAtTile lookup (occupied vs empty)
+   - rebuildFromLayout preserving seats or random placement when seats removed
+   - setAgentActive toggling active flag and CharacterState.TYPE/IDLE transitions
+
+3. **characters.test.ts (11 tests):**
+   - createCharacter initializing all properties (id, name, role, palette, hueShift, position, timers)
+   - Default position (1,1) vs seat position
+   - Idle → Walk transition after wanderTimer expires
+   - Walk → Idle transition after path completion
+   - Active agent at seat enters TYPE state
+   - Active agent not at seat starts walking to seat
+   - Frame animation progression in TYPE and WALK states
+   - Direction updates based on movement (directionBetween logic)
+
+4. **layoutManager.test.ts (17 tests):**
+   - layoutToTileMap converting 1D tile array to 2D grid
+   - layoutToSeats creating seats for adjacent desk+chair pairs with correct facing directions
+   - No seat creation for isolated chairs
+   - layoutToFurnitureInstances creating instances with positions/sizes
+   - getBlockedTiles returning furniture footprints
+   - getSeatTiles returning seat positions
+   - createDefaultLayout generating valid office with wall perimeter, floor interior, furniture, tile colors
+
+5. **editorState.test.ts (19 tests):**
+   - Default initialization (tool, tileType, furnitureType, colors, stacks)
+   - Setters for tool, tileType, furnitureType, floorColor, wallColor, selectedFurnitureUid
+   - reset() returning all properties to defaults
+   - canUndo/canRedo returning false for empty stacks, true when populated
+   - Color setters creating copies (not mutating input objects)
+
+**Test Coverage Highlights:**
+- All pathfinding logic (BFS, blocked tile avoidance, edge cases)
+- Office state management (agent lifecycle, seat assignment, layout rebuilding)
+- Character behavior state machines (idle/walk/type transitions, frame animation)
+- Layout utilities (tile maps, seat detection, furniture blocking, default layout generation)
+- Editor state management (tool/type selection, color changes, undo/redo stack queries)
+
+**Build Verification:**
+- ✅ All 75 tests pass (exceeded 30 test minimum)
+- ✅ Vitest run completes in ~18.5s (transform 415ms, setup 0ms, import 840ms, tests 27ms)
+- ✅ jsdom environment with globals: true config
+- ✅ Zero TypeScript errors, all imports resolved
+
+**Architecture Insights from Testing:**
+- Pathfinding uses BFS with Set-based visited tracking for O(1) lookups
+- OfficeState maintains Seat[] array (not Map) for React-friendly iteration
+- Characters use col/row for tile logic + x/y for pixel rendering with TILE_SIZE conversions
+- Layout manager creates seats by scanning chairs for adjacent desks in 4 cardinal directions
+- EditorState uses value copies for colors to prevent unintended mutations
+- Random timers in createCharacter ensure organic idle behavior (no synchronized wandering)
+
+**Testing Patterns Used:**
+- beforeEach setup for clean state isolation
+- Explicit property assertions vs toBeDefined() for stricter validation
+- Grid construction with Array.fill() for readable test data
+- Set-based tile blocking with string keys (`${col},${row}`)
+- Path validation checking adjacent steps (dx + dy === 1)
+- Frame animation testing via time delta advancement
+- Edge case coverage (empty arrays, null/undefined, out-of-bounds)
+
+**Key Learnings:**
+- All engine code (pathfinding, characters, officeState, layoutManager) is pure TypeScript with no DOM/React dependencies → easily testable with jsdom
+- Editor state (editorState.ts) is also pure logic → no mocking required
+- Vitest globals: true eliminates need for explicit describe/it/expect imports
+- Test file naming convention: `*.test.ts` adjacent to source files
+- Vitest config: `include: ['src/**/*.test.ts']` scans entire src tree
+
+**User Preferences:**
+- Read each source file first before writing tests (understand exact signatures/behavior)
+- All tests must pass (no partial solutions)
+- Minimum 30 test cases (delivered 75 = 2.5x target)
+- Comprehensive coverage of core engine logic (pathfinding, state management, character behavior)
+
+**Cross-Agent Notes:**
+- Marge Simpson owns testing strategy/tooling decisions
+- These tests document expected behavior for Lisa's engine modules
+- Future refactoring by any agent should maintain these test contracts

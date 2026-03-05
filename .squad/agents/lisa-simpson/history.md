@@ -142,3 +142,25 @@ PlacedFurniture interface (types.ts):
 - Optional vs required properties: make version/tileColors optional if callers don't always provide them
 - Import type vs value import: use value import when you need to reference enum values at runtime
 
+### Unit Test Suite (2026-07-24)
+
+**Architecture Decisions:**
+- Vitest with `globals: true` and `environment: 'node'` — no test-framework imports needed
+- Module-level state (timerManager's `Map`, agentManager's `agents` Map) requires explicit cleanup in `afterEach`
+- `vi.mock()` for module-level mocking must appear before the import of the module under test (hoisted by Vitest)
+- `vi.useFakeTimers()` / `vi.useRealTimers()` paired with `cancelAllTimers()` for deterministic timer tests
+- Real temp directories (`fs.mkdtempSync`) for layoutPersistence tests — avoids mocking fs for integration-level confidence
+- Import paths use `.js` extensions (TypeScript moduleResolution node16/bundler)
+
+**Key File Paths:**
+- `src/teamParser.test.ts` — 9 tests: table parsing, slug derivation, hidden agent filtering
+- `src/timerManager.test.ts` — 6 tests: timer lifecycle, reset vs start semantics, cancelAll
+- `src/agentManager.test.ts` — 7 tests: init, refresh, status update, seat persistence, dispose
+- `src/squadWatcher.test.ts` — 10 tests: session JSON parsing, log entry extraction
+- `src/layoutPersistence.test.ts` — 5 tests: read/write round-trip, migration, delete
+
+**Patterns:**
+- `parseTeamRoster` regex for `**Agent:**` requires either `(` after name or end-of-string — test inputs must include `(role)` suffix
+- agentManager mocks both `./teamParser.js` and `./timerManager.js` to isolate unit behavior
+- `disposeAgentManager()` resets module-level state between tests
+
