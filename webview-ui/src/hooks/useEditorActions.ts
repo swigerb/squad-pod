@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { EditorState } from '../office/editor/editorState.js';
-import type { EditTool, TileType, FloorColor, OfficeLayout } from '../office/types.js';
+import { EditTool } from '../office/types.js';
+import type { TileType, FloorColor, OfficeLayout } from '../office/types.js';
 import { applyTilePaint, applyErase, applyFurniturePlace } from '../office/editor/editorActions.js';
 import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, UNDO_STACK_MAX_SIZE } from '../constants.js';
 import { vscode } from '../vscodeApi.js';
@@ -69,7 +70,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   const handleEditorTileAction = useCallback(
     (col: number, row: number) => {
       const officeState = getOfficeState();
-      if (editorState.tool === 'tile') {
+      if (editorState.tool === EditTool.TILE_PAINT) {
         pushUndo();
         const currentLayout = officeState.getLayout();
         const newLayout = applyTilePaint(
@@ -80,7 +81,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
           editorState.tileType === 1 ? editorState.floorColor : editorState.wallColor
         );
         officeState.rebuildFromLayout(newLayout);
-      } else if (editorState.tool === 'furniture') {
+      } else if (editorState.tool === EditTool.FURNITURE_PLACE) {
         pushUndo();
         const currentLayout = officeState.getLayout();
         const newLayout = applyFurniturePlace(

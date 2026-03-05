@@ -39,18 +39,23 @@ export type Direction = (typeof Direction)[keyof typeof Direction];
 export type SpriteData = string[][]; // [row][col] of hex colors, '' for transparent
 
 export interface Seat {
-  uid: string;
-  seatCol: number;
-  seatRow: number;
-  facingDir: Direction;
-  assigned: boolean;
+  id: string;
+  col: number;
+  row: number;
+  direction: Direction;
+  occupant?: string | null;
 }
 
 export interface FurnitureInstance {
+  uid: string;
+  type: string;
+  col: number;
+  row: number;
+  width: number;
+  height: number;
   sprite: SpriteData;
-  x: number;
-  y: number;
-  zY: number;
+  rotation: number;
+  state?: string;
 }
 
 export interface ToolActivity {
@@ -86,12 +91,14 @@ export type EditTool = (typeof EditTool)[keyof typeof EditTool];
 export interface FurnitureCatalogEntry {
   type: string;
   label: string;
-  footprintW: number;
-  footprintH: number;
+  name?: string;
+  width: number;
+  height: number;
   sprite: SpriteData;
   isDesk: boolean;
   category?: string;
   orientation?: string;
+  dynamicState?: boolean;
   canPlaceOnSurfaces?: boolean;
   backgroundTiles?: number;
   canPlaceOnWalls?: boolean;
@@ -102,16 +109,18 @@ export interface PlacedFurniture {
   type: string;
   col: number;
   row: number;
+  rotation: number;
   color?: FloorColor;
+  state?: string;
 }
 
 export interface OfficeLayout {
-  version: 1;
+  version?: number;
   cols: number;
   rows: number;
-  tiles: TileType[];
+  tiles: number[];
   furniture: PlacedFurniture[];
-  tileColors?: Array<FloorColor | null>;
+  tileColors?: Record<string, FloorColor>;
 }
 
 // KEY SQUAD CHANGE: Character uses string ID (slug) and has name/role
@@ -120,25 +129,24 @@ export interface Character {
   name: string; // display name like "Homer Simpson"
   role: string; // role like "Lead" or "Frontend Dev"
   state: CharacterState;
-  dir: Direction;
+  direction: Direction;
   x: number;
   y: number;
-  tileCol: number;
-  tileRow: number;
+  col: number;
+  row: number;
   path: Array<{ col: number; row: number }>;
   moveProgress: number;
-  currentTool: string | null;
+  tool: string | undefined;
   palette: number;
   hueShift: number;
-  frame: number;
+  frameIndex: number;
   frameTimer: number;
   wanderTimer: number;
   wanderCount: number;
   wanderLimit: number;
-  isActive: boolean;
+  active: boolean;
   seatId: string | null;
-  bubbleType: 'permission' | 'waiting' | null;
-  bubbleTimer: number;
+  bubbleState: { type: string; fadeTimer?: number };
   seatTimer: number;
 }
 

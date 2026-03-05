@@ -1,5 +1,3 @@
-import type * as vscode from 'vscode';
-
 export interface SquadTeamMember {
   name: string;        // e.g. "Homer Simpson"
   slug: string;        // e.g. "homer-simpson" (directory name)
@@ -29,6 +27,17 @@ export interface SquadSession {
     content: string;
     timestamp: string;
   }>;
+}
+
+export interface AgentDetailInfo {
+  id: string;
+  name: string;
+  role: string;
+  status: 'active' | 'idle' | 'waiting';
+  currentTask: string | null;
+  charterSummary: string | null;  // first 2-3 sentences from charter.md
+  recentActivity: string[];        // last 3-5 log entries mentioning this agent
+  lastActiveAt: number;
 }
 
 export interface PersistedAgentMeta {
@@ -151,4 +160,5 @@ export type OutboundMessage =
   | { type: 'floorTilesLoaded'; tiles: SpriteData[] }
   | { type: 'wallTilesLoaded'; tiles: SpriteData[] }
   | { type: 'furnitureLoaded'; furniture: FurnitureAsset[] }
-  | { type: 'soundEnabled'; enabled: boolean };
+  | { type: 'soundEnabled'; enabled: boolean }
+  | { type: 'agentDetailLoaded'; detail: AgentDetailInfo };

@@ -4,7 +4,6 @@ import {
   Direction,
   Seat,
   SpriteData,
-  ToolActivity,
   TILE_SIZE
 } from '../types.js';
 import {
@@ -18,7 +17,7 @@ import {
   SEAT_REST_MIN_SEC,
   SEAT_REST_MAX_SEC
 } from '../../constants.js';
-import { findPath, getWalkableTiles } from './pathfinding.js';
+import { findPath } from './pathfinding.js';
 
 export function isReadingTool(tool: string | undefined): boolean {
   if (!tool) return false;
@@ -32,10 +31,6 @@ function randomRange(min: number, max: number): number {
 
 function randomInt(min: number, max: number): number {
   return Math.floor(randomRange(min, max + 1));
-}
-
-function tileCenter(col: number, row: number): { x: number; y: number } {
-  return { x: col * TILE_SIZE + TILE_SIZE / 2, y: row * TILE_SIZE + TILE_SIZE / 2 };
 }
 
 function directionBetween(fromCol: number, fromRow: number, toCol: number, toRow: number): Direction {
@@ -64,6 +59,8 @@ export function createCharacter(
     role,
     col: startCol,
     row: startRow,
+    x: startCol * TILE_SIZE + TILE_SIZE / 2,
+    y: startRow * TILE_SIZE + TILE_SIZE / 2,
     direction: Direction.DOWN,
     state: CharacterState.IDLE,
     frameIndex: 0,
@@ -176,6 +173,8 @@ export function updateCharacter(
           ch.direction = directionBetween(ch.col, ch.row, next.col, next.row);
           ch.col = next.col;
           ch.row = next.row;
+          ch.x = ch.col * TILE_SIZE + TILE_SIZE / 2;
+          ch.y = ch.row * TILE_SIZE + TILE_SIZE / 2;
         }
       }
 

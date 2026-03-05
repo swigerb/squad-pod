@@ -21,6 +21,7 @@ import { resetActivityTimer, cancelAllTimers } from './timerManager.js';
 // ─── Module State ───────────────────────────────────────────────────
 
 let agents = new Map<string, SquadAgentState>();
+let disposed = false;
 
 // ─── Public API ─────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ export function initializeAgents(
   const persisted = loadPersistedMeta(context);
 
   agents = new Map();
+  disposed = false;
 
   members.forEach((member, index) => {
     const state = memberToState(member, index, persisted);
@@ -214,6 +216,7 @@ export function getAgents(): Map<string, SquadAgentState> {
  * Clean up all timers (call on extension deactivation).
  */
 export function disposeAgentManager(): void {
+  disposed = true;
   cancelAllTimers();
   agents.clear();
 }
@@ -256,5 +259,6 @@ function truncateTask(task: string): string {
 }
 
 function postToWebview(webview: vscode.Webview, message: OutboundMessage): void {
+  if (disposed) { return; }
   webview.postMessage(message);
 }

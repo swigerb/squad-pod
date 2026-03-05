@@ -152,7 +152,7 @@ export function parseLogEntry(
  * Heuristic: look for agent names mentioned in system/assistant messages,
  * or derive from the filename pattern `{timestamp}_{id}.json`.
  */
-function detectAgentFromSession(session: SquadSession, filename: string): string | null {
+function detectAgentFromSession(session: SquadSession, _filename: string): string | null {
   if (session.agent) {
     return session.agent;
   }
@@ -271,7 +271,7 @@ export function startSquadWatching(
   const knownLogFiles = new Map<string, WatchedFile>();
 
   const logWatcher = watchDirectory(logDir, () => {
-    scanDirectory(logDir, knownLogFiles, (filePath, filename) => {
+    scanDirectory(logDir, knownLogFiles, (filePath, _filename) => {
       const content = safeReadFile(filePath);
       if (!content) {return;}
 

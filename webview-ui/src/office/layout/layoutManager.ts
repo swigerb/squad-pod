@@ -8,7 +8,7 @@ import {
   SpriteData
 } from '../types.js';
 import { DEFAULT_COLS, DEFAULT_ROWS, DEFAULT_FLOOR_COLOR } from '../../constants.js';
-import { FURNITURE_CATALOG, getCatalogEntry } from './furnitureCatalog.js';
+import { getCatalogEntry } from './furnitureCatalog.js';
 
 export function createDefaultLayout(): OfficeLayout {
   const tiles: number[] = [];

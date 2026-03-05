@@ -9,6 +9,10 @@ export default tseslint.config(
       curly: 'warn',
       eqeqeq: 'warn',
       'no-throw-literal': 'warn',
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      }],
     },
   },
   {

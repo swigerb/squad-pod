@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { OfficeState } from '../engine/officeState.js';
 import type { EditorState } from '../editor/editorState.js';
+import { EditTool, TileType } from '../types.js';
 import { startGameLoop } from '../engine/gameLoop.js';
 import { renderFrame } from '../engine/renderer.js';
 import { updateCharacter } from '../engine/characters.js';
@@ -21,6 +22,7 @@ interface OfficeCanvasProps {
   zoom: number;
   onZoomChange?: (zoom: number) => void;
   panRef: React.RefObject<{ x: number; y: number }>;
+  onDeskClick?: (agentId: string, screenX: number, screenY: number) => void;
 }
 
 export function OfficeCanvas({
@@ -31,13 +33,11 @@ export function OfficeCanvas({
   onEditorTileAction,
   onEditorEraseAction,
   onEditorSelectionChange,
-  onDeleteSelected,
-  onRotateSelected,
   onDragMove,
-  editorTick,
   zoom,
   onZoomChange,
   panRef,
+  onDeskClick,
 }: OfficeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,18 +46,6 @@ export function OfficeCanvas({
   const panOriginRef = useRef<{ x: number; y: number } | null>(null);
   const spaceKeyRef = useRef(false);
   const draggedFurnitureRef = useRef<{ uid: string; offsetCol: number; offsetRow: number } | null>(null);
-
-  const worldToScreen = useCallback(
-    (col: number, row: number): { x: number; y: number } => {
-      const worldX = col * TILE_SIZE;
-      const worldY = row * TILE_SIZE;
-      return {
-        x: worldX * zoom + panRef.current!.x,
-        y: worldY * zoom + panRef.current!.y,
-      };
-    },
-    [zoom, panRef]
-  );
 
   const screenToWorld = useCallback(
     (screenX: number, screenY: number): { col: number; row: number } => {
@@ -111,26 +99,31 @@ export function OfficeCanvas({
     resizeObserver.observe(container);
 
     const cleanup = startGameLoop(canvas, {
-      onUpdate: (deltaTime: number) => {
+      update: (deltaTime: number) => {
         for (const char of officeState.characters.values()) {
-          updateCharacter(char, deltaTime, officeState.tileMap, officeState.blockedTiles);
-          if (char.bubbleTimer !== undefined) {
-            char.bubbleTimer += deltaTime;
-          }
+          updateCharacter(char, deltaTime, officeState.walkableTiles, officeState.seats, officeState.tileMap, officeState.blockedTiles);
         }
       },
-      onRender: () => {
+      render: () => {
         renderFrame(
           ctx,
-          officeState,
-          isEditMode,
-          editorState,
+          canvas.width / dpr,
+          canvas.height / dpr,
+          officeState.tileMap,
+          officeState.furniture,
+          Array.from(officeState.characters.values()),
           zoom,
           panRef.current!.x,
           panRef.current!.y,
-          canvas.width / dpr,
-          canvas.height / dpr,
-          dpr
+          null,
+          isEditMode ? { showGrid: true, showGhostBorder: false, ghostHoverCol: null, ghostHoverRow: null } : undefined,
+          officeState.layout.tileColors ? new Map(Object.entries(officeState.layout.tileColors)) : undefined,
+          officeState.layout.cols,
+          officeState.layout.rows,
+          officeState.selectedAgentId,
+          officeState.hoveredAgentId,
+          officeState.hoveredTile,
+          officeState.seats
         );
       },
     });
@@ -162,8 +155,8 @@ export function OfficeCanvas({
         if (editorState.tool === 'select') {
           let selectedUid: string | null = null;
           for (const furn of officeState.furniture) {
-            const furnWidth = furn.type.width;
-            const furnHeight = furn.type.height;
+            const furnWidth = furn.width;
+            const furnHeight = furn.height;
             if (col >= furn.col && col < furn.col + furnWidth && row >= furn.row && row < furn.row + furnHeight) {
               selectedUid = furn.uid;
               draggedFurnitureRef.current = { uid: furn.uid, offsetCol: col - furn.col, offsetRow: row - furn.row };
@@ -175,9 +168,9 @@ export function OfficeCanvas({
           onEditorEraseAction?.(col, row);
         } else if (editorState.tool === 'eyedropper') {
           const tile = officeState.tileMap[row]?.[col];
-          if (tile) {
-            editorState.setTileType(tile);
-            editorState.setTool('tile');
+          if (tile !== undefined) {
+            editorState.setTileType(tile as TileType);
+            editorState.setTool(EditTool.TILE_PAINT);
           }
         } else {
           onEditorTileAction?.(col, row);
@@ -196,6 +189,33 @@ export function OfficeCanvas({
             break;
           }
         }
+        
+        // If no character sprite was clicked, check for desk/seat clicks
+        if (!clickedAgentId) {
+          let seatId = officeState.getSeatAtTile(col, row);
+          
+          // If no seat at exact tile, check adjacent tiles
+          if (!seatId) {
+            const adjacentOffsets = [
+              [-1, 0], [1, 0], [0, -1], [0, 1],
+              [-1, -1], [1, -1], [-1, 1], [1, 1],
+            ];
+            for (const [dc, dr] of adjacentOffsets) {
+              seatId = officeState.getSeatAtTile(col + dc, row + dr);
+              if (seatId) break;
+            }
+          }
+          
+          // If a seat was found, check if it's occupied
+          if (seatId) {
+            const seat = officeState.seats.find(s => s.id === seatId);
+            if (seat?.occupant) {
+              clickedAgentId = seat.occupant;
+              onDeskClick?.(seat.occupant, e.clientX, e.clientY);
+            }
+          }
+        }
+        
         if (clickedAgentId) {
           officeState.selectedAgentId = officeState.selectedAgentId === clickedAgentId ? null : clickedAgentId;
         } else {
@@ -215,6 +235,7 @@ export function OfficeCanvas({
       onEditorSelectionChange,
       zoom,
       panRef,
+      onDeskClick,
     ]
   );
 

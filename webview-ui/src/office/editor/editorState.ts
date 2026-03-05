@@ -1,5 +1,5 @@
 import { EditTool, TileType, FurnitureType, FloorColor, OfficeLayout } from '../types.js';
-import { DEFAULT_FLOOR_COLOR, DEFAULT_WALL_COLOR, UNDO_STACK_MAX_SIZE } from '../../constants.js';
+import { DEFAULT_FLOOR_COLOR, DEFAULT_WALL_COLOR } from '../../constants.js';
 
 export interface UndoEntry {
   layout: OfficeLayout;
@@ -7,9 +7,9 @@ export interface UndoEntry {
 }
 
 export class EditorState {
-  activeTool: EditTool = EditTool.SELECT;
-  selectedTileType: TileType = TileType.FLOOR_1;
-  selectedFurnitureType: string = FurnitureType.DESK;
+  tool: EditTool = EditTool.SELECT;
+  tileType: TileType = TileType.FLOOR_1;
+  furnitureType: string = FurnitureType.DESK;
   selectedFurnitureUid: string | null = null;
   floorColor: FloorColor = { ...DEFAULT_FLOOR_COLOR };
   wallColor: FloorColor = { ...DEFAULT_WALL_COLOR };
@@ -18,10 +18,17 @@ export class EditorState {
 
   constructor() {}
 
+  setTool(tool: EditTool): void { this.tool = tool; }
+  setTileType(type: TileType): void { this.tileType = type; }
+  setFurnitureType(type: string): void { this.furnitureType = type; }
+  setFloorColor(color: FloorColor): void { this.floorColor = { ...color }; }
+  setWallColor(color: FloorColor): void { this.wallColor = { ...color }; }
+  setSelectedFurnitureUid(uid: string | null): void { this.selectedFurnitureUid = uid; }
+
   reset(): void {
-    this.activeTool = EditTool.SELECT;
-    this.selectedTileType = TileType.FLOOR_1;
-    this.selectedFurnitureType = FurnitureType.DESK;
+    this.tool = EditTool.SELECT;
+    this.tileType = TileType.FLOOR_1;
+    this.furnitureType = FurnitureType.DESK;
     this.selectedFurnitureUid = null;
     this.floorColor = { ...DEFAULT_FLOOR_COLOR };
     this.wallColor = { ...DEFAULT_WALL_COLOR };

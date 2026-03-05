@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { OfficeLayout, ToolActivity, SquadTeamMember } from '../office/types.js';
 import { vscode } from '../vscodeApi.js';
+import type { AgentDetailInfo } from '../components/AgentCard.js';
 
 export interface ExtensionMessageState {
   agents: string[];
@@ -10,6 +11,8 @@ export interface ExtensionMessageState {
   agentStatuses: Record<string, string>;
   rosterMembers: SquadTeamMember[];
   layoutReady: boolean;
+  agentDetail: AgentDetailInfo | null;
+  setAgentDetail: React.Dispatch<React.SetStateAction<AgentDetailInfo | null>>;
 }
 
 interface AgentInfo {
@@ -21,14 +24,15 @@ interface AgentInfo {
 export function useExtensionMessages(
   getOfficeState: () => OfficeState,
   onLayoutLoaded?: (layout: OfficeLayout) => void,
-  isEditDirty?: () => boolean
+  _isEditDirty?: () => boolean
 ): ExtensionMessageState {
   const [agents, setAgents] = useState<string[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [selectedAgent] = useState<string | null>(null);
   const [agentTools, setAgentTools] = useState<Record<string, ToolActivity[]>>({});
   const [agentStatuses, setAgentStatuses] = useState<Record<string, string>>({});
   const [rosterMembers, setRosterMembers] = useState<SquadTeamMember[]>([]);
   const [layoutReady, setLayoutReady] = useState(false);
+  const [agentDetail, setAgentDetail] = useState<AgentDetailInfo | null>(null);
   const bufferedAgentsRef = useRef<AgentInfo[]>([]);
 
   useEffect(() => {
@@ -166,8 +170,7 @@ export function useExtensionMessages(
                   agent.role,
                   meta?.palette,
                   meta?.hueShift,
-                  meta?.seatId,
-                  true
+                  meta?.seatId
                 );
                 if (meta?.isActive) {
                   officeState.setAgentActive(agent.id, true);
@@ -207,9 +210,9 @@ export function useExtensionMessages(
         }
 
         case 'furnitureAssetsLoaded': {
-          const { catalog, sprites } = message;
+          const { catalog: _catalog, sprites: _sprites } = message;
           import('../office/layout/furnitureCatalog.js').then(({ buildDynamicCatalog }) => {
-            buildDynamicCatalog(catalog, sprites);
+            buildDynamicCatalog();
           });
           break;
         }
@@ -234,6 +237,12 @@ export function useExtensionMessages(
           break;
         }
 
+        case 'agentDetailLoaded': {
+          const { detail } = message;
+          setAgentDetail(detail);
+          break;
+        }
+
         default:
           break;
       }
@@ -252,5 +261,7 @@ export function useExtensionMessages(
     agentStatuses,
     rosterMembers,
     layoutReady,
+    agentDetail,
+    setAgentDetail,
   };
 }

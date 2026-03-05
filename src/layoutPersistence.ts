@@ -178,7 +178,6 @@ export function watchLayoutFile(
  */
 export async function exportLayoutToFile(
   layout: LayoutData,
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   vscode: typeof import('vscode'),
 ): Promise<boolean> {
   const uri = await vscode.window.showSaveDialog({
@@ -201,7 +200,6 @@ export async function exportLayoutToFile(
  * Returns the parsed layout or null if cancelled/invalid.
  */
 export async function importLayoutFromFile(
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   vscode: typeof import('vscode'),
 ): Promise<LayoutData | null> {
   const uris = await vscode.window.showOpenDialog({

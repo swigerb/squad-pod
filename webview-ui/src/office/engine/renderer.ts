@@ -3,7 +3,6 @@ import {
   CharacterState,
   Direction,
   FurnitureInstance,
-  OfficeLayout,
   Seat,
   SpriteData,
   TileType,
@@ -13,7 +12,6 @@ import {
 import {
   CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_Z_SORT_OFFSET,
-  OUTLINE_Z_SORT_OFFSET,
   SELECTED_OUTLINE_ALPHA,
   HOVERED_OUTLINE_ALPHA,
   GHOST_PREVIEW_SPRITE_ALPHA,
@@ -30,13 +28,12 @@ import {
   GHOST_BORDER_VALID_COLOR,
   GHOST_BORDER_INVALID_COLOR,
   SELECTION_HIGHLIGHT_COLOR,
-  DELETE_BUTTON_BG,
-  ROTATE_BUTTON_BG
+  DELETE_BUTTON_BG
 } from '../../constants.js';
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
-import { getColorizedFloorSprite, hasFloorSprites } from '../floorTiles.js';
-import { hasWallSprites, getWallInstances, wallColorToHex } from '../wallTiles.js';
+import { getColorizedFloorSprite } from '../floorTiles.js';
+import { wallColorToHex } from '../wallTiles.js';
 
 interface Drawable {
   sprite: SpriteData;
@@ -187,7 +184,7 @@ export function renderSeatIndicators(
   seats: Seat[],
   characters: Character[],
   selectedAgentId: string | null,
-  hoveredTile: { col: number; row: number } | null,
+  _hoveredTile: { col: number; row: number } | null,
   offsetX: number,
   offsetY: number,
   zoom: number
@@ -337,7 +334,7 @@ export function renderDeleteButton(
   col: number,
   row: number,
   w: number,
-  h: number,
+  _h: number,
   offsetX: number,
   offsetY: number,
   zoom: number

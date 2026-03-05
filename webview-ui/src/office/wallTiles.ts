@@ -54,7 +54,6 @@ export function getColorizedWallSprite(
     return { sprite, offsetY };
   }
 
-  const idx = row * cols + col;
   const n = row > 0 && tiles[(row - 1) * cols + col] === TileType.WALL;
   const e = col < cols - 1 && tiles[row * cols + (col + 1)] === TileType.WALL;
   const s = row < rows - 1 && tiles[(row + 1) * cols + col] === TileType.WALL;
@@ -89,10 +88,14 @@ export function getWallInstances(
         );
         if (sprite.length > 0 && sprite[0].length > 0) {
           instances.push({
+            uid: `wall-${col}-${row}`,
+            type: 'wall',
+            col,
+            row: offsetY < 0 ? row - 1 : row,
+            width: 1,
+            height: offsetY < 0 ? 2 : 1,
             sprite,
-            x: col * TILE_SIZE,
-            y: row * TILE_SIZE + offsetY,
-            zY: row * TILE_SIZE,
+            rotation: 0,
           });
         }
       }

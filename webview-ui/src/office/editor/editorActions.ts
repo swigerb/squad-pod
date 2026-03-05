@@ -14,6 +14,7 @@ export function applyTilePaint(
   
   if (index >= 0 && index < newLayout.tiles.length) {
     newLayout.tiles[index] = tileType;
+    if (!newLayout.tileColors) newLayout.tileColors = {};
     newLayout.tileColors[`${col},${row}`] = { ...color };
   }
   
@@ -30,7 +31,9 @@ export function applyErase(
   
   if (index >= 0 && index < newLayout.tiles.length) {
     newLayout.tiles[index] = TileType.VOID;
-    delete newLayout.tileColors[`${col},${row}`];
+    if (newLayout.tileColors) {
+      delete newLayout.tileColors[`${col},${row}`];
+    }
   }
   
   return newLayout;
@@ -89,8 +92,8 @@ export function applyEyedropper(
   const index = row * layout.cols + col;
   
   if (index >= 0 && index < layout.tiles.length) {
-    const tileType = layout.tiles[index];
-    const color = layout.tileColors[`${col},${row}`];
+    const tileType = layout.tiles[index] as TileType;
+    const color = layout.tileColors?.[`${col},${row}`];
     
     if (color) {
       return { tileType, color };
@@ -143,10 +146,11 @@ export function performRedo(state: EditorState, currentLayout: OfficeLayout): Of
 
 function cloneLayout(layout: OfficeLayout): OfficeLayout {
   return {
+    version: layout.version,
     cols: layout.cols,
     rows: layout.rows,
     tiles: [...layout.tiles],
     furniture: layout.furniture.map(f => ({ ...f })),
-    tileColors: { ...layout.tileColors }
+    tileColors: layout.tileColors ? { ...layout.tileColors } : undefined
   };
 }

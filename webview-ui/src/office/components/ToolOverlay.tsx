@@ -17,7 +17,7 @@ interface ToolPosition {
 
 export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverlayProps) {
   const [toolPositions, setToolPositions] = useState<ToolPosition[]>([]);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     const updatePositions = () => {

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
-import { PULSE_ANIMATION_DURATION_SEC } from '../constants.js';
 
 interface AgentLabelsProps {
   officeState: OfficeState;
@@ -21,7 +20,7 @@ interface LabelPosition {
 
 export function AgentLabels({ officeState, zoom, panRef }: AgentLabelsProps) {
   const [labelPositions, setLabelPositions] = useState<LabelPosition[]>([]);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     const updatePositions = () => {
@@ -35,8 +34,8 @@ export function AgentLabels({ officeState, zoom, panRef }: AgentLabelsProps) {
           role: char.role || '',
           x: screenX,
           y: screenY,
-          isActive: char.isActive,
-          bubbleType: char.bubbleType,
+          isActive: char.active,
+          bubbleType: char.bubbleState.type === 'none' ? null : (char.bubbleState.type as 'permission' | 'waiting'),
           isSelected: officeState.selectedAgentId === agentId,
         });
       }

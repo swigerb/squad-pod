@@ -12,7 +12,8 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import type { LayoutData, WebviewMessage, OutboundMessage } from './types.js';
+import * as fs from 'fs';
+import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo } from './types.js';
 import {
   GLOBAL_KEY_SOUND_ENABLED,
   WORKSPACE_KEY_LAYOUT,
@@ -127,6 +128,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         this.onImportLayout();
         break;
 
+      case 'requestAgentDetail':
+        this.onRequestAgentDetail(message.agentId as string | undefined);
+        break;
+
       default:
         // Unknown message — ignore
         break;
@@ -161,10 +166,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     });
 
     // 3. Load and send assets
-    this.loadAndSendAssets(webview);
+    this.loadAndSendAssets();
 
     // 4. Load and send layout
-    this.loadAndSendLayout(workspaceRoot, webview);
+    this.loadAndSendLayout(workspaceRoot);
 
     // 5. Send existing agents (full state dump)
     sendExistingAgents(agents, this.context, webview);
@@ -186,7 +191,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
   // ─── Asset Loading ─────────────────────────────────────────────
 
-  private loadAndSendAssets(webview: vscode.Webview): void {
+  private loadAndSendAssets(): void {
     const extPath = this.context.extensionPath;
 
     // Character sprites
@@ -216,7 +221,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
   // ─── Layout ───────────────────────────────────────────────────
 
-  private loadAndSendLayout(workspaceRoot: string, webview: vscode.Webview): void {
+  private loadAndSendLayout(workspaceRoot: string): void {
     // Try workspace-persisted layout first
     let layout = readPersistedLayout(workspaceRoot);
 
@@ -323,6 +328,18 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     );
   }
 
+  private onRequestAgentDetail(agentId: string | undefined): void {
+    if (!agentId) {return;}
+
+    const workspaceRoot = this.getWorkspaceRoot();
+    if (!workspaceRoot) {return;}
+
+    const detail = getAgentDetail(workspaceRoot, agentId);
+    if (detail) {
+      this.postMessage({ type: 'agentDetailLoaded', detail });
+    }
+  }
+
   // ─── Default Layout Export (command) ──────────────────────────
 
   async exportDefaultLayout(): Promise<void> {
@@ -420,4 +437,108 @@ function getNonce(): string {
     nonce += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return nonce;
+}
+
+function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo | null {
+  const agents = getAgents();
+  const agent = agents.get(agentId);
+  if (!agent) {
+    return null;
+  }
+
+  // Read charter summary
+  let charterSummary: string | null = null;
+  const charterPath = path.join(workspaceRoot, '.squad', 'agents', agentId, 'charter.md');
+  try {
+    const charterContent = fs.readFileSync(charterPath, 'utf8');
+    const lines = charterContent.split('\n');
+    
+    // Skip title line (first # heading), find first paragraph
+    let foundHeading = false;
+    const paragraphLines: string[] = [];
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      if (!foundHeading && trimmed.startsWith('#')) {
+        foundHeading = true;
+        continue;
+      }
+      
+      if (foundHeading && trimmed.length > 0) {
+        paragraphLines.push(trimmed);
+        // Collect lines until we have enough content
+        if (paragraphLines.join(' ').length > 100) {
+          break;
+        }
+      }
+    }
+    
+    if (paragraphLines.length > 0) {
+      const paragraph = paragraphLines.join(' ');
+      // Take first 2-3 sentences
+      const sentences = paragraph.split(/\.\s+/);
+      charterSummary = sentences.slice(0, 3).join('. ');
+      if (!charterSummary.endsWith('.')) {
+        charterSummary += '.';
+      }
+    }
+  } catch {
+    // Charter doesn't exist or can't be read
+    charterSummary = null;
+  }
+
+  // Scan log directory for recent activity
+  const recentActivity: string[] = [];
+  const logDir = path.join(workspaceRoot, '.squad', 'log');
+  try {
+    const logFiles = fs.readdirSync(logDir)
+      .filter(f => f.endsWith('.md'))
+      .sort()
+      .reverse()
+      .slice(0, 5);
+
+    for (const logFile of logFiles) {
+      const logPath = path.join(logDir, logFile);
+      try {
+        const logContent = fs.readFileSync(logPath, 'utf8');
+        const lowerContent = logContent.toLowerCase();
+        const agentNameLower = agent.name.toLowerCase();
+        const agentIdLower = agentId.toLowerCase();
+        
+        // Check if log mentions this agent
+        if (lowerContent.includes(agentNameLower) || lowerContent.includes(agentIdLower)) {
+          // Extract first meaningful line (not a heading)
+          const lines = logContent.split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.length > 0 && !trimmed.startsWith('#')) {
+              recentActivity.push(trimmed.substring(0, 150));
+              break;
+            }
+          }
+          
+          if (recentActivity.length >= 5) {
+            break;
+          }
+        }
+      } catch {
+        // Skip this log file
+        continue;
+      }
+    }
+  } catch {
+    // Log directory doesn't exist or can't be read
+  }
+
+  return {
+    id: agent.id,
+    name: agent.name,
+    role: agent.role,
+    status: agent.status,
+    currentTask: agent.currentTask,
+    charterSummary,
+    recentActivity,
+    lastActiveAt: agent.lastActiveAt,
+  };
 }

@@ -57,22 +57,22 @@ export function DebugView({ officeState, agentTools, agentStatuses, onClose }: D
                     <span style={{ color: '#60a5fa' }}>State:</span> {char.state}
                   </div>
                   <div>
-                    <span style={{ color: '#60a5fa' }}>Position:</span> ({char.tileCol}, {char.tileRow})
+                    <span style={{ color: '#60a5fa' }}>Position:</span> ({char.col}, {char.row})
                   </div>
                   <div>
                     <span style={{ color: '#60a5fa' }}>Status:</span> {status}
                   </div>
                   <div>
-                    <span style={{ color: '#60a5fa' }}>Active:</span> {char.isActive ? 'Yes' : 'No'}
+                    <span style={{ color: '#60a5fa' }}>Active:</span> {char.active ? 'Yes' : 'No'}
                   </div>
-                  {char.currentTool && (
+                  {char.tool && (
                     <div>
-                      <span style={{ color: '#60a5fa' }}>Current Tool:</span> {char.currentTool}
+                      <span style={{ color: '#60a5fa' }}>Current Tool:</span> {char.tool}
                     </div>
                   )}
-                  {char.bubbleType && (
+                  {char.bubbleState.type !== 'none' && (
                     <div>
-                      <span style={{ color: '#60a5fa' }}>Bubble:</span> {char.bubbleType}
+                      <span style={{ color: '#60a5fa' }}>Bubble:</span> {char.bubbleState.type}
                     </div>
                   )}
                   {tools.length > 0 && (
@@ -106,13 +106,13 @@ export function DebugView({ officeState, agentTools, agentStatuses, onClose }: D
                 <span style={{ color: '#60a5fa' }}>Dimensions:</span> {officeState.layout.cols} × {officeState.layout.rows}
               </div>
               <div>
-                <span style={{ color: '#60a5fa' }}>Seats:</span> {officeState.seats.size}
+                <span style={{ color: '#60a5fa' }}>Seats:</span> {officeState.seats.length}
               </div>
               <div>
                 <span style={{ color: '#60a5fa' }}>Furniture:</span> {officeState.furniture.length}
               </div>
               <div>
-                <span style={{ color: '#60a5fa' }}>Walkable Tiles:</span> {officeState.walkableTiles.length}
+                <span style={{ color: '#60a5fa' }}>Walkable Tiles:</span> {officeState.walkableTiles.size}
               </div>
             </div>
           </div>

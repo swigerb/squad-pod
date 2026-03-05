@@ -7,11 +7,13 @@ import { AgentLabels } from './components/AgentLabels.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { DebugView } from './components/DebugView.js';
+import { AgentCard } from './components/AgentCard.js';
 import { EditorState } from './office/editor/editorState.js';
 import { useExtensionMessages } from './hooks/useExtensionMessages.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
 import { useEditorKeyboard } from './hooks/useEditorKeyboard.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
+import { vscode } from './vscodeApi.js';
 
 const officeStateRef = { current: null as OfficeState | null };
 const editorState = new EditorState();
@@ -24,12 +26,13 @@ function getOfficeState(): OfficeState {
 export default function App() {
   const editor = useEditorActions(getOfficeState, editorState);
   const isEditDirty = useCallback(() => editor.isEditMode && editor.isDirty, [editor.isEditMode, editor.isDirty]);
-  const { agents, selectedAgent, agentTools, agentStatuses, rosterMembers, layoutReady } = useExtensionMessages(
+  const { agentTools, agentStatuses, layoutReady, agentDetail, setAgentDetail } = useExtensionMessages(
     getOfficeState,
     editor.setLastSavedLayout,
     isEditDirty
   );
   const [isDebugMode, setIsDebugMode] = useState(false);
+  const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEditorKeyboard(
@@ -42,6 +45,20 @@ export default function App() {
     () => editor.handleEditorSelectionChange(null),
     editor.handleToggleEditMode
   );
+
+  const handleDeskClick = useCallback((agentId: string, screenX: number, screenY: number) => {
+    vscode.postMessage({ type: 'requestAgentDetail', agentId });
+    setCardPosition({ x: screenX, y: screenY });
+  }, []);
+
+  const handleCloseCard = useCallback(() => {
+    setAgentDetail(null);
+    setCardPosition(null);
+  }, [setAgentDetail]);
+
+  const handleViewCharter = useCallback((agentId: string) => {
+    vscode.postMessage({ type: 'openSquadAgent', agentId });
+  }, []);
 
   if (!layoutReady) {
     return (
@@ -79,6 +96,7 @@ export default function App() {
         zoom={editor.zoom}
         onZoomChange={editor.handleZoomChange}
         panRef={editor.panRef}
+        onDeskClick={handleDeskClick}
       />
 
       <ZoomControls zoom={editor.zoom} onZoomChange={editor.handleZoomChange} />
@@ -112,6 +130,13 @@ export default function App() {
           onClose={() => setIsDebugMode(false)}
         />
       )}
+
+      <AgentCard
+        detail={agentDetail}
+        position={cardPosition}
+        onClose={handleCloseCard}
+        onViewCharter={handleViewCharter}
+      />
     </div>
   );
 }

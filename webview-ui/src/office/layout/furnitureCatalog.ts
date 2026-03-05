@@ -171,59 +171,75 @@ const LAMP_SPRITE: SpriteData = [
 export const FURNITURE_CATALOG: FurnitureCatalogEntry[] = [
   {
     type: FurnitureType.DESK,
+    label: 'Desk',
     name: 'Desk',
     sprite: DESK_SPRITE,
     width: 2,
-    height: 1
+    height: 1,
+    isDesk: true
   },
   {
     type: FurnitureType.CHAIR,
+    label: 'Chair',
     name: 'Chair',
     sprite: CHAIR_SPRITE,
     width: 1,
-    height: 1
+    height: 1,
+    isDesk: false
   },
   {
     type: FurnitureType.BOOKSHELF,
+    label: 'Bookshelf',
     name: 'Bookshelf',
     sprite: BOOKSHELF_SPRITE,
     width: 1,
-    height: 2
+    height: 2,
+    isDesk: false
   },
   {
     type: FurnitureType.PLANT,
+    label: 'Plant',
     name: 'Plant',
     sprite: PLANT_SPRITE,
     width: 1,
-    height: 1
+    height: 1,
+    isDesk: false
   },
   {
     type: FurnitureType.COOLER,
+    label: 'Cooler',
     name: 'Cooler',
     sprite: COOLER_SPRITE,
     width: 1,
-    height: 1
+    height: 1,
+    isDesk: false
   },
   {
     type: FurnitureType.WHITEBOARD,
+    label: 'Whiteboard',
     name: 'Whiteboard',
     sprite: WHITEBOARD_SPRITE,
     width: 2,
-    height: 1
+    height: 1,
+    isDesk: false
   },
   {
     type: FurnitureType.PC,
+    label: 'PC',
     name: 'PC',
     sprite: PC_SPRITE,
     width: 1,
-    height: 1
+    height: 1,
+    isDesk: false
   },
   {
     type: FurnitureType.LAMP,
+    label: 'Lamp',
     name: 'Lamp',
     sprite: LAMP_SPRITE,
     width: 1,
-    height: 1
+    height: 1,
+    isDesk: false
   }
 ];
 
@@ -231,6 +247,6 @@ export function getCatalogEntry(type: string): FurnitureCatalogEntry | undefined
   return FURNITURE_CATALOG.find(entry => entry.type === type);
 }
 
-export function buildDynamicCatalog(assets: Record<string, any>): FurnitureCatalogEntry[] {
+export function buildDynamicCatalog(): FurnitureCatalogEntry[] {
   return [...FURNITURE_CATALOG];
 }
