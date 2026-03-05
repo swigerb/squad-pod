@@ -1,10 +1,121 @@
 # Decisions
 
+## Squad Pod: TypeScript Interface Alignment — Engine Layer
+
+**Decision Date:** 2026-03-05  
+**Author:** Lisa Simpson (Core Dev)  
+**Status:** Implemented
+
+### Context
+
+TypeScript interfaces in `types.ts` were misaligned with implementation code in the engine layer, causing property name mismatches (`dir` vs `direction`, `tileCol` vs `col`, `isActive` vs `active`), incorrect type declarations (`seats: Map<string, Seat>` vs `Seat[]`), missing properties, and type confusion between branded types and primitives.
+
+### Decision
+
+Standardize all core interfaces and data structures to match implementation:
+
+**Character Interface:**
+- Properties: `direction`, `col`/`row`, `frameIndex`, `tool`, `active`, `bubbleState: { type: string; fadeTimer?: number }`
+- Keep both tile coords (`col`/`row`) AND pixel coords (`x`/`y`) for rendering
+
+**Seat Interface:**
+- Complete rewrite: `id`, `col`/`row`, `direction`, `occupant?: string | null` (not boolean `assigned`)
+
+**FurnitureInstance:** `uid`, `type`, `col`, `row`, `width`, `height`, `rotation`, `state?`
+
+**FurnitureCatalogEntry:** Renamed `footprintW/H` to `width/height`, added `label`, `isDesk`
+
+**OfficeLayout:** `version` optional, `tiles: number[]` (not `TileType[]`), `tileColors?: Record<string, FloorColor>` (not sparse array)
+
+**PlacedFurniture:** Added `rotation: number`, `state?: string`
+
+**EditorState Class:** Renamed properties (`activeTool`→`tool`, `selectedTileType`→`tileType`, `selectedFurnitureType`→`furnitureType`), added setter methods
+
+**OfficeState Class:** 
+- `seats: Map<string, Seat>` → `seats: Seat[]` (simpler iteration)
+- `walkableTiles: Array<{col,row}>` → `walkableTiles: Set<string>` (O(1) lookups)
+- `tileMap: TileType[][]` → `tileMap: number[][]` (match runtime type)
+
+### Rationale
+
+- **Property consistency:** If frontend uses `direction`, backend should too; reduces cognitive load
+- **Shorter names:** `col/row` vs `tileCol/tileRow` reduces verbosity
+- **Seat.occupant vs .assigned:** Need to track WHICH agent is sitting, not just if occupied
+- **Seat[] vs Map:** No perf bottleneck at ~10 seats; simpler iteration pattern
+- **Set<string> for walkableTiles:** Fast O(1) membership checks for pathfinding
+- **number[][] instead of TileType[][]:** TileType is branded number; runtime is just number; unnecessary assertion churn
+- **Record<string, FloorColor>:** String keys "5,3" make intent explicit vs confusing sparse numeric indices
+
+### Consequences
+
+**Positive:**
+- TypeScript errors in engine eliminated
+- Consistent naming reduces bugs
+- Data structures match actual usage
+- Stable foundation for component layer
+
+**Negative:**
+- Breaking change for old property names (all fixed in this session)
+
+## Squad Pod: Component TypeScript Interface Fixes
+
+**Decision Date:** 2026-03-05  
+**Author:** Bart Simpson (Frontend Dev)  
+**Status:** Implemented
+
+### Context
+
+Lisa's interface refactors required cascading updates across rendering/component files. All consumers of Character, Seat, FurnitureInstance, EditorState, OfficeState were broken.
+
+### Decision
+
+Perform surgical updates across Bart-owned files (characters.ts, renderer.ts, OfficeCanvas.tsx, AgentLabels.tsx, App.tsx, useExtensionMessages.ts, DebugView.tsx, ToolOverlay.tsx):
+
+**Engine Layer (characters.ts, renderer.ts):**
+- Remove unused imports/functions
+- Add x/y pixel coordinates to Character for hit detection
+- Update all property access (direction, col/row, frameIndex, tool, active, bubbleState)
+- Prefix unused params with underscore
+
+**React Components:**
+- Fix gameLoop callbacks: `onUpdate/onRender` → `update/render`
+- Update function signatures
+- Fix seat lookups: `seats.get(id)` → `seats.find(s => s.id === id)`
+- Remove unused prop destructuring
+- Fix useRef initialization with valid initial values
+
+**Hooks:**
+- Prefix unused parameters
+- Fix call signatures (addAgent 7→6 args, buildDynamicCatalog 2→0 args)
+
+**Debug:**
+- Update all Character property accesses
+- Fix collection checks: `Map.size` → `Array.length`, `Array.length` → `Set.size`
+
+### Rationale
+
+- **Surgical vs rewrite:** Lisa's interfaces are source of truth; minimize diff surface
+- **x/y pixel coords:** Hit detection needs interpolated positions during walk animations; col/row alone causes snapping
+- **useRef initial values:** TypeScript strictNullChecks requires non-undefined initial value
+- **Prefix unused params:** Interface contracts can't change; `_` signals intentional vs forgotten
+
+### Consequences
+
+**Positive:**
+- All component files compile clean
+- No behavioral regressions
+- Smooth character rendering with x/y sync
+
+**Negative:**
+- More verbose with underscore-prefixed params
+
+---
+
 ## Squad Pod: Project Structure & Build Pipeline
 
 **Decision Date:** 2026-03-05  
 **Author:** Lisa Simpson  
-**Status:** Implemented  
+**Status:** Implemented
 
 ### Context
 

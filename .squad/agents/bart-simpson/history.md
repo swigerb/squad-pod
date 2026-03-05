@@ -181,3 +181,104 @@ Implemented the webview side of the "Desk-as-directory" feature allowing users t
 - Webview AgentCard consumes this detail data for rich card display
 - Messaging protocol: requestAgentDetail (webview→extension) ↔ agentDetailLoaded (extension→webview)
 - Type definitions maintained separately in webview/extension for decoupling
+
+### Component TypeScript Interface Updates (2026-03-05)
+
+Fixed TypeScript errors in rendering/component files to match Lisa's updated interfaces in types.ts, editorState.ts, and officeState.ts:
+
+**Character Interface Property Renames:**
+- `dir` → `direction` (Direction enum)
+- `tileCol, tileRow` → `col, row` (grid coordinates)
+- `frame` → `frameIndex` (animation frame counter)
+- `currentTool` → `tool` (string | undefined instead of string | null)
+- `isActive` → `active` (boolean flag)
+- `bubbleType` + `bubbleTimer` → `bubbleState: { type, fadeTimer? }` (unified object)
+- Added `x, y` pixel coordinates for hit detection alongside col/row
+
+**Files Updated:**
+
+1. **characters.ts (engine layer):**
+   - Removed unused imports (ToolActivity, getWalkableTiles)
+   - Removed unused tileCenter function (never called)
+   - Added x/y initialization in createCharacter (col * TILE_SIZE + TILE_SIZE/2)
+   - Added x/y updates in updateCharacter WALK case after tile transitions
+   - Updated to use new Character property names throughout
+
+2. **renderer.ts (engine layer):**
+   - Removed unused constant imports (OUTLINE_Z_SORT_OFFSET, ROTATE_BUTTON_BG)
+   - Removed unused type imports (OfficeLayout, hasFloorSprites, hasWallSprites, getWallInstances)
+   - Prefixed unused parameters with underscore (_hoveredTile, _h) to satisfy TS6133
+   - Updated to use char.direction, char.frameIndex, char.bubbleState.type throughout
+
+3. **OfficeCanvas.tsx (React component):**
+   - Fixed startGameLoop callbacks: `onUpdate/onRender` → `update/render`
+   - Updated updateCharacter call signature: added seats, walkableTiles parameters
+   - Fixed renderFrame call: unpacked officeState into individual parameters
+   - Removed unused props from destructuring (onDeleteSelected, onRotateSelected, editorTick)
+   - Removed unused worldToScreen callback
+   - Fixed furniture width/height access: `furn.type.width` → `furn.width`
+   - Fixed seat lookup: `officeState.seats.get(id)` → `officeState.seats.find(s => s.id === id)` (seats is now Seat[])
+   - Added EditTool import and fixed eyedropper tool assignment: `'tile'` → `EditTool.TILE_PAINT`
+
+4. **AgentLabels.tsx (React component):**
+   - Removed unused PULSE_ANIMATION_DURATION_SEC import
+   - Fixed Character property access: `char.isActive` → `char.active`
+   - Fixed bubble access: `char.bubbleType` → `char.bubbleState.type === 'none' ? null : ...`
+   - Fixed useRef type: `useRef<number>()` → `useRef<number>(0)` (must provide initial value)
+
+5. **App.tsx (React component):**
+   - Removed unused destructured variables from useExtensionMessages: agents, selectedAgent, rosterMembers
+   - Kept only: agentTools, agentStatuses, layoutReady, agentDetail, setAgentDetail
+
+6. **useExtensionMessages.ts (hook):**
+   - Prefixed unused parameter: `isEditDirty` → `_isEditDirty`
+   - Fixed unused state: `setSelectedAgent` → removed from useState destructuring
+   - Fixed addAgent call: removed extra boolean parameter (7 args → 6)
+   - Fixed buildDynamicCatalog call: takes 0 args, prefixed unused message props with underscore
+
+7. **DebugView.tsx (debug component):**
+   - Fixed Character property access: `char.tileCol, char.tileRow` → `char.col, char.row`
+   - Fixed: `char.isActive` → `char.active`
+   - Fixed: `char.currentTool` → `char.tool`
+   - Fixed: `char.bubbleType` → `char.bubbleState.type !== 'none'`
+   - Fixed seats size: `officeState.seats.size` → `officeState.seats.length`
+   - Fixed walkableTiles size: `officeState.walkableTiles.length` → `officeState.walkableTiles.size`
+
+8. **ToolOverlay.tsx (UI component):**
+   - Fixed useRef type: `useRef<number>()` → `useRef<number>(0)` (must provide initial value)
+
+**Seat Interface Changes:**
+- New shape: `{ id, col, row, direction, occupant? }` (Lisa's refactor from Map to array)
+- Updated all seat lookups from `seats.get(id)` to `seats.find(s => s.id === id)`
+
+**FurnitureInstance Interface Changes:**
+- `furn.type.width/height` → `furn.width/height` (properties now directly on instance, not nested in type)
+
+**EditorState Interface Changes:**
+- `activeTool` → `tool` (property rename)
+- `selectedTileType` → `tileType` (property rename)
+- Added setter methods: setTool(), setTileType(), etc.
+
+**OfficeState Interface Changes:**
+- `seats` changed from `Map<string, Seat>` to `Seat[]`
+- `walkableTiles` changed from `Array<{col, row}>` to `Set<string>` (stringified coords)
+
+**Build Verification:**
+- ✅ TypeScript compilation passes for all Bart-owned files (characters.ts, renderer.ts, OfficeCanvas.tsx, AgentLabels.tsx, App.tsx, useExtensionMessages.ts, DebugView.tsx, ToolOverlay.tsx)
+- ✅ All property renames reflected consistently across rendering and component layers
+- ✅ Interface mismatches resolved with Lisa's type updates
+- ⚠️ CSS module error (./index.css) persists but is outside scope (build config issue)
+
+**Key Architectural Notes:**
+- x/y pixel coordinates added to Character for smoother hit detection during transitions
+- col/row retained for tile-based logic (pathfinding, collision, seat assignment)
+- bubbleState unification simplifies bubble rendering logic (single fadeTimer instead of separate timer)
+- Seat[] array enables simpler React iteration (.map) vs Map.entries()
+- walkableTiles Set<string> improves O(1) lookup performance vs array scanning
+- EditTool const enum enforces type safety for tool selection vs magic strings
+
+**Cross-Agent Coordination:**
+- Lisa updated types.ts, editorState.ts, officeState.ts with interface changes
+- Bart updated all rendering/component consumers to match new interfaces
+- Parallel work avoided merge conflicts by strict file ownership boundaries
+- Shared understanding of renamed properties via CRITICAL CONTEXT in task charter
