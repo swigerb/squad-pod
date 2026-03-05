@@ -116,3 +116,68 @@ Completed full webview UI implementation in three parallel spawns + import fix s
 
 The webview is a complete, production-ready pixel art office visualization adapted from pixel-agents for Squad with string-based agent IDs and Squad roster integration.
 
+### Desk-as-Directory Feature Webview Side (2026-03-05)
+
+Implemented the webview side of the "Desk-as-directory" feature allowing users to click on desks/seats to view agent detail cards:
+
+**Key Changes:**
+
+1. **OfficeCanvas.tsx Click Detection:**
+   - Added `onDeskClick` prop to OfficeCanvasProps
+   - Modified click handler to detect seat occupancy after character sprite detection
+   - Checks exact tile position first, then searches adjacent tiles (radius 1) for seats
+   - When an occupied seat is clicked, triggers `onDeskClick` with agent ID and screen coordinates
+   - Properly handles both direct character sprite clicks and desk/seat area clicks
+
+2. **AgentCard.tsx Component (NEW):**
+   - Self-contained card component displaying detailed agent information
+   - Shows agent name, role, status indicator (colored dot: blue=active, yellow=waiting, gray=idle)
+   - Displays charter summary, current task, recent activity list, and relative "last active" time
+   - Smart positioning: clamps to viewport bounds to prevent off-screen rendering
+   - Click-outside and Escape key handlers for dismissal
+   - "View Charter" button sends `openSquadAgent` message to extension
+   - Uses fixed positioning (z-index 100) with semi-transparent dark background
+   - Pixel art aesthetic with monospace fonts and retro styling
+
+3. **useExtensionMessages.ts Hook:**
+   - Added `agentDetail` state and `setAgentDetail` setter
+   - Handles `agentDetailLoaded` message from extension, updating state with received AgentDetailInfo
+   - Exports AgentDetailInfo type from AgentCard for consistent typing
+   - Returns both `agentDetail` and `setAgentDetail` in hook interface
+
+4. **App.tsx Integration:**
+   - Added `cardPosition` state to track click coordinates
+   - Created `handleDeskClick` callback sending `requestAgentDetail` message to extension
+   - Created `handleCloseCard` to clear both detail and position state
+   - Created `handleViewCharter` to send `openSquadAgent` message
+   - Wired `onDeskClick` prop to OfficeCanvas
+   - Rendered AgentCard component at bottom of component tree (after all overlays)
+
+**Messaging Protocol:**
+- **Outbound (webview → extension):**
+  - `requestAgentDetail` — sent on desk click with agentId
+  - `openSquadAgent` — sent on "View Charter" button click with agentId
+- **Inbound (extension → webview):**
+  - `agentDetailLoaded` — contains AgentDetailInfo object with agent metadata
+
+**Type Definitions:**
+- AgentDetailInfo defined locally in AgentCard.tsx (webview doesn't import from extension types)
+- Properties: id, name, role, status, currentTask, charterSummary, recentActivity, lastActiveAt
+
+**Build Verification:**
+- ✅ TypeScript compilation passes with no errors
+- ✅ Vite build succeeds (dist/webview/assets/)
+- ✅ All imports resolved correctly
+
+**Architecture Notes:**
+- AgentCard uses viewport clamping to ensure visibility regardless of click position
+- Click detection prioritizes direct character sprite hits over desk area detection
+- Card dismissal works via both outside clicks and Escape key for UX flexibility
+- The feature integrates seamlessly with existing edit mode and selection system
+
+**Cross-Agent Context:**
+- Lisa Simpson implemented extension-side AgentDetailInfo interface + requestAgentDetail handler
+- Extension reads charter.md and .squad/log/ to enrich agent data sent to webview
+- Webview AgentCard consumes this detail data for rich card display
+- Messaging protocol: requestAgentDetail (webview→extension) ↔ agentDetailLoaded (extension→webview)
+- Type definitions maintained separately in webview/extension for decoupling

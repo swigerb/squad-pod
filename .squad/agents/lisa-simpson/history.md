@@ -37,3 +37,23 @@
 - Wants type checking separate from bundling (npm run check-types)
 - Expects npm-run-all for parallel watch tasks (watch:esbuild + watch:tsc)
 - Panel webview preferred over sidebar (contributes.viewsContainers.panel)
+
+### Agent Detail Feature (2026-03-05)
+
+**Architecture Decisions:**
+- AgentDetailInfo interface added to types.ts for rich agent inspection
+- Extension-side message handler `requestAgentDetail` reads charter.md and .squad/log/ to enrich agent state
+- Charter summary extraction: skip title heading, take first paragraph, limit to 2-3 sentences
+- Recent activity scan: read last 5 log files, find mentions of agent name/slug, extract first non-heading line
+- Synchronous fs.readFileSync is acceptable for single-file charter reads (no async churn for small data)
+
+**Key File Paths:**
+- `src/types.ts` — AgentDetailInfo interface, agentDetailLoaded message type
+- `src/SquadPodViewProvider.ts` — onRequestAgentDetail handler, getAgentDetail helper function
+- `.squad/agents/{agentId}/charter.md` — source for charterSummary
+- `.squad/log/*.md` — source for recentActivity
+
+**Cross-Agent Context:**
+- Bart Simpson implemented webview-side AgentCard component + click detection consuming this extension handler
+- Feature pairs extension-side detail fetching with frontend card rendering
+- Type protocol AgentDetailInfo is maintained separately in webview (decoupled, synced by convention)
