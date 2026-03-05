@@ -20,6 +20,7 @@ Each agent on your Squad roster gets their own character that walks around, sits
 - **Sound notifications** — optional chime when an agent finishes (turn it off if you're in a meeting)
 - **Persistent layouts** — your office design is saved and shared across VS Code windows
 - **6 diverse characters** — built-in pixel art character sprites, no external assets required
+- **Desk-as-directory** — click any occupied desk to see the agent's charter summary, current task, and recent activity
 
 ## How We Built This
 
@@ -144,7 +145,6 @@ squad-pod/
 
 - **Simpsons-themed sprites** — custom pixel art characters matching the casting universe 🍩
 - **Real-time Squad events** — if Squad adds a status API or event stream, hook into it for instant updates
-- **Desk-as-directory** — click a desk to see what an agent is working on
 - **Multi-window sync** — coordinate the office view across multiple VS Code windows
 - **Custom character skins** — let users assign custom sprites per agent
 - **Team ceremonies visualization** — animate design reviews and retros as team gatherings
