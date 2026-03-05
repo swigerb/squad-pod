@@ -9,7 +9,6 @@ Each agent on your Squad roster gets their own character that walks around, sits
 > Built in one session by a Simpsons-themed Squad team, because of course it was.
 
 ![Squad Pod in action — pixel art office with Squad agents at their desks](Screenshot.jpg)
-*Screenshot coming soon — the office is still under construction* 🏗️
 
 ## Features
 
