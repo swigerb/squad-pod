@@ -1,0 +1,14 @@
+.vscode/**
+out/**
+**/node_modules/**
+src/**
+webview-ui/**
+scripts/**
+.github/**
+.squad/**
+*.ts
+!dist/**/*.js
+*.map
+tsconfig.json
+eslint.config.mjs
+esbuild.js
