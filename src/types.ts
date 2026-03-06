@@ -101,6 +101,18 @@ export interface CharacterSpriteSet {
   };
 }
 
+export type TelemetryCategory = 'status' | 'session' | 'log' | 'orchestration';
+
+export interface TelemetryEvent {
+  id: string;
+  timestamp: number;
+  category: TelemetryCategory;
+  agentId: string | null;
+  agentName: string | null;
+  summary: string;
+  detail: string | null;
+}
+
 export interface WebviewMessage {
   type: string;
   [key: string]: unknown;
@@ -161,4 +173,5 @@ export type OutboundMessage =
   | { type: 'wallTilesLoaded'; tiles: SpriteData[] }
   | { type: 'furnitureLoaded'; furniture: FurnitureAsset[] }
   | { type: 'soundEnabled'; enabled: boolean }
-  | { type: 'agentDetailLoaded'; detail: AgentDetailInfo };
+  | { type: 'agentDetailLoaded'; detail: AgentDetailInfo }
+  | { type: 'telemetryEvent'; event: TelemetryEvent };

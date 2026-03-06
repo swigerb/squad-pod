@@ -8,6 +8,7 @@ import { BottomToolbar } from './components/BottomToolbar.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { DebugView } from './components/DebugView.js';
 import { AgentCard } from './components/AgentCard.js';
+import { TelemetryDrawer } from './components/TelemetryDrawer.js';
 import { EditorState } from './office/editor/editorState.js';
 import { useExtensionMessages } from './hooks/useExtensionMessages.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
@@ -26,12 +27,14 @@ function getOfficeState(): OfficeState {
 export default function App() {
   const editor = useEditorActions(getOfficeState, editorState);
   const isEditDirty = useCallback(() => editor.isEditMode && editor.isDirty, [editor.isEditMode, editor.isDirty]);
-  const { agentTools, agentStatuses, layoutReady, agentDetail, setAgentDetail } = useExtensionMessages(
+  const { agentTools, agentStatuses, layoutReady, agentDetail, setAgentDetail, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.setLastSavedLayout,
     isEditDirty
   );
   const [isDebugMode, setIsDebugMode] = useState(false);
+  const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
+  const [telemetrySeenCount, setTelemetrySeenCount] = useState(0);
   const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +62,20 @@ export default function App() {
   const handleViewCharter = useCallback((agentId: string) => {
     vscode.postMessage({ type: 'openSquadAgent', agentId });
   }, []);
+
+  const handleToggleTelemetry = useCallback(() => {
+    setIsTelemetryOpen((prev) => {
+      if (!prev) {
+        setTelemetrySeenCount(telemetryEvents.length);
+      }
+      return !prev;
+    });
+  }, [telemetryEvents.length]);
+
+  const handleClearTelemetry = useCallback(() => {
+    clearTelemetry();
+    setTelemetrySeenCount(0);
+  }, [clearTelemetry]);
 
   if (!layoutReady) {
     return (
@@ -113,7 +130,20 @@ export default function App() {
 
       <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef} />
 
-      <BottomToolbar isEditMode={editor.isEditMode} onToggleEditMode={editor.handleToggleEditMode} />
+      <BottomToolbar
+        isEditMode={editor.isEditMode}
+        onToggleEditMode={editor.handleToggleEditMode}
+        isTelemetryOpen={isTelemetryOpen}
+        onToggleTelemetry={handleToggleTelemetry}
+        telemetryCount={telemetryEvents.length - telemetrySeenCount}
+      />
+
+      <TelemetryDrawer
+        events={telemetryEvents}
+        isOpen={isTelemetryOpen}
+        onToggle={handleToggleTelemetry}
+        onClear={handleClearTelemetry}
+      />
 
       <ToolOverlay
         officeState={getOfficeState()}

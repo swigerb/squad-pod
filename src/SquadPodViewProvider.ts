@@ -13,7 +13,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo } from './types.js';
+import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent } from './types.js';
 import {
   GLOBAL_KEY_SOUND_ENABLED,
   WORKSPACE_KEY_LAYOUT,
@@ -50,6 +50,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private disposeSquadWatcher: (() => void) | undefined;
   private disposeLayoutWatcher: { dispose: () => void } | undefined;
   private disposables: vscode.Disposable[] = [];
+  private telemetryCounter = 0;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -159,8 +160,22 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         // Re-read roster, add/remove agents
         const updated = refreshAgents(workspaceRoot, this.context, webview);
         sendExistingAgents(updated, this.context, webview);
+        this.emitTelemetry('log', null, null, 'Team roster updated');
       },
       onAgentActivity: (event) => {
+        // Emit detailed telemetry for the raw file event
+        const agents = getAgents();
+        const agent = agents.get(event.agentId);
+        const displayName = agent?.name ?? event.agentId;
+        const sourceLabel = event.source === 'orchestration-log' ? 'orchestration' : event.source;
+        this.emitTelemetry(
+          sourceLabel as TelemetryEvent['category'],
+          event.agentId,
+          displayName,
+          `[${event.source}] ${displayName} — ${event.task ?? 'activity detected'}`,
+          event.task,
+        );
+
         updateAgentStatus(event.agentId, event.status, event.task, webview);
       },
     });
@@ -400,6 +415,27 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
   private postMessage(message: OutboundMessage): void {
     this.view?.webview?.postMessage(message);
+  }
+
+  private emitTelemetry(
+    category: TelemetryEvent['category'],
+    agentId: string | null,
+    agentName: string | null,
+    summary: string,
+    detail: string | null = null,
+  ): void {
+    this.postMessage({
+      type: 'telemetryEvent',
+      event: {
+        id: `tel-${Date.now()}-${++this.telemetryCounter}`,
+        timestamp: Date.now(),
+        category,
+        agentId,
+        agentName,
+        summary,
+        detail,
+      },
+    });
   }
 
   // ─── Teardown ─────────────────────────────────────────────────

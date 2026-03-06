@@ -7,7 +7,7 @@
  */
 
 import type * as vscode from 'vscode';
-import type { SquadAgentState, SquadTeamMember, PersistedAgentMeta, OutboundMessage } from './types.js';
+import type { SquadAgentState, SquadTeamMember, PersistedAgentMeta, OutboundMessage, TelemetryEvent } from './types.js';
 import {
   CHAR_COUNT,
   WORKSPACE_KEY_AGENTS,
@@ -22,6 +22,25 @@ import { resetActivityTimer, cancelAllTimers } from './timerManager.js';
 
 let agents = new Map<string, SquadAgentState>();
 let disposed = false;
+let telemetryCounter = 0;
+
+function makeTelemetryEvent(
+  category: TelemetryEvent['category'],
+  agentId: string | null,
+  agentName: string | null,
+  summary: string,
+  detail: string | null = null,
+): TelemetryEvent {
+  return {
+    id: `tel-${Date.now()}-${++telemetryCounter}`,
+    timestamp: Date.now(),
+    category,
+    agentId,
+    agentName,
+    summary,
+    detail,
+  };
+}
 
 // ─── Public API ─────────────────────────────────────────────────────
 
@@ -129,6 +148,14 @@ export function updateAgentStatus(
 
   // Notify webview of status change
   postToWebview(webview, { type: 'agentStatus', agentId, status });
+
+  // Emit telemetry for the status transition
+  const statusLabel = status === 'active' ? 'became active' : status === 'waiting' ? 'is waiting for input' : 'went idle';
+  const taskSuffix = agent.currentTask ? `: ${agent.currentTask}` : '';
+  postToWebview(webview, {
+    type: 'telemetryEvent',
+    event: makeTelemetryEvent('status', agentId, agent.name, `${agent.name} ${statusLabel}${taskSuffix}`),
+  });
 
   // If going active, send a tool-start message so the character animates
   if (status === 'active' && prevStatus !== 'active') {

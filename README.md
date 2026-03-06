@@ -17,6 +17,7 @@ Each agent on your Squad roster gets their own character that walks around, sits
 - **Team auto-discovery** — reads your `.squad/team.md` roster and spawns a character for every agent, no setup needed
 - **One agent, one character** — Homer gets a desk, Lisa gets a desk, everyone gets a desk
 - **Live activity tracking** — watches `.squad/sessions/`, `.squad/log/`, and `.squad/orchestration-log/` to animate characters based on real agent activity
+- **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
 - **Office layout editor** — design your office with floors, walls, and furniture using the built-in editor
 - **Speech bubbles** — visual indicators when an agent needs your attention
 - **Sound notifications** — optional chime when an agent finishes (turn it off if you're in a meeting)
@@ -84,7 +85,24 @@ The built-in editor lets you design your office:
 
 The grid is expandable up to 64×64 tiles. The default layout is a 20×11 office with 6 desk/chair pairs — enough for a solid Squad team.
 
-## How It Works
+## Telemetry Feed
+
+Squad Pod streams live activity from your Squad team to a dedicated drawer at the bottom of the office view. Click the **📡 Telemetry** button in the bottom toolbar to open it.
+
+### What You'll See
+
+- **Color-coded event types** — Status (🟦 agent state), Session (🟩 activity), Log (🟨 completed work), Orchestration (🟪 live events)
+- **Live timestamp** — Every event shows when it happened
+- **Agent name** — Which team member the event concerns
+- **Event summary** — Quick description (e.g., "homer-simpson → busy typing")
+- **Expandable details** — Click any event to see full context
+- **Unread badge** — Count of new events while the drawer is closed, so you don't miss activity
+
+### How It Works
+
+The extension watches your `.squad/` directories and streams all activity to the webview via its internal messaging protocol. Events are buffered (newest first, max 200) so you can scroll back and see what happened. When you scroll up to review older events, the drawer pauses auto-scrolling; click **↓ Latest** to jump back to the newest activity.
+
+## File Watching & Activity Detection
 
 Squad Pod watches your project's `.squad/` directory:
 

@@ -150,6 +150,18 @@ export interface Character {
   seatTimer: number;
 }
 
+export type TelemetryCategory = 'status' | 'session' | 'log' | 'orchestration';
+
+export interface TelemetryEvent {
+  id: string;
+  timestamp: number;
+  category: TelemetryCategory;
+  agentId: string | null;
+  agentName: string | null;
+  summary: string;
+  detail: string | null;
+}
+
 // Squad team member from roster
 export interface SquadTeamMember {
   name: string;

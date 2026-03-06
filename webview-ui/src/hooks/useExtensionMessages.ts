@@ -1,8 +1,10 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
-import type { OfficeLayout, ToolActivity, SquadTeamMember } from '../office/types.js';
+import type { OfficeLayout, ToolActivity, SquadTeamMember, TelemetryEvent } from '../office/types.js';
 import { vscode } from '../vscodeApi.js';
 import type { AgentDetailInfo } from '../components/AgentCard.js';
+
+const MAX_TELEMETRY_EVENTS = 200;
 
 export interface ExtensionMessageState {
   agents: string[];
@@ -13,6 +15,8 @@ export interface ExtensionMessageState {
   layoutReady: boolean;
   agentDetail: AgentDetailInfo | null;
   setAgentDetail: React.Dispatch<React.SetStateAction<AgentDetailInfo | null>>;
+  telemetryEvents: TelemetryEvent[];
+  clearTelemetry: () => void;
 }
 
 interface AgentInfo {
@@ -33,7 +37,10 @@ export function useExtensionMessages(
   const [rosterMembers, setRosterMembers] = useState<SquadTeamMember[]>([]);
   const [layoutReady, setLayoutReady] = useState(false);
   const [agentDetail, setAgentDetail] = useState<AgentDetailInfo | null>(null);
+  const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
   const bufferedAgentsRef = useRef<AgentInfo[]>([]);
+
+  const clearTelemetry = useCallback(() => setTelemetryEvents([]), []);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -243,6 +250,17 @@ export function useExtensionMessages(
           break;
         }
 
+        case 'telemetryEvent': {
+          const { event } = message;
+          if (event) {
+            setTelemetryEvents((prev) => {
+              const next = [...prev, event as TelemetryEvent];
+              return next.length > MAX_TELEMETRY_EVENTS ? next.slice(-MAX_TELEMETRY_EVENTS) : next;
+            });
+          }
+          break;
+        }
+
         default:
           break;
       }
@@ -263,5 +281,7 @@ export function useExtensionMessages(
     layoutReady,
     agentDetail,
     setAgentDetail,
+    telemetryEvents,
+    clearTelemetry,
   };
 }
