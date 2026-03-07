@@ -517,6 +517,8 @@ function getNonce(): string {
 /**
  * Runtime check that a layout object has the shape the webview expects.
  * Guards against stale cached layouts with the old rooms-based schema.
+ * Version 2 required — older layouts used blue-gray floor colors that
+ * were nearly invisible against the dark blue body background.
  */
 function isValidLayout(layout: unknown): layout is LayoutData {
   if (!layout || typeof layout !== 'object') return false;
@@ -525,7 +527,9 @@ function isValidLayout(layout: unknown): layout is LayoutData {
     typeof l.cols === 'number' &&
     typeof l.rows === 'number' &&
     Array.isArray(l.tiles) &&
-    Array.isArray(l.furniture)
+    Array.isArray(l.furniture) &&
+    typeof l.version === 'number' &&
+    l.version >= 2
   );
 }
 
@@ -537,8 +541,10 @@ function isValidLayout(layout: unknown): layout is LayoutData {
 function ensureTileColors(layout: LayoutData): void {
   if (layout.tileColors && Object.keys(layout.tileColors).length > 0) return;
 
-  const floorColor = { h: 210, s: 25, b: 0, c: 0 };
-  const wallColor  = { h: 30,  s: 15, b: -20, c: 0 };
+  // Warm tan for floors, dark brown for walls — clearly distinct
+  // from the dark blue webview background (#1a1a2e).
+  const floorColor = { h: 35, s: 40, b: 15, c: 0 };
+  const wallColor  = { h: 20, s: 30, b: -25, c: 0 };
   const colors: Record<string, { h: number; s: number; b: number; c: number }> = {};
 
   for (let r = 0; r < layout.rows; r++) {
@@ -583,9 +589,11 @@ function createMinimalLayout(): LayoutData {
     { uid: 'chair-4', type: 'chair', col: 10, row: 8, rotation: 0 },
   ];
 
-  // Populate tileColors so the renderer draws every tile
-  const floorColor = { h: 210, s: 25, b: 0, c: 0 };
-  const wallColor  = { h: 30,  s: 15, b: -20, c: 0 };
+  // Populate tileColors so the renderer draws every tile.
+  // Use warm tan/beige for floors (clearly distinct from the dark blue
+  // body background #1a1a2e) and dark brown for walls.
+  const floorColor = { h: 35, s: 40, b: 15, c: 0 };
+  const wallColor  = { h: 20, s: 30, b: -25, c: 0 };
   const tileColors: Record<string, { h: number; s: number; b: number; c: number }> = {};
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -595,7 +603,7 @@ function createMinimalLayout(): LayoutData {
   }
 
   return {
-    version: 1,
+    version: 2,
     cols,
     rows,
     tiles,

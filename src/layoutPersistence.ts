@@ -84,18 +84,24 @@ export function deletePersistedLayout(workspaceRoot: string): void {
 
 // ─── Migration ──────────────────────────────────────────────────────
 
-const CURRENT_LAYOUT_VERSION = 1;
+const CURRENT_LAYOUT_VERSION = 2;
 
 /**
  * Migrate older layout formats to the current version.
- * Currently a passthrough — bump the version when the schema changes.
+ * v1 → v2: Clear tileColors so ensureTileColors regenerates with warm
+ *           colors (v1 used blue-gray floor colors invisible against
+ *           the dark blue body background).
  */
 function migrateLayout(data: LayoutData): LayoutData {
   if (!data.version) {
-    data.version = CURRENT_LAYOUT_VERSION;
+    data.version = 1;
   }
-  // Future migrations go here:
-  // if (data.version < 2) { ... data.version = 2; }
+  if (data.version < 2) {
+    // Force tileColor regeneration — the extension's ensureTileColors()
+    // will fill in warm tan/brown colors instead of the old blue-gray.
+    delete data.tileColors;
+    data.version = 2;
+  }
   return data;
 }
 

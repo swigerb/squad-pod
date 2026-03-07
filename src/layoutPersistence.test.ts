@@ -21,7 +21,7 @@ describe('layoutPersistence', () => {
   });
 
   const sampleLayout: LayoutData = {
-    version: 1,
+    version: 2,
     cols: 10,
     rows: 8,
     tiles: Array(80).fill(1),
@@ -55,12 +55,13 @@ describe('layoutPersistence', () => {
     expect(readPersistedLayout(tmpDir)).toBeNull();
   });
 
-  it('adds version: 1 when reading a layout that has no version field', () => {
+  it('migrates version-less layouts to version 2 and strips stale tileColors', () => {
     const layoutNoVersion = {
       cols: 5,
       rows: 5,
       tiles: Array(25).fill(1),
       furniture: [],
+      tileColors: { '0,0': { h: 210, s: 25, b: 0, c: 0 } },
     };
 
     const dir = path.join(tmpDir, '.squad-pod');
@@ -73,6 +74,8 @@ describe('layoutPersistence', () => {
 
     const result = readPersistedLayout(tmpDir);
     expect(result).not.toBeNull();
-    expect(result!.version).toBe(1);
+    expect(result!.version).toBe(2);
+    // v1→v2 migration strips tileColors so ensureTileColors regenerates with warm colors
+    expect(result!.tileColors).toBeUndefined();
   });
 });
