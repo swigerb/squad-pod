@@ -139,13 +139,14 @@ export function OfficeCanvas({
         ctx.imageSmoothingEnabled = false;
 
         const tileColorsMap = officeState.layout.tileColors ? new Map(Object.entries(officeState.layout.tileColors)) : undefined;
+        const chars = Array.from(officeState.characters.values());
         renderFrame(
           ctx,
           cw,
           ch,
           officeState.tileMap,
           officeState.furniture,
-          Array.from(officeState.characters.values()),
+          chars,
           zoom,
           panRef.current!.x,
           panRef.current!.y,
@@ -159,6 +160,36 @@ export function OfficeCanvas({
           officeState.hoveredTile,
           officeState.seats
         );
+
+        // DIAGNOSTIC: Draw bright markers at character positions
+        // This bypasses all sprite/drawable logic — purely position-based
+        if (chars.length > 0) {
+          const px = panRef.current!.x;
+          const py = panRef.current!.y;
+          for (const c of chars) {
+            // Characters use col/row for tile position
+            const sx = px + c.col * 16 * zoom;
+            const sy = py + c.row * 16 * zoom;
+            // Large bright magenta circle
+            ctx.save();
+            ctx.fillStyle = '#FF00FF';
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            ctx.arc(sx + 8 * zoom, sy + 8 * zoom, 6 * zoom, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+        // Also draw a green indicator showing character count + debug info
+        ctx.save();
+        ctx.fillStyle = chars.length > 0 ? '#00FF00' : '#FF0000';
+        ctx.font = '14px monospace';
+        ctx.fillText(`chars: ${chars.length}  zoom: ${zoom}  dpr: ${dpr}  furn: ${officeState.furniture.length}  seats: ${officeState.seats.length}`, 10, 20);
+        if (chars.length > 0) {
+          const c0 = chars[0];
+          ctx.fillText(`[0] id=${c0.id} col=${c0.col} row=${c0.row} pal=${c0.palette}`, 10, 36);
+        }
+        ctx.restore();
       },
     });
 

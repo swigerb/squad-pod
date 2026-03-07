@@ -186,9 +186,14 @@ export function renderScene(
     }
 
     if (drawable.type === 'character') {
-      // Draw character sprites directly onto the main canvas, bypassing
-      // getCachedSprite's offscreen canvas.  This avoids any issues where
-      // the offscreen canvas drawImage fails silently.
+      // DIAGNOSTIC: Draw a solid bright rectangle at the drawable position
+      // to verify coordinates are valid, independent of sprite data.
+      ctx.save();
+      ctx.fillStyle = '#FF0000';
+      ctx.globalAlpha = 1.0;
+      ctx.fillRect(drawable.x, drawable.y, 16 * zoom, 24 * zoom);
+      ctx.restore();
+      // Also draw the sprite on top (should appear as colored pixels over the red bg)
       drawSpriteDirect(ctx, drawable.sprite, drawable.x, drawable.y, zoom);
     } else {
       const canvas = getCachedSprite(drawable.sprite, zoom);

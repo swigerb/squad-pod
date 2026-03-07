@@ -61,7 +61,9 @@ export function useExtensionMessages(
         }
 
         case 'agentCreated': {
-          const { id, name, role } = message;
+          const agent = message.agent;
+          if (!agent) break;
+          const { id, name, role } = agent;
           if (!agents.includes(id)) {
             setAgents((prev) => [...prev, id]);
             getOfficeState().addAgent(id, name, role);
@@ -70,7 +72,7 @@ export function useExtensionMessages(
         }
 
         case 'agentClosed': {
-          const { id } = message;
+          const id = message.agentId;
           setAgents((prev) => prev.filter((a) => a !== id));
           setAgentTools((prev) => {
             const next = { ...prev };
@@ -87,7 +89,8 @@ export function useExtensionMessages(
         }
 
         case 'agentStatus': {
-          const { id, status } = message;
+          const id = message.agentId;
+          const { status } = message;
           setAgentStatuses((prev) => ({ ...prev, [id]: status }));
           const officeState = getOfficeState();
           if (status === 'active') {
@@ -101,7 +104,9 @@ export function useExtensionMessages(
         }
 
         case 'agentToolStart': {
-          const { id, toolId, status } = message;
+          const id = message.agentId;
+          const toolId = message.tool ?? message.toolId;
+          const { status } = message;
           setAgentTools((prev) => {
             const tools = prev[id] || [];
             const existing = tools.find((t) => t.toolId === toolId);
@@ -118,7 +123,8 @@ export function useExtensionMessages(
         }
 
         case 'agentToolDone': {
-          const { id, toolId } = message;
+          const id = message.agentId;
+          const toolId = message.tool ?? message.toolId;
           setAgentTools((prev) => {
             const tools = prev[id] || [];
             const tool = tools.find((t) => t.toolId === toolId);
@@ -131,7 +137,7 @@ export function useExtensionMessages(
         }
 
         case 'agentToolsClear': {
-          const { id } = message;
+          const id = message.agentId;
           setAgentTools((prev) => {
             const next = { ...prev };
             delete next[id];
@@ -142,7 +148,7 @@ export function useExtensionMessages(
         }
 
         case 'agentToolPermission': {
-          const { id } = message;
+          const id = message.agentId;
           setAgentTools((prev) => {
             const tools = prev[id] || [];
             for (const tool of tools) {
@@ -157,7 +163,7 @@ export function useExtensionMessages(
         }
 
         case 'agentToolPermissionClear': {
-          const { id } = message;
+          const id = message.agentId;
           setAgentTools((prev) => {
             const tools = prev[id] || [];
             for (const tool of tools) {
@@ -171,7 +177,10 @@ export function useExtensionMessages(
 
         case 'existingAgents': {
           const { agents: existingAgents, agentMeta } = message;
-          if (!layoutReadyRef.current) {
+          // Check both the ref AND the officeState directly — the ref might
+          // be stale if React hasn't re-rendered since layoutLoaded was handled.
+          const layoutIsReady = layoutReadyRef.current || getOfficeState().layout.cols > 0;
+          if (!layoutIsReady) {
             bufferedAgentsRef.current = existingAgents;
           } else {
             const officeState = getOfficeState();
@@ -199,6 +208,10 @@ export function useExtensionMessages(
         case 'layoutLoaded': {
           const { layout } = message;
           setLayoutReady(true);
+          // Update ref immediately so subsequent message handlers in the same
+          // tick (e.g., existingAgents arriving right after) see the correct value.
+          // React's setState is async — the ref normally updates on re-render.
+          layoutReadyRef.current = true;
           const officeState = getOfficeState();
           officeState.rebuildFromLayout(layout, true);
           onLayoutLoaded?.(layout);
@@ -233,17 +246,17 @@ export function useExtensionMessages(
         }
 
         case 'floorTilesLoaded': {
-          const { sprites } = message;
+          const tiles = message.tiles ?? message.sprites;
           import('../office/floorTiles.js').then(({ setFloorSprites }) => {
-            setFloorSprites(sprites);
+            setFloorSprites(tiles);
           });
           break;
         }
 
         case 'wallTilesLoaded': {
-          const { sprites } = message;
+          const tiles = message.tiles ?? message.sprites;
           import('../office/wallTiles.js').then(({ setWallSprites }) => {
-            setWallSprites(sprites);
+            setWallSprites(tiles);
           });
           break;
         }
