@@ -185,16 +185,39 @@ export function renderScene(
       ctx.restore();
     }
 
-    const canvas = getCachedSprite(drawable.sprite, zoom);
-    ctx.drawImage(canvas, drawable.x, drawable.y);
-
-    // DEBUG: draw bright marker for character drawables
     if (drawable.type === 'character') {
-      ctx.save();
-      ctx.fillStyle = '#FF0000';
-      ctx.globalAlpha = 0.7;
-      ctx.fillRect(drawable.x, drawable.y, 16 * zoom, 24 * zoom);
-      ctx.restore();
+      // Draw character sprites directly onto the main canvas, bypassing
+      // getCachedSprite's offscreen canvas.  This avoids any issues where
+      // the offscreen canvas drawImage fails silently.
+      drawSpriteDirect(ctx, drawable.sprite, drawable.x, drawable.y, zoom);
+    } else {
+      const canvas = getCachedSprite(drawable.sprite, zoom);
+      ctx.drawImage(canvas, drawable.x, drawable.y);
+    }
+  }
+}
+
+/**
+ * Draw a sprite directly onto `ctx` pixel-by-pixel.
+ * This avoids the offscreen-canvas indirection of getCachedSprite,
+ * guaranteeing visible output if the sprite data has colors.
+ */
+function drawSpriteDirect(
+  ctx: CanvasRenderingContext2D,
+  sprite: SpriteData,
+  x: number,
+  y: number,
+  zoom: number
+): void {
+  const height = sprite.length;
+  const width = sprite[0]?.length ?? 0;
+  for (let sy = 0; sy < height; sy++) {
+    for (let sx = 0; sx < width; sx++) {
+      const color = sprite[sy][sx];
+      if (color && color !== '') {
+        ctx.fillStyle = color;
+        ctx.fillRect(x + sx * zoom, y + sy * zoom, zoom, zoom);
+      }
     }
   }
 }

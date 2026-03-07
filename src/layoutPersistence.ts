@@ -84,7 +84,7 @@ export function deletePersistedLayout(workspaceRoot: string): void {
 
 // ─── Migration ──────────────────────────────────────────────────────
 
-const CURRENT_LAYOUT_VERSION = 2;
+const _CURRENT_LAYOUT_VERSION = 2;
 
 /**
  * Migrate older layout formats to the current version.
