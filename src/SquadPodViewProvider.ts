@@ -259,6 +259,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       layout = createMinimalLayout();
     }
 
+    // Ensure tileColors is populated — layouts from older versions or
+    // external sources may omit it, causing the renderer to skip all tiles.
+    ensureTileColors(layout);
+
     // Always send layoutLoaded message
     this.postMessage({ type: 'layoutLoaded', layout });
   }
@@ -496,6 +500,29 @@ function isValidLayout(layout: unknown): layout is LayoutData {
     Array.isArray(l.tiles) &&
     Array.isArray(l.furniture)
   );
+}
+
+/**
+ * Ensure a layout has tileColors populated. Layouts from older versions,
+ * external tools, or the layout editor may omit tileColors entirely.
+ * Without tileColors, renderTileGrid skips every tile → blank blue screen.
+ */
+function ensureTileColors(layout: LayoutData): void {
+  if (layout.tileColors && Object.keys(layout.tileColors).length > 0) return;
+
+  const floorColor = { h: 210, s: 25, b: 0, c: 0 };
+  const wallColor  = { h: 30,  s: 15, b: -20, c: 0 };
+  const colors: Record<string, { h: number; s: number; b: number; c: number }> = {};
+
+  for (let r = 0; r < layout.rows; r++) {
+    for (let c = 0; c < layout.cols; c++) {
+      const index = r * layout.cols + c;
+      const tile = layout.tiles[index];
+      colors[`${c},${r}`] = tile === 0 ? { ...wallColor } : { ...floorColor };
+    }
+  }
+
+  layout.tileColors = colors;
 }
 
 /**

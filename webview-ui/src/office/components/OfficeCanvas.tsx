@@ -105,6 +105,10 @@ export function OfficeCanvas({
         }
       },
       render: () => {
+        // Scale the context so all drawing coordinates are in CSS pixels.
+        // Without this, DPR>1 displays render at wrong size/position.
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.imageSmoothingEnabled = false;
         renderFrame(
           ctx,
           canvas.width / dpr,
