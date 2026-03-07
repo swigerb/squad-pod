@@ -182,3 +182,27 @@ PlacedFurniture interface (types.ts):
 
 **Files Changed:** `tsconfig.json`, all 5 `src/*.test.ts` files
 
+### No-Workspace Handling (2026-03-07)
+
+**Problem:** When no workspace folder is open in VS Code, Squad Pod webview gets stuck showing "Loading office..." forever because the extension host returns early from `onWebviewReady()` without sending any message, leaving the webview waiting indefinitely for `layoutLoaded`.
+
+**Architecture Decisions:**
+- Added `noWorkspace` to `OutboundMessage` discriminated union in `src/types.ts`
+- Extension host now explicitly sends `{ type: 'noWorkspace' }` when `getWorkspaceRoot()` returns undefined in `onWebviewReady()`
+- Webview hook `useExtensionMessages` handles `noWorkspace` by setting both `noWorkspace: true` and `layoutReady: true` (so loading screen exits)
+- `App.tsx` shows a helpful message when `noWorkspace` is true instead of hanging on loading screen
+
+**Key File Changes:**
+- `src/types.ts` — Added `{ type: 'noWorkspace' }` to `OutboundMessage` union
+- `src/SquadPodViewProvider.ts` — `onWebviewReady()` sends `noWorkspace` message before returning when no workspace is open
+- `webview-ui/src/hooks/useExtensionMessages.ts` — Added `noWorkspace` state, handles `noWorkspace` message case
+- `webview-ui/src/App.tsx` — Added conditional render for `noWorkspace` state with helpful guidance message
+
+**User Experience:**
+- Before: Extension opens, shows "Loading office..." indefinitely when no folder open
+- After: Extension opens, shows clear message: "Open a folder to get started. Squad Pod needs a workspace to discover your AI team."
+
+**Pattern:** Discriminated union on message `type` field ensures type-safe exhaustive handling across extension-webview boundary. Always send a message when a condition changes, never silently return early.
+
+**Decision:** See `.squad/decisions.md` § 7 for full architectural rationale and pattern for future no-workspace-like conditions.
+

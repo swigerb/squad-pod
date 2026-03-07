@@ -307,6 +307,52 @@ The extension host code had no unit tests. Five core modules — teamParser, tim
 - **Lisa (Core Dev):** Established testing pattern for extension host
 - **All team members:** Can run tests locally and in CI/CD
 
+### 7. No-Workspace Handling — Explicit Communication Pattern
+
+**Decision Date:** 2026-03-07  
+**Author:** Lisa Simpson (Core Dev)  
+**Status:** Implemented
+
+#### Context
+
+When Squad Pod extension opens in VS Code without a workspace folder open, the webview would get stuck showing "Loading office..." forever. The extension host's `onWebviewReady()` handler would detect no workspace root and return early without sending any message, leaving the webview in an indefinite loading state.
+
+#### Problem
+
+Silent early returns in message handlers break the request-response contract between extension host and webview. The webview expected a `layoutLoaded` message to exit loading state, but never received it when no workspace was available.
+
+#### Decision
+
+**Always send a message when a condition changes, never silently return early.**
+
+1. Added `noWorkspace` to the `OutboundMessage` discriminated union in `src/types.ts`
+2. Extension host explicitly sends `{ type: 'noWorkspace' }` when `getWorkspaceRoot()` returns undefined
+3. Webview handles this message by setting both `noWorkspace: true` and `layoutReady: true`
+4. `App.tsx` renders a helpful message when `noWorkspace` is true instead of showing loading spinner
+
+#### Rationale
+
+- **Explicit over implicit:** Sending a message makes the no-workspace state observable in the message flow
+- **Type safety:** Discriminated union ensures all message types are exhaustively handled
+- **User experience:** Clear guidance ("Open a folder to get started") is better than indefinite spinner
+- **Debuggability:** Message appears in webview console, making the state transition visible
+
+#### Alternatives Considered
+
+1. **Show error notification and keep loading spinner** — Too passive, user might miss the notification
+2. **Auto-close webview when no workspace** — Bad UX, webview would disappear immediately on open
+3. **Poll for workspace changes** — Unnecessary complexity, VS Code already notifies on workspace changes
+
+#### Pattern for Future Work
+
+When an extension host handler detects a condition that prevents normal flow:
+1. Add a new message type to `OutboundMessage` describing the condition (e.g., `noWorkspace`, `invalidConfig`, `permissionDenied`)
+2. Send the message before returning
+3. Handle the message in `useExtensionMessages` hook
+4. Update `App.tsx` to render appropriate UI for the state
+
+This pattern applies to any situation where the extension cannot fulfill the webview's expectations.
+
 ## Governance
 
 - All meaningful changes require team consensus
