@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import type { OfficeState } from '../engine/officeState.js';
 import type { EditorState } from '../editor/editorState.js';
 import { EditTool, TileType } from '../types.js';
@@ -47,7 +47,6 @@ export function OfficeCanvas({
   const spaceKeyRef = useRef(false);
   const draggedFurnitureRef = useRef<{ uid: string; offsetCol: number; offsetRow: number } | null>(null);
   const hasCenteredRef = useRef(false);
-  const [debugInfo, setDebugInfo] = useState('waiting...');
   const frameCountRef = useRef(0);
 
   const screenToWorld = useCallback(
@@ -82,48 +81,19 @@ export function OfficeCanvas({
     if (!canvas || !container) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const rect = container.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
-
-    // DEBUG: Make canvas background visible to prove element is rendering
-    canvas.style.backgroundColor = '#330000';
-
-    console.error('[SquadPod] useEffect init:', {
-      dpr,
-      rectW: rect.width, rectH: rect.height,
-      canvasW: canvas.width, canvasH: canvas.height,
-      containerW: container.clientWidth, containerH: container.clientHeight,
-    });
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.error('[SquadPod] FATAL: canvas.getContext("2d") returned null!');
-      setDebugInfo('ERROR: No 2D context!');
-      return;
+    if (!ctx) return;
+
+    // Initial sizing — may be 0 if webview hasn't laid out yet; that's OK,
+    // the render callback re-checks every frame.
+    const rect = container.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
     }
-    ctx.imageSmoothingEnabled = false;
-
-    // DEBUG: Immediate draw test — draw directly before game loop starts
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(0, 0, 100, 100);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '14px monospace';
-    ctx.fillText('CANVAS OK', 10, 50);
-    console.error('[SquadPod] Drew immediate test rectangle');
-
-    const resizeObserver = new ResizeObserver(() => {
-      const newRect = container.getBoundingClientRect();
-      canvas.width = newRect.width * dpr;
-      canvas.height = newRect.height * dpr;
-      canvas.style.width = `${newRect.width}px`;
-      canvas.style.height = `${newRect.height}px`;
-      clampPan();
-    });
-    resizeObserver.observe(container);
 
     const cleanup = startGameLoop(canvas, {
       update: (deltaTime: number) => {
@@ -134,45 +104,45 @@ export function OfficeCanvas({
       render: () => {
         frameCountRef.current++;
 
-        // One-time auto-center: when layout first loads (cols > 0),
-        // position the map in the center of the viewport.
-        if (!hasCenteredRef.current && officeState.layout.cols > 0 && containerRef.current) {
-          const r = containerRef.current.getBoundingClientRect();
+        // Inline resize: check container dimensions every frame and resize
+        // canvas if needed.  This replaces the ResizeObserver which could
+        // clear the backing store AFTER rAF draw but BEFORE browser paint,
+        // producing an always-blank canvas.
+        const r = container.getBoundingClientRect();
+        const targetW = Math.round(r.width * dpr);
+        const targetH = Math.round(r.height * dpr);
+        if (targetW > 0 && targetH > 0 && (canvas.width !== targetW || canvas.height !== targetH)) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+          canvas.style.width = `${r.width}px`;
+          canvas.style.height = `${r.height}px`;
+          clampPan();
+        }
+
+        // Skip drawing if canvas has no area
+        const cw = canvas.width / dpr;
+        const ch = canvas.height / dpr;
+        if (cw <= 0 || ch <= 0) return;
+
+        // One-time auto-center when layout first loads
+        if (!hasCenteredRef.current && officeState.layout.cols > 0) {
           const mapW = officeState.layout.cols * TILE_SIZE * zoom;
           const mapH = officeState.layout.rows * TILE_SIZE * zoom;
-          panRef.current!.x = (r.width - mapW) / 2;
-          panRef.current!.y = (r.height - mapH) / 2;
+          panRef.current!.x = (cw - mapW) / 2;
+          panRef.current!.y = (ch - mapH) / 2;
           hasCenteredRef.current = true;
-          console.error('[SquadPod] Auto-centered map:', {
-            containerSize: `${r.width}x${r.height}`,
-            mapSize: `${mapW}x${mapH}`,
-            pan: `${panRef.current!.x},${panRef.current!.y}`,
-            cols: officeState.layout.cols,
-            rows: officeState.layout.rows,
-            tileMapRows: officeState.tileMap.length,
-            tileMapCols: officeState.tileMap[0]?.length ?? 0,
-            hasTileColors: !!officeState.layout.tileColors,
-            tileColorCount: officeState.layout.tileColors ? Object.keys(officeState.layout.tileColors).length : 0,
-            zoom,
-            dpr,
-          });
         }
 
-        // Update debug display every 60 frames
-        if (frameCountRef.current % 60 === 1) {
-          setDebugInfo(`f:${frameCountRef.current} cw:${canvas.width} ch:${canvas.height} dpr:${dpr} cols:${officeState.layout.cols} tc:${officeState.layout.tileColors ? Object.keys(officeState.layout.tileColors).length : 0} pan:${Math.round(panRef.current!.x)},${Math.round(panRef.current!.y)}`);
-        }
-
-        // Scale the context so all drawing coordinates are in CSS pixels.
-        // Without this, DPR>1 displays render at wrong size/position.
+        // DPR scaling — must come AFTER any canvas.width change (which
+        // resets the context transform to identity).
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.imageSmoothingEnabled = false;
 
         const tileColorsMap = officeState.layout.tileColors ? new Map(Object.entries(officeState.layout.tileColors)) : undefined;
         renderFrame(
           ctx,
-          canvas.width / dpr,
-          canvas.height / dpr,
+          cw,
+          ch,
           officeState.tileMap,
           officeState.furniture,
           Array.from(officeState.characters.values()),
@@ -192,10 +162,7 @@ export function OfficeCanvas({
       },
     });
 
-    return () => {
-      cleanup();
-      resizeObserver.disconnect();
-    };
+    return () => { cleanup(); };
   }, [officeState, isEditMode, editorState, zoom, panRef, clampPan]);
 
   const handleMouseDown = useCallback(
@@ -410,15 +377,6 @@ export function OfficeCanvas({
         onWheel={handleWheel}
         style={{ display: 'block' }}
       />
-      {/* DEBUG: Visible HTML overlay to show diagnostic info */}
-      <div style={{
-        position: 'absolute', top: 50, left: 4, zIndex: 9999,
-        background: 'rgba(0,0,0,0.85)', color: '#0f0', padding: '4px 8px',
-        fontSize: '11px', fontFamily: 'monospace', pointerEvents: 'none',
-        borderRadius: 4, maxWidth: '90%', wordBreak: 'break-all',
-      }}>
-        {debugInfo}
-      </div>
     </div>
   );
 }
