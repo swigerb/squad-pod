@@ -16,5 +16,5 @@
     "moduleResolution": "Node16"
   },
   "include": ["src"],
-  "exclude": ["node_modules", "webview-ui", "dist", "out", "scripts"]
+  "exclude": ["node_modules", "webview-ui", "dist", "out", "scripts", "src/**/*.test.ts"]
 }

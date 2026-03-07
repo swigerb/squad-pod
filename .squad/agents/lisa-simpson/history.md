@@ -164,3 +164,21 @@ PlacedFurniture interface (types.ts):
 - agentManager mocks both `./teamParser.js` and `./timerManager.js` to isolate unit behavior
 - `disposeAgentManager()` resets module-level state between tests
 
+### TypeScript Build Fix — Test File Exclusion (2026-07-24)
+
+**Problem:** `npm run build` failed with 211 TypeScript errors because `tsc --noEmit` was type-checking `*.test.ts` files that use vitest globals (`vi`, `describe`, `it`, `expect`) without type references.
+
+**Root Cause:** `tsconfig.json` included all of `src/` (including test files), but vitest's `globals: true` only injects types at runtime — TypeScript's compiler had no way to resolve them.
+
+**Fix Applied:**
+- Excluded `src/**/*.test.ts` from `tsconfig.json` so `tsc --noEmit` skips test files entirely
+- Added `/// <reference types="vitest/globals" />` triple-slash directive to each test file for IDE DX (so VS Code still resolves vitest types when editing tests)
+- Vitest handles its own TypeScript compilation via esbuild, so `npm test` is unaffected
+
+**Why This Approach:**
+- Option 1 (add `"types": ["vitest/globals"]` to tsconfig) would leak test-framework types into production code
+- Option 3 (shared `.d.ts` file) is equivalent to option 1 since the `.d.ts` would be included in tsconfig scope
+- Option 2 (exclude + triple-slash) keeps a clean type boundary: production code sees only production types, test files explicitly declare their vitest dependency
+
+**Files Changed:** `tsconfig.json`, all 5 `src/*.test.ts` files
+

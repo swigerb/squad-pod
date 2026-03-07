@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 import { parseSessionFile, parseLogEntry } from './squadWatcher.js';
 
 describe('parseSessionFile', () => {

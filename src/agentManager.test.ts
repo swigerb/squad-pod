@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 import type { SquadTeamMember } from './types.js';
 
 // Mock teamParser BEFORE importing agentManager

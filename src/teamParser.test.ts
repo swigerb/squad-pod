@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 import { parseTeamRoster, readTeamRoster } from './teamParser.js';
 
 const FULL_TEAM_MD = `# Squad Team
