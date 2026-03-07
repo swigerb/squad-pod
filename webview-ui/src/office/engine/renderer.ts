@@ -45,6 +45,9 @@ interface Drawable {
   outlineAlpha?: number;
 }
 
+let _tileGridLogged = false;
+let _renderFrameLogged = false;
+
 export function renderTileGrid(
   ctx: CanvasRenderingContext2D,
   tileMap: number[][],
@@ -55,6 +58,25 @@ export function renderTileGrid(
   cols: number
 ): void {
   const rows = tileMap.length;
+  if (!_tileGridLogged && rows > 0) {
+    _tileGridLogged = true;
+    let wallCount = 0, floorCount = 0, voidCount = 0, colorHits = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const t = tileMap[r]?.[c];
+        if (t === TileType.WALL) wallCount++;
+        else if (t === TileType.VOID) voidCount++;
+        else floorCount++;
+        if (tileColors.has(`${c},${r}`)) colorHits++;
+      }
+    }
+    console.log('[SquadPod] renderTileGrid:', {
+      rows, cols, offsetX, offsetY, zoom,
+      tileColorSize: tileColors.size,
+      wallCount, floorCount, voidCount, colorHits,
+      sampleKey: `0,0`, sampleColor: tileColors.get('0,0'),
+    });
+  }
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const tile = tileMap[row][col];
@@ -439,6 +461,17 @@ export function renderFrame(
   const cols = layoutCols ?? tileMap[0]?.length ?? 0;
   const rows = layoutRows ?? tileMap.length ?? 0;
 
+  if (!_renderFrameLogged && cols > 0) {
+    _renderFrameLogged = true;
+    console.log('[SquadPod] renderFrame:', {
+      canvasWidth, canvasHeight, panX, panY, zoom,
+      cols, rows,
+      tileMapLen: tileMap.length,
+      hasTileColors: !!tileColors,
+      tileColorSize: tileColors?.size ?? 0,
+    });
+  }
+
   // panX/panY are screen-space offsets — same coordinate system as AgentLabels.
   // No center offset: auto-centering is handled by initializing panRef.
   const offsetX = panX;
@@ -473,4 +506,14 @@ export function renderFrame(
   }
 
   renderBubbles(ctx, characters, offsetX, offsetY, zoom);
+
+  // Temporary diagnostic: draw a bright marker at top-left of canvas
+  // to verify the canvas is rendering. Remove once rendering is confirmed.
+  ctx.fillStyle = '#ff00ff';
+  ctx.fillRect(4, 4, 20, 20);
+  ctx.fillStyle = '#00ff00';
+  ctx.fillRect(28, 4, 20, 20);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px monospace';
+  ctx.fillText(`tiles:${cols}x${rows} tc:${tileColors?.size ?? 0}`, 4, 40);
 }

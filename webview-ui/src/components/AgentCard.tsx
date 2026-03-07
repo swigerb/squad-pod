@@ -50,10 +50,12 @@ export function AgentCard({ detail, position, onClose, onViewCharter }: AgentCar
 
   useEffect(() => {
     if (detail && position) {
-      document.addEventListener('click', handleClickOutside);
+      // Use mousedown instead of click to avoid the opening click
+      // immediately triggering the "click outside" close handler.
+      document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
       return () => {
-        document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener('mousedown', handleClickOutside);
         document.removeEventListener('keydown', handleEscape);
       };
     }

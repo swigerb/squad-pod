@@ -115,12 +115,27 @@ export function OfficeCanvas({
           panRef.current!.x = (r.width - mapW) / 2;
           panRef.current!.y = (r.height - mapH) / 2;
           hasCenteredRef.current = true;
+          console.log('[SquadPod] Auto-centered map:', {
+            containerSize: `${r.width}x${r.height}`,
+            mapSize: `${mapW}x${mapH}`,
+            pan: `${panRef.current!.x},${panRef.current!.y}`,
+            cols: officeState.layout.cols,
+            rows: officeState.layout.rows,
+            tileMapRows: officeState.tileMap.length,
+            tileMapCols: officeState.tileMap[0]?.length ?? 0,
+            hasTileColors: !!officeState.layout.tileColors,
+            tileColorCount: officeState.layout.tileColors ? Object.keys(officeState.layout.tileColors).length : 0,
+            zoom,
+            dpr,
+          });
         }
 
         // Scale the context so all drawing coordinates are in CSS pixels.
         // Without this, DPR>1 displays render at wrong size/position.
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.imageSmoothingEnabled = false;
+
+        const tileColorsMap = officeState.layout.tileColors ? new Map(Object.entries(officeState.layout.tileColors)) : undefined;
         renderFrame(
           ctx,
           canvas.width / dpr,
@@ -133,7 +148,7 @@ export function OfficeCanvas({
           panRef.current!.y,
           null,
           isEditMode ? { showGrid: true, showGhostBorder: false, ghostHoverCol: null, ghostHoverRow: null } : undefined,
-          officeState.layout.tileColors ? new Map(Object.entries(officeState.layout.tileColors)) : undefined,
+          tileColorsMap,
           officeState.layout.cols,
           officeState.layout.rows,
           officeState.selectedAgentId,
