@@ -211,9 +211,9 @@ export function useExtensionMessages(
         }
 
         case 'characterSpritesLoaded': {
-          const { characters } = message;
+          const { sprites } = message;
           import('../office/sprites/defaultCharacters.js').then(({ setCharacterTemplates }) => {
-            setCharacterTemplates(characters);
+            setCharacterTemplates(sprites);
           });
           break;
         }

@@ -176,6 +176,7 @@ let characterTemplates: CharacterSprites[] | null = null;
 
 export function setCharacterTemplates(templates: CharacterSprites[]): void {
   characterTemplates = templates;
+  generatedSpriteCache.clear();
 }
 
 function hueShiftColor(hex: string, hueShift: number): string {
@@ -241,12 +242,22 @@ function applyHueShift(sprite: SpriteData, hueShift: number): SpriteData {
   }));
 }
 
+// Cache for generated (fallback) character sprites — keyed by "palette:hueShift".
+// Without this, getCharacterSprites creates new arrays every frame, which means
+// getCachedSprite's WeakMap cache never hits and new offscreen canvases are
+// allocated every frame.
+const generatedSpriteCache = new Map<string, CharacterSprites>();
+
 export function getCharacterSprites(palette: number, hueShift: number): CharacterSprites {
   if (characterTemplates && characterTemplates[palette]) {
     const template = characterTemplates[palette];
     if (hueShift === 0) return template;
     
-    return {
+    const cacheKey = `t:${palette}:${hueShift}`;
+    const cached = generatedSpriteCache.get(cacheKey);
+    if (cached) return cached;
+    
+    const result: CharacterSprites = {
       walk: {
         [Direction.DOWN]: template.walk[Direction.DOWN].map(s => applyHueShift(s, hueShift)),
         [Direction.LEFT]: template.walk[Direction.LEFT].map(s => applyHueShift(s, hueShift)),
@@ -266,7 +277,13 @@ export function getCharacterSprites(palette: number, hueShift: number): Characte
         [Direction.UP]: template.reading[Direction.UP].map(s => applyHueShift(s, hueShift))
       }
     };
+    generatedSpriteCache.set(cacheKey, result);
+    return result;
   }
+  
+  const cacheKey = `p:${palette}:${hueShift}`;
+  const cached = generatedSpriteCache.get(cacheKey);
+  if (cached) return cached;
   
   const p = palettes[palette % palettes.length];
   
@@ -298,6 +315,7 @@ export function getCharacterSprites(palette: number, hueShift: number): Characte
     }
   };
   
+  generatedSpriteCache.set(cacheKey, sprites);
   return sprites;
 }
 

@@ -86,6 +86,8 @@ export function renderTileGrid(
   }
 }
 
+let _sceneLogCount = 0;
+
 export function renderScene(
   ctx: CanvasRenderingContext2D,
   furniture: FurnitureInstance[],
@@ -96,6 +98,15 @@ export function renderScene(
   selectedAgentId: string | null,
   hoveredAgentId: string | null
 ): void {
+  if (_sceneLogCount < 3) {
+    _sceneLogCount++;
+    console.log('[renderScene] furniture:', furniture.length, 'characters:', characters.length, 'offset:', offsetX, offsetY, 'zoom:', zoom);
+    for (const ch of characters) {
+      const sprites = getCharacterSprites(ch.palette, ch.hueShift);
+      const sprite = getCharacterSprite(ch, sprites);
+      console.log(`[renderScene] char "${ch.name}" col=${ch.col} row=${ch.row} state=${ch.state} palette=${ch.palette} spriteH=${sprite.length} spriteW=${sprite[0]?.length} firstPixel="${sprite[0]?.[0]}" hasColors=${sprite.some(r => r.some(c => c !== ''))}`);
+    }
+  }
   const drawables: Drawable[] = [];
 
   for (const furn of furniture) {
@@ -160,6 +171,15 @@ export function renderScene(
 
     const canvas = getCachedSprite(drawable.sprite, zoom);
     ctx.drawImage(canvas, drawable.x, drawable.y);
+
+    // DEBUG: draw bright marker for character drawables
+    if (drawable.type === 'character') {
+      ctx.save();
+      ctx.fillStyle = '#FF0000';
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(drawable.x, drawable.y, 16 * zoom, 24 * zoom);
+      ctx.restore();
+    }
   }
 }
 

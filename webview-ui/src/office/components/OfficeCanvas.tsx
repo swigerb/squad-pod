@@ -207,6 +207,7 @@ export function OfficeCanvas({
           onEditorTileAction?.(col, row);
         }
       } else {
+        console.log(`[click] screen=(${screenX.toFixed(0)},${screenY.toFixed(0)}) tile=(${col},${row}) chars=${officeState.characters.size} seats=${officeState.seats.length}`);
         let clickedAgentId: string | null = null;
         for (const [id, char] of officeState.characters) {
           const charScreenX = char.x * zoom + panRef.current!.x;
@@ -215,15 +216,23 @@ export function OfficeCanvas({
           const hitRight = charScreenX + CHARACTER_HIT_HALF_WIDTH * zoom;
           const hitTop = charScreenY - CHARACTER_HIT_HEIGHT * zoom;
           const hitBottom = charScreenY;
+          console.log(`[click] char "${char.name}" hitBox: [${hitLeft.toFixed(0)},${hitTop.toFixed(0)}]-[${hitRight.toFixed(0)},${hitBottom.toFixed(0)}] charPos=(${char.x},${char.y}) col=${char.col} row=${char.row}`);
           if (screenX >= hitLeft && screenX <= hitRight && screenY >= hitTop && screenY <= hitBottom) {
             clickedAgentId = id;
+            console.log(`[click] HIT character: ${id}`);
             break;
           }
+        }
+        
+        // If character was clicked directly, also trigger card (not just desk clicks)
+        if (clickedAgentId) {
+          onDeskClick?.(clickedAgentId, e.clientX, e.clientY);
         }
         
         // If no character sprite was clicked, check for desk/seat clicks
         if (!clickedAgentId) {
           let seatId = officeState.getSeatAtTile(col, row);
+          console.log(`[click] getSeatAtTile(${col},${row}) => ${seatId}`);
           
           // If no seat at exact tile, check adjacent tiles
           if (!seatId) {
@@ -233,13 +242,17 @@ export function OfficeCanvas({
             ];
             for (const [dc, dr] of adjacentOffsets) {
               seatId = officeState.getSeatAtTile(col + dc, row + dr);
-              if (seatId) break;
+              if (seatId) {
+                console.log(`[click] found seat at adjacent (${col + dc},${row + dr}): ${seatId}`);
+                break;
+              }
             }
           }
           
           // If a seat was found, check if it's occupied
           if (seatId) {
             const seat = officeState.seats.find(s => s.id === seatId);
+            console.log(`[click] seat occupant: ${seat?.occupant}`);
             if (seat?.occupant) {
               clickedAgentId = seat.occupant;
               onDeskClick?.(seat.occupant, e.clientX, e.clientY);
