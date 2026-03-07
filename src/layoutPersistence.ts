@@ -47,6 +47,10 @@ export function readPersistedLayout(workspaceRoot: string): LayoutData | null {
     }
     const content = fs.readFileSync(filePath, 'utf-8');
     const data = JSON.parse(content) as LayoutData;
+    // Validate that the layout has the expected shape (cols/rows/tiles)
+    if (typeof data.cols !== 'number' || typeof data.rows !== 'number' || !Array.isArray(data.tiles)) {
+      return null;
+    }
     return migrateLayout(data);
   } catch {
     return null;

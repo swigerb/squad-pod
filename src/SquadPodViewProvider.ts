@@ -243,7 +243,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     // Fall back to VS Code workspace state
     if (!layout) {
-      layout = this.context.workspaceState.get<LayoutData>(WORKSPACE_KEY_LAYOUT) ?? null;
+      const cached = this.context.workspaceState.get<LayoutData>(WORKSPACE_KEY_LAYOUT);
+      if (cached && isValidLayout(cached)) {
+        layout = cached;
+      }
     }
 
     // Fall back to bundled default
@@ -478,6 +481,21 @@ function getNonce(): string {
     nonce += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return nonce;
+}
+
+/**
+ * Runtime check that a layout object has the shape the webview expects.
+ * Guards against stale cached layouts with the old rooms-based schema.
+ */
+function isValidLayout(layout: unknown): layout is LayoutData {
+  if (!layout || typeof layout !== 'object') return false;
+  const l = layout as Record<string, unknown>;
+  return (
+    typeof l.cols === 'number' &&
+    typeof l.rows === 'number' &&
+    Array.isArray(l.tiles) &&
+    Array.isArray(l.furniture)
+  );
 }
 
 /**

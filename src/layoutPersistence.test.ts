@@ -22,9 +22,10 @@ describe('layoutPersistence', () => {
 
   const sampleLayout: LayoutData = {
     version: 1,
-    rooms: [{ id: 'room-1', x: 0, y: 0, width: 200, height: 150 }],
-    furniture: [{ id: 'desk-1', type: 'desk', x: 50, y: 50, roomId: 'room-1' }],
-    seats: [{ id: 'seat-1', x: 60, y: 55, direction: 'down', roomId: 'room-1' }],
+    cols: 10,
+    rows: 8,
+    tiles: Array(80).fill(1),
+    furniture: [{ uid: 'desk-1', type: 'desk', col: 3, row: 2, rotation: 0 }],
   };
 
   it('round-trips a layout through write then read', () => {
@@ -56,9 +57,10 @@ describe('layoutPersistence', () => {
 
   it('adds version: 1 when reading a layout that has no version field', () => {
     const layoutNoVersion = {
-      rooms: [{ id: 'r1', x: 0, y: 0, width: 100, height: 100 }],
+      cols: 5,
+      rows: 5,
+      tiles: Array(25).fill(1),
       furniture: [],
-      seats: [],
     };
 
     const dir = path.join(tmpDir, '.squad-pod');
