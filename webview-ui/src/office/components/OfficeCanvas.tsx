@@ -47,6 +47,8 @@ export function OfficeCanvas({
   const spaceKeyRef = useRef(false);
   const draggedFurnitureRef = useRef<{ uid: string; offsetCol: number; offsetRow: number } | null>(null);
   const hasCenteredRef = useRef(false);
+  const [debugInfo, setDebugInfo] = useState('waiting...');
+  const frameCountRef = useRef(0);
 
   const screenToWorld = useCallback(
     (screenX: number, screenY: number): { col: number; row: number } => {
@@ -86,8 +88,32 @@ export function OfficeCanvas({
     canvas.style.width = `${rect.width}px`;
     canvas.style.height = `${rect.height}px`;
 
-    const ctx = canvas.getContext('2d')!;
+    // DEBUG: Make canvas background visible to prove element is rendering
+    canvas.style.backgroundColor = '#330000';
+
+    console.error('[SquadPod] useEffect init:', {
+      dpr,
+      rectW: rect.width, rectH: rect.height,
+      canvasW: canvas.width, canvasH: canvas.height,
+      containerW: container.clientWidth, containerH: container.clientHeight,
+    });
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('[SquadPod] FATAL: canvas.getContext("2d") returned null!');
+      setDebugInfo('ERROR: No 2D context!');
+      return;
+    }
     ctx.imageSmoothingEnabled = false;
+
+    // DEBUG: Immediate draw test — draw directly before game loop starts
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(0, 0, 100, 100);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px monospace';
+    ctx.fillText('CANVAS OK', 10, 50);
+    console.error('[SquadPod] Drew immediate test rectangle');
 
     const resizeObserver = new ResizeObserver(() => {
       const newRect = container.getBoundingClientRect();
@@ -106,6 +132,8 @@ export function OfficeCanvas({
         }
       },
       render: () => {
+        frameCountRef.current++;
+
         // One-time auto-center: when layout first loads (cols > 0),
         // position the map in the center of the viewport.
         if (!hasCenteredRef.current && officeState.layout.cols > 0 && containerRef.current) {
@@ -115,7 +143,7 @@ export function OfficeCanvas({
           panRef.current!.x = (r.width - mapW) / 2;
           panRef.current!.y = (r.height - mapH) / 2;
           hasCenteredRef.current = true;
-          console.log('[SquadPod] Auto-centered map:', {
+          console.error('[SquadPod] Auto-centered map:', {
             containerSize: `${r.width}x${r.height}`,
             mapSize: `${mapW}x${mapH}`,
             pan: `${panRef.current!.x},${panRef.current!.y}`,
@@ -128,6 +156,11 @@ export function OfficeCanvas({
             zoom,
             dpr,
           });
+        }
+
+        // Update debug display every 60 frames
+        if (frameCountRef.current % 60 === 1) {
+          setDebugInfo(`f:${frameCountRef.current} cw:${canvas.width} ch:${canvas.height} dpr:${dpr} cols:${officeState.layout.cols} tc:${officeState.layout.tileColors ? Object.keys(officeState.layout.tileColors).length : 0} pan:${Math.round(panRef.current!.x)},${Math.round(panRef.current!.y)}`);
         }
 
         // Scale the context so all drawing coordinates are in CSS pixels.
@@ -377,6 +410,15 @@ export function OfficeCanvas({
         onWheel={handleWheel}
         style={{ display: 'block' }}
       />
+      {/* DEBUG: Visible HTML overlay to show diagnostic info */}
+      <div style={{
+        position: 'absolute', top: 50, left: 4, zIndex: 9999,
+        background: 'rgba(0,0,0,0.85)', color: '#0f0', padding: '4px 8px',
+        fontSize: '11px', fontFamily: 'monospace', pointerEvents: 'none',
+        borderRadius: 4, maxWidth: '90%', wordBreak: 'break-all',
+      }}>
+        {debugInfo}
+      </div>
     </div>
   );
 }
