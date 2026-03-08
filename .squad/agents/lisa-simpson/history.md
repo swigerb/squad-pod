@@ -327,6 +327,35 @@ Diagnosed and fixed the final rendering gap: while sprite assets (character PNGs
 - `FLOOR_1` → `floor_wood` | `FLOOR_2` → `floor_blue_diamond` | `FLOOR_3–7` → alternating
 - `WALL` → `wall_white_panel` (clipped to top 16px)
 
+### Asset Pipeline End-to-End Audit (2026-03-08)
+
+**Problem:** Despite three prior fix attempts (commits 3906f88, 5e6c42f, 74715a4), Brian still sees colored rectangles for tiles and inline sprites for characters instead of PNG artwork. Every previous fix addressed a real bug but none fixed the runtime rendering.
+
+**Root Cause Audit Findings:**
+The build output is correct (dist/assets/ has all PNGs, metadata JSONs, single Vite bundle). The extension host correctly generates webview URIs and sends `tilesetMetadataLoaded`, `tilesetAssetsLoaded`, and `characterAssetsLoaded` messages. The webview handlers exist and call the right assetLoader functions. Static imports (§17) ensure shared module state.
+
+**Three real bugs found:**
+
+1. **CORS vulnerability in `removeBackground()`** — Character sheet processing uses `canvas.getImageData()` which throws `SecurityError` when the canvas is tainted by a cross-origin image. In VS Code webviews, resources at `https://file+.vscode-resource.vscode-cdn.net/` are cross-origin relative to the `vscode-webview://` origin. The original code's try/catch around the entire `img.onload` handler meant that a CORS error in `getImageData()` prevented the character sheet from being registered AND prevented `assetsReady` from being set. **Fix:** Moved try/catch inside `removeBackground()` itself — on CORS error, returns the raw canvas (visible background but renders). Added `crossOrigin="anonymous"` to Image objects with automatic retry-without-CORS fallback.
+
+2. **Silent image load failures** — All three Image loaders (`setTilesetMetadata`, `setLegacyTilesetAssets`, `loadCharacterSheetsFromUris`) had only `console.warn` in `onerror`. With `crossOrigin="anonymous"` and some VS Code environments not sending CORS headers, the image could fail to load entirely (not just taint the canvas). **Fix:** Added automatic retry without `crossOrigin` in all three loaders. Added comprehensive `console.log`/`console.error` diagnostics throughout the pipeline (extension host and webview) so the exact failure point appears in VS Code Developer Tools.
+
+3. **`furnitureLoaded` vs `furnitureAssetsLoaded` message name mismatch** — Extension sends `{ type: 'furnitureLoaded' }` but the webview handler was `case 'furnitureAssetsLoaded'`. Dead code path (no furniture/ dir exists), but still a bug. **Fix:** Handler now matches both names.
+
+**Diagnostic Logging Added:**
+- Extension host: logs assetsDir path, webview URIs, file existence checks, message sends
+- Webview assetLoader: logs each stage with ✅/❌ indicators, image dimensions, assetsReady transitions
+- Webview renderer: one-time logs when PNG rendering first activates or falls back (no 60fps spam)
+- Webview renderer: one-time warning if `areAssetsReady()=true` but `drawTilesetTile()` returns false
+
+**Key Files Changed:**
+- `src/SquadPodViewProvider.ts` — Diagnostic logging in `loadAndSendCustomAssetUris()`
+- `webview-ui/src/office/sprites/assetLoader.ts` — CORS-safe `removeBackground()`, retry-without-CORS for all Image loaders, comprehensive logging
+- `webview-ui/src/office/engine/renderer.ts` — One-time diagnostic logs for PNG vs fallback rendering
+- `webview-ui/src/hooks/useExtensionMessages.ts` — Fixed `furnitureLoaded` handler name
+
+**Pattern:** When loading cross-origin images in a VS Code webview for canvas pixel manipulation, always: (1) try `crossOrigin="anonymous"` first, (2) have a retry-without-CORS fallback, (3) wrap `getImageData()` in try/catch with a graceful degradation path.
+
 **Key Learning:** Asset delivery is only half the battle — the renderer must actively draw from loaded assets. Just storing them in memory isn't enough.
 
 **Test Results:** All 124 tests pass, build clean.

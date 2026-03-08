@@ -265,6 +265,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     if (!webview) { return; }
 
     const assetsDir = path.join(this.context.extensionPath, 'dist', 'assets');
+    console.log('[SquadPod] loadAndSendCustomAssetUris — assetsDir:', assetsDir);
 
     // ── Tileset metadata (rich format) with legacy fallback ──────────
     const tilesetPngPath = path.join(assetsDir, 'tileset_office.png');
@@ -275,6 +276,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       const tilesetPngUri = webview
         .asWebviewUri(vscode.Uri.file(tilesetPngPath))
         .toString();
+      console.log('[SquadPod] tileset_office.png found, webviewUri:', tilesetPngUri.slice(0, 100));
 
       // Send rich metadata when available (for metadata-based rendering)
       if (fs.existsSync(metadataJsonPath)) {
@@ -282,15 +284,20 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
           const metadata: TilesetMetadata = JSON.parse(
             fs.readFileSync(metadataJsonPath, 'utf-8'),
           );
+          console.log('[SquadPod] Sending tilesetMetadataLoaded with', metadata.items?.length, 'items');
           this.postMessage({ type: 'tilesetMetadataLoaded', tilesetPngUri, metadata });
-        } catch {
-          // metadata JSON malformed — skip, legacy below still sent
+        } catch (e) {
+          console.error('[SquadPod] tileset-metadata.json parse error:', e);
         }
+      } else {
+        console.warn('[SquadPod] tileset-metadata.json not found at:', metadataJsonPath);
       }
 
       // Always send legacy tileset data (drawTilesetFurniture relies on
       // the tileset.json object names which differ from metadata item IDs)
       this.sendLegacyTilesetData(legacyJsonPath, tilesetPngUri);
+    } else {
+      console.error('[SquadPod] ❌ tileset_office.png NOT FOUND at:', tilesetPngPath);
     }
 
     // ── Custom character sprite sheets (char_employeeA–D.png) ────────
@@ -308,8 +315,13 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
             .toString(),
         }));
 
+        console.log('[SquadPod] Sending characterAssetsLoaded with', characters.length, 'sheets:', characters.map(c => c.id).join(', '));
         this.postMessage({ type: 'characterAssetsLoaded', characters });
+      } else {
+        console.warn('[SquadPod] No custom character PNGs found in:', charsDir);
       }
+    } else {
+      console.warn('[SquadPod] characters/ dir not found at:', charsDir);
     }
   }
 

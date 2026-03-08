@@ -145,6 +145,7 @@ export function getInteractables(): TilesetInteractable[] {
  * then loads the tileset PNG image in the browser.
  */
 export function setTilesetMetadata(metadata: TilesetMetadata, tilesetPngUri: string): void {
+  console.log('[assetLoader] setTilesetMetadata called with', metadata.items?.length, 'items, URI:', tilesetPngUri.slice(0, 80));
   tilesetMetadata = metadata;
   interactables = metadata.interactables ?? [];
 
@@ -160,15 +161,30 @@ export function setTilesetMetadata(metadata: TilesetMetadata, tilesetPngUri: str
       itemsByType.set(item.type, [item]);
     }
   }
+  console.log('[assetLoader] itemById has', itemById.size, 'entries; floor_wood?', itemById.has('floor_wood'), 'wall_white_panel?', itemById.has('wall_white_panel'));
 
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.onload = () => {
     tilesetMetadataImage = img;
     assetsReady = true;
-    console.log(`[assetLoader] Tileset metadata PNG loaded: ${img.width}×${img.height}`);
+    console.log(`[assetLoader] ✅ Tileset metadata PNG loaded: ${img.width}×${img.height}, assetsReady=true`);
   };
-  img.onerror = () => {
-    console.warn('[assetLoader] Failed to load tileset PNG for metadata:', tilesetPngUri);
+  img.onerror = (e) => {
+    console.error('[assetLoader] ❌ Failed to load tileset PNG for metadata:', tilesetPngUri, e);
+    // Retry without crossOrigin — some VS Code webview environments
+    // serve local files without CORS headers, causing crossOrigin
+    // loads to fail even though non-CORS loads succeed.
+    const retry = new Image();
+    retry.onload = () => {
+      tilesetMetadataImage = retry;
+      assetsReady = true;
+      console.log(`[assetLoader] ✅ Tileset metadata PNG loaded (retry, no CORS): ${retry.width}×${retry.height}`);
+    };
+    retry.onerror = (e2) => {
+      console.error('[assetLoader] ❌ Tileset PNG retry also failed:', e2);
+    };
+    retry.src = tilesetPngUri;
   };
   img.src = tilesetPngUri;
 }
@@ -186,7 +202,9 @@ export function setLegacyTilesetAssets(
   data: { tile_size?: number; objects: Record<string, TilesetObjectDef> },
   tilesetPngUri: string,
 ): void {
+  console.log('[assetLoader] setLegacyTilesetAssets called with', Object.keys(data.objects ?? {}).length, 'objects');
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.onload = () => {
     tilesetData = {
       image: img,
@@ -194,10 +212,25 @@ export function setLegacyTilesetAssets(
       tileSize: data.tile_size ?? TILE_SIZE,
     };
     assetsReady = true;
-    console.log(`[assetLoader] Legacy tileset PNG loaded: ${img.width}×${img.height}, ${Object.keys(data.objects ?? {}).length} objects`);
+    console.log(`[assetLoader] ✅ Legacy tileset PNG loaded: ${img.width}×${img.height}, ${Object.keys(data.objects ?? {}).length} objects, assetsReady=true`);
   };
-  img.onerror = () => {
-    console.warn('[assetLoader] Failed to load tileset PNG for legacy data:', tilesetPngUri);
+  img.onerror = (e) => {
+    console.error('[assetLoader] ❌ Failed to load legacy tileset PNG:', tilesetPngUri, e);
+    // Retry without crossOrigin
+    const retry = new Image();
+    retry.onload = () => {
+      tilesetData = {
+        image: retry,
+        objects: data.objects ?? {},
+        tileSize: data.tile_size ?? TILE_SIZE,
+      };
+      assetsReady = true;
+      console.log(`[assetLoader] ✅ Legacy tileset PNG loaded (retry, no CORS): ${retry.width}×${retry.height}`);
+    };
+    retry.onerror = (e2) => {
+      console.error('[assetLoader] ❌ Legacy tileset PNG retry also failed:', e2);
+    };
+    retry.src = tilesetPngUri;
   };
   img.src = tilesetPngUri;
 }
@@ -217,6 +250,11 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  * Remove the near-white background from a sprite sheet by making
  * matching pixels transparent.  Samples the top-left corner for
  * the reference colour.
+ *
+ * If `getImageData()` throws (e.g. cross-origin canvas taint in
+ * a VS Code webview), returns the canvas with the raw image drawn
+ * on it — the character will have a visible background, but at
+ * least it renders.
  */
 function removeBackground(img: HTMLImageElement, tolerance: number = 45): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
@@ -225,22 +263,29 @@ function removeBackground(img: HTMLImageElement, tolerance: number = 45): HTMLCa
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(img, 0, 0);
 
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const d = imageData.data;
+  try {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imageData.data;
 
-  // Reference background from top-left pixel
-  const bgR = d[0], bgG = d[1], bgB = d[2];
+    // Reference background from top-left pixel
+    const bgR = d[0], bgG = d[1], bgB = d[2];
 
-  for (let i = 0; i < d.length; i += 4) {
-    const dr = Math.abs(d[i] - bgR);
-    const dg = Math.abs(d[i + 1] - bgG);
-    const db = Math.abs(d[i + 2] - bgB);
-    if (dr + dg + db < tolerance) {
-      d[i + 3] = 0; // transparent
+    for (let i = 0; i < d.length; i += 4) {
+      const dr = Math.abs(d[i] - bgR);
+      const dg = Math.abs(d[i + 1] - bgG);
+      const db = Math.abs(d[i + 2] - bgB);
+      if (dr + dg + db < tolerance) {
+        d[i + 3] = 0; // transparent
+      }
     }
-  }
 
-  ctx.putImageData(imageData, 0, 0);
+    ctx.putImageData(imageData, 0, 0);
+  } catch (e) {
+    // Canvas tainted by cross-origin image (SecurityError).
+    // Return canvas with raw image — character has a background
+    // but at least renders instead of falling back to colored circles.
+    console.warn('[assetLoader] removeBackground failed (CORS?), using raw image:', e);
+  }
   return canvas;
 }
 
@@ -271,8 +316,7 @@ export function loadCharacterSheetsFromUris(
       continue;
     }
 
-    const img = new Image();
-    img.onload = () => {
+    const processImage = (img: HTMLImageElement, label: string) => {
       try {
         const processed = removeBackground(img);
 
@@ -295,14 +339,26 @@ export function loadCharacterSheetsFromUris(
           baseHeight,
         });
 
-        console.log(`[assetLoader] Character sheet "${key}" loaded: ${img.width}×${img.height}, ${framesPerRow}×${rows} frames, scale=${scale}`);
+        console.log(`[assetLoader] ✅ Character sheet "${key}" loaded (${label}): ${img.width}×${img.height}, ${framesPerRow}×${rows} frames, scale=${scale}`);
         assetsReady = true;
       } catch (e) {
-        console.warn(`[assetLoader] Error processing character sheet "${key}":`, e);
+        console.error(`[assetLoader] ❌ Error processing character sheet "${key}" (${label}):`, e);
       }
     };
+
+    // Try with crossOrigin first (enables removeBackground pixel access)
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => processImage(img, 'CORS');
     img.onerror = () => {
-      console.warn(`[assetLoader] Failed to load character sheet "${key}" from:`, uri);
+      // Retry without crossOrigin — image will load but canvas may be tainted
+      console.warn(`[assetLoader] Character sheet "${key}" CORS load failed, retrying without crossOrigin`);
+      const retry = new Image();
+      retry.onload = () => processImage(retry, 'no-CORS');
+      retry.onerror = (e) => {
+        console.error(`[assetLoader] ❌ Character sheet "${key}" failed to load entirely:`, uri.slice(0, 80), e);
+      };
+      retry.src = uri;
     };
     img.src = uri;
   }

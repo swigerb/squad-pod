@@ -256,6 +256,7 @@ export function useExtensionMessages(
           break;
         }
 
+        case 'furnitureLoaded':
         case 'furnitureAssetsLoaded': {
           const { catalog: _catalog, sprites: _sprites } = message;
           buildDynamicCatalog();

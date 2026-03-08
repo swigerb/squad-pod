@@ -55,6 +55,12 @@ interface Drawable {
   character?: Character;
 }
 
+// Track first-time diagnostic logging per render path (avoid 60fps spam)
+let _loggedPngReady = false;
+let _loggedPngFallback = false;
+let _loggedCharPng = false;
+let _loggedCharFallback = false;
+
 export function renderTileGrid(
   ctx: CanvasRenderingContext2D,
   tileMap: number[][],
@@ -67,6 +73,11 @@ export function renderTileGrid(
   const rows = tileMap.length;
   const pngReady = areAssetsReady();
 
+  if (pngReady && !_loggedPngReady) {
+    _loggedPngReady = true;
+    console.log('[renderer] ✅ areAssetsReady()=true — using tileset PNG for tile rendering');
+  }
+
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const tile = tileMap[row][col];
@@ -78,6 +89,12 @@ export function renderTileGrid(
       // Prefer tileset PNG tiles when loaded
       if (pngReady && drawTilesetTile(ctx, tile, x, y, zoom)) {
         continue;
+      }
+
+      // One-time diagnostic if PNG path is ready but drawTilesetTile returned false
+      if (pngReady && !_loggedPngFallback) {
+        _loggedPngFallback = true;
+        console.warn('[renderer] ⚠️ areAssetsReady()=true but drawTilesetTile returned false for tile type', tile, '— falling back to colored rendering');
       }
 
       // Fall back to colored rendering
@@ -208,7 +225,15 @@ export function renderScene(
         ctx, ch.palette, ch.direction, ch.frameIndex,
         drawable.x, drawable.y, zoom,
       );
+      if (pngDrawn && !_loggedCharPng) {
+        _loggedCharPng = true;
+        console.log('[renderer] ✅ Character drawn from PNG sprite sheet (palette', ch?.palette, ')');
+      }
       if (!pngDrawn) {
+        if (pngReady && !_loggedCharFallback) {
+          _loggedCharFallback = true;
+          console.warn('[renderer] ⚠️ areAssetsReady()=true but character PNG draw failed for palette', ch?.palette, '— using inline sprite');
+        }
         drawSpriteDirect(ctx, drawable.sprite, drawable.x, drawable.y, zoom);
       }
     } else {
