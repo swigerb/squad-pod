@@ -24,8 +24,8 @@ const DIRECTION_TO_ROW: Record<Direction, number> = {
   [Direction.LEFT]: 3,
 };
 
-/** Map palette index (0-5) to character sheet key (A-E). */
-const PALETTE_TO_SHEET: string[] = ['A', 'B', 'C', 'D', 'E', 'A'];
+/** Map palette index (0-1) to character sheet key (A-B). */
+const PALETTE_TO_SHEET: string[] = ['A', 'B'];
 const _loggedCharacterSheetIssues = new Set<string>();
 
 function logCharacterSheetIssueOnce(key: string, ...args: unknown[]): void {

@@ -479,7 +479,7 @@ export function loadAssets(): Promise<void> {
       };
 
       // Load all character sprite sheets in parallel
-      const charKeys = ['A', 'B', 'C', 'D', 'E'];
+      const charKeys = ['A', 'B'];
       const charImages = await Promise.all(
         charKeys.map(key =>
           loadImage(resolveUrl(`assets/characters/char_employee${key}.png`))

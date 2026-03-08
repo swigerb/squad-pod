@@ -24,7 +24,7 @@ export const CHARACTER_DIRECTIONS = ['down', 'up', 'right'] as const;
 export const CHAR_FRAME_W = 16;
 export const CHAR_FRAME_H = 32;
 export const CHAR_FRAMES_PER_ROW = 7;
-export const CHAR_COUNT = 6;
+export const CHAR_COUNT = 2;
 
 // ─── Custom Asset Sprites (4-direction character sheets) ────────────
 /**
