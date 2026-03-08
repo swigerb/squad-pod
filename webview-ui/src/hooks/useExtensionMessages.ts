@@ -324,14 +324,14 @@ export function useExtensionMessages(
         case 'characterAssetsLoaded': {
           const { characters } = message;
           if (characters && Array.isArray(characters)) {
-            console.log('[useExtensionMessages] characterAssetsLoaded received:', characters.length, 'sheets');
+            console.error('[SPRITE-DEBUG] characterAssetsLoaded received, count:', characters.length, 'ids:', characters.map((c: { id: string }) => c.id));
             loadCharacterSheetsFromUris(characters);
-            console.log('[useExtensionMessages] characterAssetsLoaded dispatched to assetLoader', getAssetLoadSnapshot());
+            console.error('[SPRITE-DEBUG] characterAssetsLoaded dispatched to assetLoader', getAssetLoadSnapshot());
             setTimeout(() => {
-              console.log('[useExtensionMessages] ⏱️ Asset check (3s after characterAssetsLoaded): areAssetsReady()=' + areAssetsReady(), getAssetLoadSnapshot());
+              console.error('[SPRITE-DEBUG] ⏱️ Asset check (3s after characterAssetsLoaded): areAssetsReady()=' + areAssetsReady(), getAssetLoadSnapshot());
             }, 3000);
           } else {
-            console.error('[useExtensionMessages] characterAssetsLoaded missing characters array');
+            console.error('[SPRITE-DEBUG] ❌ characterAssetsLoaded missing characters array, got:', typeof characters, message);
           }
           break;
         }

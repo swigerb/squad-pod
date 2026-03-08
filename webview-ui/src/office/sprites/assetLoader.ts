@@ -159,8 +159,15 @@ export function getTilesetData(): TilesetData | null {
   return tilesetData;
 }
 
+let _loggedCharacterSheetAccess = false;
+
 export function getCharacterSheet(key: string): CharacterSheetData | null {
-  return characterSheets.get(key) ?? null;
+  const sheet = characterSheets.get(key) ?? null;
+  if (!_loggedCharacterSheetAccess) {
+    _loggedCharacterSheetAccess = true;
+    console.error(`[SPRITE-DEBUG] getCharacterSheet("${key}") first access: found=${!!sheet}, map.size=${characterSheets.size}, keys=[${[...characterSheets.keys()]}]`);
+  }
+  return sheet;
 }
 
 /** Set the base URL for assets (e.g. from extension webview URI). */
@@ -377,14 +384,14 @@ function resolveUrl(relativePath: string): string {
 export function loadCharacterSheetsFromUris(
   characters: Array<{ id: string; uri: string }>
 ): void {
-  console.log('[assetLoader] loadCharacterSheetsFromUris called with', characters.length, 'sheets');
+  console.error('[SPRITE-DEBUG] loadCharacterSheetsFromUris called with', characters.length, 'sheets');
   characterSheets.clear();
   expectedCharacterSheetKeys.clear();
   loadedCharacterSheetKeys.clear();
   failedCharacterSheetKeys.clear();
 
   if (!Array.isArray(characters) || characters.length === 0) {
-    console.warn('[assetLoader] No character sheet URIs received');
+    console.error('[SPRITE-DEBUG] ❌ No character sheet URIs received');
     return;
   }
 
@@ -392,20 +399,24 @@ export function loadCharacterSheetsFromUris(
     // Extract sheet key: "char_employeeA" → "A"
     const key = id.replace(/^char_employee/, '');
     if (!key) {
-      console.warn('[assetLoader] Could not extract sheet key from id:', id);
+      console.error('[SPRITE-DEBUG] ❌ Could not extract sheet key from id:', id);
       continue;
     }
     expectedCharacterSheetKeys.add(key);
 
     if (!uri.startsWith('data:image/png;base64,')) {
       failedCharacterSheetKeys.add(key);
-      console.error(`[assetLoader] ❌ Character sheet "${key}" URI is not a PNG data URI`);
+      console.error(`[SPRITE-DEBUG] ❌ Sheet "${key}" URI is NOT a PNG data URI, starts with:`, uri.slice(0, 40));
       continue;
     }
 
+    console.error(`[SPRITE-DEBUG] Sheet "${key}" URI is valid data URI, length:`, uri.length);
+
     const processImage = (img: HTMLImageElement) => {
       try {
+        console.error(`[SPRITE-DEBUG] processImage called for "${key}": ${img.width}×${img.height}, complete=${img.complete}`);
         const processed = removeBackground(img);
+        console.error(`[SPRITE-DEBUG] removeBackground done for "${key}": canvas ${processed.width}×${processed.height}`);
 
         const rows = 4;
         const frameHeight = img.height / rows;
@@ -428,27 +439,42 @@ export function loadCharacterSheetsFromUris(
 
         loadedCharacterSheetKeys.add(key);
         failedCharacterSheetKeys.delete(key);
-        console.log(`[assetLoader] ✅ Character sheet "${key}" loaded: ${img.width}×${img.height}, ${framesPerRow}×${rows} frames, scale=${scale}`, getAssetLoadSnapshot());
+        console.error(`[SPRITE-DEBUG] ✅ Sheet "${key}" stored in characterSheets. Map size: ${characterSheets.size}, keys: [${[...characterSheets.keys()]}]`);
       } catch (e) {
         failedCharacterSheetKeys.add(key);
-        console.error(`[assetLoader] ❌ Error processing character sheet "${key}":`, e, getAssetLoadSnapshot());
+        console.error(`[SPRITE-DEBUG] ❌ processImage THREW for "${key}":`, e);
       }
     };
 
-    // No crossOrigin — avoids CORS failures in VS Code webviews.
-    // removeBackground() may fail to getImageData() on the tainted
-    // canvas, but its catch block falls back to the raw image drawn
-    // on the canvas (character visible with background, not circles).
     const img = new Image();
     trackImage(img);
-    img.onload = () => processImage(img);
+    img.onload = () => {
+      console.error(`[SPRITE-DEBUG] img.onload fired for "${key}": ${img.width}×${img.height}`);
+      processImage(img);
+    };
     img.onerror = (e) => {
       failedCharacterSheetKeys.add(key);
-      console.error(`[assetLoader] ❌ Character sheet "${key}" failed to load:`, uri.slice(0, 80), e, getAssetLoadSnapshot());
+      console.error(`[SPRITE-DEBUG] ❌ img.onerror fired for "${key}":`, uri.slice(0, 80), e);
     };
-    console.log(`[assetLoader] Starting character sheet "${key}" load`);
+    console.error(`[SPRITE-DEBUG] Setting img.src for "${key}" (${uri.length} chars)`);
     img.src = uri;
+
+    // For data URIs, browsers may decode synchronously. If already
+    // complete, process immediately — onload may have already fired
+    // or may never fire in some Electron versions.
+    if (img.complete && img.naturalWidth > 0 && !characterSheets.has(key)) {
+      console.error(`[SPRITE-DEBUG] img.complete=true for "${key}" (synchronous decode), processing immediately`);
+      processImage(img);
+    }
   }
+
+  // Health check: verify sheets actually load after async Image decode
+  setTimeout(() => {
+    console.error(`[SPRITE-DEBUG] ⏱️ Health check (2s): characterSheets.size=${characterSheets.size}, keys=[${[...characterSheets.keys()]}], expected=[${[...expectedCharacterSheetKeys]}], failed=[${[...failedCharacterSheetKeys]}]`);
+    if (characterSheets.size === 0 && expectedCharacterSheetKeys.size > 0) {
+      console.error('[SPRITE-DEBUG] ❌❌❌ CRITICAL: No character sheets loaded after 2s! Images may be silently failing.');
+    }
+  }, 2000);
 }
 
 // ── Public loader ─────────────────────────────────────────────────

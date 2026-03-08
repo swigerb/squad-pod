@@ -13,6 +13,10 @@ const copyAssetsPlugin = {
       const targetDir = path.join(__dirname, 'dist', 'assets');
       
       if (fs.existsSync(sourceDir)) {
+        // Clean target first so stale files from previous builds don't persist
+        if (fs.existsSync(targetDir)) {
+          fs.rmSync(targetDir, { recursive: true });
+        }
         fs.cpSync(sourceDir, targetDir, { recursive: true });
         console.log('✓ Copied webview assets to dist/assets');
       }

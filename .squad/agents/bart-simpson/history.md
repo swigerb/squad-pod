@@ -625,3 +625,22 @@ Fixed the EditorToolbar so all tile categories from tileset-metadata.json are vi
 - Added `createPlaceholderSprite()` utility for generating placeholder sprite data for metadata items.
 
 **Key pattern:** Tileset metadata items use their ID (e.g. 'vending_machine_soda') as the furniture type string, flowing through placement → hydration → rendering. The renderer cascade is: legacy tileset → metadata PNG → inline sprite.
+## Sprite Debug Session (2026-03-08)
+
+### Character Sprite Sheet Rendering Pipeline Audit
+
+Traced the full character sprite rendering pipeline end-to-end. Extension host reads PNGs, converts to base64 data URIs, sends characterAssetsLoaded message. Webview receives it, calls loadCharacterSheetsFromUris(). Asset loader creates Image objects with data URI src. Renderer checks hasCharacterSheetForPalette() every frame.
+
+**Bugs Found & Fixed:**
+
+- **Stale dist files**: dist/assets/characters/ had old C/D/E PNGs (63KB each) left from pre-replacement era. The esbuild copy plugin used cpSync without cleaning, so deleted source files persisted in dist. Extension sent 5 character sheets instead of 2. Fixed esbuild copy plugin to rmSync target before cpSync.
+
+- **Silent Image load failure**: Added img.complete synchronous check after setting img.src to data URI. Some Electron versions decode data URIs synchronously and the async onload handler may not fire.
+
+- **Added aggressive SPRITE-DEBUG console.error diagnostics** at every decision point in the pipeline (assetLoader, useExtensionMessages, renderer, characterSheetRenderer) to trace the exact failure point in runtime.
+
+**Key Learnings:**
+
+- Always clean build targets before copying. cpSync is additive, stale artifacts persist silently.
+- Data URI Image loading in VS Code webviews (Electron) can be unpredictable. Always add both async onload AND synchronous img.complete checks.
+- When a persistent bug evades code-level analysis, aggressive runtime diagnostics (console.error at every branch point) are the fastest path to root cause.

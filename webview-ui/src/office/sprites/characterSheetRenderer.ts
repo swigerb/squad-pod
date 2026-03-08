@@ -39,7 +39,9 @@ function getSheetKeyForPalette(palette: number): string {
 }
 
 export function hasCharacterSheetForPalette(palette: number): boolean {
-  return getCharacterSheet(getSheetKeyForPalette(palette)) !== null;
+  const key = getSheetKeyForPalette(palette);
+  const sheet = getCharacterSheet(key);
+  return sheet !== null;
 }
 
 /**
@@ -62,10 +64,11 @@ export function drawCharacterFromSheet(
   if (!sheet) {
     logCharacterSheetIssueOnce(
       `missing-sheet:${sheetKey}`,
-      '[characterSheetRenderer] PNG character sheet unavailable for palette',
+      '[SPRITE-DEBUG] drawCharacterFromSheet: NO sheet for palette',
       palette,
-      'expected sheet',
+      '→ key',
       sheetKey,
+      '(getCharacterSheet returned null)',
     );
     return false;
   }

@@ -240,15 +240,15 @@ export function renderScene(
       );
       if (pngDrawn && !_loggedCharPng) {
         _loggedCharPng = true;
-        console.log('[renderer] ✅ Character drawn from PNG sprite sheet (palette', ch?.palette, ')', getAssetLoadSnapshot());
+        console.error('[SPRITE-DEBUG] ✅ Character drawn from PNG sprite sheet (palette', ch?.palette, ')', getAssetLoadSnapshot());
       }
       if (!pngDrawn) {
         if (!characterAssetsReady && !_loggedCharWaiting) {
           _loggedCharWaiting = true;
-          console.log('[renderer] ⏳ Character PNG sheets not ready yet — using inline sprites', getAssetLoadSnapshot());
-        } else if (anyAssetsReady && !_loggedCharFallback) {
+          console.error('[SPRITE-DEBUG] ⏳ Character PNG sheets not ready — using inline sprites. characterAssetsReady=false', getAssetLoadSnapshot());
+        } else if (characterAssetsReady && !_loggedCharFallback) {
           _loggedCharFallback = true;
-          console.warn('[renderer] ⚠️ Character PNG draw failed for palette', ch?.palette, '— using inline sprite', getAssetLoadSnapshot());
+          console.error('[SPRITE-DEBUG] ⚠️ Character PNG draw FAILED for palette', ch?.palette, '— using inline sprite. hasSheet:', ch ? hasCharacterSheetForPalette(ch.palette) : 'N/A', getAssetLoadSnapshot());
         }
         drawSpriteDirect(ctx, drawable.sprite, drawable.x, drawable.y, zoom);
       }
