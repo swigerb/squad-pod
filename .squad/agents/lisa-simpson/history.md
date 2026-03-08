@@ -220,3 +220,21 @@ Established dual-build infrastructure (esbuild + Vite), TypeScript interfaces fo
 **Test Results:** All 124 tests pass, both builds clean.
 
 **Outcome:** ✅ SUCCESS — Sprite asset loading now fully functional via both metadata and legacy paths.
+
+### Character Asset Loading Webview Handler (2026-03-08)
+
+**Task:** Fix character asset loading in webview post-F5 refresh — characters render as colored rectangles instead of PNG sprites.
+
+**Problem:** Extension sends `characterAssetsLoaded` message with character sprite sheet URIs, but webview has no handler to ingest them.
+
+**Solution:**
+- `webview-ui/src/hooks/useExtensionMessages.ts` — Added `characterAssetsLoaded` case in message handler, calls `loadCharacterSheetsFromUris()`
+- `webview-ui/src/office/sprites/assetLoader.ts` — Implemented `loadCharacterSheetsFromUris(uri[])` to load PNG image objects from URIs and populate webview sprite cache
+
+**Key File Changes:**
+- `webview-ui/src/hooks/useExtensionMessages.ts` — Handle `characterAssetsLoaded` message
+- `webview-ui/src/office/sprites/assetLoader.ts` — New `loadCharacterSheetsFromUris()` function
+
+**Backward Compatibility:** Both legacy character sprite JSON decoding (pixel arrays) and new URI-based PNG loading paths coexist. Webview uses PNG assets when available, falls back to inline sprites.
+
+**Status:** In progress — Testing character rendering post-F5 refresh.
