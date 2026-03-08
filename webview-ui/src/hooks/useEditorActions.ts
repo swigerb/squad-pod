@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { EditorState } from '../office/editor/editorState.js';
-import { EditTool } from '../office/types.js';
-import type { TileType, FloorColor, OfficeLayout } from '../office/types.js';
+import { EditTool, TileType } from '../office/types.js';
+import type { FloorColor, OfficeLayout } from '../office/types.js';
 import { applyTilePaint, applyErase, applyFurniturePlace } from '../office/editor/editorActions.js';
 import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, UNDO_STACK_MAX_SIZE, MAX_COLS, MAX_ROWS } from '../constants.js';
 import { vscode } from '../vscodeApi.js';
@@ -32,15 +32,11 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   }, [getOfficeState]);
 
   const handleToggleEditMode = useCallback(() => {
-    if (isEditMode && isDirty()) {
-      const confirm = window.confirm('You have unsaved changes. Exit without saving?');
-      if (!confirm) return;
-    }
     setIsEditMode((prev) => !prev);
     if (!isEditMode) {
       pushUndo();
     }
-  }, [isEditMode, isDirty, pushUndo]);
+  }, [isEditMode, pushUndo]);
 
   const handleToolChange = useCallback((tool: EditTool) => {
     editorState.setTool(tool);
@@ -78,7 +74,18 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
           col,
           row,
           editorState.tileType,
-          editorState.tileType === 1 ? editorState.floorColor : editorState.wallColor
+          editorState.floorColor
+        );
+        officeState.rebuildFromLayout(newLayout);
+      } else if (editorState.tool === EditTool.WALL_PAINT) {
+        pushUndo();
+        const currentLayout = officeState.getLayout();
+        const newLayout = applyTilePaint(
+          currentLayout,
+          col,
+          row,
+          TileType.WALL,
+          editorState.wallColor
         );
         officeState.rebuildFromLayout(newLayout);
       } else if (editorState.tool === EditTool.FURNITURE_PLACE) {

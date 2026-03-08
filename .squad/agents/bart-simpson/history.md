@@ -18,6 +18,18 @@
 
 ## Learnings
 
+### Editor Bug Fixes: Exit Button + Floor Painting (2025-07-24)
+
+Fixed two bugs in the layout editor:
+
+**Bug 1 — "Exit Layout Editor" does nothing:** `window.confirm()` returns false immediately in VS Code webview sandbox (no `allow-modals`). Removed the confirm guard from `handleToggleEditMode`. Changes persist visually; user can Save or Reset explicitly.
+
+**Bug 2 — Floor tiles paint as colored rectangles:** The TILE_PAINT handler used `editorState.tileType === 1 ? floorColor : wallColor`, which only applied `floorColor` to FLOOR_1 pattern. Patterns 2-7 got `wallColor` (wrong HSB values), producing incorrect colorization. Fixed to always use `floorColor` for all floor patterns.
+
+**Bonus:** Added WALL_PAINT handler in `handleEditorTileAction` — it was routed through `onEditorTileAction` by OfficeCanvas but had no handler, so wall painting was silently broken.
+
+**Key lesson:** Never use `window.confirm()` or `window.alert()` in VS Code webviews — the sandbox blocks modal dialogs. Use VS Code message passing for confirmation flows.
+
 ### Webview Scaffold Ready (2026-03-05)
 
 Lisa Simpson completed project scaffold with full webview structure in place:
