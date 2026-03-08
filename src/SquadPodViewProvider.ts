@@ -260,6 +260,19 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
    * Assets are expected in `dist/assets/` (copied by the esbuild
    * copy-assets plugin from `webview-ui/public/assets/`).
    */
+  /**
+   * Convert a PNG file to a base64 data URI.
+   *
+   * Webview resource URIs (`vscode-resource:`) have been unreliable for
+   * `new Image()` loads — failures are silent (no onerror) and vary by
+   * VS Code version/platform.  Data URIs bypass the webview resource
+   * server entirely and are explicitly allowed by the CSP (`img-src data:`).
+   */
+  private pngToDataUri(filePath: string): string {
+    const buf = fs.readFileSync(filePath);
+    return `data:image/png;base64,${buf.toString('base64')}`;
+  }
+
   private loadAndSendCustomAssetUris(): void {
     const webview = this.view?.webview;
     if (!webview) { return; }
@@ -273,10 +286,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     const legacyJsonPath = path.join(assetsDir, 'tileset.json');
 
     if (fs.existsSync(tilesetPngPath)) {
-      const tilesetPngUri = webview
-        .asWebviewUri(vscode.Uri.file(tilesetPngPath))
-        .toString();
-      console.log('[SquadPod] tileset_office.png found, webviewUri:', tilesetPngUri.slice(0, 100));
+      const tilesetPngUri = this.pngToDataUri(tilesetPngPath);
+      console.log('[SquadPod] tileset_office.png → data URI (' + Math.round(tilesetPngUri.length / 1024) + ' KB)');
 
       // Send rich metadata when available (for metadata-based rendering)
       if (fs.existsSync(metadataJsonPath)) {
@@ -300,7 +311,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       console.error('[SquadPod] ❌ tileset_office.png NOT FOUND at:', tilesetPngPath);
     }
 
-    // ── Custom character sprite sheets (char_employeeA–D.png) ────────
+    // ── Custom character sprite sheets (char_employeeA–E.png) ────────
     const charsDir = path.join(assetsDir, 'characters');
     if (fs.existsSync(charsDir)) {
       const customCharFiles = fs.readdirSync(charsDir)
@@ -310,12 +321,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       if (customCharFiles.length > 0) {
         const characters: CharacterAssetEntry[] = customCharFiles.map(file => ({
           id: path.basename(file, '.png'),
-          uri: webview
-            .asWebviewUri(vscode.Uri.file(path.join(charsDir, file)))
-            .toString(),
+          uri: this.pngToDataUri(path.join(charsDir, file)),
         }));
 
-        console.log('[SquadPod] Sending characterAssetsLoaded with', characters.length, 'sheets:', characters.map(c => c.id).join(', '));
+        console.log('[SquadPod] Sending characterAssetsLoaded with', characters.length, 'sheets:', characters.map(c => c.id + ' (' + Math.round(c.uri.length / 1024) + ' KB)').join(', '));
         this.postMessage({ type: 'characterAssetsLoaded', characters });
       } else {
         console.warn('[SquadPod] No custom character PNGs found in:', charsDir);
