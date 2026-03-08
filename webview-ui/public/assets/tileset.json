@@ -3,17 +3,77 @@
   "tile_size": 16,
   "source": "assets/tileset_office.png",
   "objects": {
-    "work_desk_v1": { "x": 0, "y": 144, "w": 48, "h": 32 },
-    "work_desk_v2": { "x": 48, "y": 144, "w": 48, "h": 32 },
-    "computer_monitor": { "x": 64, "y": 128, "w": 16, "h": 16 },
-    "laptop_open": { "x": 16, "y": 848, "w": 16, "h": 16 },
-    "coffee_machine": { "x": 112, "y": 784, "w": 16, "h": 16 },
-    "vending_machine": { "x": 0, "y": 704, "w": 16, "h": 32 },
-    "water_dispenser": { "x": 48, "y": 704, "w": 16, "h": 32 },
-    "fridge": { "x": 16, "y": 704, "w": 16, "h": 32 },
-    "bookshelf_full": { "x": 112, "y": 912, "w": 16, "h": 32 },
-    "potted_plant": { "x": 0, "y": 576, "w": 16, "h": 32 },
-    "large_whiteboard": { "x": 48, "y": 512, "w": 32, "h": 32 },
-    "wall_clock": { "x": 16, "y": 416, "w": 16, "h": 16 }
+    "work_desk_v1": {
+      "x": 96,
+      "y": 0,
+      "w": 48,
+      "h": 32
+    },
+    "work_desk_v2": {
+      "x": 144,
+      "y": 0,
+      "w": 48,
+      "h": 32
+    },
+    "large_whiteboard": {
+      "x": 224,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "vending_machine": {
+      "x": 16,
+      "y": 32,
+      "w": 16,
+      "h": 32
+    },
+    "water_dispenser": {
+      "x": 48,
+      "y": 32,
+      "w": 16,
+      "h": 32
+    },
+    "fridge": {
+      "x": 64,
+      "y": 32,
+      "w": 16,
+      "h": 32
+    },
+    "bookshelf_full": {
+      "x": 80,
+      "y": 32,
+      "w": 16,
+      "h": 32
+    },
+    "potted_plant": {
+      "x": 96,
+      "y": 32,
+      "w": 16,
+      "h": 32
+    },
+    "computer_monitor": {
+      "x": 96,
+      "y": 64,
+      "w": 16,
+      "h": 16
+    },
+    "laptop_open": {
+      "x": 112,
+      "y": 64,
+      "w": 16,
+      "h": 16
+    },
+    "coffee_machine": {
+      "x": 128,
+      "y": 64,
+      "w": 16,
+      "h": 16
+    },
+    "wall_clock": {
+      "x": 144,
+      "y": 64,
+      "w": 16,
+      "h": 16
+    }
   }
 }

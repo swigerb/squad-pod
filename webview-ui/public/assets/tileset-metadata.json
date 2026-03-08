@@ -3,32 +3,199 @@
   "tile_size": 16,
   "asset_source": "assets/tileset_office.png",
   "items": [
-    { "id": "floor_wood", "type": "floor", "bounds": { "x": 128, "y": 0, "width": 16, "height": 16 } },
-    { "id": "floor_blue_diamond", "type": "floor", "bounds": { "x": 160, "y": 16, "width": 16, "height": 16 } },
-    { "id": "wall_white_panel", "type": "wall", "bounds": { "x": 0, "y": 80, "width": 16, "height": 32 } },
-    
-    { "id": "desk_work_monitor", "type": "furniture", "bounds": { "x": 176, "y": 128, "width": 48, "height": 32 } },
-    { "id": "desk_small_coffee", "type": "furniture", "bounds": { "x": 352, "y": 144, "width": 48, "height": 32 } },
-    { "id": "chair_office_grey", "type": "furniture", "bounds": { "x": 192, "y": 336, "width": 16, "height": 16 } },
-    { "id": "sofa_mauve_center", "type": "furniture", "bounds": { "x": 224, "y": 336, "width": 32, "height": 16 } },
-    
-    { "id": "pc_monitor_on", "type": "electronics", "bounds": { "x": 256, "y": 816, "width": 16, "height": 16 } },
-    { "id": "laptop_silver_side", "type": "electronics", "bounds": { "x": 144, "y": 864, "width": 16, "height": 16 } },
-    { "id": "printer_tray_open", "type": "electronics", "bounds": { "x": 304, "y": 864, "width": 16, "height": 16 } },
-    
-    { "id": "vending_machine_soda", "type": "appliance", "bounds": { "x": 0, "y": 704, "width": 16, "height": 32 } },
-    { "id": "fridge_double_door", "type": "appliance", "bounds": { "x": 64, "y": 704, "width": 32, "height": 32 } },
-    { "id": "coffee_maker_carafe", "type": "appliance", "bounds": { "x": 368, "y": 768, "width": 16, "height": 16 } },
-    { "id": "microwave_digital", "type": "appliance", "bounds": { "x": 0, "y": 640, "width": 16, "height": 16 } },
-    
-    { "id": "whiteboard_charts", "type": "decoration", "bounds": { "x": 240, "y": 512, "width": 32, "height": 16 } },
-    { "id": "painting_mountain", "type": "decoration", "bounds": { "x": 0, "y": 448, "width": 32, "height": 16 } },
-    { "id": "clock_red_frame", "type": "decoration", "bounds": { "x": 112, "y": 400, "width": 16, "height": 16 } },
-    { "id": "box_cardboard_stacked", "type": "decoration", "bounds": { "x": 0, "y": 912, "width": 16, "height": 32 } }
+    {
+      "id": "desk_work_monitor",
+      "type": "furniture",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 48,
+        "height": 32
+      }
+    },
+    {
+      "id": "desk_small_coffee",
+      "type": "furniture",
+      "bounds": {
+        "x": 48,
+        "y": 0,
+        "width": 48,
+        "height": 32
+      }
+    },
+    {
+      "id": "fridge_double_door",
+      "type": "appliance",
+      "bounds": {
+        "x": 192,
+        "y": 0,
+        "width": 32,
+        "height": 32
+      }
+    },
+    {
+      "id": "wall_white_panel",
+      "type": "wall",
+      "bounds": {
+        "x": 0,
+        "y": 32,
+        "width": 16,
+        "height": 32
+      }
+    },
+    {
+      "id": "vending_machine_soda",
+      "type": "appliance",
+      "bounds": {
+        "x": 16,
+        "y": 32,
+        "width": 16,
+        "height": 32
+      }
+    },
+    {
+      "id": "box_cardboard_stacked",
+      "type": "decoration",
+      "bounds": {
+        "x": 32,
+        "y": 32,
+        "width": 16,
+        "height": 32
+      }
+    },
+    {
+      "id": "sofa_mauve_center",
+      "type": "furniture",
+      "bounds": {
+        "x": 112,
+        "y": 32,
+        "width": 32,
+        "height": 16
+      }
+    },
+    {
+      "id": "whiteboard_charts",
+      "type": "decoration",
+      "bounds": {
+        "x": 144,
+        "y": 32,
+        "width": 32,
+        "height": 16
+      }
+    },
+    {
+      "id": "painting_mountain",
+      "type": "decoration",
+      "bounds": {
+        "x": 176,
+        "y": 32,
+        "width": 32,
+        "height": 16
+      }
+    },
+    {
+      "id": "floor_wood",
+      "type": "floor",
+      "bounds": {
+        "x": 208,
+        "y": 32,
+        "width": 16,
+        "height": 16
+      }
+    },
+    {
+      "id": "floor_blue_diamond",
+      "type": "floor",
+      "bounds": {
+        "x": 224,
+        "y": 32,
+        "width": 16,
+        "height": 16
+      }
+    },
+    {
+      "id": "chair_office_grey",
+      "type": "furniture",
+      "bounds": {
+        "x": 240,
+        "y": 32,
+        "width": 16,
+        "height": 16
+      }
+    },
+    {
+      "id": "pc_monitor_on",
+      "type": "electronics",
+      "bounds": {
+        "x": 0,
+        "y": 64,
+        "width": 16,
+        "height": 16
+      }
+    },
+    {
+      "id": "laptop_silver_side",
+      "type": "electronics",
+      "bounds": {
+        "x": 16,
+        "y": 64,
+        "width": 16,
+        "height": 16
+      }
+    },
+    {
+      "id": "printer_tray_open",
+      "type": "electronics",
+      "bounds": {
+        "x": 32,
+        "y": 64,
+        "width": 16,
+        "height": 16
+      }
+    },
+    {
+      "id": "coffee_maker_carafe",
+      "type": "appliance",
+      "bounds": {
+        "x": 48,
+        "y": 64,
+        "width": 16,
+        "height": 16
+      }
+    },
+    {
+      "id": "microwave_digital",
+      "type": "appliance",
+      "bounds": {
+        "x": 64,
+        "y": 64,
+        "width": 16,
+        "height": 16
+      }
+    },
+    {
+      "id": "clock_red_frame",
+      "type": "decoration",
+      "bounds": {
+        "x": 80,
+        "y": 64,
+        "width": 16,
+        "height": 16
+      }
+    }
   ],
   "interactables": [
-    { "item_id": "vending_machine_soda", "action": "dispense_drink" },
-    { "item_id": "coffee_maker_carafe", "action": "brew_coffee" },
-    { "item_id": "pc_monitor_on", "action": "use_computer" }
+    {
+      "item_id": "vending_machine_soda",
+      "action": "dispense_drink"
+    },
+    {
+      "item_id": "coffee_maker_carafe",
+      "action": "brew_coffee"
+    },
+    {
+      "item_id": "pc_monitor_on",
+      "action": "use_computer"
+    }
   ]
 }
