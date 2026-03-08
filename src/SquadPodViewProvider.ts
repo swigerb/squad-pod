@@ -157,6 +157,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     if (!webview) {return;}
 
     const workspaceRoot = this.getWorkspaceRoot();
+    console.log('[SquadPod] webviewReady received; workspaceRoot=', workspaceRoot ?? '<none>');
     if (!workspaceRoot) {
       this.postMessage({ type: 'noWorkspace' });
       return;
@@ -196,6 +197,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.loadAndSendAssets();
 
     // 4. Send custom asset URIs (tileset + character PNGs for browser-side loading)
+    console.log('[SquadPod] Starting custom asset URI send');
     this.loadAndSendCustomAssetUris();
 
     // 5. Load and send layout
@@ -270,6 +272,14 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
    */
   private pngToDataUri(filePath: string): string {
     const buf = fs.readFileSync(filePath);
+    if (buf.length < 8) {
+      throw new Error(`PNG file is too small to be valid: ${filePath}`);
+    }
+    const pngSignature = [0x89, 0x50, 0x4E, 0x47];
+    const hasPngSignature = pngSignature.every((byte, index) => buf[index] === byte);
+    if (!hasPngSignature) {
+      throw new Error(`File is not a valid PNG: ${filePath}`);
+    }
     return `data:image/png;base64,${buf.toString('base64')}`;
   }
 
@@ -286,27 +296,36 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     const legacyJsonPath = path.join(assetsDir, 'tileset.json');
 
     if (fs.existsSync(tilesetPngPath)) {
-      const tilesetPngUri = this.pngToDataUri(tilesetPngPath);
-      console.log('[SquadPod] tileset_office.png → data URI (' + Math.round(tilesetPngUri.length / 1024) + ' KB)');
-
-      // Send rich metadata when available (for metadata-based rendering)
-      if (fs.existsSync(metadataJsonPath)) {
-        try {
-          const metadata: TilesetMetadata = JSON.parse(
-            fs.readFileSync(metadataJsonPath, 'utf-8'),
-          );
-          console.log('[SquadPod] Sending tilesetMetadataLoaded with', metadata.items?.length, 'items');
-          this.postMessage({ type: 'tilesetMetadataLoaded', tilesetPngUri, metadata });
-        } catch (e) {
-          console.error('[SquadPod] tileset-metadata.json parse error:', e);
-        }
-      } else {
-        console.warn('[SquadPod] tileset-metadata.json not found at:', metadataJsonPath);
+      let tilesetPngUri = '';
+      try {
+        tilesetPngUri = this.pngToDataUri(tilesetPngPath);
+        console.log('[SquadPod] tileset_office.png → data URI (' + Math.round(tilesetPngUri.length / 1024) + ' KB)');
+      } catch (e) {
+        console.error('[SquadPod] ❌ Failed to convert tileset_office.png to data URI:', e);
       }
 
-      // Always send legacy tileset data (drawTilesetFurniture relies on
-      // the tileset.json object names which differ from metadata item IDs)
-      this.sendLegacyTilesetData(legacyJsonPath, tilesetPngUri);
+      if (tilesetPngUri) {
+        // Send rich metadata when available (for metadata-based rendering)
+        if (fs.existsSync(metadataJsonPath)) {
+          try {
+            const metadata: TilesetMetadata = JSON.parse(
+              fs.readFileSync(metadataJsonPath, 'utf-8'),
+            );
+            console.log('[SquadPod] Sending tilesetMetadataLoaded with', metadata.items?.length, 'items');
+            this.postMessage({ type: 'tilesetMetadataLoaded', tilesetPngUri, metadata });
+          } catch (e) {
+            console.error('[SquadPod] tileset-metadata.json parse error:', e);
+          }
+        } else {
+          console.warn('[SquadPod] tileset-metadata.json not found at:', metadataJsonPath);
+        }
+
+        // Always send legacy tileset data (drawTilesetFurniture relies on
+        // the tileset.json object names which differ from metadata item IDs)
+        this.sendLegacyTilesetData(legacyJsonPath, tilesetPngUri);
+      } else {
+        console.error('[SquadPod] Skipping tileset asset messages because tileset_office.png could not be converted');
+      }
     } else {
       console.error('[SquadPod] ❌ tileset_office.png NOT FOUND at:', tilesetPngPath);
     }
@@ -319,13 +338,27 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         .sort();
 
       if (customCharFiles.length > 0) {
-        const characters: CharacterAssetEntry[] = customCharFiles.map(file => ({
-          id: path.basename(file, '.png'),
-          uri: this.pngToDataUri(path.join(charsDir, file)),
-        }));
+        const characters: CharacterAssetEntry[] = [];
+        for (const file of customCharFiles) {
+          const filePath = path.join(charsDir, file);
+          try {
+            const uri = this.pngToDataUri(filePath);
+            characters.push({
+              id: path.basename(file, '.png'),
+              uri,
+            });
+            console.log('[SquadPod] Prepared character asset', file, '(' + Math.round(uri.length / 1024) + ' KB)');
+          } catch (e) {
+            console.error('[SquadPod] ❌ Failed to convert character PNG to data URI:', filePath, e);
+          }
+        }
 
         console.log('[SquadPod] Sending characterAssetsLoaded with', characters.length, 'sheets:', characters.map(c => c.id + ' (' + Math.round(c.uri.length / 1024) + ' KB)').join(', '));
-        this.postMessage({ type: 'characterAssetsLoaded', characters });
+        if (characters.length > 0) {
+          this.postMessage({ type: 'characterAssetsLoaded', characters });
+        } else {
+          console.warn('[SquadPod] characterAssetsLoaded skipped because no PNGs converted successfully');
+        }
       } else {
         console.warn('[SquadPod] No custom character PNGs found in:', charsDir);
       }
@@ -341,9 +374,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       const tilesetData: TilesetData = JSON.parse(
         fs.readFileSync(jsonPath, 'utf-8'),
       );
+      console.log('[SquadPod] Sending tilesetAssetsLoaded with', Object.keys(tilesetData.objects ?? {}).length, 'objects');
       this.postMessage({ type: 'tilesetAssetsLoaded', tilesetPngUri, tilesetData });
-    } catch {
-      // legacy tileset.json malformed — skip silently
+    } catch (e) {
+      console.error('[SquadPod] ❌ Failed to parse tileset.json:', e);
     }
   }
 
@@ -621,7 +655,18 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   }
 
   private postMessage(message: OutboundMessage): void {
-    this.view?.webview?.postMessage(message);
+    const result = this.view?.webview?.postMessage(message);
+    if (
+      message.type === 'tilesetMetadataLoaded' ||
+      message.type === 'tilesetAssetsLoaded' ||
+      message.type === 'characterAssetsLoaded'
+    ) {
+      console.log('[SquadPod] postMessage queued:', message.type);
+      void result?.then(
+        (delivered) => console.log('[SquadPod] postMessage result:', message.type, 'delivered=', delivered),
+        (error) => console.error('[SquadPod] postMessage failed:', message.type, error),
+      );
+    }
   }
 
   private emitTelemetry(
@@ -689,7 +734,7 @@ function getNonce(): string {
  * were nearly invisible against the dark blue body background.
  */
 function isValidLayout(layout: unknown): layout is LayoutData {
-  if (!layout || typeof layout !== 'object') return false;
+  if (!layout || typeof layout !== 'object') { return false; }
   const l = layout as Record<string, unknown>;
   return (
     typeof l.cols === 'number' &&
@@ -707,7 +752,7 @@ function isValidLayout(layout: unknown): layout is LayoutData {
  * Without tileColors, renderTileGrid skips every tile → blank blue screen.
  */
 function ensureTileColors(layout: LayoutData): void {
-  if (layout.tileColors && Object.keys(layout.tileColors).length > 0) return;
+  if (layout.tileColors && Object.keys(layout.tileColors).length > 0) { return; }
 
   // Warm tan for floors, dark brown for walls — clearly distinct
   // from the dark blue webview background (#1a1a2e).

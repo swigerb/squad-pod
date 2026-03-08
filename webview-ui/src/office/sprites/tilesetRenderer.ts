@@ -19,6 +19,14 @@ import {
 import type { TilesetItem } from './assetLoader.js';
 import { FurnitureType, TileType, TILE_SIZE } from '../types.js';
 
+const _loggedTilesetIssues = new Set<string>();
+
+function logTilesetIssueOnce(key: string, ...args: unknown[]): void {
+  if (_loggedTilesetIssues.has(key)) return;
+  _loggedTilesetIssues.add(key);
+  console.warn(...args);
+}
+
 // ── Legacy FurnitureType → tileset.json name mapping ──────────────
 
 const furnitureToTileset: Record<string, string> = {
@@ -48,10 +56,16 @@ export function drawMetadataItem(
   zoom: number,
 ): boolean {
   const image = getTilesetMetadataImage();
-  if (!image) return false;
+  if (!image) {
+    logTilesetIssueOnce(`metadata-image:${itemId}`, '[tilesetRenderer] Metadata image not ready for item', itemId);
+    return false;
+  }
 
   const item = getItemById(itemId);
-  if (!item) return false;
+  if (!item) {
+    logTilesetIssueOnce(`metadata-item:${itemId}`, '[tilesetRenderer] Metadata item not found:', itemId);
+    return false;
+  }
 
   ctx.imageSmoothingEnabled = false;
   const { x, y, width, height } = item.bounds;
@@ -76,10 +90,16 @@ export function drawMetadataItemScaled(
   destH: number,
 ): boolean {
   const image = getTilesetMetadataImage();
-  if (!image) return false;
+  if (!image) {
+    logTilesetIssueOnce(`metadata-scaled-image:${itemId}`, '[tilesetRenderer] Metadata image not ready for scaled item', itemId);
+    return false;
+  }
 
   const item = getItemById(itemId);
-  if (!item) return false;
+  if (!item) {
+    logTilesetIssueOnce(`metadata-scaled-item:${itemId}`, '[tilesetRenderer] Metadata item not found for scaled draw:', itemId);
+    return false;
+  }
 
   ctx.imageSmoothingEnabled = false;
   const { x, y, width, height } = item.bounds;
@@ -134,13 +154,22 @@ export function drawTilesetFurniture(
   destH: number,
 ): boolean {
   const tileset = getTilesetData();
-  if (!tileset) return false;
+  if (!tileset) {
+    logTilesetIssueOnce(`legacy-tileset:${furnitureType}`, '[tilesetRenderer] Legacy tileset not ready for furniture type', furnitureType);
+    return false;
+  }
 
   const objectName = furnitureToTileset[furnitureType];
-  if (!objectName) return false;
+  if (!objectName) {
+    logTilesetIssueOnce(`legacy-map:${furnitureType}`, '[tilesetRenderer] No legacy tileset mapping for furniture type', furnitureType);
+    return false;
+  }
 
   const obj = tileset.objects[objectName];
-  if (!obj) return false;
+  if (!obj) {
+    logTilesetIssueOnce(`legacy-object:${objectName}`, '[tilesetRenderer] Legacy tileset object missing:', objectName);
+    return false;
+  }
 
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(
@@ -163,10 +192,16 @@ export function drawTilesetObjectNative(
   zoom: number,
 ): boolean {
   const tileset = getTilesetData();
-  if (!tileset) return false;
+  if (!tileset) {
+    logTilesetIssueOnce(`native-tileset:${objectName}`, '[tilesetRenderer] Legacy tileset not ready for native object', objectName);
+    return false;
+  }
 
   const obj = tileset.objects[objectName];
-  if (!obj) return false;
+  if (!obj) {
+    logTilesetIssueOnce(`native-object:${objectName}`, '[tilesetRenderer] Native tileset object missing:', objectName);
+    return false;
+  }
 
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(
@@ -206,13 +241,22 @@ export function drawTilesetTile(
   zoom: number,
 ): boolean {
   const image = getTilesetMetadataImage();
-  if (!image) return false;
+  if (!image) {
+    logTilesetIssueOnce(`tile-image:${tileType}`, '[tilesetRenderer] Metadata image not ready for tile type', tileType);
+    return false;
+  }
 
   const itemId = tileTypeToMetadataItem[tileType];
-  if (!itemId) return false;
+  if (!itemId) {
+    logTilesetIssueOnce(`tile-map:${tileType}`, '[tilesetRenderer] No metadata mapping for tile type', tileType);
+    return false;
+  }
 
   const item = getItemById(itemId);
-  if (!item) return false;
+  if (!item) {
+    logTilesetIssueOnce(`tile-item:${itemId}`, '[tilesetRenderer] Metadata item missing for tile type', tileType, itemId);
+    return false;
+  }
 
   ctx.imageSmoothingEnabled = false;
   const { x, y, width, height } = item.bounds;

@@ -13,7 +13,7 @@
  * Background is pre-removed during asset loading (see assetLoader.ts).
  */
 
-import { getCharacterSheet, areAssetsReady } from './assetLoader.js';
+import { getCharacterSheet } from './assetLoader.js';
 import { Direction, TILE_SIZE } from '../types.js';
 
 /** Map game Direction enum to sprite-sheet row index. */
@@ -26,6 +26,21 @@ const DIRECTION_TO_ROW: Record<Direction, number> = {
 
 /** Map palette index (0-5) to character sheet key (A-E). */
 const PALETTE_TO_SHEET: string[] = ['A', 'B', 'C', 'D', 'E', 'A'];
+const _loggedCharacterSheetIssues = new Set<string>();
+
+function logCharacterSheetIssueOnce(key: string, ...args: unknown[]): void {
+  if (_loggedCharacterSheetIssues.has(key)) return;
+  _loggedCharacterSheetIssues.add(key);
+  console.warn(...args);
+}
+
+function getSheetKeyForPalette(palette: number): string {
+  return PALETTE_TO_SHEET[palette % PALETTE_TO_SHEET.length];
+}
+
+export function hasCharacterSheetForPalette(palette: number): boolean {
+  return getCharacterSheet(getSheetKeyForPalette(palette)) !== null;
+}
 
 /**
  * Try to draw a character frame from a PNG sprite sheet.
@@ -42,11 +57,18 @@ export function drawCharacterFromSheet(
   destY: number,
   zoom: number,
 ): boolean {
-  if (!areAssetsReady()) return false;
-
-  const sheetKey = PALETTE_TO_SHEET[palette % PALETTE_TO_SHEET.length];
+  const sheetKey = getSheetKeyForPalette(palette);
   const sheet = getCharacterSheet(sheetKey);
-  if (!sheet) return false;
+  if (!sheet) {
+    logCharacterSheetIssueOnce(
+      `missing-sheet:${sheetKey}`,
+      '[characterSheetRenderer] PNG character sheet unavailable for palette',
+      palette,
+      'expected sheet',
+      sheetKey,
+    );
+    return false;
+  }
 
   const row = DIRECTION_TO_ROW[direction] ?? DIRECTION_TO_ROW[Direction.DOWN];
   const col = frameIndex % sheet.framesPerRow;
@@ -77,8 +99,7 @@ export function drawCharacterFromSheet(
 export function getCharacterSheetFrameSize(
   palette: number,
 ): { width: number; height: number } | null {
-  if (!areAssetsReady()) return null;
-  const sheetKey = PALETTE_TO_SHEET[palette % PALETTE_TO_SHEET.length];
+  const sheetKey = getSheetKeyForPalette(palette);
   const sheet = getCharacterSheet(sheetKey);
   if (!sheet) return null;
   return { width: sheet.baseWidth, height: sheet.baseHeight };

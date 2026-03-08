@@ -82,7 +82,6 @@ export interface CharacterSheetData {
 let tilesetData: TilesetData | null = null;
 const characterSheets = new Map<string, CharacterSheetData>();
 let loadingPromise: Promise<void> | null = null;
-let assetsReady = false;
 let assetBaseUrl = '';
 
 // ── Rich metadata state ──────────────────────────────────────────
@@ -92,6 +91,11 @@ let tilesetMetadataImage: HTMLImageElement | null = null;
 const itemById = new Map<string, TilesetItem>();
 const itemsByType = new Map<ItemType, TilesetItem[]>();
 let interactables: TilesetInteractable[] = [];
+let tilesetMetadataStatus: 'idle' | 'loading' | 'loaded' | 'failed' = 'idle';
+let legacyTilesetStatus: 'idle' | 'loading' | 'loaded' | 'failed' = 'idle';
+const expectedCharacterSheetKeys = new Set<string>();
+const loadedCharacterSheetKeys = new Set<string>();
+const failedCharacterSheetKeys = new Set<string>();
 
 // ── In-flight image references ───────────────────────────────────
 // Keep strong references to Image objects during async loads to
@@ -111,7 +115,44 @@ function trackImage(img: HTMLImageElement): void {
 // ── Public accessors ──────────────────────────────────────────────
 
 export function areAssetsReady(): boolean {
-  return assetsReady;
+  return areTilesetAssetsReady() || areCharacterAssetsReady();
+}
+
+export function areTilesetAssetsReady(): boolean {
+  return Boolean(
+    (tilesetMetadataImage && tilesetMetadata && itemById.size > 0) ||
+    (tilesetData && tilesetData.image && Object.keys(tilesetData.objects).length > 0)
+  );
+}
+
+export function areCharacterAssetsReady(): boolean {
+  return characterSheets.size > 0;
+}
+
+export function getAssetLoadSnapshot(): {
+  anyReady: boolean;
+  tilesetReady: boolean;
+  characterReady: boolean;
+  tilesetMetadataStatus: string;
+  legacyTilesetStatus: string;
+  tilesetMetadataItems: number;
+  legacyObjectCount: number;
+  characterSheetsLoaded: string[];
+  characterSheetsExpected: string[];
+  characterSheetsFailed: string[];
+} {
+  return {
+    anyReady: areAssetsReady(),
+    tilesetReady: areTilesetAssetsReady(),
+    characterReady: areCharacterAssetsReady(),
+    tilesetMetadataStatus,
+    legacyTilesetStatus,
+    tilesetMetadataItems: itemById.size,
+    legacyObjectCount: tilesetData ? Object.keys(tilesetData.objects).length : 0,
+    characterSheetsLoaded: [...loadedCharacterSheetKeys].sort(),
+    characterSheetsExpected: [...expectedCharacterSheetKeys].sort(),
+    characterSheetsFailed: [...failedCharacterSheetKeys].sort(),
+  };
 }
 
 export function getTilesetData(): TilesetData | null {
@@ -167,7 +208,20 @@ export function getInteractables(): TilesetInteractable[] {
  */
 export function setTilesetMetadata(metadata: TilesetMetadata, tilesetPngUri: string): void {
   console.log('[assetLoader] setTilesetMetadata called with', metadata.items?.length, 'items, URI:', tilesetPngUri.slice(0, 80));
+  if (!Array.isArray(metadata.items) || metadata.items.length === 0) {
+    tilesetMetadataStatus = 'failed';
+    console.error('[assetLoader] ❌ tilesetMetadataLoaded payload is missing items');
+    return;
+  }
+  if (!tilesetPngUri.startsWith('data:image/png;base64,')) {
+    tilesetMetadataStatus = 'failed';
+    console.error('[assetLoader] ❌ tilesetMetadataLoaded PNG URI is not a PNG data URI');
+    return;
+  }
+
   tilesetMetadata = metadata;
+  tilesetMetadataImage = null;
+  tilesetMetadataStatus = 'loading';
   interactables = metadata.interactables ?? [];
 
   // Build lookup indexes
@@ -189,12 +243,14 @@ export function setTilesetMetadata(metadata: TilesetMetadata, tilesetPngUri: str
   trackImage(img);
   img.onload = () => {
     tilesetMetadataImage = img;
-    assetsReady = true;
-    console.log(`[assetLoader] ✅ Tileset metadata PNG loaded: ${img.width}×${img.height}, assetsReady=true`);
+    tilesetMetadataStatus = 'loaded';
+    console.log('[assetLoader] ✅ Tileset metadata PNG loaded:', `${img.width}×${img.height}`, getAssetLoadSnapshot());
   };
   img.onerror = (e) => {
-    console.error('[assetLoader] ❌ Failed to load tileset metadata PNG:', tilesetPngUri.slice(0, 120), e);
+    tilesetMetadataStatus = 'failed';
+    console.error('[assetLoader] ❌ Failed to load tileset metadata PNG:', tilesetPngUri.slice(0, 120), e, getAssetLoadSnapshot());
   };
+  console.log('[assetLoader] Starting tileset metadata PNG load');
   img.src = tilesetPngUri;
 }
 
@@ -212,6 +268,19 @@ export function setLegacyTilesetAssets(
   tilesetPngUri: string,
 ): void {
   console.log('[assetLoader] setLegacyTilesetAssets called with', Object.keys(data.objects ?? {}).length, 'objects');
+  if (!tilesetPngUri.startsWith('data:image/png;base64,')) {
+    legacyTilesetStatus = 'failed';
+    console.error('[assetLoader] ❌ tilesetAssetsLoaded PNG URI is not a PNG data URI');
+    return;
+  }
+  if (!data.objects || Object.keys(data.objects).length === 0) {
+    legacyTilesetStatus = 'failed';
+    console.error('[assetLoader] ❌ tilesetAssetsLoaded payload has no legacy objects');
+    return;
+  }
+
+  tilesetData = null;
+  legacyTilesetStatus = 'loading';
   // No crossOrigin — legacy tileset only needs drawImage()
   const img = new Image();
   trackImage(img);
@@ -221,12 +290,14 @@ export function setLegacyTilesetAssets(
       objects: data.objects ?? {},
       tileSize: data.tile_size ?? TILE_SIZE,
     };
-    assetsReady = true;
-    console.log(`[assetLoader] ✅ Legacy tileset PNG loaded: ${img.width}×${img.height}, ${Object.keys(data.objects ?? {}).length} objects, assetsReady=true`);
+    legacyTilesetStatus = 'loaded';
+    console.log('[assetLoader] ✅ Legacy tileset PNG loaded:', `${img.width}×${img.height}`, getAssetLoadSnapshot());
   };
   img.onerror = (e) => {
-    console.error('[assetLoader] ❌ Failed to load legacy tileset PNG:', tilesetPngUri.slice(0, 120), e);
+    legacyTilesetStatus = 'failed';
+    console.error('[assetLoader] ❌ Failed to load legacy tileset PNG:', tilesetPngUri.slice(0, 120), e, getAssetLoadSnapshot());
   };
+  console.log('[assetLoader] Starting legacy tileset PNG load');
   img.src = tilesetPngUri;
 }
 
@@ -235,6 +306,7 @@ export function setLegacyTilesetAssets(
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    trackImage(img);
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
     img.src = src;
@@ -306,12 +378,28 @@ export function loadCharacterSheetsFromUris(
   characters: Array<{ id: string; uri: string }>
 ): void {
   console.log('[assetLoader] loadCharacterSheetsFromUris called with', characters.length, 'sheets');
+  characterSheets.clear();
+  expectedCharacterSheetKeys.clear();
+  loadedCharacterSheetKeys.clear();
+  failedCharacterSheetKeys.clear();
+
+  if (!Array.isArray(characters) || characters.length === 0) {
+    console.warn('[assetLoader] No character sheet URIs received');
+    return;
+  }
 
   for (const { id, uri } of characters) {
     // Extract sheet key: "char_employeeA" → "A"
     const key = id.replace(/^char_employee/, '');
     if (!key) {
       console.warn('[assetLoader] Could not extract sheet key from id:', id);
+      continue;
+    }
+    expectedCharacterSheetKeys.add(key);
+
+    if (!uri.startsWith('data:image/png;base64,')) {
+      failedCharacterSheetKeys.add(key);
+      console.error(`[assetLoader] ❌ Character sheet "${key}" URI is not a PNG data URI`);
       continue;
     }
 
@@ -321,9 +409,9 @@ export function loadCharacterSheetsFromUris(
 
         const rows = 4;
         const frameHeight = img.height / rows;
-        const scale = Math.round(frameHeight / TILE_SIZE);
+        const scale = Math.max(1, Math.round(frameHeight / TILE_SIZE));
         const baseHeight = Math.round(frameHeight / scale);
-        const framesPerRow = img.width % 7 === 0 ? 7 : Math.round(img.width / (baseHeight * scale * (img.width / img.height)));
+        const framesPerRow = img.width % 7 === 0 ? 7 : Math.max(1, Math.round(img.width / Math.max(1, frameHeight)));
         const frameWidth = Math.round(img.width / (framesPerRow || 7));
         const baseWidth = Math.round(frameWidth / scale);
 
@@ -338,10 +426,12 @@ export function loadCharacterSheetsFromUris(
           baseHeight,
         });
 
-        console.log(`[assetLoader] ✅ Character sheet "${key}" loaded: ${img.width}×${img.height}, ${framesPerRow}×${rows} frames, scale=${scale}`);
-        assetsReady = true;
+        loadedCharacterSheetKeys.add(key);
+        failedCharacterSheetKeys.delete(key);
+        console.log(`[assetLoader] ✅ Character sheet "${key}" loaded: ${img.width}×${img.height}, ${framesPerRow}×${rows} frames, scale=${scale}`, getAssetLoadSnapshot());
       } catch (e) {
-        console.error(`[assetLoader] ❌ Error processing character sheet "${key}":`, e);
+        failedCharacterSheetKeys.add(key);
+        console.error(`[assetLoader] ❌ Error processing character sheet "${key}":`, e, getAssetLoadSnapshot());
       }
     };
 
@@ -353,8 +443,10 @@ export function loadCharacterSheetsFromUris(
     trackImage(img);
     img.onload = () => processImage(img);
     img.onerror = (e) => {
-      console.error(`[assetLoader] ❌ Character sheet "${key}" failed to load:`, uri.slice(0, 80), e);
+      failedCharacterSheetKeys.add(key);
+      console.error(`[assetLoader] ❌ Character sheet "${key}" failed to load:`, uri.slice(0, 80), e, getAssetLoadSnapshot());
     };
+    console.log(`[assetLoader] Starting character sheet "${key}" load`);
     img.src = uri;
   }
 }
@@ -419,13 +511,9 @@ export function loadAssets(): Promise<void> {
         });
       }
 
-      assetsReady = true;
+      console.log('[assetLoader] ✅ URL asset load complete', getAssetLoadSnapshot());
     } catch (e) {
       console.warn('[assetLoader] PNG assets unavailable via URL fetch, using inline sprites:', e);
-      // Only reset if URI-based loaders haven't already loaded assets
-      if (!tilesetMetadataImage && characterSheets.size === 0 && !tilesetData) {
-        assetsReady = false;
-      }
     }
   })();
 

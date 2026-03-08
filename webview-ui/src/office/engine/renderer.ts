@@ -34,9 +34,9 @@ import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
 import { getColorizedFloorSprite } from '../floorTiles.js';
 import { wallColorToHex } from '../wallTiles.js';
-import { areAssetsReady } from '../sprites/assetLoader.js';
+import { areAssetsReady, areCharacterAssetsReady, areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
 import { drawTilesetFurniture, drawTilesetTile, drawMetadataItemScaled } from '../sprites/tilesetRenderer.js';
-import { drawCharacterFromSheet, getCharacterSheetOffset } from '../sprites/characterSheetRenderer.js';
+import { drawCharacterFromSheet, getCharacterSheetOffset, hasCharacterSheetForPalette } from '../sprites/characterSheetRenderer.js';
 
 interface Drawable {
   sprite: SpriteData;
@@ -58,8 +58,10 @@ interface Drawable {
 // Track first-time diagnostic logging per render path (avoid 60fps spam)
 let _loggedPngReady = false;
 let _loggedPngFallback = false;
+let _loggedTilesetWaiting = false;
 let _loggedCharPng = false;
 let _loggedCharFallback = false;
+let _loggedCharWaiting = false;
 let _loggedFirstRender = false;
 
 export function renderTileGrid(
@@ -72,17 +74,20 @@ export function renderTileGrid(
   cols: number
 ): void {
   const rows = tileMap.length;
-  const pngReady = areAssetsReady();
+  const tilesetReady = areTilesetAssetsReady();
 
   if (!_loggedFirstRender) {
     _loggedFirstRender = true;
-    console.log('[renderer] First tile render, areAssetsReady()=' + pngReady);
+    console.log('[renderer] First tile render snapshot', getAssetLoadSnapshot());
   }
 
-  if (pngReady && !_loggedPngReady) {
-    _loggedPngReady = true;
-    console.log('[renderer] ✅ areAssetsReady()=true — using tileset PNG for tile rendering');
-  }
+   if (tilesetReady && !_loggedPngReady) {
+     _loggedPngReady = true;
+     console.log('[renderer] ✅ Tileset PNG path ready — using metadata tiles', getAssetLoadSnapshot());
+   } else if (!tilesetReady && !_loggedTilesetWaiting) {
+     _loggedTilesetWaiting = true;
+     console.log('[renderer] ⏳ Tileset PNG path not ready yet — using fallback tiles', getAssetLoadSnapshot());
+   }
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -93,14 +98,14 @@ export function renderTileGrid(
       const y = offsetY + row * TILE_SIZE * zoom;
 
       // Prefer tileset PNG tiles when loaded
-      if (pngReady && drawTilesetTile(ctx, tile, x, y, zoom)) {
+      if (tilesetReady && drawTilesetTile(ctx, tile, x, y, zoom)) {
         continue;
       }
 
       // One-time diagnostic if PNG path is ready but drawTilesetTile returned false
-      if (pngReady && !_loggedPngFallback) {
+      if (tilesetReady && !_loggedPngFallback) {
         _loggedPngFallback = true;
-        console.warn('[renderer] ⚠️ areAssetsReady()=true but drawTilesetTile returned false for tile type', tile, '— falling back to colored rendering');
+        console.warn('[renderer] ⚠️ Tileset PNG path is ready but drawTilesetTile returned false for tile type', tile, getAssetLoadSnapshot());
       }
 
       // Fall back to colored rendering
@@ -138,7 +143,9 @@ export function renderScene(
   hoveredAgentId: string | null
 ): void {
   const drawables: Drawable[] = [];
-  const pngReady = areAssetsReady();
+  const tilesetReady = areTilesetAssetsReady();
+  const anyAssetsReady = areAssetsReady();
+  const characterAssetsReady = areCharacterAssetsReady();
 
   for (const furn of furniture) {
     const sprite = furn.sprite;
@@ -176,7 +183,7 @@ export function renderScene(
     let drawX: number;
     let drawY: number;
 
-    const sheetOffset = pngReady ? getCharacterSheetOffset(ch.palette) : null;
+    const sheetOffset = hasCharacterSheetForPalette(ch.palette) ? getCharacterSheetOffset(ch.palette) : null;
     if (sheetOffset) {
       spriteWidth = TILE_SIZE - sheetOffset.dx * 2; // symmetric around tile center
       spriteHeight = TILE_SIZE - sheetOffset.dy;
@@ -227,31 +234,34 @@ export function renderScene(
     if (drawable.type === 'character') {
       const ch = drawable.character;
       // Try PNG sprite sheet first, fall back to inline
-      const pngDrawn = ch && pngReady && drawCharacterFromSheet(
+      const pngDrawn = Boolean(ch) && drawCharacterFromSheet(
         ctx, ch.palette, ch.direction, ch.frameIndex,
         drawable.x, drawable.y, zoom,
       );
       if (pngDrawn && !_loggedCharPng) {
         _loggedCharPng = true;
-        console.log('[renderer] ✅ Character drawn from PNG sprite sheet (palette', ch?.palette, ')');
+        console.log('[renderer] ✅ Character drawn from PNG sprite sheet (palette', ch?.palette, ')', getAssetLoadSnapshot());
       }
       if (!pngDrawn) {
-        if (pngReady && !_loggedCharFallback) {
+        if (!characterAssetsReady && !_loggedCharWaiting) {
+          _loggedCharWaiting = true;
+          console.log('[renderer] ⏳ Character PNG sheets not ready yet — using inline sprites', getAssetLoadSnapshot());
+        } else if (anyAssetsReady && !_loggedCharFallback) {
           _loggedCharFallback = true;
-          console.warn('[renderer] ⚠️ areAssetsReady()=true but character PNG draw failed for palette', ch?.palette, '— using inline sprite');
+          console.warn('[renderer] ⚠️ Character PNG draw failed for palette', ch?.palette, '— using inline sprite', getAssetLoadSnapshot());
         }
         drawSpriteDirect(ctx, drawable.sprite, drawable.x, drawable.y, zoom);
       }
     } else {
       // Try PNG tileset first, fall back to inline cached sprite
-      const tilesetDrawn = pngReady && drawable.furnitureType && drawTilesetFurniture(
+      const tilesetDrawn = Boolean(tilesetReady && drawable.furnitureType) && drawTilesetFurniture(
         ctx, drawable.furnitureType,
         drawable.x, drawable.y,
         drawable.furnitureDestW!, drawable.furnitureDestH!,
       );
       if (!tilesetDrawn) {
         // Try tileset metadata rendering (for items placed from metadata catalog)
-        const metadataDrawn = pngReady && drawable.furnitureType && drawMetadataItemScaled(
+        const metadataDrawn = Boolean(tilesetReady && drawable.furnitureType) && drawMetadataItemScaled(
           ctx, drawable.furnitureType,
           drawable.x, drawable.y,
           drawable.furnitureDestW!, drawable.furnitureDestH!,

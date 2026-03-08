@@ -28,6 +28,26 @@ Established dual-build infrastructure (esbuild + Vite), TypeScript interfaces fo
 
 ## Learnings
 
+### Rendering Pipeline Audit — Split Readiness by Asset Family (2026-03-08)
+
+**Problem:** Even after the data-URI migration, the renderer could still show colored fallback rectangles/circles because the webview used one global `assetsReady` flag for three independent pipelines: metadata tileset PNG, legacy tileset PNG/object map, and character sprite sheets.
+
+**Root Causes Confirmed:**
+1. **Global readiness was too coarse.** A single successful load (for example one character sheet) flipped `assetsReady = true`, so the renderer started attempting PNG tile rendering before the tileset metadata image/object map was actually ready. The inverse also happened: a tileset load could make character rendering think PNG sheets were ready when a palette-specific sheet was still missing.
+2. **Renderer gating did not match the actual data source it used.** `renderTileGrid()` and furniture rendering depended on tileset metadata / legacy object state, but only checked the shared boolean. Character rendering and layout offsets also gated on that same shared boolean instead of checking whether the requested palette sheet existed.
+3. **Diagnostics were not precise enough.** The pipeline logged some success paths, but it did not expose a clear snapshot of which exact stage was ready, loading, or failed at the moment the renderer fell back.
+
+**Fix Pattern:**
+- Added **separate readiness helpers** in `webview-ui/src/office/sprites/assetLoader.ts`:
+  - `areTilesetAssetsReady()`
+  - `areCharacterAssetsReady()`
+  - `getAssetLoadSnapshot()`
+- `renderer.ts` now gates **tiles/furniture on tileset readiness** and **characters on actual sheet availability**, rather than a shared boolean.
+- `characterSheetRenderer.ts` no longer blocks on global readiness; it checks for the requested sheet directly.
+- Extension host and webview now log **start, receipt, dispatch, load success, load failure, and fallback decisions** with structured snapshots so Brian can inspect DevTools and see exactly where the pipeline stopped.
+
+**Key Insight:** For extension↔webview asset pipelines, never let a single boolean represent multiple asynchronous asset families. Readiness checks must mirror the exact resource each renderer path consumes, or fallback rendering can remain active even when part of the PNG pipeline is working.
+
 ### Image Loading in VS Code Webviews — The Real Fix (2026-03-08)
 
 **Problem:** PNG tileset and character sprite sheets never rendered — the renderer permanently fell back to colored rectangles/circles despite all prior fixes (dynamic→static imports, eager loadAssets removal, CORS retry).

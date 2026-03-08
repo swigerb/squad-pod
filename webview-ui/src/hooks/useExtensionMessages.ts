@@ -21,6 +21,7 @@ import {
   setLegacyTilesetAssets,
   loadCharacterSheetsFromUris,
   areAssetsReady,
+  getAssetLoadSnapshot,
 } from '../office/sprites/assetLoader.js';
 
 const MAX_TELEMETRY_EVENTS = 200;
@@ -75,6 +76,13 @@ export function useExtensionMessages(
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
+      if (
+        message?.type === 'tilesetMetadataLoaded' ||
+        message?.type === 'tilesetAssetsLoaded' ||
+        message?.type === 'characterAssetsLoaded'
+      ) {
+        console.log('[useExtensionMessages] Asset message received:', message.type, getAssetLoadSnapshot());
+      }
 
       switch (message.type) {
         case 'squadRosterLoaded': {
@@ -294,6 +302,9 @@ export function useExtensionMessages(
           if (metadata && tilesetPngUri) {
             console.log('[useExtensionMessages] tilesetMetadataLoaded received:', metadata.items?.length, 'items');
             setTilesetMetadata(metadata, tilesetPngUri);
+            console.log('[useExtensionMessages] tilesetMetadataLoaded dispatched to assetLoader', getAssetLoadSnapshot());
+          } else {
+            console.error('[useExtensionMessages] tilesetMetadataLoaded missing metadata or tilesetPngUri');
           }
           break;
         }
@@ -303,6 +314,9 @@ export function useExtensionMessages(
           if (tilesetData && tilesetPngUri) {
             console.log('[useExtensionMessages] tilesetAssetsLoaded received');
             setLegacyTilesetAssets(tilesetData as { tile_size?: number; objects: Record<string, { x: number; y: number; w: number; h: number }> }, tilesetPngUri as string);
+            console.log('[useExtensionMessages] tilesetAssetsLoaded dispatched to assetLoader', getAssetLoadSnapshot());
+          } else {
+            console.error('[useExtensionMessages] tilesetAssetsLoaded missing tilesetData or tilesetPngUri');
           }
           break;
         }
@@ -312,10 +326,12 @@ export function useExtensionMessages(
           if (characters && Array.isArray(characters)) {
             console.log('[useExtensionMessages] characterAssetsLoaded received:', characters.length, 'sheets');
             loadCharacterSheetsFromUris(characters);
-            // Diagnostic: verify images actually loaded after a delay
+            console.log('[useExtensionMessages] characterAssetsLoaded dispatched to assetLoader', getAssetLoadSnapshot());
             setTimeout(() => {
-              console.log('[useExtensionMessages] ⏱️ Asset check (3s after characterAssetsLoaded): areAssetsReady()=' + areAssetsReady());
+              console.log('[useExtensionMessages] ⏱️ Asset check (3s after characterAssetsLoaded): areAssetsReady()=' + areAssetsReady(), getAssetLoadSnapshot());
             }, 3000);
+          } else {
+            console.error('[useExtensionMessages] characterAssetsLoaded missing characters array');
           }
           break;
         }
@@ -354,6 +370,7 @@ export function useExtensionMessages(
     };
 
     window.addEventListener('message', handleMessage);
+    console.log('[useExtensionMessages] Posting webviewReady to extension host');
     vscode.postMessage({ type: 'webviewReady' });
 
     return () => window.removeEventListener('message', handleMessage);
