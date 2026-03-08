@@ -35,7 +35,7 @@ import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } 
 import { getColorizedFloorSprite } from '../floorTiles.js';
 import { wallColorToHex } from '../wallTiles.js';
 import { areAssetsReady } from '../sprites/assetLoader.js';
-import { drawTilesetFurniture } from '../sprites/tilesetRenderer.js';
+import { drawTilesetFurniture, drawTilesetTile } from '../sprites/tilesetRenderer.js';
 import { drawCharacterFromSheet, getCharacterSheetOffset } from '../sprites/characterSheetRenderer.js';
 
 interface Drawable {
@@ -65,6 +65,8 @@ export function renderTileGrid(
   cols: number
 ): void {
   const rows = tileMap.length;
+  const pngReady = areAssetsReady();
+
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const tile = tileMap[row][col];
@@ -73,6 +75,12 @@ export function renderTileGrid(
       const x = offsetX + col * TILE_SIZE * zoom;
       const y = offsetY + row * TILE_SIZE * zoom;
 
+      // Prefer tileset PNG tiles when loaded
+      if (pngReady && drawTilesetTile(ctx, tile, x, y, zoom)) {
+        continue;
+      }
+
+      // Fall back to colored rendering
       if (tile === TileType.WALL) {
         const colorKey = `${col},${row}`;
         const color = tileColors.get(colorKey);

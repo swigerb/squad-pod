@@ -17,7 +17,7 @@ import {
   getItemById,
 } from './assetLoader.js';
 import type { TilesetItem } from './assetLoader.js';
-import { FurnitureType, TILE_SIZE } from '../types.js';
+import { FurnitureType, TileType, TILE_SIZE } from '../types.js';
 
 // ── Legacy FurnitureType → tileset.json name mapping ──────────────
 
@@ -173,6 +173,56 @@ export function drawTilesetObjectNative(
     tileset.image,
     obj.x, obj.y, obj.w, obj.h,
     destX, destY, obj.w * zoom, obj.h * zoom,
+  );
+  return true;
+}
+
+// ── TileType → tileset metadata item mapping ──────────────────────
+
+/** Map TileType values to tileset-metadata.json item IDs for tile grid rendering. */
+const tileTypeToMetadataItem: Record<number, string> = {
+  [TileType.FLOOR_1]: 'floor_wood',
+  [TileType.FLOOR_2]: 'floor_blue_diamond',
+  [TileType.FLOOR_3]: 'floor_wood',
+  [TileType.FLOOR_4]: 'floor_blue_diamond',
+  [TileType.FLOOR_5]: 'floor_wood',
+  [TileType.FLOOR_6]: 'floor_blue_diamond',
+  [TileType.FLOOR_7]: 'floor_wood',
+  [TileType.WALL]: 'wall_white_panel',
+};
+
+/**
+ * Draw a floor or wall tile from the tileset PNG using metadata bounds.
+ * For wall items taller than TILE_SIZE (e.g. wall_white_panel at 16×32),
+ * clips to the top TILE_SIZE rows so it fits in a single grid cell.
+ *
+ * @returns `true` if drawn, `false` if tileset metadata/image not available.
+ */
+export function drawTilesetTile(
+  ctx: CanvasRenderingContext2D,
+  tileType: number,
+  destX: number,
+  destY: number,
+  zoom: number,
+): boolean {
+  const image = getTilesetMetadataImage();
+  if (!image) return false;
+
+  const itemId = tileTypeToMetadataItem[tileType];
+  if (!itemId) return false;
+
+  const item = getItemById(itemId);
+  if (!item) return false;
+
+  ctx.imageSmoothingEnabled = false;
+  const { x, y, width, height } = item.bounds;
+  // Clip source height to one tile for multi-tile items (wall_white_panel is 16×32)
+  const srcH = Math.min(height, TILE_SIZE);
+
+  ctx.drawImage(
+    image,
+    x, y, width, srcH,
+    destX, destY, TILE_SIZE * zoom, TILE_SIZE * zoom,
   );
   return true;
 }

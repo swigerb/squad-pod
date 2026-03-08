@@ -288,3 +288,25 @@ Established dual-build infrastructure (esbuild + Vite), TypeScript interfaces fo
 **Outcome:** SUCCESS — Full editor functionality now accessible via UI. The toolbar integrates seamlessly with the EditorState infrastructure, furnishing the visual interface for layout editing workflows. Ghost borders enable interactive grid expansion.
 
 **Team Impact:** Any new EditTool variants added to types.ts should also be added to TOOL_DEFS in EditorToolbar.tsx for consistent UI mapping.
+
+### Tileset-Based Tile Grid Rendering (2026-03-08)
+
+**Task:** Fix custom tileset not rendering for floor/wall tiles — webview always showed colored rectangles instead of tileset PNG artwork.
+
+**Root Cause:** `renderTileGrid()` in `renderer.ts` never checked for tileset assets. It always rendered walls as solid-color rectangles (`wallColorToHex`) and floors as colorized inline sprites (`getColorizedFloorSprite`). The tileset PNG was only used for furniture via `drawTilesetFurniture()` in `renderScene()`. The full asset delivery pipeline (extension → webview → assetLoader) worked correctly — the missing link was the renderer itself.
+
+**Fix — Two files:**
+1. **`webview-ui/src/office/sprites/tilesetRenderer.ts`** — Added `drawTilesetTile()` function:
+   - Maps `TileType` enum values to tileset-metadata.json item IDs (`FLOOR_1` → `floor_wood`, `FLOOR_2` → `floor_blue_diamond`, `WALL` → `wall_white_panel`)
+   - Draws tiles from tileset PNG via `ctx.drawImage()` with source-rectangle clipping
+   - For wall items taller than TILE_SIZE (wall_white_panel is 16×32), clips to top 16px
+   - Returns false if metadata/image not available, enabling graceful fallback
+
+2. **`webview-ui/src/office/engine/renderer.ts`** — Updated `renderTileGrid()`:
+   - Checks `areAssetsReady()` and tries `drawTilesetTile()` before existing colored rendering
+   - Falls back to `wallColorToHex`/`getColorizedFloorSprite` when tileset not loaded
+   - Preserves full backward compatibility
+
+**Key Pattern:** The renderer must actively USE loaded assets — loading and storing them isn't enough. When adding new asset types, trace the full pipeline: extension reads → message sent → webview stores → **renderer draws**.
+
+**Test Results:** All 124 tests pass (46 extension + 78 webview), both builds clean.
