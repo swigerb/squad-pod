@@ -22,6 +22,7 @@ import {
   loadCharacterSheetsFromUris,
   areAssetsReady,
   getAssetLoadSnapshot,
+  getFullDiagnosticReport,
 } from '../office/sprites/assetLoader.js';
 
 const MAX_TELEMETRY_EVENTS = 200;
@@ -372,6 +373,11 @@ export function useExtensionMessages(
     window.addEventListener('message', handleMessage);
     console.log('[useExtensionMessages] Posting webviewReady to extension host');
     vscode.postMessage({ type: 'webviewReady' });
+
+    // Send diagnostic report to extension host for file-based logging
+    const diagReport = getFullDiagnosticReport();
+    console.error('[SPRITE-DEBUG] Sending diagnostic report to extension:', JSON.stringify(diagReport));
+    vscode.postMessage({ type: 'diagnosticReport', ...diagReport });
 
     return () => window.removeEventListener('message', handleMessage);
   // eslint-disable-next-line react-hooks/exhaustive-deps

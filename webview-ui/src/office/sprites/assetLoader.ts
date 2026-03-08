@@ -576,9 +576,13 @@ function storeCharacterSheet(key: string, width: number, height: number, source:
   console.error(`[SPRITE-DEBUG] ✅ Sheet "${key}" stored: ${width}×${height}, ${framesPerRow}×${rows} frames, scale=${scale}, base=${baseWidth}×${baseHeight}`);
 }
 
+// ── Diagnostic tracking for extension host logging ───────────────
+const _bootstrapErrors: string[] = [];
+
 // Bootstrap: SYNCHRONOUS loading at module init time.
 // Guarded with typeof checks so it doesn't crash in JSDOM test environments.
-if (typeof document !== 'undefined' && typeof atob === 'function' && EMBEDDED_CHARACTERS.length > 0) {
+const _bootstrapRan = typeof document !== 'undefined' && typeof atob === 'function' && EMBEDDED_CHARACTERS.length > 0;
+if (_bootstrapRan) {
   console.error('[SPRITE-DEBUG] Sync embedded load: starting for', EMBEDDED_CHARACTERS.length, 'sheets');
   
   for (const { id, width, height, rgbaBase64 } of EMBEDDED_CHARACTERS) {
@@ -602,6 +606,7 @@ if (typeof document !== 'undefined' && typeof atob === 'function' && EMBEDDED_CH
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
+        _bootstrapErrors.push(`${key}: failed to get 2d context`);
         console.error(`[SPRITE-DEBUG] ❌ Failed to get 2d context for "${key}"`);
         continue;
       }
@@ -610,9 +615,40 @@ if (typeof document !== 'undefined' && typeof atob === 'function' && EMBEDDED_CH
       // Store immediately — characterSheets Map is now populated
       storeCharacterSheet(key, width, height, canvas);
     } catch (e) {
+      _bootstrapErrors.push(`${key}: ${e}`);
       console.error(`[SPRITE-DEBUG] ❌ Sync embedded load failed for "${key}":`, e);
     }
   }
   
   console.error('[SPRITE-DEBUG] Sync embedded load complete. characterSheets.size:', characterSheets.size, 'keys:', [...characterSheets.keys()]);
+}
+
+// Update DOM diagnostic banner if present
+if (typeof document !== 'undefined') {
+  const diagEl = document.getElementById('squad-diag');
+  if (diagEl) {
+    const status = characterSheets.size > 0 ? '✅' : '❌';
+    diagEl.textContent = `${status} JS:v2025-diag | sheets:${characterSheets.size} [${[...characterSheets.keys()]}] | embedded:${EMBEDDED_CHARACTERS.length} | bootstrap:${_bootstrapRan} | errs:${_bootstrapErrors.length}`;
+    diagEl.style.background = characterSheets.size > 0 ? '#070' : '#c00';
+  }
+}
+
+export function getFullDiagnosticReport(): {
+  characterSheetsSize: number;
+  characterSheetKeys: string[];
+  embeddedCharactersLength: number;
+  bootstrapRan: boolean;
+  errors: string[];
+  timestamp: string;
+  bundleVersion: string;
+} {
+  return {
+    characterSheetsSize: characterSheets.size,
+    characterSheetKeys: [...characterSheets.keys()].sort(),
+    embeddedCharactersLength: EMBEDDED_CHARACTERS.length,
+    bootstrapRan: _bootstrapRan,
+    errors: _bootstrapErrors,
+    timestamp: new Date().toISOString(),
+    bundleVersion: 'v2025-diag-sync-rgba',
+  };
 }

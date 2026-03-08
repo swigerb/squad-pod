@@ -144,6 +144,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         this.onOpenSquadInfo();
         break;
 
+      case 'diagnosticReport':
+        this.onDiagnosticReport(message);
+        break;
+
       default:
         // Unknown message — ignore
         break;
@@ -213,12 +217,108 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     );
     this.postMessage({ type: 'soundEnabled', enabled: soundEnabled });
 
+    // 8a. Write extension-side diagnostics to log file
+    this.writeExtensionDiagnostics();
+
     // 8. Start watching layout file for external changes
     this.disposeLayoutWatcher?.dispose();
     this.disposeLayoutWatcher = watchLayoutFile(workspaceRoot, (layout) => {
       this.postMessage({ type: 'layoutLoaded', layout });
       this.context.workspaceState.update(WORKSPACE_KEY_LAYOUT, layout);
     });
+  }
+
+  // ─── Diagnostics ─────────────────────────────────────────────────
+
+  private writeDiagnosticLog(section: string, data: string): void {
+    const workspaceRoot = this.getWorkspaceRoot();
+    if (!workspaceRoot) return;
+    const logPath = path.join(workspaceRoot, 'squad-pod-debug.log');
+    const timestamp = new Date().toISOString();
+    const entry = `\n=== ${section} [${timestamp}] ===\n${data}\n`;
+    try {
+      fs.appendFileSync(logPath, entry, 'utf-8');
+    } catch (e) {
+      console.error('[SquadPod] Failed to write diagnostic log:', e);
+    }
+  }
+
+  private writeExtensionDiagnostics(): void {
+    const extPath = this.context.extensionPath;
+    const webviewAssetsDir = path.join(extPath, 'dist', 'webview', 'assets');
+    const charAssetsDir = path.join(extPath, 'dist', 'assets');
+
+    const lines: string[] = [
+      `Extension path: ${extPath}`,
+      `Extension version: ${this.context.extension?.packageJSON?.version ?? 'unknown'}`,
+      '',
+    ];
+
+    // List webview assets
+    lines.push('--- dist/webview/assets/ ---');
+    try {
+      const files = fs.readdirSync(webviewAssetsDir);
+      for (const f of files) {
+        const stat = fs.statSync(path.join(webviewAssetsDir, f));
+        lines.push(`  ${f}: ${stat.size} bytes, modified ${stat.mtime.toISOString()}`);
+      }
+    } catch (e) {
+      lines.push(`  ERROR reading dir: ${e}`);
+    }
+
+    // List character assets
+    lines.push('', '--- dist/assets/ ---');
+    try {
+      const files = fs.readdirSync(charAssetsDir);
+      for (const f of files) {
+        const stat = fs.statSync(path.join(charAssetsDir, f));
+        lines.push(`  ${f}: ${stat.size} bytes, modified ${stat.mtime.toISOString()}`);
+      }
+    } catch (e) {
+      lines.push(`  ERROR reading dir: ${e}`);
+    }
+
+    // Show generated HTML (first 300 chars + script URIs)
+    const webview = this.view?.webview;
+    if (webview) {
+      const html = this.getWebviewHtml(webview);
+      const scriptMatch = html.match(/src="([^"]+)"/);
+      const cssMatch = html.match(/href="([^"]+\.css[^"]*)"/);
+      lines.push('', '--- Generated HTML URIs ---');
+      lines.push(`  Script: ${scriptMatch?.[1] ?? 'NOT FOUND'}`);
+      lines.push(`  CSS: ${cssMatch?.[1] ?? 'NOT FOUND'}`);
+      lines.push(`  HTML length: ${html.length}`);
+      lines.push(`  HTML preview: ${html.substring(0, 300)}...`);
+    }
+
+    this.writeDiagnosticLog('EXTENSION HOST', lines.join('\n'));
+  }
+
+  private onDiagnosticReport(message: WebviewMessage): void {
+    const report = message as WebviewMessage & {
+      characterSheetsSize?: number;
+      characterSheetKeys?: string[];
+      embeddedCharactersLength?: number;
+      bootstrapRan?: boolean;
+      errors?: string[];
+      timestamp?: string;
+      bundleVersion?: string;
+    };
+    const lines: string[] = [
+      `Webview JS loaded at: ${report.timestamp ?? 'unknown'}`,
+      `Bundle version marker: ${report.bundleVersion ?? 'none'}`,
+      `characterSheets.size: ${report.characterSheetsSize ?? 'unknown'}`,
+      `characterSheets keys: [${(report.characterSheetKeys ?? []).join(', ')}]`,
+      `EMBEDDED_CHARACTERS.length: ${report.embeddedCharactersLength ?? 'unknown'}`,
+      `Bootstrap ran: ${report.bootstrapRan ?? 'unknown'}`,
+      `Errors: ${(report.errors ?? []).join('; ') || 'none'}`,
+    ];
+    this.writeDiagnosticLog('WEBVIEW REPORT', lines.join('\n'));
+
+    // Also show a notification so Brian can see it immediately
+    const sheetsMsg = `Sheets: ${report.characterSheetsSize ?? '?'} [${(report.characterSheetKeys ?? []).join(',')}]`;
+    const embeddedMsg = `Embedded: ${report.embeddedCharactersLength ?? '?'}`;
+    vscode.window.showInformationMessage(`[Squad Pod Diag] ${sheetsMsg} | ${embeddedMsg} | Bootstrap: ${report.bootstrapRan}`);
   }
 
   // ─── Asset Loading ─────────────────────────────────────────────
@@ -644,6 +744,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   <title>Squad Pod</title>
 </head>
 <body>
+  <div id="squad-diag" style="position:fixed;top:0;left:0;z-index:99999;background:#c00;color:#fff;font:bold 10px monospace;padding:2px 6px;pointer-events:none;opacity:0.9">DIAG: waiting for JS...</div>
   <div id="root"></div>
   <script nonce="${nonce}" type="module" src="${scriptUri}?v=${cacheBuster}"></script>
 </body>
