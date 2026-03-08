@@ -858,3 +858,215 @@ Dynamic `import()` is acceptable ONLY for:
 
 - `vite.config.ts` uses `emptyOutDir: true` to prevent stale chunks from lingering
 - If a new code-split chunk appears in `dist/webview/assets/` after a build, investigate whether it duplicates module state
+
+### 18. Synchronous RGBA Loading for Critical Webview Assets
+
+**Author:** Bart Simpson (Frontend Dev)  
+**Date:** 2026-03-08  
+**Status:** Implemented
+
+#### Context
+
+Character sprites failed to render in the VS Code Electron webview across 7+ fix attempts. All async image loading approaches (new Image().onload, createImageBitmap, img.decode()) proved unreliable in the Electron/Chromium environment. Characters rendered as colored rectangle fallbacks instead of PNG sprite art.
+
+#### Problem
+
+**Async Image Loading is Fundamentally Unreliable in VS Code Webviews:**
+- 
+ew Image().onload may never fire for data URIs in Electron
+- createImageBitmap is async and may resolve too late for module init
+- img.decode() is async and has timing issues
+- All three approaches worked in Chrome DevTools but failed in production VS Code environment
+
+**Webview Caching Hid the Problem:**
+- Previous fixes (removeBackground skip, code-splitting fix, race condition guard) never took effect
+- VS Code Electron webview served cached JS/CSS from old builds
+- No cache-busting mechanism existed in _getHtmlForWebview()
+
+#### Decision
+
+**For critical bootstrap assets in VS Code webviews:**
+
+1. **Pre-decode images to raw RGBA at build time** using server-side tools (Python PIL, Node.js Sharp, etc.)
+2. **Embed raw RGBA pixel data** as base64-encoded strings in the bundle (not PNG data URIs)
+3. **Use putImageData() at module init time** — this is 100% synchronous with zero dependencies on Image objects, decode(), or onload
+4. **Add cache-busting to all script/CSS URIs** — append ?v= parameter to force fresh loads
+
+#### Implementation
+
+**Build-Time PNG Decode (scripts/gen_embedded_chars.py):**
+- Convert PNG to RGBA using PIL
+- Encode raw bytes as base64
+- Generate TypeScript with width/height metadata
+
+**Synchronous Bootstrap (assetLoader.ts):**
+- Decode base64 → raw RGBA bytes via atob
+- Create ImageData from raw pixels
+- Draw to canvas via putImageData (SYNCHRONOUS!)
+- Store immediately in characterSheets Map at module init
+
+**Cache-Busting (SquadPodViewProvider.ts):**
+- Append ?v= to all script/CSS URLs in _getHtmlForWebview()
+- Forces fresh loads on each extension activation
+
+#### Rationale
+
+- **putImageData is 100% synchronous** — no onload, no decode(), no Promises, no race conditions
+- **Module init guarantees load order** — characterSheets Map is populated before any other code runs
+- **Build-time decode is reliable** — Python PIL/Node.js Sharp are battle-tested, deterministic
+- **Cache-busting prevents silent failures** — fixes take effect immediately, no stale JS served
+- **Bundle size tradeoff is acceptable** — 597KB vs 375KB for guaranteed rendering
+
+#### Consequences
+
+**Positive:**
+- **Zero async dependencies for critical assets** — rendering works 100% reliably
+- **No more colored rectangle fallbacks** — sprites always render
+- **Faster first paint** — no Image load delay, pixels are immediately available
+- **Debuggable** — console logs show characterSheets.size at bootstrap time
+
+**Negative:**
+- **Larger bundle size** — raw RGBA is ~3× bigger than compressed PNG (224×128 = 114KB raw vs ~38KB PNG)
+- **Build-time dependency on PIL** — Python Pillow must be installed to run gen script
+- **Regenerate on PNG changes** — run python scripts/gen_embedded_chars.py after updating source PNGs
+
+#### Team Impact
+
+- **Bart (Frontend Dev):** Owns gen script and bootstrap code — regenerate embeddedCharacters.ts after PNG updates
+- **Lisa (Core Dev):** Cache-busting pattern applies to all webview HTML generation — use ?v= for script/CSS
+- **All:** If adding new critical bootstrap assets (tileset, icons), use this pattern — raw RGBA + putImageData
+
+#### Enforcement
+
+- Add comment to assetLoader.ts bootstrap section: "CRITICAL: Use putImageData for sync load — do not replace with async Image"
+- Document in README.md: "Run python scripts/gen_embedded_chars.py after updating character PNGs"
+- If webview caching issues recur, verify cache-busting is present in _getHtmlForWebview()
+
+### 19. User Directive: Base64 Data URIs for PNG Asset Delivery (2026-03-08)
+
+**From:** Squad Coordinator  
+**Status:** Implemented
+
+**What:** All PNG assets sent as base64 data URIs instead of webview resource URIs.  
+**Why:** Webview resource URIs failed silently in new Image() loads after 5+ fix attempts. Data URIs bypass the webview resource server entirely.
+
+**Note:** This directive was superseded by Decision §18 (Synchronous RGBA Loading), which replaced data URIs with embedded base64 RGBA and putImageData() for even greater reliability.
+
+### 20. User Directive: Smaller Sprite Sheets Incoming (2026-03-08T15:52)
+
+**From:** Brian Swiger (via Copilot)  
+**Status:** Captured for team memory
+
+**What:** Brian is generating smaller character sprite sheet PNGs using Gemini with Nano Banana Pro 2. These will replace the current oversized character PNGs. Team should be ready to integrate when provided.  
+**Why:** User request - captured for team memory
+
+### 21. Reduce Character Sprites to 2 (A and B)
+
+**Author:** Lisa Simpson  
+**Date:** 2026-03-08  
+**Status:** Implemented
+
+#### Context
+
+Brian provided two new source character images to replace all existing sprite sheets. The project previously had 5 character variants (A-E, all identical 63KB placeholders) with CHAR_COUNT=6 palette cycling.
+
+#### Decision
+- Reduce to exactly 2 character sprite sheets: char_employeeA.png (dark-haired male) and char_employeeB.png (blonde female).
+- CHAR_COUNT set to 2. Palette index cycles 0→A, 1→B, 2→A, 3→B, etc.
+- PALETTE_TO_SHEET reduced to ['A', 'B'] with modulo wrapping.
+- The SquadPodViewProvider auto-discovers sheets via glob — no code change needed there.
+
+#### Impact
+- All agents now alternate between 2 character appearances instead of 6.
+- Sprite sheet file size dropped from 63KB each to ~23-29KB each (real pixel art vs placeholders).
+- If more character variety is needed later, add new sheets (C, D, etc.) and bump CHAR_COUNT + PALETTE_TO_SHEET.
+
+#### UP-Facing Sprite Limitation
+
+Image A's UP-facing direction had gray clothing indistinguishable from the gray background. The UP row uses horizontally-flipped DOWN frames as a workaround. If Brian provides a re-rendered source with distinct background color (e.g., magenta/green screen), the true back view can be extracted.
+
+### 22. Never Use crossOrigin on Image Loads in VS Code Webviews
+
+**Author:** Lisa Simpson  
+**Date:** 2026-03-08  
+**Status:** Implemented
+
+#### Context
+
+Five consecutive fix attempts failed to make PNG tileset and character sprites render in the webview. The root cause was crossOrigin='anonymous' on 
+ew Image() — the vscode-resource server does not reliably send CORS headers, causing the image load to fail entirely (onerror fires). The retry mechanism (load without crossOrigin after CORS failure) was also unreliable due to browser response caching.
+
+#### Decision
+
+**Never set crossOrigin on Image elements in VS Code webviews.** Load all images as plain 
+ew Image() without any CORS attribute.
+
+- **Tilesets:** Only need ctx.drawImage() which works perfectly on tainted canvases. No downside.
+- **Character sheets:** emoveBackground() may fail to getImageData() on a tainted canvas, but its existing catch block handles this gracefully (returns canvas with raw image — character renders with visible background instead of colored circles).
+
+Additionally, always keep strong module-level references to in-flight Image objects to prevent garbage collection before onload/onerror fires.
+
+#### Rationale
+
+- ctx.drawImage() does not require CORS. Only pixel manipulation (getImageData/toDataURL) requires it.
+- The character background removal is a nice-to-have, not critical. The catch block already handles the failure gracefully.
+- Reliability of image loading trumps background removal quality.
+
+### 23. Separate Readiness Gates for Tileset vs Character Assets
+
+**Author:** Lisa Simpson  
+**Date:** 2026-03-08  
+**Status:** Implemented
+
+#### Context
+
+Squad Pod's PNG rendering pipeline now uses extension-host base64 data URIs sent over postMessage, then browser-side Image loads in the webview. Even with that transport fixed, the runtime could still fall back to colored rectangles/circles because the renderer relied on one shared ssetsReady flag for three different async asset families:
+
+1. metadata tileset PNG + item index
+2. legacy tileset PNG + object map
+3. character sprite sheets keyed by palette
+
+That shared flag allowed partial success to masquerade as full readiness.
+
+#### Decision
+
+Use **resource-specific readiness checks** instead of a single global gate:
+
+- reTilesetAssetsReady() for floor/wall/furniture PNG rendering
+- reCharacterAssetsReady() plus direct palette-sheet existence checks for character rendering
+- getAssetLoadSnapshot() for diagnostics
+
+Keep reAssetsReady() only as an aggregate "anything PNG-based is available" helper, not as the renderer's primary decision point.
+
+#### Why
+
+- Tile rendering depends on **tileset metadata image/object data**, not on character sheets.
+- Character rendering depends on **the requested sheet for that palette**, not on the tileset.
+- A single async success must not flip the entire renderer into a PNG path that still lacks the data it needs.
+- Brian needs DevTools visibility into which exact stage loaded, failed, or is still pending.
+
+#### Consequences
+
+- Renderer fallback decisions now match the actual resource each path consumes.
+- DevTools logs clearly show when messages are sent, received, dispatched, loaded, failed, and why fallback was chosen.
+- Future asset work should avoid reintroducing a shared readiness boolean across unrelated pipelines.
+
+### 24. Clean Build Targets Before Asset Copy
+
+**Author:** Bart Simpson (Frontend Dev)  
+**Date:** 2026-03-08  
+**Status:** Implemented
+
+#### Context
+
+The esbuild copy-assets plugin copied webview-ui/public/assets/ to dist/assets/ using fs.cpSync() without cleaning the target first. When character sprite files C/D/E were removed from source, the stale PNGs persisted in dist/assets/characters/. The extension host then sent 5 character sheet data URIs instead of 2, adding ~252KB of unnecessary payload to the characterAssetsLoaded message.
+
+#### Decision
+
+Updated esbuild.js copy-assets plugin to rmSync the target directory before cpSync. This ensures dist/assets/ is always a clean mirror of webview-ui/public/assets/.
+
+#### Consequences
+
+- dist/assets/ will always match source, no stale file surprises
+- Build is slightly slower (delete + copy instead of overwrite), negligible impact
+- All team members building from source get identical dist/ output
