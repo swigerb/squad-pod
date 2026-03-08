@@ -531,3 +531,38 @@ Built the complete layout editor toolbar — the missing piece that makes Edit L
 - ✅ Vite webview build succeeds (297KB bundle)
 - ✅ Extension build succeeds
 - ✅ No changes to extension host code (src/)
+
+## Bug Fixes & Refinements (2026-03-08 Session)
+
+### Exit Layout Editor + Floor Tile Painting Fixes (2026-03-08T0416)
+
+Fixed two blocking bugs in the layout editor, reported from test session:
+
+**Bug 1 — "Exit Layout Editor" button does nothing**
+- Root cause: `handleToggleEditMode()` used `window.confirm()` to ask about unsaved changes
+- VS Code webview sandbox blocks modal dialogs (no `allow-modals` permission)
+- `window.confirm()` returns false immediately, causing handler to return early
+- Solution: Removed confirm gate. Changes persist visually; user can Save or Reset explicitly via buttons
+
+**Bug 2 — Floor tiles paint as wrong color**
+- Root cause: TILE_PAINT handler used conditional `editorState.tileType === 1 ? floorColor : wallColor`
+- Only FLOOR_1 (pattern 1) got `floorColor`; patterns 2–7 got `wallColor` (incorrect HSB values)
+- Visual result: some floor tiles painted with gray wall color instead of brown/tan
+- Solution: Fixed to always use `floorColor` for all floor patterns (1–7)
+
+**Bonus Fix: WALL_PAINT handler missing**
+- Editor routed WALL_PAINT action through `onEditorTileAction` but had no case in switch
+- Wall painting was silently broken (no visual feedback, tiles unchanged)
+- Added WALL_PAINT handler in `handleEditorTileAction`
+
+**Files Modified:**
+- `webview-ui/src/App.tsx` — Removed `window.confirm()` call from `handleToggleEditMode()`
+- `webview-ui/src/hooks/useEditorActions.ts` — Fixed TILE_PAINT handler logic + added WALL_PAINT handler
+
+**Key Learning:** Never use `window.confirm()`, `window.alert()`, or `window.prompt()` in VS Code webviews. The sandbox blocks modal dialogs. For confirmation flows, use VS Code message passing (`postMessage` → extension → `vscode.window.showWarningMessage` → response back) or design UX that avoids blocking confirmation (undo/reset buttons, auto-save, etc.).
+
+**Decision Added:** `.squad/decisions.md` § 13 — No modal dialogs in webview (architectural pattern + alternatives).
+
+**Test Results:** All 124 tests pass, build clean.
+
+**Status:** ✅ COMPLETED (commit 8698533)

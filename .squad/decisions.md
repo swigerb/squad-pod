@@ -454,6 +454,61 @@ The layout editor had all backend plumbing (EditorState, tools, undo/redo, ghost
 
 #### Decision
 
+(see original document for details)
+
+### 13. No `window.confirm()` or `window.alert()` in Webview
+
+**Author:** Bart Simpson  
+**Date:** 2025-07-24  
+**Status:** Implemented
+
+#### Context
+
+The "Exit Layout Editor" button silently did nothing because `handleToggleEditMode` used `window.confirm()` to ask about unsaved changes. In VS Code webview sandbox, `window.confirm()` returns `false` immediately without showing a dialog (no `allow-modals` permission), causing the handler to return early.
+
+#### Decision
+
+Never use `window.confirm()`, `window.alert()`, or `window.prompt()` in the webview. These modal dialog APIs are blocked by the VS Code webview sandbox.
+
+For confirmation flows, either:
+1. Use VS Code message passing (`postMessage` to extension → extension calls `vscode.window.showWarningMessage` → posts result back)
+2. Design UX that doesn't require blocking confirmation (e.g., undo/reset buttons, auto-save)
+
+#### Impact
+
+All webview code (`webview-ui/src/`). Anyone adding user-facing dialogs must use the VS Code messaging pattern instead of browser-native modals.
+
+### 14. Tileset PNG Replaces Colored Rectangles for Tile Grid Rendering
+
+**Author:** Lisa Simpson  
+**Date:** 2026-03-08  
+**Status:** Implemented
+
+#### Context
+
+The renderer always drew floor and wall tiles as colored rectangles (HSB-adjusted solid fills for walls, colorized inline sprites for floors). Custom tileset assets were loaded into memory but never used for tile grid rendering — only furniture used the tileset via `drawTilesetFurniture()`.
+
+#### Decision
+
+When tileset metadata and the tileset PNG are loaded, `renderTileGrid()` now draws floor and wall tiles directly from the tileset sprite sheet. Colored rendering is preserved as a fallback when assets aren't available.
+
+**TileType → Tileset item mapping:**
+- `FLOOR_1` → `floor_wood`
+- `FLOOR_2` → `floor_blue_diamond`
+- `FLOOR_3–7` → alternating `floor_wood`/`floor_blue_diamond`
+- `WALL` → `wall_white_panel` (clipped to top 16px of 16×32 source)
+
+#### Rationale
+
+The tileset PNG contains hand-crafted pixel art that looks significantly better than procedurally colored rectangles. The asset delivery pipeline was already working correctly — only the renderer was missing the connection.
+
+#### Impact
+
+- **Rendering:** Office now shows tileset artwork instead of flat colors when custom assets are present
+- **Fallback:** No-asset installs continue working with colored rectangles
+- **Performance:** `drawImage()` from a cached `HTMLImageElement` is faster than `getColorizedSprite()` → `getCachedSprite()` → `drawImage()`
+- **Future:** Additional floor/wall variants in tileset-metadata.json can be mapped to new TileType values by extending `tileTypeToMetadataItem` in `tilesetRenderer.ts`
+
 Implemented EditorToolbar as a **left side panel** (220px wide) rather than a floating overlay or top strip:
 
 1. **Left panel positioning** — sits between left edge and canvas, above the BottomToolbar (bottom: 48px). Doesn't obscure the canvas.

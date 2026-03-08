@@ -310,3 +310,27 @@ Established dual-build infrastructure (esbuild + Vite), TypeScript interfaces fo
 **Key Pattern:** The renderer must actively USE loaded assets — loading and storing them isn't enough. When adding new asset types, trace the full pipeline: extension reads → message sent → webview stores → **renderer draws**.
 
 **Test Results:** All 124 tests pass (46 extension + 78 webview), both builds clean.
+
+**Outcome:** ✅ SUCCESS (commit bc07a60) — Tileset PNG now renders floor and wall tiles; colored rectangles preserved as fallback for no-asset installs.
+
+## Bug Fixes & Refinements (2026-03-08 Session)
+
+### Tileset PNG Tile Grid Rendering — Complete (2026-03-08T0416)
+
+Diagnosed and fixed the final rendering gap: while sprite assets (character PNGs, tileset PNG, metadata) all loaded correctly, the `renderTileGrid()` function never used them. All floor and wall tiles rendered as colored rectangles.
+
+**Solution:**
+- `webview-ui/src/office/sprites/tilesetRenderer.ts` — Added `drawTilesetTile()` that maps TileType → tileset-metadata item IDs and renders directly from PNG
+- `webview-ui/src/office/engine/renderer.ts` — `renderTileGrid()` now calls `drawTilesetTile()` when assets loaded, falls back to colored rectangles when not
+
+**TileType Mapping:**
+- `FLOOR_1` → `floor_wood` | `FLOOR_2` → `floor_blue_diamond` | `FLOOR_3–7` → alternating
+- `WALL` → `wall_white_panel` (clipped to top 16px)
+
+**Key Learning:** Asset delivery is only half the battle — the renderer must actively draw from loaded assets. Just storing them in memory isn't enough.
+
+**Test Results:** All 124 tests pass, build clean.
+
+**Decision Added:** `.squad/decisions.md` § 14 — Tileset PNG replaces colored rectangles (architectural rationale + future extensibility).
+
+**Status:** ✅ COMPLETED
