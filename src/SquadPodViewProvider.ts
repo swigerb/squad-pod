@@ -623,6 +623,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       vscode.Uri.joinPath(distUri, 'assets', 'index.css'),
     );
 
+    // Cache-busting: append timestamp to force fresh load on every panel create
+    const cacheBuster = Date.now();
     const nonce = getNonce();
 
     return /* html */ `<!DOCTYPE html>
@@ -638,12 +640,12 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     font-src ${webview.cspSource};
     connect-src ${webview.cspSource};
   " />
-  <link rel="stylesheet" href="${styleUri}" />
+  <link rel="stylesheet" href="${styleUri}?v=${cacheBuster}" />
   <title>Squad Pod</title>
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
+  <script nonce="${nonce}" type="module" src="${scriptUri}?v=${cacheBuster}"></script>
 </body>
 </html>`;
   }

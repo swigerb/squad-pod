@@ -547,11 +547,10 @@ export function loadAssets(): Promise<void> {
 }
 
 // ── Embedded character bootstrap ──────────────────────────────────
-// Load character sprites from data URIs embedded directly in the JS
-// bundle.  Uses createImageBitmap (reliable in Electron) instead of
-// new Image() which has unreliable onload behavior in VS Code webviews.
-// Skips removeBackground() — these PNGs already have transparent
-// backgrounds from Python PIL processing.
+// Load character sprites SYNCHRONOUSLY from raw RGBA pixel data.
+// Uses putImageData() which is 100% synchronous — no Image objects,
+// no decode(), no onload, no Promises. The characterSheets Map is
+// populated BEFORE any other code runs.
 
 function storeCharacterSheet(key: string, width: number, height: number, source: CanvasImageSource): void {
   const rows = 4;
@@ -577,71 +576,43 @@ function storeCharacterSheet(key: string, width: number, height: number, source:
   console.error(`[SPRITE-DEBUG] ✅ Sheet "${key}" stored: ${width}×${height}, ${framesPerRow}×${rows} frames, scale=${scale}, base=${baseWidth}×${baseHeight}`);
 }
 
-async function loadEmbeddedCharactersAsync(): Promise<void> {
-  for (const { id, uri } of EMBEDDED_CHARACTERS) {
-    const key = id.replace(/^char_employee/, '');
-    if (!key) continue;
-
-    try {
-      // Strategy 1: DOM-based <img> with .decode() — most reliable in browsers
-      const img = document.createElement('img');
-      img.style.display = 'none';
-      img.src = uri;
-      document.body.appendChild(img);
-
-      try {
-        await img.decode();
-      } catch {
-        // .decode() might not be available; wait for natural load
-        if (!img.complete) {
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error(`img load failed for ${key}`));
-          });
-        }
-      }
-
-      console.error(`[SPRITE-DEBUG] DOM img loaded for "${key}": ${img.naturalWidth}×${img.naturalHeight}`);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx2 = canvas.getContext('2d');
-      if (ctx2) {
-        ctx2.drawImage(img, 0, 0);
-        storeCharacterSheet(key, img.naturalWidth, img.naturalHeight, canvas);
-      }
-      img.remove();
-    } catch (e) {
-      console.error(`[SPRITE-DEBUG] DOM strategy failed for "${key}", trying createImageBitmap:`, e);
-
-      // Strategy 2: createImageBitmap from Blob (fallback)
-      const base64 = uri.replace('data:image/png;base64,', '');
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: 'image/png' });
-      const bitmap = await createImageBitmap(blob);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      const ctx2 = canvas.getContext('2d');
-      if (ctx2) {
-        ctx2.drawImage(bitmap, 0, 0);
-        storeCharacterSheet(key, bitmap.width, bitmap.height, canvas);
-      }
-      bitmap.close();
-    }
-  }
-}
-
-// Bootstrap: load embedded characters immediately.
-// Uses DOM <img> + .decode() (primary) or createImageBitmap (fallback).
+// Bootstrap: SYNCHRONOUS loading at module init time.
 // Guarded with typeof checks so it doesn't crash in JSDOM test environments.
 if (typeof document !== 'undefined' && typeof atob === 'function' && EMBEDDED_CHARACTERS.length > 0) {
-  console.error('[SPRITE-DEBUG] loadEmbeddedCharacters: starting async load of', EMBEDDED_CHARACTERS.length, 'sheets');
-  loadEmbeddedCharactersAsync()
-    .then(() => console.error('[SPRITE-DEBUG] loadEmbeddedCharacters: done. characterSheets.size:', characterSheets.size, 'keys:', [...characterSheets.keys()]))
-    .catch(e => console.error('[SPRITE-DEBUG] ❌ loadEmbeddedCharacters failed:', e));
+  console.error('[SPRITE-DEBUG] Sync embedded load: starting for', EMBEDDED_CHARACTERS.length, 'sheets');
+  
+  for (const { id, width, height, rgbaBase64 } of EMBEDDED_CHARACTERS) {
+    const key = id.replace(/^char_employee/, '');
+    if (!key) continue;
+    
+    try {
+      // Decode base64 → raw RGBA bytes
+      const binary = atob(rgbaBase64);
+      const rgba = new Uint8ClampedArray(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        rgba[i] = binary.charCodeAt(i);
+      }
+      
+      // Create ImageData from raw pixels
+      const imageData = new ImageData(rgba, width, height);
+      
+      // Draw to canvas via putImageData (SYNCHRONOUS!)
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        console.error(`[SPRITE-DEBUG] ❌ Failed to get 2d context for "${key}"`);
+        continue;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Store immediately — characterSheets Map is now populated
+      storeCharacterSheet(key, width, height, canvas);
+    } catch (e) {
+      console.error(`[SPRITE-DEBUG] ❌ Sync embedded load failed for "${key}":`, e);
+    }
+  }
+  
+  console.error('[SPRITE-DEBUG] Sync embedded load complete. characterSheets.size:', characterSheets.size, 'keys:', [...characterSheets.keys()]);
 }
