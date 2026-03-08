@@ -271,4 +271,10 @@ Established dual-build infrastructure (esbuild + Vite), TypeScript interfaces fo
 
 **Backward Compatibility:** Both legacy character sprite JSON decoding (pixel arrays) and new URI-based PNG loading paths coexist. Webview uses PNG assets when available, falls back to inline sprites.
 
-**Status:** In progress — Testing character rendering post-F5 refresh.
+**Status:** ✅ COMPLETED (2026-03-08T0356)
+
+**Test Results:** All 124 tests pass, both builds clean.
+
+**Commit:** 3906f88 — Character asset loading webview handler — fix missing message case for custom sprite sheets
+
+**Pattern Established:** When adding new `OutboundMessage` variants to the discriminated union in `src/types.ts`, always add corresponding handler in `webview-ui/src/hooks/useExtensionMessages.ts`. Silent fallback in default case makes unhandled messages invisible to debugging.
