@@ -422,3 +422,44 @@ Ported four self-contained HTML browser tools from pablodelucca/pixel-agents int
 **Branding:** Updated `<title>` tags to include "— Squad Pod" suffix. The original files had no "Pixel Agents" text strings in their content — they used generic tool names throughout.
 
 **Key conventions:** All tools are self-contained single HTML files (no build step). They reference JSON data via file input or localStorage. Users open them directly in a web browser.
+
+### PNG Sprite Sheet Rendering System (2026-03-07)
+
+**Task:** Added PNG-based tileset and character sprite sheet rendering alongside existing inline sprite system.
+
+**Files Created:**
+- `webview-ui/src/office/sprites/assetLoader.ts` — Asset preloader that loads tileset PNG + JSON and character sprite sheet PNGs (A–D). Removes near-white background via color keying to create transparency. Caches processed canvases. Exposes `areAssetsReady()`, `getTilesetData()`, `getCharacterSheet()`, `setAssetBaseUrl()`.
+- `webview-ui/src/office/sprites/tilesetRenderer.ts` — Draws furniture from `tileset_office.png` using `ctx.drawImage()` source-rectangle clipping. Maps FurnitureType to tileset.json object names (desk→work_desk_v1, bookshelf→bookshelf_full, etc.).
+- `webview-ui/src/office/sprites/characterSheetRenderer.ts` — Renders characters from 4-row PNG sprite sheets. Direction-to-row mapping: UP→0, RIGHT→1, DOWN→2, LEFT→3. Palette-to-sheet mapping: 0→A, 1→B, 2→C, 3→D (wraps). Provides frame size and offset utilities for positioning.
+
+**Files Modified:**
+- `webview-ui/src/office/engine/renderer.ts` — Extended Drawable interface with furnitureType, character refs, and PNG dest dimensions. renderScene() now checks `areAssetsReady()` each frame and tries PNG rendering first with inline sprite fallback.
+- `webview-ui/src/office/sprites/index.ts` — Added exports for all three new modules.
+- `webview-ui/src/office/components/OfficeCanvas.tsx` — Added `loadAssets()` call on mount (fire-and-forget).
+- `webview-ui/src/hooks/useExtensionMessages.ts` — Added `assetBaseUrl` message handler so extension can provide correct webview URI for assets.
+
+**Character Sprite Sheet Analysis:**
+- Dimensions: 3220×1280, 4 rows of 320px each
+- Scale factor: 20× (base 16px tile height)
+- Frame layout: 7 frames per row, each 460×320 source pixels (23×16 base pixels)
+- No alpha channel — background is near-white (~RGB 230, tolerance 45 for removal)
+- Base character content: ~7×14 pixels centered in 23×16 frame
+
+**Tileset Analysis:**
+- `tileset_office.png`: 800×1333 pixels
+- 12 named objects in tileset.json with 16px tile grid coordinates
+- Objects range from 16×16 (monitor, clock) to 48×32 (desks)
+
+**Architecture Decisions:**
+- PNG rendering is opt-in — only activates when assets load successfully
+- Inline sprites remain the default fallback for zero-downtime rendering
+- Z-sorting works across both PNG and inline drawables in the same scene
+- Asset loading is fire-and-forget from OfficeCanvas useEffect
+- Extension can set base URL via `assetBaseUrl` message for VS Code webview URI resolution
+- `imageSmoothingEnabled = false` enforced for crisp pixel art at all zoom levels
+
+**Build Verification:**
+- ✅ 78 webview tests pass (vitest)
+- ✅ Vite build succeeds (283KB bundle)
+- ✅ TypeScript strict mode: zero errors
+- ✅ No changes to extension host code (src/)

@@ -425,6 +425,107 @@ Implement **EditorToolbar** + **Furniture Palette UI** + **Color Picker** in nex
 
 See `.squad/decisions/inbox/homer-simpson-pixel-agents-gap-analysis.md` for complete feature comparison matrix, implementation notes, and file references.
 
+### 10. Custom Asset URI Pipeline
+
+**Date:** 2026-03-08  
+**Author:** Lisa Simpson (Core Dev)  
+**Status:** Implemented
+
+#### Context
+
+Brian provided custom 16×16 pixel art assets — a tileset spritesheet (tileset_office.png, 2.1MB) with 12 furniture objects and 4 character sprite sheets (char_employeeA–D.png, ~5MB each) with a 4-direction walk format. The existing asset pipeline decodes PNGs server-side via `pngjs` and sends pixel arrays as JSON through `postMessage`. This works for small procedural sprites but would be prohibitively slow and memory-intensive for multi-megabyte spritesheets.
+
+#### Decision
+
+**Introduce a parallel URI-based asset delivery path alongside the existing inline-sprite pipeline.**
+
+**New message types:**
+- `tilesetAssetsLoaded` — sends the tileset PNG as a webview URI plus the parsed tileset.json coordinate map
+- `characterAssetsLoaded` — sends an array of `{id, uri}` entries for each custom character sprite sheet
+
+**How it works:**
+1. Extension host reads `tileset.json` from `dist/assets/` to get the object coordinate map
+2. Converts local file paths to webview-safe URIs via `webview.asWebviewUri()`
+3. Sends URIs + JSON metadata to webview via `postMessage`
+4. Webview loads PNGs via `new Image()` in the browser (Bart's territory)
+
+**Key types:**
+- `TilesetData` / `TilesetObjectRegion` — JSON coordinate map
+- `CharacterAssetEntry` — `{id, uri}` pair
+
+#### Rationale
+
+- **Performance:** Browser-native image loading is orders of magnitude faster than server-side PNG decode → pixel array → JSON serialize → postMessage → deserialize
+- **Backward compatibility:** Legacy inline-sprite messages (`characterSpritesLoaded`, `furnitureLoaded`, etc.) are still sent — webview can prefer URI-based assets when available
+- **Separation of concerns:** Extension host only handles URI generation and JSON parsing; webview handles all rendering (Bart's domain)
+- **Graceful degradation:** If custom assets don't exist, no messages are sent — no errors, no broken state
+
+#### Consequences
+
+**Positive:**
+- Custom assets load efficiently in the webview without blocking the extension host
+- No dependency on `pngjs` for the new asset path
+- Webview can use Canvas `drawImage()` with source rectangles for tileset slicing
+
+**Negative:**
+- Two parallel asset delivery mechanisms (inline pixels vs URIs) — slightly more complexity
+- Webview must handle both old and new message types during transition
+
+#### Team Impact
+
+- **Bart (Canvas Dev):** Can now receive `tilesetAssetsLoaded` and `characterAssetsLoaded` messages in `useExtensionMessages.ts` and load the images for Canvas rendering
+- **Lisa (Core Dev):** Types, URI generation, and message protocol complete
+- **All:** TILE_SIZE = 16 is now a named constant in `src/constants.ts` (was previously only in webview code)
+
+### 11. PNG Asset Rendering Pipeline
+
+**Author:** Bart Simpson (Frontend Dev)  
+**Date:** 2026-03-08  
+**Status:** Implemented
+
+#### Context
+
+Brian provided custom 16×16 pixel art assets (tileset + 4 character sprite sheets) placed in `webview-ui/public/assets/`. The existing rendering system uses inline `SpriteData` (2D string arrays) for both furniture and characters. We need to render from PNG sprite sheets without breaking the existing system.
+
+#### Decision
+
+Implemented a **parallel rendering pipeline** that loads PNG assets at startup and uses them when available, with automatic fallback to inline sprites.
+
+#### Architecture
+
+1. **assetLoader.ts** preloads all PNGs on mount. Character sheets get background removal (color keying) since they have opaque near-white backgrounds instead of alpha transparency.
+2. **tilesetRenderer.ts** and **characterSheetRenderer.ts** provide draw functions that clip from sprite sheets using `ctx.drawImage()`.
+3. **renderer.ts** checks `areAssetsReady()` each frame. Per-drawable, it tries PNG first then falls back to inline.
+4. The extension can send an `assetBaseUrl` message to set the correct webview URI base for production.
+
+#### Character Sheet Format
+
+- 4 rows: Up(0), Right(1), Down(2), Left(3)
+- 7 frames per row, 23×16 base pixels at 20× upscale
+- Palette index maps to sheet: 0→A, 1→B, 2→C, 3→D (wraps for 4+)
+
+#### Team Impact
+
+- **Lisa:** Can send `assetBaseUrl` message from extension host to set correct webview URI for assets. No extension host code was modified.
+- **Marge:** All 78 existing tests pass. New rendering code is browser-only (Canvas API) so not directly unit-testable in jsdom without canvas mocks.
+- **Ned:** Asset pipeline documented in history.md. Users place PNGs in `webview-ui/public/assets/`.
+
+#### Consequences
+
+**Positive:** PNG rendering is completely opt-in. If assets fail to load, nothing breaks.  
+**Negative:** Character sprite sheets require background removal at load time (one-time cost per sheet, ~50ms each).
+
+### 12. User Directive: Custom Asset Integration (2026-03-08T03:03)
+
+**From:** Brian Swiger (via Copilot)  
+**Status:** Captured for team memory
+
+Custom 16x16 pixel assets must be integrated manually into the codebase. Character PNGs (4 employees A-D) go to webview-ui/public/assets/characters/. Tileset PNG + JSON go to webview-ui/public/assets/. TILE_SIZE must be 16. tileset.json is the source of truth for object IDs. Character sheets use 4-frame rows: Row 0=Walk Up, Row 1=Walk Right, Row 2=Walk Down, Row 3=Walk Left.
+
+#### Rationale
+
+User request — captured for team memory and decision context.
+
 ## Governance
 
 - All meaningful changes require team consensus

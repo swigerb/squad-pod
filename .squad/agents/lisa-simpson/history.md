@@ -114,3 +114,45 @@ Established dual-build infrastructure (esbuild + Vite), TypeScript interfaces fo
 
 **Outcome:** SUCCESS — Complete tileset import pipeline ported and working.
 
+### Custom Asset URI Pipeline (2026-03-08)
+
+**Task:** Extension-host side of custom asset integration — types, asset URI generation, message protocol for Brian's custom 16×16 tileset and 4-direction character sprite sheets.
+
+**Problem:** The legacy asset pipeline (assetLoader.ts) decodes PNGs server-side into pixel arrays and sends them as JSON. Custom assets (tileset_office.png at 2.1MB, 4 character PNGs at ~5MB each) are too large for this approach. The webview needs to load them directly via `<img>` / `new Image()` in the browser.
+
+**Solution — URI-based asset delivery:**
+- Extension host generates webview-safe URIs via `webview.asWebviewUri()` and sends them in new message types
+- Webview loads PNGs directly in the browser — no PNG decode overhead in the extension host
+- Legacy inline-sprite pipeline preserved as fallback (both messages sent during init)
+
+**Types Added (src/types.ts):**
+- `TilesetObjectRegion` — pixel region {x, y, w, h} within tileset PNG
+- `TilesetData` — parsed tileset.json structure (name, tile_size, source, objects map)
+- `CharacterAssetEntry` — {id, uri} for a single character sprite sheet
+- `tilesetAssetsLoaded` message — sends tileset PNG URI + parsed JSON coordinate map
+- `characterAssetsLoaded` message — sends array of character sprite sheet URIs
+
+**Constants Added (src/constants.ts):**
+- `TILE_SIZE = 16` — canonical tile size constant (extension host side)
+- `FLOOR_TILE_SIZE` now derives from `TILE_SIZE` instead of hardcoded 16
+- `CUSTOM_CHAR_DIRECTIONS` — ['up', 'right', 'down', 'left'] row order for new 4-direction sprites
+- `CUSTOM_CHAR_SPRITE_PREFIX` — 'char_employee' filename prefix filter
+
+**Provider Changes (src/SquadPodViewProvider.ts):**
+- Added `loadAndSendCustomAssetUris()` method in the `onWebviewReady` flow (step 4, between legacy assets and layout)
+- Reads tileset.json, generates webview URIs for tileset PNG and all char_employee*.png files
+- Graceful degradation: silently skips if assets don't exist (won't break existing installs)
+
+**Build Pipeline:** No changes needed — esbuild's `copyAssetsPlugin` already recursively copies `webview-ui/public/assets/` → `dist/assets/`, including the new PNG and JSON files. Verified all 6 custom asset files appear in `dist/assets/` after build.
+
+**TILE_SIZE Enforcement:** Added `TILE_SIZE = 16` to `src/constants.ts`. Webview already has `TILE_SIZE = 16` in both `webview-ui/src/constants.ts` and `webview-ui/src/office/types.ts`. The tileset.json also declares `tile_size: 16` — the webview can validate this at runtime.
+
+**Key File Changes:**
+- `src/types.ts` — 3 new interfaces + 2 new OutboundMessage variants
+- `src/constants.ts` — TILE_SIZE, CUSTOM_CHAR_DIRECTIONS, CUSTOM_CHAR_SPRITE_PREFIX
+- `src/SquadPodViewProvider.ts` — loadAndSendCustomAssetUris() method + import updates
+
+**Backward Compatibility:** Fully preserved. Both legacy (characterSpritesLoaded with pixel arrays) and new (characterAssetsLoaded with URIs) messages are sent. Webview can use whichever it prefers.
+
+**Test Results:** All 46 tests pass, build clean.
+
