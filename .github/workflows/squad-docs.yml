@@ -26,17 +26,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
 
-      - name: Install build dependencies
-        run: npm install --no-save markdown-it markdown-it-anchor
+      - name: Install docs dependencies
+        working-directory: docs
+        run: npm ci
 
       - name: Build docs site
-        run: node docs/build.js --out _site --base /squad
+        working-directory: docs
+        run: npm run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: docs/dist
 
   deploy:
     needs: build
