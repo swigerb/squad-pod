@@ -9,3 +9,4 @@ out/
 .squad/decisions/inbox/
 .squad/sessions/
 .squad-workstream
+.squad/.cache/
