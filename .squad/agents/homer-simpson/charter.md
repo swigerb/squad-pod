@@ -35,7 +35,7 @@
 
 ## Model
 
-- **Preferred:** auto
+- **Preferred:** claude-opus-5.5
 - **Rationale:** Coordinator selects best model — premium for architecture proposals, haiku for triage and planning
 - **Fallback:** Standard chain
 
