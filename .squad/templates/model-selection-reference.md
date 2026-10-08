@@ -50,9 +50,9 @@ Before spawning an agent, determine which model to use. Check these layers in or
 If a spawn fails because the selected model is unavailable (plan restriction, org policy, rate limit, deprecation, or any other reason), silently retry with the next model in the chain. Do NOT tell the user about fallback attempts. Maximum 3 retries before using the platform default fallback.
 
 ```
-Premium:  gpt-5.6-sol → claude-opus-5 → claude-opus-4.8 → claude-opus-4.7 → claude-opus-4.6 → claude-sonnet-4.6 → (omit model param)
-Standard: gpt-5.6-terra → claude-sonnet-5 → claude-sonnet-4.6 → gpt-5.5 → gpt-5.4 → gpt-5.3-codex → claude-sonnet-4.5 → gemini-3.1-pro → (omit model param)
-Fast:     gpt-5.6-luna → claude-haiku-4.5 → gpt-5.4-mini → gpt-5-mini → (omit model param)
+Premium:  gpt-5.6-sol → claude-opus-5.5 → claude-opus-5 → claude-opus-4.8 → claude-opus-4.7 → claude-opus-4.6 → claude-sonnet-4.6 → (omit model param)
+Standard: gpt-5.6-terra → claude-sonnet-5.5 → claude-sonnet-5 → claude-sonnet-4.6 → gpt-5.5 → gpt-5.4 → gpt-5.3-codex → claude-sonnet-4.5 → gemini-3.1-pro → (omit model param)
+Fast:     gpt-5.6-luna → claude-haiku-5.5 → claude-haiku-4.5 → gpt-5.4-mini → gpt-5-mini → (omit model param)
 ```
 
 `(omit model param)` = call the `task` tool WITHOUT the `model` parameter. The platform uses its built-in default. This is the platform default fallback — it lets the platform choose the model.
@@ -96,6 +96,6 @@ Include tier annotation only when the model was bumped or a specialist was chose
 
 **Valid models (current platform catalog):**
 
-Premium: `gpt-5.6-sol`, `claude-opus-5`, `claude-opus-4.8`, `claude-opus-4.7`, `claude-opus-4.6`
-Standard: `gpt-5.6-terra`, `claude-sonnet-5`, `claude-sonnet-4.6`, `claude-sonnet-4.5`, `gpt-5.5`, `gpt-5.4`, `gpt-5.3-codex`, `gemini-3.1-pro`
-Fast/Cheap: `gpt-5.6-luna`, `claude-haiku-4.5`, `gpt-5.4-mini`, `gpt-5-mini`
+Premium: `gpt-5.6-sol`, `claude-opus-5.5`, `claude-opus-5`, `claude-opus-4.8`, `claude-opus-4.7`, `claude-opus-4.6`
+Standard: `gpt-5.6-terra`, `claude-sonnet-5.5`, `claude-sonnet-5`, `claude-sonnet-4.6`, `claude-sonnet-4.5`, `gpt-5.5`, `gpt-5.4`, `gpt-5.3-codex`, `gemini-3.1-pro`
+Fast/Cheap: `gpt-5.6-luna`, `claude-haiku-5.5`, `claude-haiku-4.5`, `gpt-5.4-mini`, `gpt-5-mini`

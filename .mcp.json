@@ -1,10 +1,8 @@
 {
   "mcpServers": {
     "squad_state": {
-      "command": "npx",
+      "command": "squad",
       "args": [
-        "-y",
-        "@bradygaster/squad-cli@1.0.1",
         "state-mcp"
       ],
       "env": {},

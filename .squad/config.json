@@ -2,6 +2,8 @@
   "version": 1,
   "teamRoot": ".",
   "agentModelOverrides": {
-    "homer-simpson": "claude-opus-5.5"
-  }
+    "homer-simpson": "claude-opus-5.5",
+    "scribe": "claude-haiku-5.5"
+  },
+  "defaultModel": "claude-sonnet-5.5"
 }
