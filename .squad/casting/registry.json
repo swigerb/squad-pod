@@ -1,52 +1,69 @@
 {
+  "schema": "squad-agent-provenance/v1",
+  "schema_version": 1,
+  "revision": 2,
+  "generated_at": "2026-03-05T16:35:00.000Z",
   "agents": {
     "homer-simpson": {
+      "display_name": "Homer Simpson",
       "persistent_name": "Homer Simpson",
-      "universe": "The Simpsons",
       "role": "Lead",
-      "created_at": "2026-03-05T16:35:00Z",
-      "legacy_named": false,
-      "status": "active"
+      "universe": "The Simpsons",
+      "status": "active",
+      "created_at": "2026-03-05T16:35:00.000Z",
+      "updated_at": "2026-03-05T16:35:00.000Z",
+      "legacy_named": false
     },
     "lisa-simpson": {
+      "display_name": "Lisa Simpson",
       "persistent_name": "Lisa Simpson",
-      "universe": "The Simpsons",
       "role": "Core Dev / Extension Developer",
-      "created_at": "2026-03-05T16:35:00Z",
-      "legacy_named": false,
-      "status": "active"
+      "universe": "The Simpsons",
+      "status": "active",
+      "created_at": "2026-03-05T16:35:00.000Z",
+      "updated_at": "2026-03-05T16:35:00.000Z",
+      "legacy_named": false
     },
     "bart-simpson": {
+      "display_name": "Bart Simpson",
       "persistent_name": "Bart Simpson",
-      "universe": "The Simpsons",
       "role": "Frontend Dev",
-      "created_at": "2026-03-05T16:35:00Z",
-      "legacy_named": false,
-      "status": "active"
+      "universe": "The Simpsons",
+      "status": "active",
+      "created_at": "2026-03-05T16:35:00.000Z",
+      "updated_at": "2026-03-05T16:35:00.000Z",
+      "legacy_named": false
     },
     "marge-simpson": {
+      "display_name": "Marge Simpson",
       "persistent_name": "Marge Simpson",
-      "universe": "The Simpsons",
       "role": "Tester",
-      "created_at": "2026-03-05T16:35:00Z",
-      "legacy_named": false,
-      "status": "active"
+      "universe": "The Simpsons",
+      "status": "active",
+      "created_at": "2026-03-05T16:35:00.000Z",
+      "updated_at": "2026-03-05T16:35:00.000Z",
+      "legacy_named": false
     },
     "ned-flanders": {
+      "display_name": "Ned Flanders",
       "persistent_name": "Ned Flanders",
-      "universe": "The Simpsons",
       "role": "DevRel",
-      "created_at": "2026-03-05T16:35:00Z",
-      "legacy_named": false,
-      "status": "active"
+      "universe": "The Simpsons",
+      "status": "active",
+      "created_at": "2026-03-05T16:35:00.000Z",
+      "updated_at": "2026-03-05T16:35:00.000Z",
+      "legacy_named": false
     },
     "scribe": {
+      "display_name": "Scribe",
       "persistent_name": "Scribe",
-      "universe": null,
       "role": "Scribe",
-      "created_at": "2026-03-05T16:35:00Z",
-      "legacy_named": true,
-      "status": "active"
+      "universe": "unknown",
+      "status": "active",
+      "created_at": "2026-03-05T16:35:00.000Z",
+      "updated_at": "2026-03-05T16:35:00.000Z",
+      "legacy_named": true
     }
-  }
+  },
+  "transaction_id": "3139b128-6f34-46df-9500-866f9312cd1e"
 }

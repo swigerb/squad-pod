@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "teamRoot": "C:\\Users\\brswig\\source\\repos\\squad-pod",
+  "teamRoot": ".",
   "agentModelOverrides": {
     "homer-simpson": "claude-opus-5.5"
   }
