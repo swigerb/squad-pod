@@ -1,8 +1,39 @@
-import { OfficeLayout, TileType, FloorColor, PlacedFurniture } from '../types.js';
+import { OfficeLayout, TileType, FloorColor, PlacedFurniture, CarpetTile } from '../types.js';
 import { EditorState, UndoEntry } from './editorState.js';
 import { UNDO_STACK_MAX_SIZE } from '../../constants.js';
 import { getCatalogEntry } from '../layout/furnitureCatalog.js';
 import { getFurnitureFootprint } from '../layout/layoutManager.js';
+import { isValidCarpetTile } from '../../../../src/carpetValidation.js';
+
+function inGrid(layout: OfficeLayout, col: number, row: number): boolean {
+  return Number.isInteger(col) && Number.isInteger(row) && col >= 0 && row >= 0 && col < layout.cols && row < layout.rows;
+}
+
+export function applyCarpetPaint(layout: OfficeLayout, col: number, row: number, carpet: CarpetTile): OfficeLayout {
+  if (!inGrid(layout, col, row) || !isValidCarpetTile(carpet)) return layout;
+  const index = row * layout.cols + col;
+  const floor = layout.tiles[index];
+  if (floor === TileType.WALL || floor === TileType.VOID || floor === undefined) return layout;
+  const carpets = structuredClone(layout.carpetTiles ?? Array(layout.tiles.length).fill(null)) as Array<CarpetTile | null>;
+  const current = carpets[index];
+  if (current?.variant === carpet.variant && JSON.stringify(current.color) === JSON.stringify(carpet.color)
+    && JSON.stringify(current.accentColor) === JSON.stringify(carpet.accentColor)) return layout;
+  const order = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, ...carpets.map((tile) => tile?.order ?? 0)) + 1);
+  carpets[index] = { ...structuredClone(carpet), order };
+  return { ...layout, carpetTiles: carpets };
+}
+
+export function applyCarpetErase(layout: OfficeLayout, col: number, row: number): OfficeLayout {
+  if (!inGrid(layout, col, row) || !layout.carpetTiles?.[row * layout.cols + col]) return layout;
+  const carpets = [...layout.carpetTiles];
+  carpets[row * layout.cols + col] = null;
+  return { ...layout, carpetTiles: carpets };
+}
+
+export function pickCarpet(layout: OfficeLayout, col: number, row: number): CarpetTile | null {
+  if (!inGrid(layout, col, row)) return null;
+  return structuredClone(layout.carpetTiles?.[row * layout.cols + col] ?? null);
+}
 
 function overlapArea(a: PlacedFurniture, b: PlacedFurniture): number {
   const af = getFurnitureFootprint(a);
@@ -132,6 +163,7 @@ export function applyTilePaint(
   tileType: TileType,
   color: FloorColor
 ): OfficeLayout {
+  if (!inGrid(layout, col, row)) return layout;
   const newLayout = cloneLayout(layout);
   const index = row * layout.cols + col;
   
@@ -139,6 +171,9 @@ export function applyTilePaint(
     newLayout.tiles[index] = tileType;
     if (!newLayout.tileColors) newLayout.tileColors = {};
     newLayout.tileColors[`${col},${row}`] = { ...color };
+    if ((tileType === TileType.WALL || tileType === TileType.VOID) && newLayout.carpetTiles) {
+      newLayout.carpetTiles[index] = null;
+    }
   }
   
   return newLayout;
@@ -149,11 +184,13 @@ export function applyErase(
   col: number,
   row: number
 ): OfficeLayout {
+  if (!inGrid(layout, col, row)) return layout;
   const newLayout = cloneLayout(layout);
   const index = row * layout.cols + col;
   
   if (index >= 0 && index < newLayout.tiles.length) {
     newLayout.tiles[index] = TileType.VOID;
+    if (newLayout.carpetTiles) newLayout.carpetTiles[index] = null;
     if (newLayout.tileColors) {
       delete newLayout.tileColors[`${col},${row}`];
     }
@@ -268,12 +305,5 @@ export function performRedo(state: EditorState, currentLayout: OfficeLayout): Of
 }
 
 function cloneLayout(layout: OfficeLayout): OfficeLayout {
-  return {
-    version: layout.version,
-    cols: layout.cols,
-    rows: layout.rows,
-    tiles: [...layout.tiles],
-    furniture: layout.furniture.map(f => ({ ...f })),
-    tileColors: layout.tileColors ? { ...layout.tileColors } : undefined
-  };
+  return structuredClone(layout);
 }

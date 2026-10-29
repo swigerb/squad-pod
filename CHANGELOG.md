@@ -11,6 +11,7 @@ All notable changes to Squad Pod are documented here.
 - Diagnostics moved to the **Squad Pod** output channel (no more workspace debug logs or popups).
 
 ### Added
+- Three source-pinned auto-tiling carpet styles with main/accent colors, style/color eyedropper, single-transaction paint/right-erase undo/redo, and resize/save/import/export preservation. Carpets are an optional visual layer: floor/wall IDs, walkability, furniture and Squad displays are unchanged. Separate PR316 asset provenance, exact blob checks and MIT contributor notices retained. This completes only the carpet slice of #7, not Areas/pets/launch or full #4 parity.
 - Settings → Add Asset Directory / Unload for validated local furniture manifests, independent failure diagnostics and one-second live reload. New placements persist their dimensions; changed/removed assets cannot silently expand saved furniture. Static group variants are supported; animation, other external pack kinds and pets remain deferred under partial issue #7.
 - Persisted sound/Debug View preferences, host-reported team file and native/polling observer status, and missing-team setup guidance. Launch remains off/unavailable; EventBus / WebSocket has no connected producer, and file observations do not supply authoritative tool/context events. Issue #7 remains partial.
 - Alt-drag furniture copies with fresh IDs and preserved colors; atomic desk + PC/lamp moves and rotations, group previews, and single-step undo/redo.

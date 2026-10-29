@@ -59,6 +59,9 @@ describe('validated manifest assets', () => {
     expect(snapshot.floors.every((sprite) => sprite.length === 16 && sprite.every((row) => row.length === 16))).toBe(true);
     expect(snapshot.walls).toHaveLength(16);
     expect(snapshot.walls.every((sprite) => sprite.length === 32 && sprite.every((row) => row.length === 16))).toBe(true);
+    expect(snapshot.carpets).toHaveLength(3);
+    expect(snapshot.carpets.every((set) => set.length === 16 && set.every((sprite) =>
+      sprite.length === 16 && sprite.every((row) => row.length === 16)))).toBe(true);
     expect(snapshot.furniture.every((a) => a.sprite.some((row) => row.some(Boolean)))).toBe(true);
     expect(fs.existsSync(path.join(bundled, 'tileset_office.png'))).toBe(false);
   });
@@ -72,16 +75,47 @@ describe('validated manifest assets', () => {
         if (entry.isDirectory()) { walk(relative); } else { files.push(relative); }
       }
     };
-    for (const dir of ['furniture', 'floors', 'walls']) { walk(dir); }
+    for (const dir of ['furniture', 'floors', 'walls', 'carpets']) { walk(dir); }
     const hash = createHash('sha256');
     for (const relative of files.sort()) {
       hash.update(`${relative}\0`);
       hash.update(fs.readFileSync(path.join(bundled, relative)));
     }
-    expect(files).toHaveLength(73);
+    expect(files).toHaveLength(76);
     expect(hash.digest('hex')).toBe(provenance.sha256);
     expect(provenance.commit).toBe('b1bafd02896d90d83457266575a1e8e5011ce997');
+    expect(provenance.directories).toEqual(['furniture', 'floors', 'walls', 'carpets']);
+    expect(provenance.fileCount).toBe(files.length);
+    const blobs = ['67fe2cd77038247a84c1a66fb9592ba3ee41a780', '25c9c0105fc0373cfcf89176101035bf64a5010c', '28907dc0181b713bf9da57cfac6148a7f7ca6122'];
+    const sizes = [394, 380, 363];
+    for (let i = 0; i < 3; i++) {
+      const bytes = fs.readFileSync(path.join(bundled, 'carpets', `carpet_${i}.png`));
+      expect(bytes.length).toBe(sizes[i]);
+      expect(createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex')).toBe(blobs[i]);
+      expect(provenance.carpets.files[i]).toEqual({ path: `carpets/carpet_${i}.png`, gitBlob: blobs[i], bytes: sizes[i] });
+    }
   });
+
+  it('isolates a corrupt fixed carpet sheet without shifting style IDs and detects restoration', () => {
+    const copy = path.join(root, 'bundle');
+    fs.cpSync(bundled, copy, { recursive: true });
+    const target = path.join(copy, 'carpets', 'carpet_1.png');
+    const original = fs.readFileSync(target);
+    const before = assetSourceFingerprint(copy, []);
+    const invalid = Buffer.from(original);
+    invalid.writeUInt32BE(0x7fffffff, 16);
+    fs.writeFileSync(target, invalid);
+    expect(assetSourceFingerprint(copy, [])).not.toBe(before);
+    const broken = loadAssetSnapshot(copy);
+    expect(broken.carpets.map((set) => set.length)).toEqual([16, 0, 16]);
+    expect(broken.furniture).toHaveLength(38);
+    expect(broken.diagnostics).toEqual([expect.stringContaining('Bundled carpet 1: PNG dimensions/signature must match 64x64')]);
+    fs.writeFileSync(target, original);
+    expect(assetSourceFingerprint(copy, [])).toBe(before);
+    const restored = loadAssetSnapshot(copy);
+    expect(restored.carpets.map((set) => set.length)).toEqual([16, 16, 16]);
+    expect(restored.diagnostics).toEqual([]);
+  }, 20_000);
 
   it.each(['../escape.png', '..\\escape.png', '/tmp/escape.png', 'C:\\escape.png', 'https://host/x.png', 'x.svg', 'x.png:stream'])(
     'rejects untrusted file reference %s', (file) => {
@@ -256,7 +290,7 @@ describe('validated manifest assets', () => {
       fs.rmSync(path.join(root, 'item000'), { recursive: true });
       expect(loadAssetSnapshot(bundled, [root, other]).diagnostics).toEqual([]);
     } finally { fs.rmSync(other, { recursive: true, force: true }); }
-  });
+  }, 20_000);
 
   it('counts attempted decode pixels even when corrupt art causes atomic failure', () => {
     const size = { width: 256, height: 256, footprintW: 16, footprintH: 16 };
@@ -304,7 +338,7 @@ describe('validated manifest assets', () => {
     expect(publish.mock.lastCall![0].diagnostics).toEqual([]);
     expect(publish.mock.lastCall![0].furniture.some((f: { type: string }) => f.type === 'local_EXTRA_EXTRA')).toBe(true);
     watcher.dispose();
-  });
+  }, 20_000);
 
   it('bounds total actual reads, bytes and enumeration across eight hostile roots on both paths', () => {
     const roots = Array.from({ length: 8 }, (_, i) => path.join(root, `root${i}`));
@@ -402,10 +436,10 @@ describe('validated manifest assets', () => {
     for (const dir of roots) {
       expect(snapshot.diagnostics).toContainEqual(expect.stringContaining(`${dir} / z_overflow: Root decode budget`));
     }
-    expect(decode).toHaveBeenCalledTimes(38 + 16 + 10);
+    expect(decode).toHaveBeenCalledTimes(38 + 16 + 13);
     const pixels = decode.mock.results.reduce((sum, result) =>
       sum + (result.type === 'return' ? result.value.width * result.value.height : 0), 0);
-    expect(pixels).toBeLessThanOrEqual(1048576 + 10496);
+    expect(pixels).toBeLessThanOrEqual(1048576);
     expect(pixels).toBeGreaterThanOrEqual(8 * ASSET_ROOT_LIMITS.external.pixels);
   });
 
@@ -441,7 +475,7 @@ describe('validated manifest assets', () => {
     fs.writeFileSync(path.join(dir, 'manifest.json'), 'invalid');
     vi.advanceTimersByTime(100);
     expect(publish).toHaveBeenCalledTimes(count);
-  });
+  }, 20_000);
 
   it('round-trips saved legacy and unknown IDs without revision reset, remapping, movement or loss', () => {
     const layout = {

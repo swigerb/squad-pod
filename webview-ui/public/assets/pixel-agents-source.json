@@ -5,9 +5,21 @@
   "originalAssetPullRequest": "https://github.com/pixel-agents-hq/pixel-agents/pull/117",
   "license": "MIT",
   "copyright": "Copyright (c) 2026 Pablo De Lucca",
-  "directories": ["furniture", "floors", "walls"],
-  "fileCount": 73,
-  "sha256": "edb508aa2902d4aafe751afa8c4d3866698194f872233f2f4ada76c2091edee2",
-  "hashFormat": "Sorted relative POSIX filename, NUL, then raw bytes for every file under the three directories",
-  "verification": "All 48 PNG blobs match the original asset commit. Only COFFEE and LARGE_PLANT manifests differ at the pin; their later changes are category/background metadata, not artwork. Root MIT license, CONTRIBUTING MIT contribution terms, and PR117's explicit original/open-source furniture/floor/wall description were inspected together. Pets and other asset directories were not imported."
+  "directories": ["furniture", "floors", "walls", "carpets"],
+  "fileCount": 76,
+  "sha256": "2a7bc1bb5e851441723d04b0860b012c75d4ff43d12281667d57d6c3b1dc37d1",
+  "hashFormat": "Sorted relative POSIX filename, NUL, then raw bytes for every file under the four directories",
+  "verification": "All 48 furniture/floor/wall PNG blobs match originalAssetCommit (PR117). Only COFFEE and LARGE_PLANT manifests differ at the pin; later changes are metadata, not artwork. Carpets are a separate PR316 contribution verified below. Pets and other asset directories were not imported.",
+  "carpets": {
+    "introducingCommit": "7a1643fb5e7bab59e1e789fac06c0f9a2fd78d7c",
+    "pullRequest": "https://github.com/pixel-agents-hq/pixel-agents/pull/316",
+    "supersedes": "https://github.com/pixel-agents-hq/pixel-agents/pull/259",
+    "contributors": ["Pablo De Lucca", "NNTin", "Florin Timbuc"],
+    "verification": "All three files are added at introducingCommit with identical Git blobs at the v1.5.0 pin. PR316 credits the carpet/zoning work; the introducing commit retains NNTin and Florin Timbuc coauthor credits. Pinned README explicitly lists bundled carpets and MIT license; pinned CONTRIBUTING states contributions are MIT. Root MIT copyright/permission/disclaimer retained in LICENSE. These are not PR117 furniture-pack assets.",
+    "files": [
+      { "path": "carpets/carpet_0.png", "gitBlob": "67fe2cd77038247a84c1a66fb9592ba3ee41a780", "bytes": 394 },
+      { "path": "carpets/carpet_1.png", "gitBlob": "25c9c0105fc0373cfcf89176101035bf64a5010c", "bytes": 380 },
+      { "path": "carpets/carpet_2.png", "gitBlob": "28907dc0181b713bf9da57cfac6148a7f7ca6122", "bytes": 363 }
+    ]
+  }
 }

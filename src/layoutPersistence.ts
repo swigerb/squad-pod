@@ -11,6 +11,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { LayoutData } from './types.js';
+import { isValidCarpetLayer } from './carpetValidation.js';
 import {
   LAYOUT_FILE_DIR,
   LAYOUT_FILE_NAME,
@@ -52,6 +53,7 @@ export function isValidLayout(data: unknown): data is LayoutData {
   if (!isGridSize(layout.cols) || !isGridSize(layout.rows)) {return false;}
   if (!Array.isArray(layout.tiles) || layout.tiles.length !== layout.cols * layout.rows) {return false;}
   if (!layout.tiles.every((t) => Number.isInteger(t))) {return false;}
+  if (!isValidCarpetLayer(layout.carpetTiles, layout.cols * layout.rows)) { return false; }
   if (layout.furniture !== undefined) {
     if (!Array.isArray(layout.furniture)) {return false;}
     const ok = layout.furniture.every((f) =>

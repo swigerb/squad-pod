@@ -85,6 +85,14 @@ export interface LayoutData {
   tiles: number[];
   furniture: PlacedFurniture[];
   tileColors?: Record<string, FloorColor>;
+  carpetTiles?: Array<CarpetTile | null>;
+}
+
+export interface CarpetTile {
+  variant: number;
+  color?: FloorColor;
+  accentColor?: FloorColor;
+  order?: number;
 }
 
 export interface CharacterSpriteSet {

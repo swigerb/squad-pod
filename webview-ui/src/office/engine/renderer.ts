@@ -33,6 +33,8 @@ import {
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
 import { getColorizedFloorSprite } from '../floorTiles.js';
+import type { CarpetTile } from '../types.js';
+import { renderCarpetLayer } from '../sprites/carpetRenderer.js';
 import { wallColorToHex, getColorizedWallSprite, hasWallSprites } from '../wallTiles.js';
 import { areCharacterAssetsReady, areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
 import { drawTilesetFurniture, drawTilesetTile, drawMetadataItemScaled } from '../sprites/tilesetRenderer.js';
@@ -567,7 +569,8 @@ export function renderFrame(
   hoveredAgentId?: string | null,
   hoveredTile?: { col: number; row: number } | null,
   seats?: Seat[],
-  isDebugMode = false
+  isDebugMode = false,
+  carpetTiles?: Array<CarpetTile | null>,
 ): void {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -581,6 +584,7 @@ export function renderFrame(
   if (tileColors) {
     renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, cols);
   }
+  renderCarpetLayer(ctx, carpetTiles, tileMap, cols, rows, offsetX, offsetY, zoom);
 
   if (seats) {
     renderSeatIndicators(ctx, seats, characters, selectedAgentId ?? null, hoveredTile ?? null, offsetX, offsetY, zoom);

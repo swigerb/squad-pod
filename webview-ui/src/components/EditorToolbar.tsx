@@ -4,6 +4,7 @@ import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, EditTool as EditToolType } from '../office/types.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
 import { getFloorSprite } from '../office/floorTiles.js';
+import { getCarpetPreview, hasCarpetVariant } from '../office/sprites/carpetTiles.js';
 import type { SpriteData } from '../office/types.js';
 import {
   getItemsByType,
@@ -21,6 +22,8 @@ export interface EditorToolbarProps {
   onFloorColorChange: (color: FloorColor) => void;
   onWallColorChange: (color: FloorColor) => void;
   onFurnitureTypeChange: (type: string) => void;
+  onCarpetVariantChange: (variant: number) => void;
+  onCarpetColorChange: (color: FloorColor, accent?: boolean) => void;
   onSave: () => void;
   onReset: () => void;
   onUndo: () => void;
@@ -48,6 +51,7 @@ const TOOL_DEFS: { tool: EditToolType; icon: string; label: string }[] = [
   { tool: EditTool.SELECT, icon: '◎', label: 'Select' },
   { tool: EditTool.TILE_PAINT, icon: '▦', label: 'Floor' },
   { tool: EditTool.WALL_PAINT, icon: '▥', label: 'Wall' },
+  { tool: EditTool.CARPET_PAINT, icon: '▦', label: 'Carpet' },
   { tool: EditTool.FURNITURE_PLACE, icon: '♜', label: 'Furniture' },
   { tool: EditTool.ERASE, icon: '✕', label: 'Erase' },
   { tool: EditTool.EYEDROPPER, icon: '⊙', label: 'Eyedrop' },
@@ -372,10 +376,12 @@ function ColorSliders({
   label,
   color,
   onChange,
+  flat = false,
 }: {
   label: string;
   color: FloorColor;
   onChange: (c: FloorColor) => void;
+  flat?: boolean;
 }) {
   const handleChange = useCallback(
     (field: keyof FloorColor, value: number | boolean) => {
@@ -392,6 +398,7 @@ function ColorSliders({
         <span style={styles.sliderLabel}>H</span>
         <input
           type="range"
+          aria-label={`${label} hue`}
           min={0}
           max={360}
           value={color.h}
@@ -405,6 +412,7 @@ function ColorSliders({
         <span style={styles.sliderLabel}>S</span>
         <input
           type="range"
+          aria-label={`${label} saturation`}
           min={0}
           max={100}
           value={color.s}
@@ -418,6 +426,7 @@ function ColorSliders({
         <span style={styles.sliderLabel}>B</span>
         <input
           type="range"
+          aria-label={`${label} brightness`}
           min={-100}
           max={100}
           value={color.b}
@@ -427,7 +436,7 @@ function ColorSliders({
         <span style={styles.sliderValue}>{color.b}</span>
       </div>
 
-      <div style={styles.sliderRow}>
+      {!flat && <div style={styles.sliderRow}>
         <span style={styles.sliderLabel}>C</span>
         <input
           type="range"
@@ -438,9 +447,9 @@ function ColorSliders({
           style={styles.slider}
         />
         <span style={styles.sliderValue}>{color.c}</span>
-      </div>
+      </div>}
 
-      <div style={styles.checkRow}>
+      {!flat && <div style={styles.checkRow}>
         <input
           type="checkbox"
           checked={!!color.colorize}
@@ -450,7 +459,7 @@ function ColorSliders({
         <label htmlFor={`colorize-${label}`} style={{ fontSize: '10px', color: TEXT_DIM, cursor: 'pointer' }}>
           Colorize
         </label>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -464,6 +473,8 @@ export function EditorToolbar({
   onFloorColorChange,
   onWallColorChange,
   onFurnitureTypeChange,
+  onCarpetVariantChange,
+  onCarpetColorChange,
   onSave,
   onReset,
   onUndo,
@@ -490,6 +501,7 @@ export function EditorToolbar({
   const showFloorOptions = activeTool === EditTool.TILE_PAINT;
   const showWallOptions = activeTool === EditTool.WALL_PAINT;
   const showFurnitureOptions = activeTool === EditTool.FURNITURE_PLACE;
+  const showCarpetOptions = activeTool === EditTool.CARPET_PAINT;
 
   // Gather tileset metadata items for each placeable category
   const metadataCategories = PLACEABLE_CATEGORIES.map(cat => ({
@@ -518,6 +530,28 @@ export function EditorToolbar({
       </div>
 
       {/* ── Floor Pattern Selector (with tile previews) ── */}
+      {showCarpetOptions && (
+        <div style={styles.section}>
+          <div style={styles.sectionLabel}>Carpet Style</div>
+          <div style={styles.toolGrid}>
+            {[0, 1, 2].map((variant) => (
+              <button key={variant} title={`Carpet ${variant + 1}`}
+                disabled={!hasCarpetVariant(variant)}
+                aria-pressed={editorState.carpetVariant === variant}
+                style={styles.furnitureBtn(editorState.carpetVariant === variant)}
+                onClick={() => onCarpetVariantChange(variant)}>
+                <SpritePreview sprite={getCarpetPreview(variant, editorState.carpetColor, editorState.carpetAccentColor)} size={52} />
+                <span>Style {variant + 1}</span>
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: '10px', color: TEXT_DIM }}>Drag to paint over floors. Right-drag erases only carpet. Eyedrop copies style and both colors.</p>
+          {!hasCarpetVariant(editorState.carpetVariant) && <p role="alert">Carpet style unavailable. Check asset diagnostics.</p>}
+          <ColorSliders label="Carpet Main" color={editorState.carpetColor} onChange={(color) => onCarpetColorChange(color)} flat />
+          <ColorSliders label="Carpet Accent" color={editorState.carpetAccentColor} onChange={(color) => onCarpetColorChange(color, true)} flat />
+        </div>
+      )}
+
       {showFloorOptions && (
         <div style={styles.section}>
           <div style={styles.sectionLabel}>Floor Pattern</div>

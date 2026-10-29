@@ -134,7 +134,7 @@ describe('settings and source UI with simulated host messages', () => {
     click('→');
     expect(host.textContent).toContain('● Save Layout');
     send({ type: 'manifestAssetsLoaded', snapshot: {
-      furniture: [], floors: [], walls: [], directories: [], diagnostics: ['Root read budget exceeded'],
+      furniture: [], floors: [], walls: [], carpets: [], directories: [], diagnostics: ['Root read budget exceeded'],
     } });
     expect(host.textContent).toContain('Root read budget exceeded');
     expect(host.textContent).toContain('● Save Layout');
@@ -160,7 +160,7 @@ describe('settings and source UI with simulated host messages', () => {
         type: 'local_TEST_TEST', label: 'Test fixture asset', width: 1, height: 1,
         sprite: [['#abcdef']], isDesk: false, category: 'decor', canPlaceOnSurfaces: false, canPlaceOnWalls: false,
       }],
-      floors: [], walls: [], directories: ['C:\\fixture-assets'], diagnostics: ['Bad fixture manifest rejected'],
+      floors: [], walls: [], carpets: [], directories: ['C:\\fixture-assets'], diagnostics: ['Bad fixture manifest rejected'],
     };
     send({ type: 'manifestAssetsLoaded', snapshot });
     send({ type: 'layoutLoaded', layout });
