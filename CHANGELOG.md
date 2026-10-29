@@ -18,6 +18,7 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Sprites with opaque edge pixels no longer crash the animation loop while generating selection outlines.
 - Sound setting was ignored; the chime now plays when a member finishes work.
 - Invalid layout imports could overwrite the saved office; layouts are now validated and written atomically.
 - Roster tables with empty cells or CRLF line endings were misparsed.
