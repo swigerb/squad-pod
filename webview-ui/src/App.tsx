@@ -147,6 +147,8 @@ export default function App() {
         onRotateSelected={editor.handleRotateSelected}
         onDragMove={editor.handleDragMove}
         onExpandGrid={editor.handleExpandGrid}
+        onGestureStart={editor.handleGestureStart}
+        onGestureEnd={editor.handleGestureEnd}
         editorTick={editor.editorTick}
         zoom={editor.zoom}
         onZoomChange={editor.handleZoomChange}
@@ -196,6 +198,8 @@ export default function App() {
         isTelemetryOpen={isTelemetryOpen}
         onToggleTelemetry={handleToggleTelemetry}
         telemetryCount={telemetryEvents.length - telemetrySeenCount}
+        isDebugMode={isDebugMode}
+        onToggleDebugMode={() => setIsDebugMode((v) => !v)}
       />
 
       <TelemetryDrawer

@@ -9,9 +9,11 @@ interface BottomToolbarProps {
   isTelemetryOpen: boolean;
   onToggleTelemetry: () => void;
   telemetryCount: number;
+  isDebugMode?: boolean;
+  onToggleDebugMode?: () => void;
 }
 
-export function BottomToolbar({ isEditMode, onToggleEditMode, onOpenSquadInfo, isTelemetryOpen, onToggleTelemetry, telemetryCount }: BottomToolbarProps) {
+export function BottomToolbar({ isEditMode, onToggleEditMode, onOpenSquadInfo, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode }: BottomToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleSquadInfo = () => {
@@ -123,7 +125,7 @@ export function BottomToolbar({ isEditMode, onToggleEditMode, onOpenSquadInfo, i
           Settings
         </button>
       </div>
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} isDebugMode={isDebugMode} onToggleDebugMode={onToggleDebugMode} />}
     </>
   );
 }

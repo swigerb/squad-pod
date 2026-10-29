@@ -33,6 +33,51 @@ function ensureDir(dir: string): void {
   }
 }
 
+// ─── Validation ─────────────────────────────────────────────────────
+
+const MAX_LAYOUT_DIMENSION = 256;
+
+function isGridSize(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) > 0 && (value as number) <= MAX_LAYOUT_DIMENSION;
+}
+
+/**
+ * Structural check for a layout: positive bounded grid, one numeric tile per
+ * cell, and well-formed furniture entries. Anything else is rejected so a bad
+ * file never replaces a good saved layout.
+ */
+export function isValidLayout(data: unknown): data is LayoutData {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {return false;}
+  const layout = data as Partial<LayoutData>;
+  if (!isGridSize(layout.cols) || !isGridSize(layout.rows)) {return false;}
+  if (!Array.isArray(layout.tiles) || layout.tiles.length !== layout.cols * layout.rows) {return false;}
+  if (!layout.tiles.every((t) => Number.isInteger(t))) {return false;}
+  if (layout.furniture !== undefined) {
+    if (!Array.isArray(layout.furniture)) {return false;}
+    const ok = layout.furniture.every((f) =>
+      !!f && typeof f === 'object'
+      && typeof f.uid === 'string' && typeof f.type === 'string'
+      && Number.isInteger(f.col) && Number.isInteger(f.row));
+    if (!ok) {return false;}
+  }
+  if (layout.tileColors !== undefined && (typeof layout.tileColors !== 'object' || layout.tileColors === null)) {
+    return false;
+  }
+  return true;
+}
+
+/** Parse layout JSON text; returns null when it is not a valid layout. */
+export function parseLayoutJson(content: string): LayoutData | null {
+  try {
+    const data: unknown = JSON.parse(content.replace(/^\uFEFF/, ''));
+    if (!isValidLayout(data)) {return null;}
+    if (!data.furniture) {data.furniture = [];}
+    return migrateLayout(data);
+  } catch {
+    return null;
+  }
+}
+
 // ─── Read / Write ───────────────────────────────────────────────────
 
 /**
@@ -45,13 +90,7 @@ export function readPersistedLayout(workspaceRoot: string): LayoutData | null {
     if (!fs.existsSync(filePath)) {
       return null;
     }
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const data = JSON.parse(content) as LayoutData;
-    // Validate that the layout has the expected shape (cols/rows/tiles)
-    if (typeof data.cols !== 'number' || typeof data.rows !== 'number' || !Array.isArray(data.tiles)) {
-      return null;
-    }
-    return migrateLayout(data);
+    return parseLayoutJson(fs.readFileSync(filePath, 'utf-8'));
   } catch {
     return null;
   }
@@ -65,7 +104,10 @@ export function writePersistedLayout(workspaceRoot: string, layout: LayoutData):
   ensureDir(dir);
 
   const filePath = layoutFilePath(workspaceRoot);
-  fs.writeFileSync(filePath, JSON.stringify(layout, null, 2), 'utf-8');
+  // Write then rename so an interrupted save never leaves a truncated layout.
+  const tmpPath = `${filePath}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpPath, JSON.stringify(layout, null, 2), 'utf-8');
+  fs.renameSync(tmpPath, filePath);
 }
 
 /**
@@ -207,7 +249,8 @@ export async function exportLayoutToFile(
 
 /**
  * Import a layout from a user-chosen JSON file.
- * Returns the parsed layout or null if cancelled/invalid.
+ * Returns the parsed layout, or null if cancelled or invalid (invalid files
+ * are reported to the user and leave the current layout untouched).
  */
 export async function importLayoutFromFile(
   vscode: typeof import('vscode'),
@@ -224,10 +267,13 @@ export async function importLayoutFromFile(
 
   try {
     const bytes = await vscode.workspace.fs.readFile(uris[0]);
-    const content = Buffer.from(bytes).toString('utf-8');
-    const data = JSON.parse(content) as LayoutData;
-    return migrateLayout(data);
+    const layout = parseLayoutJson(Buffer.from(bytes).toString('utf-8'));
+    if (!layout) {
+      vscode.window.showErrorMessage('Squad Pod: that file is not a valid office layout. Your current layout was not changed.');
+    }
+    return layout;
   } catch {
+    vscode.window.showErrorMessage('Squad Pod: could not read that layout file. Your current layout was not changed.');
     return null;
   }
 }

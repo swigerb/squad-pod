@@ -4,9 +4,11 @@ import { isSoundEnabled, setSoundEnabled as setGlobalSoundEnabled } from '../not
 
 interface SettingsModalProps {
   onClose: () => void;
+  isDebugMode?: boolean;
+  onToggleDebugMode?: () => void;
 }
 
-export function SettingsModal({ onClose }: SettingsModalProps) {
+export function SettingsModal({ onClose, isDebugMode = false, onToggleDebugMode }: SettingsModalProps) {
   const [soundEnabled, setSoundEnabled] = useState(isSoundEnabled);
 
   useEffect(() => {
@@ -87,6 +89,19 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               style={{ width: '18px', height: '18px', cursor: 'pointer' }}
             />
           </div>
+
+          {onToggleDebugMode && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label htmlFor="squad-pod-debug-view" style={{ fontSize: '13px' }}>Debug View</label>
+              <input
+                id="squad-pod-debug-view"
+                type="checkbox"
+                checked={isDebugMode}
+                onChange={onToggleDebugMode}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+            </div>
+          )}
 
           <div style={{ borderTop: '1px solid var(--vscode-panel-border)', paddingTop: '16px' }}>
             <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Layout</div>
