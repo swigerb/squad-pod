@@ -112,6 +112,78 @@ The built-in editor lets you design your office:
 
 The grid is expandable up to 64×64 tiles. A new host-created office is 20×15 with four verified desk/chair pairs. Existing offices are never reset to this default.
 
+### Unsaved layouts and incoming conflicts
+
+Dirty state compares the **actual layout contents**, including metadata, not
+whether the editor happens to be open. File reloads and saves from another
+window use the same incoming-snapshot path. A clean external snapshot applies
+normally. **Import stages a draft; it does not write the workspace file until
+you click Save.** Settings' ordinary Export exports the saved office; the
+recovery panel's Export buttons export the exact displayed draft/snapshot.
+
+If an incoming layout differs from an unsaved draft, **Layout conflict** keeps
+the current canvas and queues the complete incoming snapshot. Multiple distinct
+snapshots remain individually inspectable; resolving one does not ignore later
+changes from that source. Save and Reset are blocked while snapshots remain.
+For each pending snapshot:
+
+- **Keep local draft** keeps editing locally and retains the incoming JSON in
+  recovery copies. It does not write anything to disk.
+- **Use incoming... → Confirm incoming** replaces the working canvas only after
+  confirmation and retains the previous local draft in recovery copies. Other
+  pending snapshots still need a decision.
+- Expand the inspection sections and **Export** either version to a chosen
+  JSON file, including retained copies after resolution/save.
+
+Save clears dirty state only after the host acknowledges the actual written
+layout. Edits made while a save is in flight remain dirty. A stale disk revision
+rejects the save and returns the newer snapshot for resolution instead of
+overwriting it. Cooperating Squad Pod windows use an exclusive
+`.squad-pod/layout.json.lock` during check/write. Every successful replacement
+also preserves the previous raw file in `.squad-pod/recovery/<unique-id>.json`;
+these saved-file backups are never automatically pruned. A failed/interrupted
+writer may leave a lock: verify no writer is active before manually removing
+that specific lock. Malformed files are reported and not overwritten. Legacy
+colors, unknown asset IDs, dimensions, roles, positions and extra JSON metadata
+are preserved, not reset/remapped. Workspace changes block saving an original
+draft into the new workspace; export copies and return to the original folder.
+
+**Recovery boundaries:** after each rendered editor action and snapshot decision,
+the complete draft, baseline, incoming queue and retained copies are serialized
+with VS Code's per-webview `setState`. They recover when VS Code recreates the
+same view and supplies that state (tested with a simulated panel recreation).
+Undo history, current tool and in-progress uncommitted drag previews are not
+serialized. This is **not** a durable unsaved-draft file or cross-window draft
+sync: closing/removing the view, changing workspace, clearing state, a hard
+crash before persistence, or a VS Code lifecycle that does not return the state
+can lose these recovery copies. Export before closing/restarting; disk backups
+contain previously saved layouts, not unsaved drafts. Reported state-write
+failures leave the live versions available for export. The filesystem lock is
+advisory: unrelated tools that ignore it are not transactionally serialized with
+the final rename. Concurrent arbitrary filesystem writers and storage-provider
+failures cannot be promised lossless by this mechanism.
+
+Evidence for this slice is automated DOM/host-message simulation plus real
+temporary-file import parsing, watcher, revision-checked save and backup tests.
+The save regression also runs independent Node hosts against the production
+helper with a deterministic pre-rename barrier: the second writer is rejected
+under the shared lock, and its later stale retry cannot replace the winning file.
+The regression imports a 20×15 office, expands locally to width 21, receives
+four legacy items from disk, then checks exact JSON through both resolutions,
+save and panel recovery. These are **not live VS Code Development Host or
+installed-VSIX observations**; that manual host proof remains outstanding.
+
+**Editor integration contract:** incoming layouts must enter through
+`useEditorActions.receiveLayout`, never directly rebuild the office or assign a
+saved-baseline ref. Editor mutations must advance `editorTick` so recovery captures
+their actual contents. The host `layoutLoaded` envelope carries `source`
+(`external`/`import`), raw-file `revision`, and `workspaceRoot`; `saveLayout`
+must echo the observed `expectedRevision` and original `workspaceRoot`. Only
+`layoutSaved` acknowledges a successful disk write; `layoutError` leaves the
+draft available. New layout metadata must round-trip untouched through snapshots,
+validation, editor transforms and saves. No caller should bypass
+`saveLayoutIfUnchanged` for a user save or write imports before resolution.
+
 ## Office assets and local manifests
 
 Bundled originals are pinned to Pixel Agents `b1bafd02896d90d83457266575a1e8e5011ce997`.
@@ -172,11 +244,9 @@ rejected, not allowed to override earlier/bundled assets. Diagnostics appear in
 the office warning panel, Settings and the **Squad Pod** output channel.
 Missing-art warnings also update immediately when a later host layout snapshot
 introduces or removes legacy/unknown IDs; no unrelated UI action or save is needed.
-This notification fix does not add layout conflict resolution: incoming host
-`layoutLoaded` messages currently replace an unsaved editor draft. Handling both
-the draft and external snapshot without data loss remains a separate known gap;
-the reactive signal is not draft protection. Asset-only refreshes do not replace
-the layout or editor history.
+Incoming host layouts now use the draft-conflict protection described above;
+missing-art warnings follow the selected canvas rather than an unresolved
+incoming snapshot. Asset-only refreshes do not replace the layout or editor history.
 
 **Aggregate reload work is bounded, including failed attempts.** Each root has
 its own non-transferable allowance per fingerprint/load pass: **2 MiB of file
