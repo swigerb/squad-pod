@@ -5,12 +5,12 @@ import { parseLayoutJson } from './layoutPersistence.js';
 const color = { h: 360, s: 100, b: -100, c: 100, colorize: true };
 
 describe('optional carpet layout contract', () => {
-  it('leaves old layouts unchanged and retains carpet colors/order and unknown metadata', () => {
+  it('migrates old layouts and retains carpet colors/order and unknown metadata', () => {
     const old = { version: 2, cols: 2, rows: 1, tiles: [1, 0], furniture: [], custom: { keep: true } };
-    expect(parseLayoutJson(JSON.stringify(old))).toEqual(old);
+    expect(parseLayoutJson(JSON.stringify(old))).toEqual({ ...old, pets: [] });
     expect(parseLayoutJson(JSON.stringify(old))).not.toHaveProperty('carpetTiles');
     const layout = { ...old, carpetTiles: [{ variant: 2, color, accentColor: { ...color, b: 100 }, order: 4 }, null] };
-    expect(parseLayoutJson(JSON.stringify(layout))).toEqual(layout);
+    expect(parseLayoutJson(JSON.stringify(layout))).toEqual({ ...layout, pets: [] });
     expect(isValidCarpetTile({ variant: 0 })).toBe(true);
     expect(isValidCarpetTile({ variant: 1 })).toBe(true);
   });

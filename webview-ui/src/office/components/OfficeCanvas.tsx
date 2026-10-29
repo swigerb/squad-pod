@@ -10,6 +10,7 @@ import { startGameLoop } from '../engine/gameLoop.js';
 import { renderFrame } from '../engine/renderer.js';
 import { clampPanOffset, zoomPanAroundAnchor } from '../engine/viewport.js';
 import { updateCharacter } from '../engine/characters.js';
+import { updatePet } from '../engine/petEntity.js';
 import { vscode } from '../../vscodeApi.js';
 import { TILE_SIZE, CHARACTER_HIT_HALF_WIDTH, CHARACTER_HIT_HEIGHT, PAN_MARGIN_FRACTION, ZOOM_SCROLL_THRESHOLD } from '../../constants.js';
 
@@ -136,6 +137,9 @@ export function OfficeCanvas({
         for (const char of officeState.characters.values()) {
           updateCharacter(char, deltaTime, officeState.walkableTiles, officeState.seats, officeState.tileMap, officeState.blockedTiles);
         }
+        for (const pet of officeState.pets) {
+          updatePet(pet, deltaTime, officeState.walkableTileList, officeState.characters, officeState.tileMap, officeState.blockedTiles);
+        }
       },
       render: () => {
         frameCountRef.current++;
@@ -197,6 +201,7 @@ export function OfficeCanvas({
           officeState.seats,
           isDebugMode,
           officeState.layout.carpetTiles,
+          officeState.pets,
         );
         const preview = dragPreviewRef.current;
         if (isEditMode && preview) {
@@ -289,6 +294,8 @@ export function OfficeCanvas({
           onEditorTileAction?.(col, row);
         }
       } else {
+        const worldX = (screenX - panRef.current!.x) / zoom;
+        const worldY = (screenY - panRef.current!.y) / zoom;
         let clickedAgentId: string | null = null;
         for (const [id, char] of officeState.characters) {
           const charScreenX = char.x * zoom + panRef.current!.x;
@@ -305,6 +312,15 @@ export function OfficeCanvas({
         
         if (clickedAgentId) {
           onDeskClick?.(clickedAgentId, e.clientX, e.clientY);
+        }
+
+        if (!clickedAgentId) {
+          const pet = officeState.getPetAt(worldX, worldY);
+          if (pet) {
+            officeState.togglePetBubble(pet.id);
+            officeState.selectedAgentId = null;
+            return;
+          }
         }
         
         if (!clickedAgentId) {
@@ -418,6 +434,10 @@ export function OfficeCanvas({
         }
       }
       officeState.hoveredAgentId = hoveredId;
+      const worldX = (screenX - panRef.current!.x) / zoom;
+      const worldY = (screenY - panRef.current!.y) / zoom;
+      const hoveredPet = !isEditMode && !hoveredId ? officeState.getPetAt(worldX, worldY) : null;
+      if (canvasRef.current) canvasRef.current.style.cursor = hoveredId || hoveredPet ? 'pointer' : 'default';
     },
     [isPanning, isEditMode, editorState.tool, screenToWorld, officeState, zoom, panRef, clampPan, onEditorEraseAction, onEditorTileAction]
   );
@@ -517,7 +537,10 @@ export function OfficeCanvas({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={finishGesture}
+        onMouseLeave={() => {
+          if (canvasRef.current) canvasRef.current.style.cursor = 'default';
+          finishGesture();
+        }}
         onContextMenu={(e) => { if (isEditMode && editorState.tool === EditTool.CARPET_PAINT) e.preventDefault(); }}
         onWheel={handleWheel}
         style={{ display: 'block' }}

@@ -56,7 +56,8 @@
     "test:watch": "vitest",
     "test:webview": "npm test --prefix webview-ui",
     "test:all": "npm test && npm run test:webview",
-    "verify": "npm run lint && npm run check-types && npm run test:all && npm run build",
+    "verify": "npm run lint && npm run check-types && npm run test:all && npm run build && npm run test:acceptance:pets",
+    "test:acceptance:pets": "node scripts/acceptance-pets.cjs",
     "import-tileset": "tsx scripts/0-import-tileset.ts"
   },
   "devDependencies": {

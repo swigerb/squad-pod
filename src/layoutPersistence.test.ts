@@ -35,6 +35,7 @@ describe('layoutPersistence', () => {
     rows: 8,
     tiles: Array(80).fill(1),
     furniture: [{ uid: 'desk-1', type: 'desk', col: 3, row: 2, rotation: 0 }],
+    pets: [],
   };
 
   it('round-trips a layout through write then read', () => {
@@ -85,6 +86,7 @@ describe('layoutPersistence', () => {
     expect(result).not.toBeNull();
     expect(result!.version).toBe(2);
     expect(result!.tileColors).toEqual(layoutNoVersion.tileColors);
+    expect(result!.pets).toEqual([]);
   });
 
   it('imports a real file without writing it, then saves exact selected contents and backs up the previous disk version', () => {
@@ -131,6 +133,7 @@ describe('layoutPersistence', () => {
   it('refuses malformed disk contents, invalid saves and competing writers without changing disk', () => {
     writePersistedLayout(tmpDir, sampleLayout);
     expect(() => saveLayoutIfUnchanged(tmpDir, { ...sampleLayout, tiles: [] }, readLayoutRevision(tmpDir))).toThrow('Invalid layout');
+    expect(() => saveLayoutIfUnchanged(tmpDir, { ...sampleLayout, pets: [{ id: '', petType: 0 }] }, readLayoutRevision(tmpDir))).toThrow('Invalid layout');
     const lock = path.join(tmpDir, '.squad-pod', 'layout.json.lock');
     fs.writeFileSync(lock, 'other writer');
     expect(() => saveLayoutIfUnchanged(tmpDir, sampleLayout, readLayoutRevision(tmpDir))).toThrow();
@@ -213,6 +216,7 @@ describe('layoutPersistence', () => {
   it('protects the real watcher regression: imported 20x15 -> local width21 -> external legacy four-item snapshot', async () => {
     const imported: OfficeLayout = {
       version: 2, cols: 20, rows: 15, tiles: Array(300).fill(1), furniture: [],
+      pets: [],
       carpetTiles: Array(300).fill(null),
     };
     imported.carpetTiles![42] = { variant: 1, color: { h: 20, s: 70, b: -20, c: 0 }, accentColor: { h: 50, s: 80, b: 10, c: 0 }, order: 4 };
@@ -223,7 +227,7 @@ describe('layoutPersistence', () => {
     local.carpetTiles[44] = { variant: 0, color: { h: 120, s: 70, b: -10, c: 0 }, accentColor: { h: 40, s: 80, b: 20, c: 0 }, order: 5 };
     protection.capture(local);
     const external: OfficeLayout = {
-      ...imported, carpetTiles: Array(300).fill(null), furniture: Array.from({ length: 4 }, (_, n) =>
+      ...imported, pets: [], carpetTiles: Array(300).fill(null), furniture: Array.from({ length: 4 }, (_, n) =>
         ({ uid: `legacy-${n}`, type: `unknown-${n}`, col: n + 1, row: n + 1, rotation: 0 })),
     };
     external.carpetTiles![42] = { variant: 2, color: { h: 210, s: 75, b: -25, c: 0 }, accentColor: { h: 0, s: 90, b: 30, c: 0 }, order: 6 };
@@ -349,6 +353,11 @@ describe('layoutPersistence', () => {
 
     it('accepts a UTF-8 BOM', () => {
       expect(parseLayoutJson('\uFEFF' + JSON.stringify(sampleLayout))).not.toBeNull();
+    });
+
+    it('migrates a legacy layout without pets to an explicit empty pet list', () => {
+      const { pets: _pets, ...legacy } = sampleLayout;
+      expect(parseLayoutJson(JSON.stringify(legacy))).toEqual({ ...legacy, pets: [] });
     });
 
     it.each([

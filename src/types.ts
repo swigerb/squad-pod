@@ -78,6 +78,11 @@ export interface PlacedFurniture {
   state?: string;
 }
 
+export interface PlacedPet {
+  id: string;
+  petType: number;
+}
+
 export interface LayoutData {
   version?: number;
   cols: number;
@@ -86,6 +91,7 @@ export interface LayoutData {
   furniture: PlacedFurniture[];
   tileColors?: Record<string, FloorColor>;
   carpetTiles?: Array<CarpetTile | null>;
+  pets?: PlacedPet[];
 }
 
 export interface CarpetTile {

@@ -21,6 +21,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
 - **Office layout editor** — design your office with floors, walls, and furniture using the built-in editor
 - **Decorative carpets** — three auto-tiling styles with independent main/accent colors, painted over floors without changing floor IDs or agent walkability.
+- **Animated pets** — add or remove Claudio and Gitcat in the Layout editor; pets wander, follow nearby agents, and show a timed heart when clicked. Pet IDs/types survive save, reload, import and export.
 - **Manifest furniture and live imports** — verified original Pixel Agents furniture/floors/walls; Settings can load local furniture manifests and pick up edits without restarting VS Code.
 - **Speech bubbles** — visual indicators when an agent needs your attention
 - **Sound notifications** — optional chime when a file-observed active member returns to idle (not proof of task completion; turn it off in Settings if you're in a meeting)
@@ -80,6 +81,7 @@ Then press **F5** in VS Code to launch the Extension Development Host.
 | `npm run build` | Production build of the webview (Vite) and extension (esbuild) |
 | `npm run verify` | Lint, type-check, test, and build: the same checks CI runs |
 | `npm run package` | Build `squad-pod-<version>.vsix` with `@vscode/vsce` |
+| `npm run test:acceptance:pets` | Smoke-test production webview/compiled-provider asset delivery through a mocked VS Code boundary (not a native host) |
 
 ### Development dependency advisories
 
@@ -140,6 +142,7 @@ The built-in editor lets you design your office:
 - **Floor** — Full HSB color control
 - **Walls** — Auto-tiling walls with color customization
 - **Carpets** — choose one of three pinned styles and adjust Main/Accent hue, saturation and brightness. Left-drag paints on existing floors (including beneath furniture); right-drag removes only carpet. Eyedrop copies the style and both colors. The generic Erase tool removes carpet first when present, preserving the underlying floor and furniture.
+- **Pets** — use the Pets tool to add/remove the pinned Claudio and Gitcat companions. They wander across walkable tiles, sometimes follow nearby agents, and respond to a click with a heart. Each placement's `id` and `petType` are saved; older layouts behave as having no pets.
 - **Tools** — Select, paint, erase, place, eyedropper. Floor, wall, and erase tools paint continuously while you drag.
 - **Undo/Redo** — 50 levels with Ctrl+Z / Ctrl+Y. Each drag (a paint stroke or a furniture move) is a single undo step.
 - **Furniture moves and copies** — Select, then drag to move; hold **Alt when releasing** to copy. Desks carry their overlapping PCs and lamps; grabbing a PC or lamp moves just that object. Copies have fresh IDs and preserve the source's color (including no color), independently of the palette's Colorize setting.
@@ -162,8 +165,8 @@ direction, saving, reloading and JSON export/import retain these fields.
 Existing layouts without carpets are not filled with empty carpet data or
 reset. Walls/void cannot be carpet-painted; changing a floor to wall/void removes
 its carpet within the same undo transaction. Carpet artwork reloads do not save
-or reset the office. Areas, directory launch, pets and full upstream parity
-remain separate work under #7/#4.
+or reset the office. Areas, directory launch and full upstream parity remain
+separate work under #7/#4.
 
 ### Unsaved layouts and incoming conflicts
 

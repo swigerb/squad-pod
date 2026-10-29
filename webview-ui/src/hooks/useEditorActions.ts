@@ -10,6 +10,8 @@ import { UndoHistory } from '../office/editor/undoHistory.js';
 import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, MAX_COLS, MAX_ROWS } from '../constants.js';
 import { vscode } from '../vscodeApi.js';
 import { LayoutDraft } from '../office/editor/layoutDraft.js';
+import { MAX_LAYOUT_PETS } from '../../../src/layoutValidation.js';
+import { getPetSprites } from '../office/sprites/petSpriteData.js';
 
 export function useEditorActions(getOfficeState: () => OfficeState, editorState: EditorState) {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -101,6 +103,32 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     else editorState.carpetColor = { ...color };
     setEditorTick((t) => t + 1);
   }, [editorState]);
+
+  const handlePetToggle = useCallback((petType: number) => {
+    const officeState = getOfficeState();
+    const layout = officeState.getLayout();
+    const pets = layout.pets ?? [];
+    const hasType = pets.some((pet) => pet.petType === petType);
+    if (hasType) {
+      pushUndo();
+      officeState.rebuildFromLayout({ ...layout, pets: pets.filter((pet) => pet.petType !== petType) });
+      editorState.transformError = null;
+    } else if (!getPetSprites(petType)) {
+      editorState.transformError = 'Cannot place this pet: its sprite sheet is unavailable. Check asset diagnostics.';
+    } else if (pets.length >= MAX_LAYOUT_PETS) {
+      editorState.transformError = `An office can contain at most ${MAX_LAYOUT_PETS} pets.`;
+    } else if (!officeState.walkableTileList.length) {
+      editorState.transformError = 'Cannot place a pet because the office has no walkable floor tiles.';
+    } else {
+      pushUndo();
+      officeState.rebuildFromLayout({
+        ...layout,
+        pets: [...pets, { id: crypto.randomUUID(), petType }],
+      });
+      editorState.transformError = null;
+    }
+    setEditorTick((t) => t + 1);
+  }, [getOfficeState, editorState, pushUndo]);
 
   const handleEyedropper = useCallback((col: number, row: number) => {
     const layout = getOfficeState().getLayout();
@@ -454,6 +482,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     handleFurnitureTypeChange,
     handleCarpetVariantChange,
     handleCarpetColorChange,
+    handlePetToggle,
     handleEyedropper,
     handleEditorTileAction,
     handleEditorEraseAction,

@@ -21,12 +21,15 @@ export interface AssetSnapshot {
   floors: string[][][];
   walls: string[][][];
   carpets: string[][][][];
+  pets: Array<{ id: string; name: string; sprite: string[][] }>;
   directories: string[];
   diagnostics: string[];
 }
 
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_MANIFEST_BYTES = 64 * 1024;
+export const MAX_PET_PNG_BYTES = 512 * 1024;
+export const PET_SHEET_SIZE = 96;
 const MAX_ENTRIES = 128;
 // Independent root allowances prevent one import from consuming another root's work.
 // Nine roots together: 18 MiB read/hashed, 1152 reads, 18432 enumeration calls,
@@ -141,7 +144,7 @@ function readBounded(file: string, max: number, budget: RootBudget): Buffer {
   }
 }
 
-function decode(buffer: Buffer, width: number, height: number): string[][] {
+function decode(buffer: Buffer, width: number, height: number, allowPetPadding = false): string[][] {
   if (buffer.length < 33 || buffer.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a'
     || buffer.readUInt32BE(8) !== 13
     || buffer.toString('ascii', 12, 16) !== 'IHDR'
@@ -151,6 +154,7 @@ function decode(buffer: Buffer, width: number, height: number): string[][] {
   // pngjs's interlaced sync path inflates without an output limit. Keep decoding bounded.
   if (buffer[28] !== 0) { throw new Error('Interlaced PNGs are not supported; export a non-interlaced PNG'); }
   let ended = false;
+  let pngEnd = buffer.length;
   for (let offset = 8; offset < buffer.length;) {
     if (offset + 12 > buffer.length) { throw new Error('Truncated PNG chunk'); }
     const length = buffer.readUInt32BE(offset);
@@ -158,13 +162,20 @@ function decode(buffer: Buffer, width: number, height: number): string[][] {
     const next = offset + length + 12;
     if (next > buffer.length || (offset !== 8 && type === 'IHDR')) { throw new Error('Invalid PNG chunk/header'); }
     if (type === 'IEND') {
-      if (length !== 0 || next !== buffer.length) { throw new Error('Invalid PNG end'); }
+      const padding = buffer.subarray(next);
+      if (length !== 0 || (padding.length !== 0
+        && (!allowPetPadding || padding.length !== 2 || padding[0] !== 0 || padding[1] !== 0))) {
+        throw new Error('Invalid PNG end');
+      }
+      // The pinned Gitcat sheet has two zero padding bytes after IEND.
       ended = true;
+      pngEnd = next;
+      break;
     }
     offset = next;
   }
   if (!ended) { throw new Error('PNG is missing IEND'); }
-  const png = PNG.sync.read(buffer, { checkCRC: true });
+  const png = PNG.sync.read(buffer.subarray(0, pngEnd), { checkCRC: true });
   return Array.from({ length: height }, (_, y) => Array.from({ length: width }, (_, x) => {
     const i = (y * width + x) * 4;
     const alpha = png.data[i + 3];
@@ -255,6 +266,54 @@ function readManifest(
   return { ...validated, buffers };
 }
 
+function getPetRoot(root: string): string | null {
+  const candidate = path.join(root, 'pets');
+  try {
+    fs.lstatSync(candidate);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') { return null; }
+    throw error;
+  }
+  const resolved = safePath(root, ['pets']);
+  if (!fs.statSync(resolved).isDirectory()) { throw new Error('Pets path is not a directory'); }
+  return resolved;
+}
+
+function readPet(
+  root: string, folder: string, budget: RootBudget,
+  observe: (name: string, bytes: Buffer) => void = () => {},
+): { id: string; name: string; buffer: Buffer } {
+  const manifest = readBounded(safePath(root, [folder, 'manifest.json']), MAX_MANIFEST_BYTES, budget);
+  observe(`${folder}/manifest.json`, manifest);
+  const meta = record(JSON.parse(manifest.toString('utf8')));
+  const id = text(meta.id, 'pet id', ID);
+  if (id !== folder) { throw new Error('Pet folder must match manifest id'); }
+  const name = text(meta.name, 'pet name');
+  budget.sheet(PET_SHEET_SIZE, PET_SHEET_SIZE);
+  const buffer = readBounded(safePath(root, [folder, 'pet.png']), MAX_PET_PNG_BYTES, budget);
+  observe(`${folder}/pet.png`, buffer);
+  return { id, name, buffer };
+}
+
+function loadPetSprites(
+  root: string, budget: RootBudget, ids: Set<string>, snapshot: AssetSnapshot,
+): void {
+  if (!path.isAbsolute(root)) { throw new Error('Asset directory must be absolute'); }
+  const petRoot = getPetRoot(root);
+  if (!petRoot) { return; }
+  for (const folder of directories(petRoot, budget)) {
+    try {
+      const { id, name, buffer } = readPet(petRoot, folder, budget);
+      if (ids.has(id)) { throw new Error(`Duplicate pet id: ${id}`); }
+      const sprite = decode(buffer, PET_SHEET_SIZE, PET_SHEET_SIZE, true);
+      ids.add(id);
+      snapshot.pets.push({ id, name, sprite });
+    } catch (error) {
+      snapshot.diagnostics.push(`${root} / pets / ${folder}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+}
+
 function entries(root: string, budget: RootBudget): fs.Dirent[] {
   const directory = fs.opendirSync(root);
   const result: fs.Dirent[] = [];
@@ -276,8 +335,9 @@ function directories(root: string, budget: RootBudget): string[] {
 
 /** Manifests are atomic; independent root budgets protect other roots and the bundled catalog. */
 export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] = []): AssetSnapshot {
-  const snapshot: AssetSnapshot = { furniture: [], floors: [], walls: [], carpets: [], directories: externalRoots, diagnostics: [] };
+  const snapshot: AssetSnapshot = { furniture: [], floors: [], walls: [], carpets: [], pets: [], directories: externalRoots, diagnostics: [] };
   const ids = new Set<string>();
+  const petIds = new Set<string>();
   const bundledBudget = new RootBudget(true);
   const attempt = (label: string, work: () => void): void => {
     try { work(); } catch (error) {
@@ -291,6 +351,7 @@ export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] =
       // External roots contain item folders, each with manifest.json and sibling PNGs.
       const furnitureRoot = index === 0 ? safePath(root, ['furniture']) : fs.realpathSync(root);
       for (const folder of directories(furnitureRoot, budget)) {
+        if (index !== 0 && folder === 'pets') { continue; }
         attempt(`${root} / ${folder}`, () => {
           const { root: meta, leaves, buffers } = readManifest(furnitureRoot, folder, budget);
           const loaded = leaves.map((leaf): ManifestFurniture => {
@@ -309,6 +370,7 @@ export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] =
         });
       }
     });
+    attempt(`${root} / pets`, () => loadPetSprites(root, budget, petIds, snapshot));
   }
   if (externalRoots.length > 8) { snapshot.diagnostics.push('Only eight external directories can be loaded'); }
   for (let i = 0; i < 9; i++) {
@@ -363,12 +425,24 @@ export function assetSourceFingerprint(bundledRoot: string, externalRoots: strin
       if (!path.isAbsolute(root)) { throw new Error('Asset directory must be absolute'); }
       const furnitureRoot = index === 0 ? safePath(root, ['furniture']) : fs.realpathSync(root);
       for (const folder of directories(furnitureRoot, budget)) {
+        if (index !== 0 && folder === 'pets') { continue; }
         hash.update(folder);
         attempt(folder, () => {
           readManifest(furnitureRoot, folder, budget, (name, bytes) => {
             hash.update(name);
             hash.update(bytes);
           });
+        });
+      }
+    });
+    attempt(`${root} / pets`, () => {
+      if (!path.isAbsolute(root)) { throw new Error('Asset directory must be absolute'); }
+      const petRoot = getPetRoot(root);
+      if (!petRoot) { return; }
+      for (const folder of directories(petRoot, budget)) {
+        hash.update(`pets/${folder}`);
+        attempt(`pets/${folder}`, () => {
+          readPet(petRoot, folder, budget, (_name, bytes) => { hash.update(bytes); });
         });
       }
     });

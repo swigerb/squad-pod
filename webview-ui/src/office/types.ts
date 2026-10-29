@@ -82,6 +82,7 @@ export const EditTool = {
   WALL_PAINT: 'wall_paint',
   CARPET_PAINT: 'carpet_paint',
   FURNITURE_PLACE: 'furniture_place',
+  PETS: 'pets',
   FURNITURE_PICK: 'furniture_pick',
   SELECT: 'select',
   EYEDROPPER: 'eyedropper',
@@ -125,10 +126,11 @@ export interface OfficeLayout {
   furniture: PlacedFurniture[];
   tileColors?: Record<string, FloorColor>;
   carpetTiles?: Array<CarpetTile | null>;
+  pets?: PlacedPet[];
 }
 
 export type { CarpetTile } from '../../../src/types.js';
-import type { CarpetTile } from '../../../src/types.js';
+import type { CarpetTile, PlacedPet } from '../../../src/types.js';
 
 // KEY SQUAD CHANGE: Character uses string ID (slug) and has name/role
 export interface Character {
@@ -155,6 +157,34 @@ export interface Character {
   seatId: string | null;
   bubbleState: { type: string; fadeTimer?: number };
   seatTimer: number;
+}
+
+export const PetState = {
+  IDLE: 'idle',
+  WALK: 'walk',
+  FOLLOW: 'follow',
+} as const;
+export type PetState = (typeof PetState)[keyof typeof PetState];
+
+export interface Pet extends PlacedPet {
+  name: string;
+  state: PetState;
+  dir: Direction;
+  x: number;
+  y: number;
+  tileCol: number;
+  tileRow: number;
+  path: Array<{ col: number; row: number }>;
+  moveProgress: number;
+  frame: number;
+  frameTimer: number;
+  wanderTimer: number;
+  followTargetId: string | null;
+  followRecalcTimer: number;
+  followDuration: number;
+  followDurationLimit: number;
+  bubbleType: 'heart' | null;
+  bubbleTimer: number;
 }
 
 export type TelemetryCategory = 'status' | 'session' | 'log' | 'orchestration' | 'agent' | 'decision';

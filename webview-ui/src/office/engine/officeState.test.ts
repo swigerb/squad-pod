@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { OfficeState } from './officeState.js';
 import { TileType, CharacterState } from '../types.js';
 import type { OfficeLayout } from '../types.js';
+import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
 
 describe('OfficeState', () => {
   let officeState: OfficeState;
@@ -25,6 +26,44 @@ describe('OfficeState', () => {
     };
     officeState = new OfficeState(layout);
   });
+
+  it('operates on legacy layouts as an empty pet list without mutating their source', () => {
+    const legacy: OfficeLayout = {
+      version: 2, cols: 2, rows: 2, tiles: Array(4).fill(TileType.FLOOR_1), furniture: [],
+    };
+    const original = structuredClone(legacy);
+    const state = new OfficeState(legacy);
+    expect(state.getLayout().pets).toBeUndefined();
+    expect(state.pets).toEqual([]);
+    expect(legacy).toEqual(original);
+  });
+
+  it('restores persisted pet identities and keeps runtime state when the layout is rebuilt', () => {
+    setPetTemplates([{ id: 'claudio', name: 'Claudio', sprite: Array.from({ length: 96 }, () => Array(96).fill('#fff')) }]);
+    const layout: OfficeLayout = {
+      version: 2, cols: 5, rows: 5, tiles: Array(25).fill(TileType.FLOOR_1), furniture: [],
+      pets: [{ id: 'companion-1', petType: 0 }],
+    };
+    const state = new OfficeState(layout);
+    expect(state.getActivePetTypes()).toEqual([0]);
+    expect(state.pets).toHaveLength(1);
+    expect(state.pets[0]).toMatchObject({ id: 'companion-1', petType: 0, name: 'Claudio' });
+    const pet = state.pets[0];
+    pet.x = 47;
+    state.togglePetBubble(pet.id);
+    state.rebuildFromLayout({ ...layout, customMetadata: { keep: true } } as OfficeLayout);
+    expect(state.pets[0]).toBe(pet);
+    expect(state.pets[0]).toMatchObject({ id: 'companion-1', petType: 0, x: 47, bubbleType: 'heart' });
+    expect(state.getLayout()).toMatchObject({
+      pets: [{ id: 'companion-1', petType: 0 }],
+      customMetadata: { keep: true },
+    });
+    const reloaded = new OfficeState(JSON.parse(JSON.stringify(state.getLayout())) as OfficeLayout);
+    expect(reloaded.getLayout().pets).toEqual([{ id: 'companion-1', petType: 0 }]);
+    expect(reloaded.pets[0].id).toBe('companion-1');
+  });
+
+  afterEach(() => resetPetTemplates());
 
   describe('constructor', () => {
     it('creates empty state with default layout', () => {

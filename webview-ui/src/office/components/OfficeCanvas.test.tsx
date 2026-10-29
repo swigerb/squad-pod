@@ -16,6 +16,7 @@ import { TILE_SIZE } from '../../constants.js';
 import type { FloorColor, OfficeLayout } from '../types.js';
 import { setFloorSprites } from '../floorTiles.js';
 import { setWallSprites } from '../wallTiles.js';
+import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -82,12 +83,44 @@ it('passes live Debug View changes into every rendered frame', () => {
     for (const enabled of [false, true, false]) {
       act(() => root.render(<OfficeCanvas officeState={office} editorState={editor} isEditMode={false}
         isDebugMode={enabled} editorTick={0} zoom={1} panRef={pan} />));
-      expect(frame.mock.lastCall?.at(-2)).toBe(enabled);
-      expect(frame.mock.lastCall?.at(-1)).toBe(office.layout.carpetTiles);
+      expect(frame.mock.lastCall?.at(-3)).toBe(enabled);
+      expect(frame.mock.lastCall?.at(-2)).toBe(office.layout.carpetTiles);
+      expect(frame.mock.lastCall?.at(-1)).toBe(office.pets);
     }
   } finally {
     act(() => root.unmount());
     vi.restoreAllMocks();
+  }
+});
+
+it('lets a canvas click toggle the persisted pet heart interaction', () => {
+  setPetTemplates([{
+    id: 'claudio', name: 'Claudio',
+    sprite: Array.from({ length: 96 }, () => Array(96).fill('#fff')),
+  }]);
+  const office = new OfficeState({
+    version: 2, cols: 5, rows: 5, tiles: Array(25).fill(TileType.FLOOR_1), furniture: [],
+    pets: [{ id: 'companion-1', petType: 0 }],
+  });
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  try {
+    act(() => root.render(<OfficeCanvas officeState={office} editorState={new EditorState()}
+      isEditMode={false} editorTick={0} zoom={1} panRef={{ current: { x: 0, y: 0 } }} />));
+    const canvas = host.querySelector('canvas')!;
+    const pet = office.pets[0];
+    const clickPet = () => act(() => canvas.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, button: 0, clientX: pet.x, clientY: pet.y - 1,
+    })));
+    clickPet();
+    expect(office.pets[0].bubbleType).toBe('heart');
+    clickPet();
+    expect(office.pets[0].bubbleType).toBeNull();
+    expect(office.getLayout().pets).toEqual([{ id: 'companion-1', petType: 0 }]);
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+    resetPetTemplates();
   }
 });
 

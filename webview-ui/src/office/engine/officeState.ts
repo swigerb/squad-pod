@@ -1,10 +1,13 @@
 import { CharacterState } from '../types.js';
-import type { OfficeLayout, Character, Seat, FurnitureInstance } from '../types.js';
+import type { OfficeLayout, Character, Seat, FurnitureInstance, Pet } from '../types.js';
 import { createCharacter } from './characters.js';
 import { layoutToTileMap, layoutToSeats, getBlockedTiles, layoutToFurnitureInstances } from '../layout/layoutManager.js';
 import { getWalkableTiles } from './pathfinding.js';
 import { findPath } from './pathfinding.js';
 import { getCatalogEntry } from '../layout/furnitureCatalog.js';
+import { createPet, getPetSpriteData, togglePetHeart } from './petEntity.js';
+import { getPetName, getPetSprites } from '../sprites/petSpriteData.js';
+import { PET_HIT_HALF_WIDTH, PET_HIT_HEIGHT } from '../../constants.js';
 
 export class OfficeState {
   layout: OfficeLayout;
@@ -13,28 +16,35 @@ export class OfficeState {
   blockedTiles: Set<string>;
   furniture: FurnitureInstance[];
   walkableTiles: Set<string>;
+  walkableTileList: Array<{ col: number; row: number }> = [];
   characters: Map<string, Character> = new Map();
+  pets: Pet[] = [];
   selectedAgentId: string | null = null;
   hoveredAgentId: string | null = null;
   hoveredTile: { col: number; row: number } | null = null;
   cameraFollowId: string | null = null;
 
   constructor(layout?: OfficeLayout) {
-    this.layout = layout || { version: 1, cols: 0, rows: 0, tiles: [], furniture: [] };
+    this.layout = layout || { version: 1, cols: 0, rows: 0, tiles: [], furniture: [], pets: [] };
     this.tileMap = layoutToTileMap(this.layout);
     this.seats = layoutToSeats(this.layout.furniture);
     this.blockedTiles = getBlockedTiles(this.layout.furniture);
     this.furniture = layoutToFurnitureInstances(this.layout.furniture);
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
+    this.rebuildWalkableTileList();
+    this.rebuildPetsFromLayout();
   }
 
   rebuildFromLayout(layout: OfficeLayout, shift?: boolean) {
+    const previousPets = new Map(this.pets.map((pet) => [pet.id, pet]));
     this.layout = layout;
     this.tileMap = layoutToTileMap(layout);
     this.seats = layoutToSeats(layout.furniture);
     this.blockedTiles = getBlockedTiles(layout.furniture);
     this.furniture = layoutToFurnitureInstances(layout.furniture);
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
+    this.rebuildWalkableTileList();
+    this.rebuildPetsFromLayout(previousPets);
 
     if (shift) {
       for (const char of this.characters.values()) {
@@ -267,7 +277,51 @@ export class OfficeState {
     this.furniture = layoutToFurnitureInstances(this.layout.furniture);
     this.blockedTiles = getBlockedTiles(this.layout.furniture);
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
+    this.rebuildWalkableTileList();
+    this.rebuildPetsFromLayout();
     this.rebuildFurnitureInstances();
+  }
+
+  private rebuildWalkableTileList(): void {
+    this.walkableTileList = Array.from(this.walkableTiles, (key) => {
+      const separator = key.indexOf(',');
+      return { col: Number(key.slice(0, separator)), row: Number(key.slice(separator + 1)) };
+    });
+  }
+
+  rebuildPetsFromLayout(previousPets = new Map(this.pets.map((pet) => [pet.id, pet]))): void {
+    this.pets = (this.layout.pets ?? []).flatMap((placed) => {
+      const existing = previousPets.get(placed.id);
+      if (existing && existing.petType === placed.petType) {
+        existing.name = getPetName(placed.petType);
+        return [existing];
+      }
+      if (!this.walkableTileList.length) return [];
+      const tile = this.walkableTileList[Math.floor(Math.random() * this.walkableTileList.length)];
+      if (!tile) return [];
+      return [createPet(placed.id, placed.petType, getPetName(placed.petType), tile.col, tile.row)];
+    });
+  }
+
+  getActivePetTypes(): number[] {
+    return [...new Set((this.layout.pets ?? []).map((pet) => pet.petType))];
+  }
+
+  getPetAt(x: number, y: number): Pet | null {
+    for (let index = this.pets.length - 1; index >= 0; index--) {
+      const pet = this.pets[index];
+      if (!getPetSpriteData(pet, getPetSprites(pet.petType))) continue;
+      if (x >= pet.x - PET_HIT_HALF_WIDTH && x <= pet.x + PET_HIT_HALF_WIDTH
+        && y >= pet.y - PET_HIT_HEIGHT && y <= pet.y) {
+        return pet;
+      }
+    }
+    return null;
+  }
+
+  togglePetBubble(id: string): void {
+    const pet = this.pets.find((candidate) => candidate.id === id);
+    if (pet) togglePetHeart(pet);
   }
 
   rebuildFurnitureInstances() {

@@ -50,6 +50,34 @@ describe('content-based layout conflict snapshots', () => {
     expect(protection.state.pending).toEqual([]);
   });
 
+  it.each(['local', 'incoming'] as const)('retains distinct pet identities and metadata through dirty %s resolution and save acknowledgement', (choice) => {
+    const protection = start();
+    const localPet = { id: 'local-companion', petType: 0, companionMetadata: { color: 'blue' } };
+    const incomingPet = { id: 'remote-companion', petType: 1, companionMetadata: { color: 'orange' } };
+    const localPets: OfficeLayout = {
+      ...draft, pets: [localPet],
+    };
+    const incomingPets: OfficeLayout = {
+      ...external, pets: [incomingPet],
+    };
+    protection.capture(localPets);
+    expect(protection.receive(incomingPets, 'external', 'pets-revision')).toBe(false);
+    expect(protection.state.draft).toEqual(localPets);
+    expect(protection.state.pending[0].layout).toEqual(incomingPets);
+    protection.resolve(protection.state.pending[0].id, choice);
+    const selected = choice === 'local' ? localPets : incomingPets;
+    expect(protection.state.draft).toEqual(selected);
+    expect(protection.state.retained.map((snapshot) => snapshot.layout)).toContainEqual(localPets);
+    if (choice === 'local') {
+      expect(protection.state.retained.map((snapshot) => snapshot.layout)).toContainEqual(incomingPets);
+    }
+    protection.beginSave();
+    protection.acknowledge(selected, 'pets-saved-revision');
+    expect(protection.state.baseline).toEqual(selected);
+    expect(protection.state.draft).toEqual(selected);
+    expect(protection.dirty).toBe(false);
+  });
+
   it('does not suppress later distinct snapshots from a resolved source, even if an old version returns', () => {
     const protection = start();
     protection.capture(draft);

@@ -1,6 +1,8 @@
 import type { LayoutData } from './types.js';
 import { isValidCarpetLayer } from './carpetValidation.js';
 
+export const MAX_LAYOUT_PETS = 32;
+
 function isGridSize(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) > 0 && (value as number) <= 256;
 }
@@ -14,6 +16,13 @@ export function isValidLayout(data: unknown): data is LayoutData {
   if (!Array.isArray(layout.tiles) || layout.tiles.length !== layout.cols * layout.rows) {return false;}
   if (!layout.tiles.every((t) => Number.isInteger(t))) {return false;}
   if (!isValidCarpetLayer(layout.carpetTiles, layout.cols * layout.rows)) {return false;}
+  if (layout.pets !== undefined && (
+    !Array.isArray(layout.pets) || layout.pets.length > MAX_LAYOUT_PETS
+    || !layout.pets.every((pet) => !!pet && typeof pet === 'object'
+      && typeof pet.id === 'string' && pet.id.length > 0 && pet.id.length <= 120
+      && Number.isSafeInteger(pet.petType) && pet.petType >= 0 && pet.petType < 512)
+    || new Set(layout.pets.map((pet) => pet.id)).size !== layout.pets.length
+  )) {return false;}
   if (layout.furniture !== undefined) {
     if (!Array.isArray(layout.furniture)) {return false;}
     if (!layout.furniture.every((f) =>

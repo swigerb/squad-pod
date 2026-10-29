@@ -27,6 +27,7 @@ describe('carpets through real canvas/editor transactions', () => {
     setCarpetSprites([0, 1, 2].map(() => Array.from({ length: 16 }, () => [['#111111', '#eeeeee']])));
     before = {
       version: 2, cols: 6, rows: 4, tiles: Array(24).fill(1),
+      pets: [],
       furniture: [{ uid: 'chair', type: 'chair', col: 2, row: 1, rotation: 0 }],
       tileColors: { '2,1': { h: 40, s: 50, b: 10, c: 0 } },
     };
@@ -47,6 +48,7 @@ describe('carpets through real canvas/editor transactions', () => {
         <EditorToolbar editorState={state} {...actions} onToolChange={actions.handleToolChange}
           onTileTypeChange={actions.handleTileTypeChange} onFloorColorChange={actions.handleFloorColorChange}
           onWallColorChange={actions.handleWallColorChange} onFurnitureTypeChange={actions.handleFurnitureTypeChange}
+          activePetTypes={[]} onPetToggle={actions.handlePetToggle}
           onCarpetVariantChange={actions.handleCarpetVariantChange} onCarpetColorChange={actions.handleCarpetColorChange}
           onSave={actions.handleSave} onReset={actions.handleReset} onUndo={actions.handleUndo} onRedo={actions.handleRedo}
           onDeleteSelected={actions.handleDeleteSelected} onRotateSelected={actions.handleRotateSelected}
