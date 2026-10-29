@@ -80,6 +80,41 @@ Then press **F5** in VS Code to launch the Extension Development Host.
 | `npm run verify` | Lint, type-check, test, and build: the same checks CI runs |
 | `npm run package` | Build `squad-pod-<version>.vsix` with `@vscode/vsce` |
 
+### Development dependency advisories
+
+Audit both dependency roots separately with `npm audit` and
+`npm audit --prefix webview-ui`, using your configured registry. For maintenance,
+prefer targeted, compatible lockfile updates and verify the installed ancestry
+with `npm ls` / `npm explain`; do not force incompatible transitive majors to
+silence an advisory. Keep the tileset tools and their `@anthropic-ai/sdk`
+dependency: `scripts/3-vision-inspect.ts` still uses it.
+
+The 2026-10-29 refresh ([#21](https://github.com/swigerb/squad-pod/issues/21))
+updated only the root lockfile:
+
+| Development dependency path | Locked version |
+|---|---|
+| `eslint` → `@humanfs/node` | 0.16.8 (requires `@humanfs/core` 0.19.2 and `@humanfs/types` 0.15.0) |
+| `npm-run-all` → `minimatch` → `brace-expansion` | 1.1.21 |
+| `npm-run-all` → `shell-quote` | 1.12.0 |
+
+Fresh audit results were **two high root package entries** (down from five:
+one critical, three high, one moderate) and **zero webview findings**. The remaining
+entries are `@azure/identity` 4.14.0 and its `@azure/msal-node` 6.0.1 dependency,
+both reported through [GHSA-xcx6-jx8p-x3h5](https://github.com/advisories/GHSA-xcx6-jx8p-x3h5).
+The advisory affects MSAL Node `>=5.0.0-beta.0 <7.1.0`. Available stable
+`@vscode/vsce` 4.1.0 requires Identity `^4.13.2`, while latest stable Identity
+4.14.0 requires MSAL Node `^6.0.0`; there is no compatible stable fix in those
+published ranges as checked through the configured corporate proxy. Although
+the audit reports `fixAvailable: true`, forcing MSAL Node 7 or downgrading Identity
+to 4.13.0 would violate the declared parent contracts. These findings remain
+visible and #21 stays open for a supported upstream resolution.
+
+These are development-tool advisory classifications, not a demonstrated
+application exploit. The package command uses `--no-dependencies`; audit results
+do not establish exploitability, and a zero-finding audit is not proof of exploit
+freedom. No publishing or release operation is needed to validate a local VSIX.
+
 ### Usage
 
 1. Open the **Squad Pod** panel (it appears in the bottom panel area alongside your terminal)
