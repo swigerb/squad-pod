@@ -173,6 +173,7 @@ export default function App() {
         isDebugMode={isDebugMode}
         officeState={getOfficeState()}
         isEditMode={editor.isEditMode}
+        showAreas={settings.showAreas}
         editorState={editorState}
         onEditorTileAction={editor.handleEditorTileAction}
         onEditorEraseAction={editor.handleEditorEraseAction}
@@ -203,6 +204,20 @@ export default function App() {
         onPetToggle={editor.handlePetToggle}
         onCarpetVariantChange={editor.handleCarpetVariantChange}
         onCarpetColorChange={editor.handleCarpetColorChange}
+        areas={getOfficeState().layout.areas ?? []}
+        areaMappings={getOfficeState().layout.areaMappings}
+        directories={[
+          ...(directoryCatalog?.workspaceDirectories ?? []),
+          ...(directoryCatalog?.savedDirectories ?? []),
+        ]}
+        selectedAreaLabel={editorState.selectedAreaLabel}
+        transformError={editorState.transformError}
+        onAreaAdd={editor.handleAreaAdd}
+        onAreaRename={editor.handleAreaRename}
+        onAreaColorChange={editor.handleAreaColorChange}
+        onAreaRemove={editor.handleAreaRemove}
+        onAreaMappingChange={editor.handleAreaMappingChange}
+        onAreaSelect={editor.handleAreaSelect}
         onSave={editor.handleSave}
         onReset={editor.handleReset}
         onUndo={editor.handleUndo}
@@ -239,6 +254,7 @@ export default function App() {
         sourceStatus={sourceStatus}
         assetStatus={assetStatus}
         onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
+        onShowAreasChange={(enabled) => updateSetting('showAreas', enabled)}
         isEditMode={editor.isEditMode}
         onToggleEditMode={editor.handleToggleEditMode}
         onOpenSquadInfo={handleOpenSquadInfo}

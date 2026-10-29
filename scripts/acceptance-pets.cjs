@@ -4,6 +4,10 @@ const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const Module = require('node:module');
+const { pathToFileURL } = require('node:url');
+require('tsx/cjs');
+const { OfficeState } = require('../webview-ui/src/office/engine/officeState.ts');
+const { reconcileAgents } = require('../webview-ui/src/office/engine/agentSync.ts');
 
 const extensionPath = path.resolve(__dirname, '..');
 const extensionBundle = path.join(extensionPath, 'dist', 'extension.js');
@@ -15,7 +19,7 @@ let provider;
 let receiveMessage;
 let deactivate;
 const disposable = { dispose() {} };
-const uri = (fsPath) => ({ fsPath });
+const uri = (fsPath) => ({ fsPath, toString: () => pathToFileURL(fsPath).toString() });
 const vscode = {
   Uri: {
     file: (fsPath) => uri(fsPath),
@@ -40,12 +44,58 @@ assert.ok(fs.existsSync(webviewScript), 'production webview bundle must exist');
 assert.ok(fs.readFileSync(webviewScript, 'utf8').includes('pets-carousel'), 'production webview must include the Pets editor');
 
 const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-pet-acceptance-'));
+const workspaceAliasContainer = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-alias-'));
+const workspaceAlias = path.join(workspaceAliasContainer, 'selected-root');
+fs.symlinkSync(workspaceRoot, workspaceAlias, 'junction');
+const savedRoot = workspaceRoot;
+const unrelatedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-unrelated-'));
 fs.mkdirSync(path.join(workspaceRoot, '.squad'), { recursive: true });
 fs.writeFileSync(
   path.join(workspaceRoot, '.squad', 'team.md'),
-  '## Members\n\n| Name | Role | Charter |\n| --- | --- | --- |\n' + (usageAcceptance
-    ? '| Ada | Developer | .squad/agents/ada/charter.md |\n| Shared | Dev | .squad/agents/first/charter.md |\n| Shared | Dev | .squad/agents/second/charter.md |\n' : ''),
+  '## Members\n\n| Name | Role | Charter | Status |\n| --- | --- | --- | --- |\n' +
+    '| Synthetic Fixture Agent | Dev | `.squad/agents/fixture-agent/charter.md` | ✅ Active |\n' +
+    (usageAcceptance
+      ? '| Ada | Developer | .squad/agents/ada/charter.md | Idle |\n| Shared | Dev | .squad/agents/first/charter.md | Idle |\n| Shared | Dev | .squad/agents/second/charter.md | Idle |\n'
+      : ''),
 );
+vscode.workspace.workspaceFolders = [{ uri: uri(workspaceAlias), name: 'Selected fixture root' }];
+const savedDirectory = {
+  id: '00000000-0000-4000-8000-000000000001',
+  name: 'Synthetic alternate project',
+  path: savedRoot,
+};
+const unrelatedDirectory = {
+  id: '00000000-0000-4000-8000-000000000002',
+  name: 'Unrelated synthetic project',
+  path: unrelatedRoot,
+};
+const recentLaunch = { ...savedDirectory, id: 'recent-launch-id', lastLaunchedAt: '2026-10-29T00:00:00.000Z' };
+const expectedDirectoryId = `workspace:${vscode.workspace.workspaceFolders[0].uri.toString()}`;
+const mappedLayout = {
+  version: 2,
+  cols: 9,
+  rows: 3,
+  tiles: Array(27).fill(1),
+  furniture: [1, 3, 5, 7].flatMap((col, index) => [
+    { uid: `desk-${index}`, type: 'desk', col, row: 0, rotation: 0 },
+    { uid: index === 0 ? 'chair-saved' : index === 1 ? 'chair-workspace' : `chair-${index}`, type: 'chair', col, row: 1, rotation: 0 },
+  ]),
+  areas: [
+    { label: 'Saved Area', color: '#112233' },
+    { label: 'Workspace Area', color: '#223344' },
+  ],
+  areaTiles: Array(27).fill(null).map((value, index) =>
+    index === 10 ? 'Saved Area' : index === 12 ? 'Workspace Area' : value),
+  areaMappings: {
+    [savedDirectory.id]: ['Saved Area'],
+    [expectedDirectoryId]: ['Workspace Area'],
+  },
+};
+const storageValues = new Map([
+  ['squad-pod.directories', [savedDirectory, unrelatedDirectory]],
+  ['squad-pod.directoryLaunchHistory', [recentLaunch]],
+  ['squad-pod.layout', mappedLayout],
+]);
 if (usageAcceptance) {
   const timestamp = '2026-10-28T15:00:00Z';
   const report = {
@@ -63,10 +113,9 @@ if (usageAcceptance) {
     { ...report, inputTokens: -1 }, { ...report, version: 2 },
   ].map(record => JSON.stringify(record)).join('\n') + '\n{"version":1');
 }
-vscode.workspace.workspaceFolders = [{ uri: uri(workspaceRoot) }];
 const storage = {
-  get: (_key, fallback) => fallback,
-  update: async () => {},
+  get: (key, fallback) => storageValues.has(key) ? storageValues.get(key) : fallback,
+  update: async (key, value) => { storageValues.set(key, value); },
 };
 const context = {
   subscriptions: [],
@@ -104,11 +153,41 @@ try {
   assert.equal(typeof receiveMessage, 'function');
 
   receiveMessage({ type: 'webviewReady' });
+  receiveMessage({ type: 'getDirectories' });
   const assetSnapshot = messages.find((message) => message.type === 'manifestAssetsLoaded')?.snapshot;
   assert.ok(assetSnapshot, 'compiled provider must publish its production asset snapshot');
   assert.deepEqual(assetSnapshot.pets.map((pet) => pet.id).sort(), ['claudio', 'gitcat']);
   const layoutMessage = messages.find((message) => message.type === 'layoutLoaded');
   assert.ok(layoutMessage, 'compiled provider must deliver a layout through the host boundary');
+  const observedRoster = messages.find((message) => message.type === 'existingAgents');
+  const fixtureAgent = observedRoster.agents.find((agent) => agent.id === 'fixture-agent');
+  assert.ok(fixtureAgent, 'compiled provider must attach the selected real synthetic roster');
+  assert.equal(fixtureAgent.directoryId, expectedDirectoryId, 'workspace URI identity remains the primary stable ID');
+  assert.deepEqual(fixtureAgent.directoryMappingIds, [expectedDirectoryId, savedDirectory.id],
+    'canonical saved-path alias contributes a durable mapping ID after the workspace ID');
+  const directoryCatalog = messages.find((message) => message.type === 'directoryCatalog')?.catalog;
+  assert.ok(directoryCatalog?.workspaceDirectories.some((entry) => entry.id === expectedDirectoryId));
+  assert.ok(directoryCatalog?.savedDirectories.some((entry) => entry.id === savedDirectory.id));
+  assert.ok(directoryCatalog?.savedDirectories.some((entry) => entry.id === unrelatedDirectory.id));
+  assert.ok(directoryCatalog?.recentLaunches.some((entry) => entry.id === recentLaunch.id));
+  assert.equal(fixtureAgent.directoryMappingIds.includes(unrelatedDirectory.id), false,
+    'unrelated saved paths are not aliases of the selected root');
+  assert.equal(fixtureAgent.directoryMappingIds.includes(recentLaunch.id), false,
+    'recent launch IDs are never mapping identities');
+
+  const allocateSeat = (layout) => {
+    const office = new OfficeState(layout);
+    reconcileAgents(office, [fixtureAgent]);
+    return office.characters.get(fixtureAgent.id)?.seatId;
+  };
+  assert.equal(allocateSeat(layoutMessage.layout), 'chair-saved',
+    'compiled-provider roster identity must reach the real engine and honor the saved-directory Area mapping');
+  const workspaceOnlyLayout = {
+    ...layoutMessage.layout,
+    areaMappings: { [expectedDirectoryId]: ['Workspace Area'] },
+  };
+  assert.equal(allocateSeat(workspaceOnlyLayout), 'chair-workspace',
+    'workspace-ID mappings remain compatible when no saved-ID mapping applies');
   if (usageAcceptance) {
     const snapshot = messages.find(message => message.type === 'recordedUsage')?.snapshot;
     assert.ok(snapshot, 'compiled provider must publish recorded usage');
@@ -127,8 +206,15 @@ try {
   if (serveBrowser) {
     const port = 4173;
     const hostMessages = messages.filter((message) =>
-      ['settingsLoaded', 'sourceStatus', 'recordedUsage', 'characterSpritesLoaded', 'manifestAssetsLoaded', 'layoutLoaded', 'existingAgents', 'squadRosterLoaded'].includes(message.type),
-    );
+      ['settingsLoaded', 'sourceStatus', 'recordedUsage', 'characterSpritesLoaded', 'manifestAssetsLoaded', 'layoutLoaded', 'existingAgents', 'squadRosterLoaded', 'directoryCatalog'].includes(message.type),
+    ).map((message) => {
+      if (message.type !== 'layoutLoaded') return message;
+      const layout = { ...message.layout };
+      delete layout.areas;
+      delete layout.areaTiles;
+      delete layout.areaMappings;
+      return { ...message, layout };
+    });
     const fixtures = JSON.stringify(hostMessages).replace(/</g, '\\u003c');
     let html = webview.html;
     const nonce = html.match(/<script nonce="([^"]+)"/)?.[1];
@@ -180,10 +266,12 @@ try {
       console.log(`Production pet browser fixture at http://127.0.0.1:${port}/ (mocked VS Code boundary; Ctrl+C to stop).`);
     });
   } else {
-    console.log('PASS compiled-provider artifact smoke (mocked VS Code boundary; does not execute webview UI or a native VS Code host).');
+    console.log('PASS compiled-provider artifact and provider-to-seat mapping smoke (mocked VS Code boundary; no native VS Code host or directory launch).');
   }
 } finally {
   deactivate?.();
   Module._load = originalLoad;
+  fs.rmSync(workspaceAliasContainer, { recursive: true, force: true });
   fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  fs.rmSync(unrelatedRoot, { recursive: true, force: true });
 }

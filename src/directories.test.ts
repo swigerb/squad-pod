@@ -10,6 +10,7 @@ import {
   readLaunchHistory,
   readSavedDirectories,
   recordDirectoryLaunch,
+  resolveDirectoryMappingIds,
   sameDirectoryPath,
   validateDirectoryName,
   validateDirectoryPath,
@@ -86,9 +87,13 @@ describe('saved launch directories', () => {
     const first = createSavedDirectory('Project', makeDirectory('project'));
     const second = { ...first, name: 'Renamed' };
     await recordDirectoryLaunch(storage, first, '2026-10-29T18:00:00.000Z');
+    const firstLaunchId = readLaunchHistory(storage)[0].id;
     await recordDirectoryLaunch(storage, second, '2026-10-29T19:00:00.000Z');
-    expect(readLaunchHistory(storage)).toEqual([{ ...second, lastLaunchedAt: '2026-10-29T19:00:00.000Z' }]);
-    await forgetDirectoryLaunch(storage, first.id);
+    const [recent] = readLaunchHistory(storage);
+    expect(recent).toMatchObject({ name: 'Renamed', path: second.path, lastLaunchedAt: '2026-10-29T19:00:00.000Z' });
+    expect(recent.id).not.toBe(first.id);
+    expect(recent.id).not.toBe(firstLaunchId);
+    await forgetDirectoryLaunch(storage, recent.id);
     expect(storage.values.get(GLOBAL_KEY_DIRECTORY_LAUNCH_HISTORY)).toEqual([]);
   });
 
@@ -104,6 +109,24 @@ describe('saved launch directories', () => {
     expect(sameDirectoryPath(alias, fs.realpathSync.native(directory))).toBe(true);
     const removed = path.join(path.dirname(directory), 'removed');
     expect(sameDirectoryPath(removed, path.join(removed, '..', 'removed'))).toBe(true);
+  });
+
+  it('resolves workspace and matching saved mapping IDs by canonical path in stable order', () => {
+    const directory = makeDirectory('observed');
+    const alias = path.join(path.dirname(directory), 'observed-alias');
+    const unrelated = makeDirectory('unrelated');
+    fs.symlinkSync(directory, alias, process.platform === 'win32' ? 'junction' : 'dir');
+    const workspaceDirectories = [
+      { id: 'workspace:file:///selected-alias', path: alias },
+      { id: 'workspace:file:///other', path: unrelated },
+    ];
+    const savedDirectories = [
+      { id: 'saved-match', name: 'Selected', path: directory },
+      { id: 'saved-other', name: 'Other', path: unrelated },
+    ];
+
+    expect(resolveDirectoryMappingIds(directory, workspaceDirectories, savedDirectories))
+      .toEqual(['workspace:file:///selected-alias', 'saved-match']);
   });
 });
 

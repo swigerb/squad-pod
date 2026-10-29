@@ -10,6 +10,7 @@ import {
   FloorColor,
   Pet,
 } from '../types.js';
+import type { AreaDefinition } from '../types.js';
 import {
   CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_Z_SORT_OFFSET,
@@ -368,6 +369,79 @@ export function renderSeatIndicators(
   }
 }
 
+export function renderAreaOverlay(
+  ctx: CanvasRenderingContext2D,
+  areaTiles: Array<string | null> | undefined,
+  areas: AreaDefinition[] | undefined,
+  cols: number,
+  rows: number,
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+  activeAreaLabel?: string | null,
+): void {
+  if (!areaTiles || !areas?.length) return;
+  const colors = new Map(areas.map((area) => [area.label, area.color]));
+  const tileSize = TILE_SIZE * zoom;
+  ctx.save();
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const label = areaTiles[row * cols + col];
+      if (!label) continue;
+      const color = colors.get(label);
+      if (!color) continue;
+      ctx.globalAlpha = label === activeAreaLabel ? 0.4 : 0.22;
+      ctx.fillStyle = color;
+      ctx.fillRect(offsetX + col * tileSize, offsetY + row * tileSize, tileSize, tileSize);
+    }
+  }
+  ctx.restore();
+}
+
+export function renderAreaLabels(
+  ctx: CanvasRenderingContext2D,
+  areaTiles: Array<string | null> | undefined,
+  areas: AreaDefinition[] | undefined,
+  cols: number,
+  rows: number,
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  if (!areaTiles || !areas?.length) return;
+  const colors = new Map(areas.map((area) => [area.label, area.color]));
+  const centers = new Map<string, { col: number; row: number; count: number }>();
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const label = areaTiles[row * cols + col];
+      if (!label || !colors.has(label)) continue;
+      const center = centers.get(label);
+      if (center) {
+        center.col += col + 0.5;
+        center.row += row + 0.5;
+        center.count++;
+      } else {
+        centers.set(label, { col: col + 0.5, row: row + 0.5, count: 1 });
+      }
+    }
+  }
+  ctx.save();
+  ctx.font = `bold ${Math.max(8, 12 * zoom)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const [label, center] of centers) {
+    const x = offsetX + center.col / center.count * TILE_SIZE * zoom;
+    const y = offsetY + center.row / center.count * TILE_SIZE * zoom;
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = '#000000';
+    ctx.fillText(label, x + 1, y + 1);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = colors.get(label)!;
+    ctx.fillText(label, x, y);
+  }
+  ctx.restore();
+}
+
 export function renderGridOverlay(
   ctx: CanvasRenderingContext2D,
   offsetX: number,
@@ -598,6 +672,10 @@ export function renderFrame(
   isDebugMode = false,
   carpetTiles?: Array<CarpetTile | null>,
   pets: Pet[] = [],
+  areas?: AreaDefinition[],
+  areaTiles?: Array<string | null>,
+  showAreas = false,
+  activeAreaLabel?: string | null,
 ): void {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -610,6 +688,7 @@ export function renderFrame(
 
   renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors ?? EMPTY_TILE_COLORS, cols);
   renderCarpetLayer(ctx, carpetTiles, tileMap, cols, rows, offsetX, offsetY, zoom);
+  if (showAreas) renderAreaOverlay(ctx, areaTiles, areas, cols, rows, offsetX, offsetY, zoom, activeAreaLabel);
 
   if (seats) {
     renderSeatIndicators(ctx, seats, characters, selectedAgentId ?? null, hoveredTile ?? null, offsetX, offsetY, zoom);
@@ -637,6 +716,7 @@ export function renderFrame(
 
   renderBubbles(ctx, characters, offsetX, offsetY, zoom);
   renderPetBubbles(ctx, pets, offsetX, offsetY, zoom);
+  if (showAreas) renderAreaLabels(ctx, areaTiles, areas, cols, rows, offsetX, offsetY, zoom);
 
   if (isDebugMode) drawAssetDiagnosticOverlay(ctx);
 }

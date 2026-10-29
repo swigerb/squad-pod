@@ -33,6 +33,7 @@ async function main() {
       page.on('pageerror', (error) => errors.push(error.message));
       const record = { viewport, hits: [] };
       results.cases.push(record);
+      let expectedRetainedLayout;
       try {
         await page.goto(url);
         await page.evaluate(() => {
@@ -49,7 +50,24 @@ async function main() {
         const editor = page.getByRole('region', { name: 'Layout editor' });
         const select = page.getByTitle('Select', { exact: true });
         const pets = page.getByTitle('Pets', { exact: true });
+        const area = page.getByTitle('Area', { exact: true });
         const canvas = page.locator('canvas').first();
+        const hostFacts = await page.evaluate(() => {
+          const roster = window.__petAcceptance.fixtures.find((message) => message.type === 'existingAgents')?.agents ?? [];
+          const catalog = window.__petAcceptance.fixtures.find((message) => message.type === 'directoryCatalog')?.catalog;
+          return {
+            roster: roster.map(({ id, directoryId, directoryMappingIds }) => ({ id, directoryId, directoryMappingIds })),
+            workspaceId: catalog?.workspaceDirectories.find((entry) => entry.name === 'Selected fixture root')?.id,
+          };
+        });
+        assert.deepEqual(hostFacts.roster, [{
+          id: 'fixture-agent',
+          directoryId: hostFacts.workspaceId,
+          directoryMappingIds: [hostFacts.workspaceId, '00000000-0000-4000-8000-000000000001'],
+        }]);
+        assert.ok(hostFacts.workspaceId?.startsWith('workspace:file:'), 'selected root identity must come from its URI');
+        record.observedRoster = hostFacts.roster;
+        record.providerMappingIds = hostFacts.roster[0].directoryMappingIds;
 
         async function hitClick(locator, name) {
           await locator.scrollIntoViewIfNeeded();
@@ -91,7 +109,7 @@ async function main() {
         const zoomBox = await zoom.boundingBox();
         record.editor = editorBox;
         record.zoom = zoomBox;
-        for (const name of ['Select', 'Floor', 'Wall', 'Carpet', 'Furniture', 'Pets', 'Erase', 'Eyedrop']) {
+        for (const name of ['Select', 'Floor', 'Wall', 'Carpet', 'Area', 'Furniture', 'Pets', 'Erase', 'Eyedrop']) {
           const tool = page.getByTitle(name, { exact: true });
           const level = await zoom.textContent();
           await hitClick(tool, `Editor tool: ${name}`);
@@ -135,6 +153,55 @@ async function main() {
         await page.getByRole('button', { name: 'Save Layout', exact: true }).waitFor();
         const redone = await page.evaluate(() => window.__petAcceptance.outbound.filter((m) => m.type === 'saveLayout').at(-1)?.layout);
         assert.deepEqual(redone, saved, 'controls must preserve the draft and redo contents');
+        expectedRetainedLayout = redone;
+
+        if (viewport.height >= 480) {
+          await hitClick(area, 'Area tool with scrolling');
+          const areaName = page.getByTestId('new-area-name');
+          await hitClick(areaName, 'Area name input');
+          await areaName.pressSequentially('Engineering Room');
+          assert.equal(await areaName.inputValue(), 'Engineering Room', 'normal typing must accept spaces');
+          await page.keyboard.press('Control+Z');
+          assert.equal(await areaName.inputValue(), '', 'Ctrl+Z must undo text natively in the Area name field');
+          record.areaTextUndo = { typed: 'Engineering Room', afterUndo: await areaName.inputValue() };
+          await areaName.pressSequentially('Engineering Room');
+          await hitClick(page.getByTestId('add-area'), 'Add Area');
+          assert.equal(await page.getByTestId('select-area-Engineering Room').count(), 1);
+
+          const areaDirectory = page.getByTestId('area-directory');
+          await areaDirectory.scrollIntoViewIfNeeded();
+          await areaDirectory.selectOption(hostFacts.workspaceId);
+          await areaDirectory.focus();
+          await page.keyboard.press('Delete');
+          await page.keyboard.press('r');
+          await page.keyboard.press('Control+Z');
+          assert.equal(await page.getByTestId('select-area-Engineering Room').count(), 1,
+            'mapping-control keys must not invoke office delete, rotate or undo shortcuts');
+
+          const rename = page.getByRole('textbox', { name: 'Rename Area Engineering Room' });
+          await hitClick(rename, 'Rename Area input');
+          await rename.press('Control+A');
+          await rename.pressSequentially('Engineering Room East');
+          await page.keyboard.press('Control+Z');
+          assert.equal(await rename.inputValue(), 'Engineering Room',
+            'Ctrl+Z in Area rename must undo the text edit, not the office draft');
+          await rename.press('Control+A');
+          await rename.pressSequentially('Engineering Room East');
+          await rename.press('Tab');
+
+          const areaMapping = page.getByTestId('area-mapping');
+          await hitClick(areaMapping, 'Map Area to selected workspace');
+          await areaMapping.check();
+          await hitClick(page.getByRole('button', { name: /Save Layout/ }), 'Save Area mapping');
+          await page.getByRole('button', { name: 'Save Layout', exact: true }).waitFor();
+          const mappedLayout = await page.evaluate(() => window.__petAcceptance.outbound.filter((m) => m.type === 'saveLayout').at(-1)?.layout);
+          assert.deepEqual(mappedLayout.areas, [{ label: 'Engineering Room East', color: '#50c878' }]);
+          assert.deepEqual(mappedLayout.areaMappings, { [hostFacts.workspaceId]: ['Engineering Room East'] });
+          assert.equal(mappedLayout.cols, redone.cols, 'Area-field shortcuts must not undo existing layout edits');
+          expectedRetainedLayout = mappedLayout;
+          record.areaMapping = { directoryId: hostFacts.workspaceId, label: 'Engineering Room East' };
+        }
+
         record.scroll = await editor.evaluate((element) => ({
           clientHeight: element.clientHeight, scrollHeight: element.scrollHeight, scrollTop: element.scrollTop,
         }));
@@ -142,22 +209,19 @@ async function main() {
         if (output) await page.screenshot({ path: path.join(output, `controls-${viewport.width}x${viewport.height}.png`) });
 
         if (viewport.height >= 480) {
-          await page.evaluate(() => window.__sendHost({
-            type: 'directoryCatalog',
-            catalog: {
-              workspaceDirectories: [{ id: 'fixture-workspace', name: 'Fixture workspace', path: 'C:\\Fixture', valid: true }],
-              savedDirectories: [], recentLaunches: [], squadHistoryAvailable: false,
-            },
-          }));
           const launchesBefore = await page.evaluate(() => window.__petAcceptance.outbound.filter((m) => m.type === 'launchDirectory').length);
           assert.equal(launchesBefore, 0, 'controls must never auto-launch');
           await hitClick(page.getByRole('button', { name: 'Directories', exact: true }), 'Directories alongside editor');
           const dialog = page.getByRole('dialog', { name: 'Launch directory' });
           await dialog.waitFor();
-          await hitClick(page.getByRole('button', { name: 'Launch Fixture workspace', exact: true }), 'Explicit directory Launch');
+          const savedDirectoryRow = dialog.getByLabel('Name for Synthetic alternate project').locator('xpath=../../..');
+          await hitClick(savedDirectoryRow.getByRole('button', { name: 'Launch Synthetic alternate project', exact: true }), 'Explicit saved-directory Launch request');
           const launch = await page.evaluate(() => window.__petAcceptance.outbound.filter((m) => m.type === 'launchDirectory').at(-1));
-          assert.deepEqual(launch, { type: 'launchDirectory', id: 'fixture-workspace', source: 'workspace' });
-          record.directoryLaunch = 'Explicit mocked-boundary request only; no terminal/CLI executed';
+          assert.deepEqual(launch, { type: 'launchDirectory', id: '00000000-0000-4000-8000-000000000001', source: 'saved' });
+          const rosterAfterRequest = await page.evaluate(() =>
+            window.__petAcceptance.fixtures.find((message) => message.type === 'existingAgents')?.agents.map((agent) => agent.id) ?? []);
+          assert.deepEqual(rosterAfterRequest, ['fixture-agent'], 'a saved-directory launch request must not attach another observed roster');
+          record.directoryLaunch = 'Explicit mocked-boundary request only; no terminal/CLI executed or extra roster attached';
           if (output) await page.screenshot({ path: path.join(output, `directories-${viewport.width}x${viewport.height}.png`) });
           await hitClick(page.getByRole('button', { name: 'Close directories', exact: true }), 'Close directories');
           assert.equal(await select.getAttribute('aria-pressed'), 'true');
@@ -193,7 +257,7 @@ async function main() {
         assert.equal(await select.getAttribute('aria-pressed'), 'true');
         await hitClick(page.getByRole('button', { name: /Save Layout/ }), 'Save retained draft after editor reopening');
         const reopened = await page.evaluate(() => window.__petAcceptance.outbound.filter((m) => m.type === 'saveLayout').at(-1)?.layout);
-        assert.deepEqual(reopened, saved);
+        assert.deepEqual(reopened, expectedRetainedLayout ?? saved);
         assert.deepEqual(errors, [], 'production page errors');
         record.passed = true;
       } finally {

@@ -134,7 +134,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     const input = host.querySelector<HTMLInputElement>('input[aria-label="Name for Original"]')!;
     input.focus();
     for (const options of [
-      { key: 'Backspace' }, { key: 'Delete' }, { key: 'r' },
+      { key: 'Backspace' }, { key: 'Delete' }, { key: 'r' }, { key: ' ', code: 'Space' },
       { key: 'z', ctrlKey: true }, { key: 'z', metaKey: true },
       { key: 'z', ctrlKey: true, shiftKey: true }, { key: 'y', ctrlKey: true },
     ]) {
@@ -159,6 +159,179 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(persisted!.draft).toEqual(draft);
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
     expect(persisted!.draft).toEqual(layout);
+  });
+
+  it('keeps Area names and directory mapping controls native while protecting selected furniture and layout history', () => {
+    const layout: OfficeLayout = {
+      ...imported,
+      furniture: [{
+        uid: 'selected-desk', type: 'fixture-desk', col: 2, row: 2, rotation: 0,
+        assetFootprint: { width: 2, height: 1 }, assetRole: 'desk',
+      }],
+    };
+    snapshot(layout, 'area-keyboard-base');
+    send({
+      type: 'directoryCatalog',
+      catalog: {
+        workspaceDirectories: [], recentLaunches: [], squadHistoryAvailable: false,
+        savedDirectories: [{ id: 'saved-stable-id', name: 'Synthetic Repo', path: 'C:\\Projects\\Synthetic', valid: true }],
+      },
+    });
+    click('Edit Layout');
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Select"]')!.click());
+    const canvas = host.querySelector('canvas')!;
+    for (const type of ['mousedown', 'mouseup']) {
+      act(() => canvas.dispatchEvent(new MouseEvent(type, {
+        bubbles: true, button: 0, buttons: type === 'mousedown' ? 1 : 0,
+        clientX: 2 * 32 + 16, clientY: 2 * 32 + 16,
+      })));
+    }
+    expect(host.querySelector('button[title="Delete (Del)"]')).not.toBeNull();
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Area"]')!.click());
+
+    const setInputValue = (input: HTMLInputElement, value: string) => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const nameInput = host.querySelector<HTMLInputElement>('[data-testid="new-area-name"]')!;
+    act(() => {
+      nameInput.focus();
+      setInputValue(nameInput, 'Engineering');
+    });
+    const dispatchShortcut = (target: HTMLElement, options: KeyboardEventInit) => {
+      const event = new KeyboardEvent('keydown', { ...options, bubbles: true, cancelable: true });
+      act(() => target.dispatchEvent(event));
+      expect(event.defaultPrevented, JSON.stringify(options)).toBe(false);
+    };
+    for (const options of [
+      { key: 'Backspace' }, { key: 'Delete' }, { key: 'r' }, { key: ' ', code: 'Space' },
+      { key: 'z', ctrlKey: true }, { key: 'z', metaKey: true },
+      { key: 'z', ctrlKey: true, shiftKey: true }, { key: 'y', ctrlKey: true },
+    ]) dispatchShortcut(nameInput, options);
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="add-area"]')!.click());
+    expect(persisted!.draft!.areas).toEqual([{ label: 'Engineering', color: '#50c878' }]);
+    expect(persisted!.draft!.furniture).toEqual(layout.furniture);
+    expect(host.querySelector('button[title="Delete (Del)"]')).not.toBeNull();
+
+    const renameInput = host.querySelector<HTMLInputElement>('[aria-label="Rename Area Engineering"]')!;
+    const afterAdd = structuredClone(persisted!.draft);
+    act(() => {
+      renameInput.focus();
+      setInputValue(renameInput, 'Engineering Floor');
+    });
+    dispatchShortcut(renameInput, { key: 'z', ctrlKey: true });
+    expect(persisted!.draft).toEqual(afterAdd);
+    act(() => renameInput.blur());
+    expect(persisted!.draft!.areas).toEqual([{ label: 'Engineering Floor', color: '#50c878' }]);
+
+    const directorySelect = host.querySelector<HTMLSelectElement>('[data-testid="area-directory"]')!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(directorySelect, 'saved-stable-id');
+      directorySelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const beforeMappingKey = structuredClone(persisted!.draft);
+    dispatchShortcut(directorySelect, { key: 'Delete' });
+    dispatchShortcut(directorySelect, { key: 'r' });
+    dispatchShortcut(directorySelect, { key: 'z', ctrlKey: true });
+    expect(persisted!.draft).toEqual(beforeMappingKey);
+    const mapping = host.querySelector<HTMLInputElement>('[data-testid="area-mapping"]')!;
+    act(() => mapping.click());
+    expect(persisted!.draft!.areaMappings).toEqual({ 'saved-stable-id': ['Engineering Floor'] });
+    expect(persisted!.draft!.furniture).toEqual(layout.furniture);
+    expect(host.querySelector('button[title="Delete (Del)"]')).not.toBeNull();
+  });
+
+  it('selects a painted Area through Shift-Eyedrop on the real canvas and preserves regular Eyedrop', () => {
+    snapshot(imported, 'area-eyedrop-base');
+    click('Edit Layout');
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Area"]')!.click());
+    const nameInput = host.querySelector<HTMLInputElement>('[data-testid="new-area-name"]')!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(nameInput, 'Engineering');
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="add-area"]')!.click());
+
+    const canvas = host.querySelector('canvas')!;
+    const tileX = 1 * 32 + 16;
+    const tileY = 1 * 32 + 16;
+    act(() => canvas.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, button: 0, buttons: 1, clientX: tileX, clientY: tileY,
+    })));
+    act(() => canvas.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true, button: 0, buttons: 0, clientX: tileX, clientY: tileY,
+    })));
+    expect(persisted!.draft!.areaTiles?.[21]).toBe('Engineering');
+
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Eyedrop"]')!.click());
+    act(() => canvas.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, button: 0, buttons: 1, shiftKey: true, clientX: tileX, clientY: tileY,
+    })));
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="select-area-Engineering"]')?.getAttribute('aria-pressed'))
+      .toBe('true');
+
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Eyedrop"]')!.click());
+    act(() => canvas.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, button: 0, buttons: 1, clientX: 2 * 32 + 16, clientY: tileY,
+    })));
+    expect(host.querySelector<HTMLButtonElement>('button[title="Floor"]')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('shifts Area tiles with grid expansion and restores them through undo and redo', () => {
+    const layout: OfficeLayout = {
+      ...imported,
+      areas: [{ label: 'Engineering', color: '#50c878' }],
+      areaTiles: Array(300).fill(null).map((value, index) => index === 0 ? 'Engineering' : value),
+      areaMappings: { 'saved-stable-id': ['Engineering'] },
+    };
+    snapshot(layout, 'area-grid-base');
+    click('Edit Layout');
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Expand Left"]')!.click());
+    expect(persisted!.draft!.cols).toBe(21);
+    expect(persisted!.draft!.areaTiles).toHaveLength(315);
+    expect(persisted!.draft!.areaTiles?.[1]).toBe('Engineering');
+    expect(persisted!.draft!.areaMappings).toEqual(layout.areaMappings);
+    click('Undo');
+    expect(persisted!.draft).toEqual(layout);
+    click('Redo');
+    expect(persisted!.draft!.areaTiles?.[1]).toBe('Engineering');
+  });
+
+  it('paints, right-erases and removes Areas as undoable editor transactions', () => {
+    snapshot(imported, 'area-paint-base');
+    click('Edit Layout');
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Area"]')!.click());
+    const nameInput = host.querySelector<HTMLInputElement>('[data-testid="new-area-name"]')!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(nameInput, 'Engineering');
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="add-area"]')!.click());
+
+    const canvas = host.querySelector('canvas')!;
+    const tileX = 1 * 32 + 16;
+    const tileY = 1 * 32 + 16;
+    const stroke = (button: number) => {
+      act(() => canvas.dispatchEvent(new MouseEvent('mousedown', {
+        bubbles: true, button, buttons: button === 0 ? 1 : 2, clientX: tileX, clientY: tileY,
+      })));
+      act(() => canvas.dispatchEvent(new MouseEvent('mouseup', {
+        bubbles: true, button, buttons: 0, clientX: tileX, clientY: tileY,
+      })));
+    };
+    stroke(0);
+    expect(persisted!.draft!.areaTiles?.[21]).toBe('Engineering');
+    stroke(2);
+    expect(persisted!.draft).not.toHaveProperty('areaTiles');
+    click('Undo');
+    expect(persisted!.draft!.areaTiles?.[21]).toBe('Engineering');
+
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Remove Area Engineering"]')!.click());
+    expect(persisted!.draft).not.toHaveProperty('areas');
+    expect(persisted!.draft).not.toHaveProperty('areaTiles');
+    click('Undo');
+    expect(persisted!.draft!.areas).toEqual([{ label: 'Engineering', color: '#50c878' }]);
+    expect(persisted!.draft!.areaTiles?.[21]).toBe('Engineering');
   });
 
   it('clears only a watcher error after a valid external load, not an import or malformed message', () => {
@@ -586,24 +759,28 @@ describe('settings and source UI with simulated host messages', () => {
   });
 
   it('restores both settings on startup/reload, sends changes, and persists Debug Close as off', () => {
-    send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: false });
+    send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: false });
     load();
     expect(isSoundEnabled()).toBe(false);
     click('Settings');
     const sound = host.querySelector<HTMLInputElement>('#squad-pod-sound')!;
     const debug = host.querySelector<HTMLInputElement>('#squad-pod-debug-view')!;
+    const showAreas = host.querySelector<HTMLInputElement>('#squad-pod-show-areas')!;
     expect(sound.checked).toBe(false);
     expect(debug.checked).toBe(false);
+    expect(showAreas.checked).toBe(false);
     act(() => sound.click());
     expect(isSoundEnabled()).toBe(true);
     expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'setSoundEnabled', enabled: true });
     act(() => debug.click());
     expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: true });
+    act(() => showAreas.click());
+    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'setShowAreas', enabled: true });
     expect(host.textContent).toContain('Authoritative tool/context data is unavailable');
     act(() => root.unmount());
     root = createRoot(host);
     act(() => root.render(<App />));
-    send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: true });
+    send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: true, showAreas: true });
     load();
     expect(isSoundEnabled()).toBe(false);
     expect(host.textContent).toContain('Authoritative tool/context data is unavailable');
@@ -611,6 +788,7 @@ describe('settings and source UI with simulated host messages', () => {
     expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: false });
     click('Settings');
     expect(host.querySelector<HTMLInputElement>('#squad-pod-debug-view')!.checked).toBe(false);
+    expect(host.querySelector<HTMLInputElement>('#squad-pod-show-areas')!.checked).toBe(true);
   });
 
   it('shows only host-reported observer status and labels absent producers/launch explicitly', () => {

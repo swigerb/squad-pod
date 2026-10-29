@@ -177,6 +177,96 @@ describe('OfficeState', () => {
       expect(character.seatId).toBe('chair-1');
     });
 
+    it('prefers mapped Areas, then unzoned seats, then any remaining seat', () => {
+      const cols = 9;
+      const furniture = [1, 3, 5, 7].flatMap((col, index) => [
+        { uid: `desk-${index}`, type: 'desk', col, row: 0, rotation: 0 },
+        { uid: `chair-${index}`, type: 'chair', col, row: 1, rotation: 0 },
+      ]);
+      const areaTiles: Array<string | null> = Array(cols * 3).fill(null);
+      areaTiles[cols + 1] = 'Alpha';
+      areaTiles[cols + 3] = 'Beta';
+      areaTiles[cols + 7] = 'Other';
+      const state = new OfficeState({
+        version: 2,
+        cols,
+        rows: 3,
+        tiles: Array(cols * 3).fill(TileType.FLOOR_1),
+        furniture,
+        areas: [
+          { label: 'Alpha', color: '#112233' },
+          { label: 'Beta', color: '#223344' },
+          { label: 'Other', color: '#334455' },
+        ],
+        areaTiles,
+        areaMappings: { 'workspace:file:///selected-root': ['Alpha', 'Beta'] },
+      });
+
+      state.addAgent('member-1', 'A synthetic display name', 'Dev', undefined, undefined, undefined, 'workspace:file:///selected-root');
+      state.addAgent('member-2', 'Another synthetic name', 'Dev', undefined, undefined, undefined, 'workspace:file:///selected-root');
+      state.addAgent('member-3', 'Third member', 'Dev', undefined, undefined, undefined, 'workspace:file:///selected-root');
+      state.addAgent('member-4', 'Fourth member', 'Dev', undefined, undefined, undefined, 'workspace:file:///selected-root');
+
+      expect([...state.characters.values()].map((character) => character.seatId)).toEqual([
+        'chair-0', 'chair-1', 'chair-2', 'chair-3',
+      ]);
+      expect(state.characters.get('member-1')?.directoryId).toBe('workspace:file:///selected-root');
+      expect(state.characters.get('member-4')?.name).toBe('Fourth member');
+    });
+
+    it('keeps an available persisted seat ahead of directory Area preference', () => {
+      const layout: OfficeLayout = {
+        ...officeState.getLayout(),
+        areas: [{ label: 'Mapped', color: '#112233' }],
+        areaTiles: Array(25).fill(null).map((value, index) => index === 2 * 5 + 2 ? 'Mapped' : value),
+        areaMappings: { 'saved-stable-id': ['Mapped'] },
+      };
+      const state = new OfficeState(layout);
+      state.addAgent('member', 'Synthetic member', 'Dev', undefined, undefined, 'chair-1', 'saved-stable-id');
+      expect(state.characters.get('member')?.seatId).toBe('chair-1');
+    });
+
+    it('combines stable workspace and saved mapping identities for observed-agent seat allocation', () => {
+      const cols = 7;
+      const furniture = [1, 3, 5].flatMap((col, index) => [
+        { uid: `desk-${index}`, type: 'desk', col, row: 0, rotation: 0 },
+        { uid: `chair-${index}`, type: 'chair', col, row: 1, rotation: 0 },
+      ]);
+      const areaTiles: Array<string | null> = Array(cols * 3).fill(null);
+      areaTiles[cols + 1] = 'Saved Area';
+      areaTiles[cols + 3] = 'Workspace Area';
+      const state = new OfficeState({
+        version: 2,
+        cols,
+        rows: 3,
+        tiles: Array(cols * 3).fill(TileType.FLOOR_1),
+        furniture,
+        areas: [
+          { label: 'Saved Area', color: '#112233' },
+          { label: 'Workspace Area', color: '#223344' },
+        ],
+        areaTiles,
+        areaMappings: {
+          'saved-stable-id': ['Saved Area'],
+          'workspace:file:///selected-root': ['Workspace Area'],
+        },
+      });
+
+      state.addAgent(
+        'mapped-member',
+        'Synthetic member',
+        'Dev',
+        undefined,
+        undefined,
+        undefined,
+        'workspace:file:///selected-root',
+        ['workspace:file:///selected-root', 'saved-stable-id'],
+      );
+
+      expect(state.characters.get('mapped-member')?.seatId).toBe('chair-0');
+      expect(state.characters.get('mapped-member')?.directoryId).toBe('workspace:file:///selected-root');
+    });
+
     it('assigns palette and hue shift', () => {
       officeState.addAgent('homer-simpson', 'Homer Simpson', 'Lead', 2, 120);
 

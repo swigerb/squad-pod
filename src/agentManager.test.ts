@@ -20,6 +20,7 @@ import {
   refreshAgents,
   updateAgentStatus,
   saveAgentSeats,
+  sendExistingAgents,
   disposeAgentManager,
   getAgents,
   resolveAgentId,
@@ -273,6 +274,23 @@ describe('agentManager', () => {
   });
 
   describe('refreshAgents', () => {
+    it('sends the selected workspace stable directory identity in creates and snapshots', () => {
+      initializeAgents('/workspace', context, webview);
+      mockReadTeamRoster.mockReturnValue([makeMember('Synthetic Member', 'synthetic-member')]);
+      const directoryId = 'workspace:file:///selected-root';
+      const directoryIds = [directoryId, 'saved-stable-id'];
+      const agents = refreshAgents('/workspace', context, webview, directoryIds);
+      const created = webview.postMessage.mock.calls.find(([message]: [any]) => message.type === 'agentCreated')?.[0];
+      expect(created.agent).toMatchObject({ id: 'synthetic-member', directoryId, directoryMappingIds: directoryIds });
+
+      webview.postMessage.mockClear();
+      sendExistingAgents(agents, context, webview, directoryIds);
+      const snapshot = webview.postMessage.mock.calls.find(([message]: [any]) => message.type === 'existingAgents')?.[0];
+      expect(snapshot.agents).toEqual([expect.objectContaining({
+        id: 'synthetic-member', directoryId, directoryMappingIds: directoryIds,
+      })]);
+    });
+
     it('adds new members and removes departed ones', () => {
       // Start with homer and lisa
       mockReadTeamRoster.mockReturnValue([

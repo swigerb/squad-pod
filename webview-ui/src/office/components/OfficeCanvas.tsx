@@ -22,7 +22,7 @@ interface OfficeCanvasProps {
   editorState: EditorState;
   onEditorTileAction?: (col: number, row: number) => void;
   onEditorEraseAction?: (col: number, row: number) => void;
-  onEditorEyedropper?: (col: number, row: number) => void;
+  onEditorEyedropper?: (col: number, row: number, sampleArea?: boolean) => void;
   onEditorSelectionChange?: (uid: string | null) => void;
   onDeleteSelected?: () => void;
   onRotateSelected?: () => void;
@@ -33,6 +33,7 @@ interface OfficeCanvasProps {
   editorTick: number;
   zoom: number;
   onZoomChange?: (zoom: number) => void;
+  showAreas?: boolean;
   panRef: React.RefObject<{ x: number; y: number }>;
   onDeskClick?: (agentId: string, screenX: number, screenY: number) => void;
 }
@@ -53,6 +54,7 @@ export function OfficeCanvas({
   onGestureEnd,
   zoom,
   onZoomChange,
+  showAreas = false,
   panRef,
   onDeskClick,
 }: OfficeCanvasProps) {
@@ -202,6 +204,10 @@ export function OfficeCanvas({
           isDebugMode,
           officeState.layout.carpetTiles,
           officeState.pets,
+          officeState.layout.areas,
+          officeState.layout.areaTiles,
+          showAreas || (isEditMode && editorState.tool === EditTool.AREA_PAINT),
+          editorState.selectedAreaLabel,
         );
         const preview = dragPreviewRef.current;
         if (isEditMode && preview) {
@@ -225,7 +231,7 @@ export function OfficeCanvas({
     });
 
     return () => { cleanup(); };
-  }, [officeState, isEditMode, isDebugMode, editorState, zoom, panRef, clampPan]);
+  }, [officeState, isEditMode, isDebugMode, editorState, zoom, panRef, clampPan, showAreas]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -238,7 +244,8 @@ export function OfficeCanvas({
       }
 
       const carpetErase = e.button === 2 && isEditMode && editorState.tool === EditTool.CARPET_PAINT;
-      if (e.button !== 0 && !carpetErase) return;
+      const areaErase = e.button === 2 && isEditMode && editorState.tool === EditTool.AREA_PAINT;
+      if (e.button !== 0 && !carpetErase && !areaErase) return;
 
       const rect = canvasRef.current!.getBoundingClientRect();
       const screenX = e.clientX - rect.left;
@@ -248,7 +255,7 @@ export function OfficeCanvas({
       if (isEditMode) {
         // Ghost border click → expand grid
         const { cols: lCols, rows: lRows } = officeState.layout;
-        if (onExpandGrid && !carpetErase && (col < 0 || col >= lCols || row < 0 || row >= lRows)) {
+        if (onExpandGrid && !carpetErase && !areaErase && (col < 0 || col >= lCols || row < 0 || row >= lRows)) {
           if (col < 0) onExpandGrid('left');
           else if (col >= lCols) onExpandGrid('right');
           else if (row < 0) onExpandGrid('up');
@@ -256,7 +263,7 @@ export function OfficeCanvas({
           return;
         }
 
-        if (carpetErase) {
+        if (carpetErase || areaErase) {
           gestureOpenRef.current = true;
           onGestureStart?.();
           strokeRef.current = { col, row, erase: true };
@@ -284,9 +291,10 @@ export function OfficeCanvas({
           strokeRef.current = { col, row, erase: true };
           onEditorEraseAction?.(col, row);
         } else if (editorState.tool === 'eyedropper') {
-          onEditorEyedropper?.(col, row);
+          onEditorEyedropper?.(col, row, e.shiftKey);
         } else {
-          if (editorState.tool === EditTool.TILE_PAINT || editorState.tool === EditTool.WALL_PAINT || editorState.tool === EditTool.CARPET_PAINT) {
+          if (editorState.tool === EditTool.TILE_PAINT || editorState.tool === EditTool.WALL_PAINT
+            || editorState.tool === EditTool.CARPET_PAINT || editorState.tool === EditTool.AREA_PAINT) {
             gestureOpenRef.current = true;
             onGestureStart?.();
             strokeRef.current = { col, row, erase: false };
@@ -414,7 +422,8 @@ export function OfficeCanvas({
         if (inGrid) {
           strokeRef.current = { col, row, erase: stroke.erase };
           if (stroke.erase) onEditorEraseAction?.(col, row);
-          else if (editorState.tool === EditTool.TILE_PAINT || editorState.tool === EditTool.WALL_PAINT || editorState.tool === EditTool.CARPET_PAINT) {
+          else if (editorState.tool === EditTool.TILE_PAINT || editorState.tool === EditTool.WALL_PAINT
+            || editorState.tool === EditTool.CARPET_PAINT || editorState.tool === EditTool.AREA_PAINT) {
             onEditorTileAction?.(col, row);
           }
         }
@@ -507,6 +516,10 @@ export function OfficeCanvas({
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target;
+      if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
+        return;
+      }
       if (e.key === 'Alt') updateCopyPreview(true);
       if (e.code === 'Space') {
         e.preventDefault();
@@ -541,7 +554,9 @@ export function OfficeCanvas({
           if (canvasRef.current) canvasRef.current.style.cursor = 'default';
           finishGesture();
         }}
-        onContextMenu={(e) => { if (isEditMode && editorState.tool === EditTool.CARPET_PAINT) e.preventDefault(); }}
+        onContextMenu={(e) => {
+          if (isEditMode && (editorState.tool === EditTool.CARPET_PAINT || editorState.tool === EditTool.AREA_PAINT)) e.preventDefault();
+        }}
         onWheel={handleWheel}
         style={{ display: 'block' }}
       />

@@ -61,6 +61,7 @@ import {
   readLaunchHistory,
   readSavedDirectories,
   recordDirectoryLaunch,
+  resolveDirectoryMappingIds,
   sameDirectoryPath,
   validateDirectoryPath,
   writeSavedDirectories,
@@ -203,6 +204,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         void this.onSaveSetting('debugEnabled', message.enabled);
         break;
 
+      case 'setShowAreas':
+        void this.onSaveSetting('showAreas', message.enabled);
+        break;
+
       case 'getSettings':
         this.postMessage({ type: 'settingsLoaded', ...readSettings(this.context.globalState) });
         break;
@@ -272,7 +277,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.loadAndSendAssets();
     this.loadAndSendCustomAssetUris();
     this.loadAndSendLayout(workspaceRoot);
-    sendExistingAgents(agents, this.context, webview);
+    sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
     this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
     this.sendRecordedUsage(workspaceRoot);
   }
@@ -297,8 +302,9 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       onRosterChanged: () => {
         this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
         this.sendRecordedUsage(workspaceRoot);
-        const updated = refreshAgents(workspaceRoot, this.context, webview);
-        sendExistingAgents(updated, this.context, webview);
+        const directoryIds = this.getWorkspaceDirectoryIds(workspaceRoot);
+        const updated = refreshAgents(workspaceRoot, this.context, webview, directoryIds);
+        sendExistingAgents(updated, this.context, webview, directoryIds);
         this.emitTelemetry('log', null, null, 'Team roster updated');
       },
       onAgentActivity: (event) => {
@@ -961,6 +967,18 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
   private getWorkspaceRoot(): string | undefined {
     return pickSquadWorkspace((vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath));
+  }
+
+  private getWorkspaceDirectoryIds(workspaceRoot: string): string[] {
+    const workspaceDirectories = (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
+      id: `workspace:${folder.uri.toString()}`,
+      path: folder.uri.fsPath,
+    }));
+    return resolveDirectoryMappingIds(
+      workspaceRoot,
+      workspaceDirectories,
+      readSavedDirectories(this.context.globalState),
+    );
   }
 
   private postMessage(message: OutboundMessage): void {

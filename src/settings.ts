@@ -1,4 +1,4 @@
-import { GLOBAL_KEY_DEBUG_ENABLED, GLOBAL_KEY_SOUND_ENABLED } from './constants.js';
+import { GLOBAL_KEY_DEBUG_ENABLED, GLOBAL_KEY_SHOW_AREAS, GLOBAL_KEY_SOUND_ENABLED } from './constants.js';
 import type { PodSettings } from './types.js';
 
 interface SettingsStore {
@@ -10,6 +10,7 @@ export function readSettings(store: SettingsStore): PodSettings {
   return {
     soundEnabled: store.get(GLOBAL_KEY_SOUND_ENABLED, true),
     debugEnabled: store.get(GLOBAL_KEY_DEBUG_ENABLED, false),
+    showAreas: store.get(GLOBAL_KEY_SHOW_AREAS, false),
   };
 }
 
@@ -21,5 +22,7 @@ export async function saveSetting(
   if (typeof enabled !== 'boolean') {
     throw new Error(`Invalid ${setting} setting: expected a boolean`);
   }
-  await store.update(setting === 'soundEnabled' ? GLOBAL_KEY_SOUND_ENABLED : GLOBAL_KEY_DEBUG_ENABLED, enabled);
+  const key = setting === 'soundEnabled' ? GLOBAL_KEY_SOUND_ENABLED
+    : setting === 'debugEnabled' ? GLOBAL_KEY_DEBUG_ENABLED : GLOBAL_KEY_SHOW_AREAS;
+  await store.update(key, enabled);
 }

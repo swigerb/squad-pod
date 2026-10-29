@@ -87,6 +87,20 @@ export function sameDirectoryPath(left: string, right: string, platform = proces
   return platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
 }
 
+export function resolveDirectoryMappingIds(
+  observedRoot: string,
+  workspaceDirectories: readonly Pick<SavedDirectory, 'id' | 'path'>[],
+  savedDirectories: readonly SavedDirectory[],
+): string[] {
+  const workspaceIds = workspaceDirectories
+    .filter((directory) => sameDirectoryPath(directory.path, observedRoot))
+    .map((directory) => directory.id);
+  const savedIds = savedDirectories
+    .filter((directory) => sameDirectoryPath(directory.path, observedRoot))
+    .map((directory) => directory.id);
+  return [...new Set([...workspaceIds, ...savedIds])];
+}
+
 function resolveDirectoryIdentity(directoryPath: string): string {
   try {
     return fs.realpathSync.native(directoryPath);
@@ -140,7 +154,7 @@ export async function recordDirectoryLaunch(
   launchedAt = new Date().toISOString(),
 ): Promise<void> {
   const recent = readLaunchHistory(storage).filter((entry) => !sameDirectoryPath(entry.path, directory.path));
-  recent.unshift({ ...directory, lastLaunchedAt: launchedAt });
+  recent.unshift({ ...directory, id: randomUUID(), lastLaunchedAt: launchedAt });
   await storage.update(GLOBAL_KEY_DIRECTORY_LAUNCH_HISTORY, recent.slice(0, MAX_RECENT_LAUNCHES));
 }
 

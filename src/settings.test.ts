@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GLOBAL_KEY_DEBUG_ENABLED, GLOBAL_KEY_SOUND_ENABLED } from './constants.js';
+import { GLOBAL_KEY_DEBUG_ENABLED, GLOBAL_KEY_SHOW_AREAS, GLOBAL_KEY_SOUND_ENABLED } from './constants.js';
 import { readSettings, saveSetting } from './settings.js';
 
 describe('host-persisted settings', () => {
@@ -13,16 +13,18 @@ describe('host-persisted settings', () => {
   }
 
   it('defaults debug off and preserves the existing sound default', () => {
-    expect(readSettings(createStore())).toEqual({ soundEnabled: true, debugEnabled: false });
+    expect(readSettings(createStore())).toEqual({ soundEnabled: true, debugEnabled: false, showAreas: false });
   });
 
   it('restores both toggles from the same storage after recreating the reader', async () => {
     const values = new Map<string, unknown>();
     await saveSetting(createStore(values), 'soundEnabled', false);
     await saveSetting(createStore(values), 'debugEnabled', true);
+    await saveSetting(createStore(values), 'showAreas', true);
     expect(values.get(GLOBAL_KEY_SOUND_ENABLED)).toBe(false);
     expect(values.get(GLOBAL_KEY_DEBUG_ENABLED)).toBe(true);
-    expect(readSettings(createStore(values))).toEqual({ soundEnabled: false, debugEnabled: true });
+    expect(values.get(GLOBAL_KEY_SHOW_AREAS)).toBe(true);
+    expect(readSettings(createStore(values))).toEqual({ soundEnabled: false, debugEnabled: true, showAreas: true });
     await saveSetting(createStore(values), 'debugEnabled', false);
     expect(readSettings(createStore(values)).debugEnabled).toBe(false);
   });

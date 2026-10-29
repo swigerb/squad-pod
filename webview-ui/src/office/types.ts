@@ -1,3 +1,6 @@
+import type { AreaDefinition, CarpetTile, PlacedPet } from '../../../src/types.js';
+export type { AreaDefinition, CarpetTile } from '../../../src/types.js';
+
 export const TILE_SIZE = 16;
 
 export const TileType = {
@@ -81,6 +84,7 @@ export const EditTool = {
   TILE_PAINT: 'tile_paint',
   WALL_PAINT: 'wall_paint',
   CARPET_PAINT: 'carpet_paint',
+  AREA_PAINT: 'area_paint',
   FURNITURE_PLACE: 'furniture_place',
   PETS: 'pets',
   FURNITURE_PICK: 'furniture_pick',
@@ -127,16 +131,17 @@ export interface OfficeLayout {
   tileColors?: Record<string, FloorColor>;
   carpetTiles?: Array<CarpetTile | null>;
   pets?: PlacedPet[];
+  areas?: AreaDefinition[];
+  areaTiles?: Array<string | null>;
+  areaMappings?: Record<string, string[]>;
 }
-
-export type { CarpetTile } from '../../../src/types.js';
-import type { CarpetTile, PlacedPet } from '../../../src/types.js';
 
 // KEY SQUAD CHANGE: Character uses string ID (slug) and has name/role
 export interface Character {
   id: string; // slug like "homer-simpson" (was number in pixel-agents)
   name: string; // display name like "Homer Simpson"
   role: string; // role like "Lead" or "Frontend Dev"
+  directoryId?: string;
   state: CharacterState;
   direction: Direction;
   x: number;
