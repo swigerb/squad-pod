@@ -22,7 +22,7 @@ interface OfficeCanvasProps {
   editorState: EditorState;
   onEditorTileAction?: (col: number, row: number) => void;
   onEditorEraseAction?: (col: number, row: number) => void;
-  onEditorEyedropper?: (col: number, row: number) => void;
+  onEditorEyedropper?: (col: number, row: number, sampleArea?: boolean) => void;
   onEditorSelectionChange?: (uid: string | null) => void;
   onDeleteSelected?: () => void;
   onRotateSelected?: () => void;
@@ -291,7 +291,7 @@ export function OfficeCanvas({
           strokeRef.current = { col, row, erase: true };
           onEditorEraseAction?.(col, row);
         } else if (editorState.tool === 'eyedropper') {
-          onEditorEyedropper?.(col, row);
+          onEditorEyedropper?.(col, row, e.shiftKey);
         } else {
           if (editorState.tool === EditTool.TILE_PAINT || editorState.tool === EditTool.WALL_PAINT
             || editorState.tool === EditTool.CARPET_PAINT || editorState.tool === EditTool.AREA_PAINT) {

@@ -10,6 +10,7 @@ import {
   readLaunchHistory,
   readSavedDirectories,
   recordDirectoryLaunch,
+  resolveDirectoryMappingIds,
   sameDirectoryPath,
   validateDirectoryName,
   validateDirectoryPath,
@@ -108,6 +109,24 @@ describe('saved launch directories', () => {
     expect(sameDirectoryPath(alias, fs.realpathSync.native(directory))).toBe(true);
     const removed = path.join(path.dirname(directory), 'removed');
     expect(sameDirectoryPath(removed, path.join(removed, '..', 'removed'))).toBe(true);
+  });
+
+  it('resolves workspace and matching saved mapping IDs by canonical path in stable order', () => {
+    const directory = makeDirectory('observed');
+    const alias = path.join(path.dirname(directory), 'observed-alias');
+    const unrelated = makeDirectory('unrelated');
+    fs.symlinkSync(directory, alias, process.platform === 'win32' ? 'junction' : 'dir');
+    const workspaceDirectories = [
+      { id: 'workspace:file:///selected-alias', path: alias },
+      { id: 'workspace:file:///other', path: unrelated },
+    ];
+    const savedDirectories = [
+      { id: 'saved-match', name: 'Selected', path: directory },
+      { id: 'saved-other', name: 'Other', path: unrelated },
+    ];
+
+    expect(resolveDirectoryMappingIds(directory, workspaceDirectories, savedDirectories))
+      .toEqual(['workspace:file:///selected-alias', 'saved-match']);
   });
 });
 

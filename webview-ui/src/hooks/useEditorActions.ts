@@ -196,9 +196,9 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     setEditorTick((t) => t + 1);
   }, [getOfficeState, editorState, pushUndo]);
 
-  const handleEyedropper = useCallback((col: number, row: number) => {
+  const handleEyedropper = useCallback((col: number, row: number, sampleArea = false) => {
     const layout = getOfficeState().getLayout();
-    if (editorState.tool === EditTool.AREA_PAINT) {
+    if (sampleArea) {
       const area = pickArea(layout, col, row);
       if (!area) return;
       editorState.selectedAreaLabel = area.label;

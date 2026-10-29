@@ -1,8 +1,11 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import type { TelemetryEvent, TelemetryCategory } from '../office/types.js';
+import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
+import { RecordedUsage } from './RecordedUsage.js';
 
 interface TelemetryDrawerProps {
   events: TelemetryEvent[];
+  recordedUsage: RecordedUsageSnapshot | null;
   isOpen: boolean;
   onToggle: () => void;
   onClear: () => void;
@@ -31,7 +34,7 @@ function formatTimestamp(ts: number): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function TelemetryDrawer({ events, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
+export function TelemetryDrawer({ events, recordedUsage, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -108,7 +111,7 @@ export function TelemetryDrawer({ events, isOpen, onToggle, onClear }: Telemetry
               ↓ Latest
             </button>
           )}
-          <button onClick={onClear} style={smallButtonStyle}>
+          <button onClick={onClear} title="Clear activity feed only; recorded usage is read-only" style={smallButtonStyle}>
             Clear
           </button>
           <button onClick={onToggle} style={smallButtonStyle}>
@@ -130,6 +133,7 @@ export function TelemetryDrawer({ events, isOpen, onToggle, onClear }: Telemetry
           lineHeight: '18px',
         }}
       >
+        <RecordedUsage snapshot={recordedUsage} />
         {events.length === 0 ? (
           <div style={{ padding: '16px', color: 'var(--vscode-descriptionForeground)', textAlign: 'center' }}>
             No telemetry events yet. Activity from Squad agents will appear here.

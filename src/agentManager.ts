@@ -26,6 +26,15 @@ let agents = new Map<string, SquadAgentState>();
 let disposed = false;
 let telemetryCounter = 0;
 
+function directoryIdentityFields(directoryIds?: readonly string[]): {
+  directoryId?: string;
+  directoryMappingIds?: string[];
+} {
+  const uniqueIds = [...new Set(directoryIds ?? [])];
+  if (!uniqueIds.length) { return {}; }
+  return { directoryId: uniqueIds[0], directoryMappingIds: uniqueIds };
+}
+
 function makeTelemetryEvent(
   category: TelemetryEvent['category'],
   agentId: string | null,
@@ -142,7 +151,7 @@ export function refreshAgents(
   workspaceRoot: string,
   context: vscode.ExtensionContext,
   webview: vscode.Webview,
-  directoryId?: string | null,
+  directoryIds?: readonly string[],
 ): Map<string, SquadAgentState> {
   const members = readTeamRoster(workspaceRoot);
   const persisted = loadPersistedMeta(context);
@@ -173,7 +182,7 @@ export function refreshAgents(
         role: state.role,
         paletteIndex: state.paletteIndex,
         seatId: state.seatId,
-        ...(directoryId ? { directoryId } : {}),
+        ...directoryIdentityFields(directoryIds),
       },
     });
   });
@@ -258,7 +267,7 @@ export function sendExistingAgents(
   agentMap: Map<string, SquadAgentState>,
   _context: vscode.ExtensionContext | undefined,
   webview: vscode.Webview,
-  directoryId?: string | null,
+  directoryIds?: readonly string[],
 ): void {
   const agentArray = Array.from(agentMap.values()).map(a => ({
     id: a.id,
@@ -266,7 +275,7 @@ export function sendExistingAgents(
     role: a.role,
     paletteIndex: a.paletteIndex,
     seatId: a.seatId,
-    ...(directoryId ? { directoryId } : {}),
+    ...directoryIdentityFields(directoryIds),
     status: a.status,
     currentTask: a.currentTask,
   }));

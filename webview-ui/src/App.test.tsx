@@ -241,6 +241,42 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(host.querySelector('button[title="Delete (Del)"]')).not.toBeNull();
   });
 
+  it('selects a painted Area through Shift-Eyedrop on the real canvas and preserves regular Eyedrop', () => {
+    snapshot(imported, 'area-eyedrop-base');
+    click('Edit Layout');
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Area"]')!.click());
+    const nameInput = host.querySelector<HTMLInputElement>('[data-testid="new-area-name"]')!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(nameInput, 'Engineering');
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="add-area"]')!.click());
+
+    const canvas = host.querySelector('canvas')!;
+    const tileX = 1 * 32 + 16;
+    const tileY = 1 * 32 + 16;
+    act(() => canvas.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, button: 0, buttons: 1, clientX: tileX, clientY: tileY,
+    })));
+    act(() => canvas.dispatchEvent(new MouseEvent('mouseup', {
+      bubbles: true, button: 0, buttons: 0, clientX: tileX, clientY: tileY,
+    })));
+    expect(persisted!.draft!.areaTiles?.[21]).toBe('Engineering');
+
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Eyedrop"]')!.click());
+    act(() => canvas.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, button: 0, buttons: 1, shiftKey: true, clientX: tileX, clientY: tileY,
+    })));
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="select-area-Engineering"]')?.getAttribute('aria-pressed'))
+      .toBe('true');
+
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Eyedrop"]')!.click());
+    act(() => canvas.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, button: 0, buttons: 1, clientX: 2 * 32 + 16, clientY: tileY,
+    })));
+    expect(host.querySelector<HTMLButtonElement>('button[title="Floor"]')?.getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('shifts Area tiles with grid expansion and restores them through undo and redo', () => {
     const layout: OfficeLayout = {
       ...imported,

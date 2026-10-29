@@ -56,13 +56,18 @@ async function main() {
           const roster = window.__petAcceptance.fixtures.find((message) => message.type === 'existingAgents')?.agents ?? [];
           const catalog = window.__petAcceptance.fixtures.find((message) => message.type === 'directoryCatalog')?.catalog;
           return {
-            roster: roster.map(({ id, directoryId }) => ({ id, directoryId })),
+            roster: roster.map(({ id, directoryId, directoryMappingIds }) => ({ id, directoryId, directoryMappingIds })),
             workspaceId: catalog?.workspaceDirectories.find((entry) => entry.name === 'Selected fixture root')?.id,
           };
         });
-        assert.deepEqual(hostFacts.roster, [{ id: 'fixture-agent', directoryId: hostFacts.workspaceId }]);
+        assert.deepEqual(hostFacts.roster, [{
+          id: 'fixture-agent',
+          directoryId: hostFacts.workspaceId,
+          directoryMappingIds: [hostFacts.workspaceId, '00000000-0000-4000-8000-000000000001'],
+        }]);
         assert.ok(hostFacts.workspaceId?.startsWith('workspace:file:'), 'selected root identity must come from its URI');
         record.observedRoster = hostFacts.roster;
+        record.providerMappingIds = hostFacts.roster[0].directoryMappingIds;
 
         async function hitClick(locator, name) {
           await locator.scrollIntoViewIfNeeded();
@@ -209,7 +214,8 @@ async function main() {
           await hitClick(page.getByRole('button', { name: 'Directories', exact: true }), 'Directories alongside editor');
           const dialog = page.getByRole('dialog', { name: 'Launch directory' });
           await dialog.waitFor();
-          await hitClick(page.getByRole('button', { name: 'Launch Synthetic alternate project', exact: true }), 'Explicit saved-directory Launch request');
+          const savedDirectoryRow = dialog.getByLabel('Name for Synthetic alternate project').locator('xpath=../../..');
+          await hitClick(savedDirectoryRow.getByRole('button', { name: 'Launch Synthetic alternate project', exact: true }), 'Explicit saved-directory Launch request');
           const launch = await page.evaluate(() => window.__petAcceptance.outbound.filter((m) => m.type === 'launchDirectory').at(-1));
           assert.deepEqual(launch, { type: 'launchDirectory', id: '00000000-0000-4000-8000-000000000001', source: 'saved' });
           const rosterAfterRequest = await page.evaluate(() =>

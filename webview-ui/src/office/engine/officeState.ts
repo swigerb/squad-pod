@@ -84,6 +84,7 @@ export class OfficeState {
     preferredHueShift?: number,
     preferredSeatId?: string,
     preferredDirectoryId?: string,
+    preferredDirectoryMappingIds?: string[],
   ) {
     if (this.characters.has(id)) return;
 
@@ -119,9 +120,13 @@ export class OfficeState {
 
     if (!seatId) {
       const freeSeats = this.seats.filter((seat) => !seat.occupant);
-      const mappedAreas = preferredDirectoryId
-        ? this.layout.areaMappings?.[preferredDirectoryId] ?? []
-        : [];
+      const directoryIds = [...new Set([
+        ...(preferredDirectoryMappingIds ?? []),
+        ...(preferredDirectoryId ? [preferredDirectoryId] : []),
+      ])];
+      const mappedAreas = directoryIds.flatMap((directoryId) =>
+        this.layout.areaMappings?.[directoryId] ?? [],
+      );
       const areaLabels = new Set(mappedAreas);
       const areaSeats = freeSeats.filter((seat) => {
         const label = this.layout.areaTiles?.[seat.row * this.layout.cols + seat.col];

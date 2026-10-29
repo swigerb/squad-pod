@@ -14,6 +14,7 @@ import {
 import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
 import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
+import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
@@ -38,6 +39,7 @@ import {
 const MAX_TELEMETRY_EVENTS = 200;
 
 export interface ExtensionMessageState {
+  recordedUsage: RecordedUsageSnapshot | null;
   assetStatus: Pick<AssetSnapshot, 'directories' | 'diagnostics'>;
   settings: PodSettings;
   sourceStatus: SourceStatus | null;
@@ -66,6 +68,7 @@ export function useExtensionMessages(
   onLayoutSaved?: (layout: OfficeLayout, revision: string | null) => void,
   onLayoutError?: (error: string, source?: 'watcher') => void,
 ): ExtensionMessageState {
+  const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false, showAreas: false });
   const [sourceStatus, setSourceStatus] = useState<SourceStatus | null>(null);
@@ -134,6 +137,9 @@ export function useExtensionMessages(
       };
 
       switch (message.type) {
+        case 'recordedUsage':
+          setRecordedUsage(message.snapshot);
+          break;
         case 'manifestAssetsLoaded': {
           const snapshot = message.snapshot as AssetSnapshot;
           buildDynamicCatalog(snapshot.furniture);
@@ -454,6 +460,7 @@ export function useExtensionMessages(
   }, [getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError]);
 
   return {
+    recordedUsage,
     assetStatus,
     settings,
     sourceStatus,

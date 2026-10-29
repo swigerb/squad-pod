@@ -87,6 +87,20 @@ export function sameDirectoryPath(left: string, right: string, platform = proces
   return platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
 }
 
+export function resolveDirectoryMappingIds(
+  observedRoot: string,
+  workspaceDirectories: readonly Pick<SavedDirectory, 'id' | 'path'>[],
+  savedDirectories: readonly SavedDirectory[],
+): string[] {
+  const workspaceIds = workspaceDirectories
+    .filter((directory) => sameDirectoryPath(directory.path, observedRoot))
+    .map((directory) => directory.id);
+  const savedIds = savedDirectories
+    .filter((directory) => sameDirectoryPath(directory.path, observedRoot))
+    .map((directory) => directory.id);
+  return [...new Set([...workspaceIds, ...savedIds])];
+}
+
 function resolveDirectoryIdentity(directoryPath: string): string {
   try {
     return fs.realpathSync.native(directoryPath);

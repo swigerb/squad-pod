@@ -61,17 +61,21 @@ import {
   readLaunchHistory,
   readSavedDirectories,
   recordDirectoryLaunch,
+  resolveDirectoryMappingIds,
   sameDirectoryPath,
   validateDirectoryPath,
   writeSavedDirectories,
   type SavedDirectory,
 } from './directories.js';
 import { launchSquadInTerminal } from './directoryLaunch.js';
+import { readRecordedUsage } from './recordedUsage.js';
 
 export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private context: vscode.ExtensionContext;
   private disposeSquadWatcher: (() => void) | undefined;
+  private usageTimer: ReturnType<typeof setInterval> | undefined;
+  private usageRoster: ReturnType<typeof parseAllMembers> = [];
   private disposeLayoutWatcher: { dispose: () => void } | undefined;
   private assetWatcher: { dispose: () => void } | undefined;
   private disposables: vscode.Disposable[] = [];
@@ -253,6 +257,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.sendDirectoryCatalog();
     this.log(`webviewReady; workspaceRoot=${workspaceRoot ?? '<none>'}`);
     if (!workspaceRoot) {
+      this.sendRecordedUsage();
       this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
       this.postMessage({ type: 'noWorkspace' });
       return;
@@ -272,22 +277,34 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.loadAndSendAssets();
     this.loadAndSendCustomAssetUris();
     this.loadAndSendLayout(workspaceRoot);
-    sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryId(workspaceRoot));
+    sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
     this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
+    this.sendRecordedUsage(workspaceRoot);
+  }
+
+  private sendRecordedUsage(workspaceRoot?: string): void {
+    this.postMessage({ type: 'recordedUsage', snapshot: readRecordedUsage(workspaceRoot, this.usageRoster) });
   }
 
   private startWatching(workspaceRoot: string, webview: vscode.Webview): void {
     this.watchedRoot = workspaceRoot;
+    this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
+    this.usageTimer = setInterval(() => this.sendRecordedUsage(workspaceRoot), 2000);
     this.disposeSquadWatcher = startSquadWatching(workspaceRoot, {
       onStatusChanged: (status) => {
+        if (status.squadDir !== this.sourceStatus.squadDir) {
+          this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
+        }
         this.sourceStatus = status;
         this.postMessage({ type: 'sourceStatus', status });
         if (status.error) { this.log(status.error); }
       },
       onRosterChanged: () => {
-        const directoryId = this.getWorkspaceDirectoryId(workspaceRoot);
-        const updated = refreshAgents(workspaceRoot, this.context, webview, directoryId);
-        sendExistingAgents(updated, this.context, webview, directoryId);
+        this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
+        this.sendRecordedUsage(workspaceRoot);
+        const directoryIds = this.getWorkspaceDirectoryIds(workspaceRoot);
+        const updated = refreshAgents(workspaceRoot, this.context, webview, directoryIds);
+        sendExistingAgents(updated, this.context, webview, directoryIds);
         this.emitTelemetry('log', null, null, 'Team roster updated');
       },
       onAgentActivity: (event) => {
@@ -314,6 +331,9 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   }
 
   private stopWatching(): void {
+    if (this.usageTimer) {clearInterval(this.usageTimer);}
+    this.usageTimer = undefined;
+    this.usageRoster = [];
     this.disposeSquadWatcher?.();
     this.disposeSquadWatcher = undefined;
     this.disposeLayoutWatcher?.dispose();
@@ -949,11 +969,16 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     return pickSquadWorkspace((vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath));
   }
 
-  private getWorkspaceDirectoryId(workspaceRoot: string): string | undefined {
-    const folder = (vscode.workspace.workspaceFolders ?? []).find((candidate) =>
-      sameDirectoryPath(candidate.uri.fsPath, workspaceRoot),
+  private getWorkspaceDirectoryIds(workspaceRoot: string): string[] {
+    const workspaceDirectories = (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
+      id: `workspace:${folder.uri.toString()}`,
+      path: folder.uri.fsPath,
+    }));
+    return resolveDirectoryMappingIds(
+      workspaceRoot,
+      workspaceDirectories,
+      readSavedDirectories(this.context.globalState),
     );
-    return folder ? `workspace:${folder.uri.toString()}` : undefined;
   }
 
   private postMessage(message: OutboundMessage): void {

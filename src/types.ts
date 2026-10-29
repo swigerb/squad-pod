@@ -254,6 +254,7 @@ export interface AgentCreatedMessage {
     paletteIndex: number;
     seatId?: string | null;
     directoryId?: string | null;
+    directoryMappingIds?: string[];
   };
 }
 
@@ -285,6 +286,7 @@ export interface ExistingAgentsMessage {
     paletteIndex: number;
     seatId: string | null;
     directoryId?: string | null;
+    directoryMappingIds?: string[];
     status: 'active' | 'idle' | 'waiting';
     currentTask: string | null;
   }>;
@@ -307,6 +309,7 @@ export interface SquadInfoData {
 }
 
 export type OutboundMessage =
+  | { type: 'recordedUsage'; snapshot: import('./recordedUsage.js').RecordedUsageSnapshot }
   | AgentCreatedMessage
   | AgentStatusMessage
   | AgentToolStartMessage

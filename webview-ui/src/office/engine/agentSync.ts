@@ -17,6 +17,7 @@ export interface AgentSnapshot {
   paletteIndex?: number;
   seatId?: string | null;
   directoryId?: string | null;
+  directoryMappingIds?: string[];
   status?: AgentStatus;
 }
 
@@ -30,6 +31,7 @@ export interface AgentSyncTarget {
     preferredHueShift?: number,
     preferredSeatId?: string,
     preferredDirectoryId?: string,
+    preferredDirectoryMappingIds?: string[],
   ): void;
   setAgentDirectoryId?(id: string, directoryId: string | null | undefined): void;
   removeAgent(id: string): void;
@@ -60,6 +62,7 @@ export function addSnapshotAgent(target: AgentSyncTarget, agent: AgentSnapshot):
     hasAppearance ? hueShift : undefined,
     agent.seatId ?? undefined,
     agent.directoryId ?? undefined,
+    agent.directoryMappingIds,
   );
   return true;
 }

@@ -278,14 +278,17 @@ describe('agentManager', () => {
       initializeAgents('/workspace', context, webview);
       mockReadTeamRoster.mockReturnValue([makeMember('Synthetic Member', 'synthetic-member')]);
       const directoryId = 'workspace:file:///selected-root';
-      const agents = refreshAgents('/workspace', context, webview, directoryId);
+      const directoryIds = [directoryId, 'saved-stable-id'];
+      const agents = refreshAgents('/workspace', context, webview, directoryIds);
       const created = webview.postMessage.mock.calls.find(([message]: [any]) => message.type === 'agentCreated')?.[0];
-      expect(created.agent).toMatchObject({ id: 'synthetic-member', directoryId });
+      expect(created.agent).toMatchObject({ id: 'synthetic-member', directoryId, directoryMappingIds: directoryIds });
 
       webview.postMessage.mockClear();
-      sendExistingAgents(agents, context, webview, directoryId);
+      sendExistingAgents(agents, context, webview, directoryIds);
       const snapshot = webview.postMessage.mock.calls.find(([message]: [any]) => message.type === 'existingAgents')?.[0];
-      expect(snapshot.agents).toEqual([expect.objectContaining({ id: 'synthetic-member', directoryId })]);
+      expect(snapshot.agents).toEqual([expect.objectContaining({
+        id: 'synthetic-member', directoryId, directoryMappingIds: directoryIds,
+      })]);
     });
 
     it('adds new members and removes departed ones', () => {

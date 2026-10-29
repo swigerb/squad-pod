@@ -226,6 +226,47 @@ describe('OfficeState', () => {
       expect(state.characters.get('member')?.seatId).toBe('chair-1');
     });
 
+    it('combines stable workspace and saved mapping identities for observed-agent seat allocation', () => {
+      const cols = 7;
+      const furniture = [1, 3, 5].flatMap((col, index) => [
+        { uid: `desk-${index}`, type: 'desk', col, row: 0, rotation: 0 },
+        { uid: `chair-${index}`, type: 'chair', col, row: 1, rotation: 0 },
+      ]);
+      const areaTiles: Array<string | null> = Array(cols * 3).fill(null);
+      areaTiles[cols + 1] = 'Saved Area';
+      areaTiles[cols + 3] = 'Workspace Area';
+      const state = new OfficeState({
+        version: 2,
+        cols,
+        rows: 3,
+        tiles: Array(cols * 3).fill(TileType.FLOOR_1),
+        furniture,
+        areas: [
+          { label: 'Saved Area', color: '#112233' },
+          { label: 'Workspace Area', color: '#223344' },
+        ],
+        areaTiles,
+        areaMappings: {
+          'saved-stable-id': ['Saved Area'],
+          'workspace:file:///selected-root': ['Workspace Area'],
+        },
+      });
+
+      state.addAgent(
+        'mapped-member',
+        'Synthetic member',
+        'Dev',
+        undefined,
+        undefined,
+        undefined,
+        'workspace:file:///selected-root',
+        ['workspace:file:///selected-root', 'saved-stable-id'],
+      );
+
+      expect(state.characters.get('mapped-member')?.seatId).toBe('chair-0');
+      expect(state.characters.get('mapped-member')?.directoryId).toBe('workspace:file:///selected-root');
+    });
+
     it('assigns palette and hue shift', () => {
       officeState.addAgent('homer-simpson', 'Homer Simpson', 'Lead', 2, 120);
 

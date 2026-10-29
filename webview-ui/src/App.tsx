@@ -32,7 +32,7 @@ function getOfficeState(): OfficeState {
 
 export default function App() {
   const editor = useEditorActions(getOfficeState, editorState);
-  const { assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
@@ -267,6 +267,7 @@ export default function App() {
       />
 
       <TelemetryDrawer
+        recordedUsage={recordedUsage}
         events={telemetryEvents}
         isOpen={isTelemetryOpen}
         onToggle={handleToggleTelemetry}

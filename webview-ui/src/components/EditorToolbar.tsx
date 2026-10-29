@@ -608,7 +608,7 @@ export function EditorToolbar({
         <div style={styles.section} data-testid="area-editor">
           <div style={styles.sectionLabel}>Named Areas</div>
           <p style={{ margin: '0 0 8px', fontSize: '10px', color: TEXT_DIM, lineHeight: 1.4 }}>
-            Paint floor tiles, then map an Area to a stable directory. Mappings only affect real agents observed in the selected Squad root; launching another directory does not add its agents.
+            Paint floor tiles, then map an Area to a stable directory. Choose Eyedrop and Shift-click a painted tile to select its Area; regular Eyedrop still samples carpet or floor. Mappings only affect real agents observed in the selected Squad root; launching another directory does not add its agents.
           </p>
           <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
             <input
