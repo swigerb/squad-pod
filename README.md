@@ -128,6 +128,13 @@ freedom. No publishing or release operation is needed to validate a local VSIX.
 5. Click **Layout** to open the office editor and customize your space
 6. Open **Settings** for sound, layout export/import, and the Debug View
 
+While editing, zoom buttons occupy a separate top strip above the tool palette.
+The palette fits narrow panels and scrolls vertically to reach its options and
+Save/Undo actions. Outside edit mode, zoom buttons keep their vertical top-left
+placement. This rearranges controls only: the canvas viewport and zoom/pan
+anchors do not move, and switching tools or leaving/reopening the editor keeps
+the current draft and undo history.
+
 ### Source status and missing-team setup
 
 Settings reports whether `team.md` exists in the selected Squad directory and whether the file observer is running (native watch plus polling, or polling alone). Native-watch errors are shown with the polling fallback; EventBus / WebSocket is **not connected** because no producer is wired. These are file-observation hints, **not authoritative lifecycle, tool or context events**. The idle timeout is not proof that a task finished.

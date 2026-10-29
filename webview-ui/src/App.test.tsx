@@ -68,6 +68,38 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     vi.restoreAllMocks();
   });
 
+  it('keeps tool choice, dirty draft and undo history independent of zoom and editor control rearrangement', () => {
+    click('Edit Layout');
+    const panel = host.querySelector('.office-panel')!;
+    expect(panel.getAttribute('data-edit-mode')).toBe('true');
+    click('♥Pets');
+    expect(host.querySelector('[title="Pets"]')?.getAttribute('aria-pressed')).toBe('true');
+    click('→');
+    const draft = structuredClone(persisted!.draft);
+    const recovery = structuredClone(persisted);
+    const zoom = host.querySelector('[aria-label="Office zoom"]')!;
+    const initialZoom = zoom.textContent;
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Zoom in"]')!.click());
+    expect(zoom.textContent).not.toBe(initialZoom);
+    expect(persisted).toEqual(recovery);
+    expect(host.querySelector('[title="Pets"]')?.getAttribute('aria-pressed')).toBe('true');
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Zoom out"]')!.click());
+    expect(zoom.textContent).toBe(initialZoom);
+    click('◎Select');
+    expect(host.querySelector('[title="Select"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(persisted!.draft).toEqual(draft);
+    click('Exit Layout Editor');
+    expect(panel.getAttribute('data-edit-mode')).toBe('false');
+    click('Edit Layout');
+    expect(host.querySelector('[title="Select"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(persisted!.draft).toEqual(draft);
+    click('Undo');
+    expect(persisted!.draft).toEqual(imported);
+    click('Redo');
+    expect(persisted!.draft).toEqual(draft);
+    expect(saves()).toEqual([]);
+  });
+
   it('clears only a watcher error after a valid external load, not an import or malformed message', () => {
     const error = 'External layout could not be read; current draft was kept.';
     send({ type: 'layoutError', error, source: 'watcher' });
