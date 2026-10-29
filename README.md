@@ -170,6 +170,13 @@ Dimensions must exactly match the footprint at 16 pixels per tile. A failing
 manifest is skipped atomically; other items remain available. Duplicated IDs are
 rejected, not allowed to override earlier/bundled assets. Diagnostics appear in
 the office warning panel, Settings and the **Squad Pod** output channel.
+Missing-art warnings also update immediately when a later host layout snapshot
+introduces or removes legacy/unknown IDs; no unrelated UI action or save is needed.
+This notification fix does not add layout conflict resolution: incoming host
+`layoutLoaded` messages currently replace an unsaved editor draft. Handling both
+the draft and external snapshot without data loss remains a separate known gap;
+the reactive signal is not draft protection. Asset-only refreshes do not replace
+the layout or editor history.
 
 **Aggregate reload work is bounded, including failed attempts.** Each root has
 its own non-transferable allowance per fingerprint/load pass: **2 MiB of file

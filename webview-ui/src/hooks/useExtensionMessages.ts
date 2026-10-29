@@ -68,7 +68,9 @@ export function useExtensionMessages(
   const [agentTools, setAgentTools] = useState<Record<string, ToolActivity[]>>({});
   const [agentStatuses, setAgentStatuses] = useState<Record<string, string>>({});
   const [rosterMembers, setRosterMembers] = useState<SquadTeamMember[]>([]);
-  const [layoutReady, setLayoutReady] = useState(false);
+  // Every applied snapshot must render App's layout-derived UI, even after ready.
+  const [layoutRevision, setLayoutRevision] = useState(0);
+  const layoutReady = layoutRevision > 0;
   const [noWorkspace, setNoWorkspace] = useState(false);
   const [agentDetail, setAgentDetail] = useState<AgentDetailInfo | null>(null);
   const [squadInfo, setSquadInfo] = useState<SquadInfoData | null>(null);
@@ -271,7 +273,7 @@ export function useExtensionMessages(
 
         case 'layoutLoaded': {
           const { layout } = message;
-          setLayoutReady(true);
+          setLayoutRevision((revision) => revision + 1);
           // Update ref immediately so subsequent message handlers in the same
           // tick (e.g., existingAgents arriving right after) see the correct value.
           // React's setState is async — the ref normally updates on re-render.
@@ -393,7 +395,7 @@ export function useExtensionMessages(
 
         case 'noWorkspace': {
           setNoWorkspace(true);
-          setLayoutReady(true);
+          setLayoutRevision((revision) => revision + 1);
           break;
         }
 

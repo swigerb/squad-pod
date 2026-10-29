@@ -109,6 +109,47 @@ describe('settings and source UI with simulated host messages', () => {
     expect(host.querySelector('canvas')).not.toBeNull();
   });
 
+  it('reacts to later layout messages alone to show and clear missing-art warnings after ready', () => {
+    load();
+    expect(host.textContent).not.toContain('Asset warnings');
+    const furniture = [
+      { uid: 'legacy', type: 'desk', col: 1, row: 1, rotation: 0 },
+      { uid: 'unknown', type: 'unknown-imported-id', col: 4, row: 4, rotation: 0 },
+    ];
+    const layout = { version: 2, cols: 6, rows: 6, tiles: Array(36).fill(1), furniture };
+    const original = JSON.stringify(layout);
+    send({ type: 'layoutLoaded', layout });
+    expect(host.textContent).toContain('Asset warnings (2)');
+    expect(host.textContent).toContain('unknown-imported-id');
+    expect(host.textContent).toContain('desk');
+    expect(JSON.stringify(layout)).toBe(original);
+    send({ type: 'layoutLoaded', layout: { ...layout, furniture: [] } });
+    expect(host.textContent).not.toContain('Asset warnings');
+    expect(vi.mocked(vscode.postMessage).mock.calls.filter(([m]) => m.type === 'saveLayout')).toEqual([]);
+  });
+
+  it('keeps unsaved editor work and undo history when asset diagnostics refresh', () => {
+    load();
+    click('Edit Layout');
+    click('→');
+    expect(host.textContent).toContain('● Save Layout');
+    send({ type: 'manifestAssetsLoaded', snapshot: {
+      furniture: [], floors: [], walls: [], directories: [], diagnostics: ['Root read budget exceeded'],
+    } });
+    expect(host.textContent).toContain('Root read budget exceeded');
+    expect(host.textContent).toContain('● Save Layout');
+    expect(vi.mocked(vscode.postMessage).mock.calls.filter(([m]) => m.type === 'saveLayout')).toEqual([]);
+    click('● Save Layout');
+    expect(vscode.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'saveLayout', layout: expect.objectContaining({ cols: 7, rows: 6, furniture: [] }),
+    }));
+    click('Undo');
+    click('● Save Layout');
+    expect(vscode.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'saveLayout', layout: expect.objectContaining({ cols: 6, rows: 6, furniture: [] }),
+    }));
+  });
+
   it('updates the live asset palette and visible diagnostics through simulated host snapshots without saving/resetting layouts', () => {
     const layout = {
       version: 2, cols: 6, rows: 6, tiles: Array(36).fill(1),
