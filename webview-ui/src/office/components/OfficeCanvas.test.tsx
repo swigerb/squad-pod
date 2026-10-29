@@ -86,7 +86,7 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
     root = createRoot(host);
     act(() => root.render(<Harness />));
     act(() => {
-      actions.setLastSavedLayout(office.getLayout());
+      actions.receiveLayout(office.getLayout(), 'external', null);
       actions.handleToggleEditMode();
     });
     canvas = host.querySelector('canvas')!;
@@ -188,7 +188,7 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
     expect(host.querySelector('[role=alert]')?.textContent).toMatch(/overlaps/);
     expect(vscode.postMessage).not.toHaveBeenCalled();
     act(() => actions.handleSave());
-    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'saveLayout', layout: before });
+    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'saveLayout', layout: before, expectedRevision: null, workspaceRoot: null });
   });
 
   it.each([false, true])('rejects a drop off-grid without expanding or resetting layout (copy=%s)', (alt) => {

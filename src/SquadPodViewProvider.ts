@@ -36,10 +36,13 @@ import {
 } from './assetLoader.js';
 import {
   readPersistedLayout,
-  writePersistedLayout,
   watchLayoutFile,
   exportLayoutToFile,
   importLayoutFromFile,
+  readLayoutRevision,
+  parseLayoutJson,
+  saveLayoutIfUnchanged,
+  isValidLayout,
 } from './layoutPersistence.js';
 import {
   readTeamFile,
@@ -133,7 +136,17 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'saveLayout':
-        this.onSaveLayout(message.layout);
+        this.onSaveLayout(message.layout, message.expectedRevision, message.workspaceRoot);
+        break;
+
+      case 'exportLayoutSnapshot':
+        if (isValidLayout(message.layout)) {
+          void exportLayoutToFile(message.layout, vscode).catch((error: unknown) => {
+            this.postMessage({ type: 'layoutError', error: `Could not export recovery snapshot: ${String(error)}` });
+          });
+        } else {
+          this.postMessage({ type: 'layoutError', error: 'Cannot export an invalid layout snapshot.' });
+        }
         break;
 
       case 'setSoundEnabled':
@@ -243,10 +256,12 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       },
     });
 
-    this.disposeLayoutWatcher = watchLayoutFile(workspaceRoot, (layout) => {
-      this.postMessage({ type: 'layoutLoaded', layout });
-      void this.context.workspaceState.update(WORKSPACE_KEY_LAYOUT, layout);
-    });
+    this.disposeLayoutWatcher = watchLayoutFile(workspaceRoot, (layout, revision) => {
+      this.postMessage({ type: 'layoutLoaded', layout, revision, workspaceRoot });
+      void this.context.workspaceState.update(WORKSPACE_KEY_LAYOUT, layout).then(undefined, (error: unknown) => {
+        this.postMessage({ type: 'layoutError', error: `Could not cache external layout: ${String(error)}` });
+      });
+    }, (error) => this.postMessage({ type: 'layoutError', error }));
   }
 
   private stopWatching(): void {
@@ -426,7 +441,14 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
   private loadAndSendLayout(workspaceRoot: string): void {
     // Try workspace-persisted layout first
-    let layout = readPersistedLayout(workspaceRoot);
+    let revision: string | null;
+    try {
+      revision = readLayoutRevision(workspaceRoot);
+    } catch (error) {
+      this.postMessage({ type: 'layoutError', error: `Cannot read saved layout; no layout was replaced. ${String(error)}` });
+      return;
+    }
+    let layout = revision === null ? null : parseLayoutJson(revision);
 
     // Fall back to VS Code workspace state
     if (!layout) {
@@ -448,20 +470,37 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     // Ensure tileColors is populated — layouts from older versions or
     // external sources may omit it, causing the renderer to skip all tiles.
-    ensureTileColors(layout);
+    if (revision === null) {ensureTileColors(layout);}
 
     // Always send layoutLoaded message
-    this.postMessage({ type: 'layoutLoaded', layout });
+    this.postMessage({ type: 'layoutLoaded', layout, revision, workspaceRoot });
+    if (revision !== null && !parseLayoutJson(revision)) {
+      this.postMessage({ type: 'layoutError', error: 'Saved layout is malformed. The file was not overwritten; recover it before saving.' });
+    }
   }
 
-  private onSaveLayout(layout: LayoutData | undefined): void {
-    if (!layout) {return;}
-
-    const workspaceRoot = this.getWorkspaceRoot();
-    if (workspaceRoot) {
-      writePersistedLayout(workspaceRoot, layout);
+  private onSaveLayout(layout: LayoutData, expectedRevision: string | null | undefined, originalRoot: string | null | undefined): void {
+    try {
+      const workspaceRoot = this.getWorkspaceRoot();
+      if (!workspaceRoot) {throw new Error('Open the original workspace before saving.');}
+      if (originalRoot !== workspaceRoot) {throw new Error('Workspace changed. Export recovery copies and reopen the original workspace before saving.');}
+      if (expectedRevision === undefined) {throw new Error('Missing layout revision. Reload the panel before saving.');}
+      const result = saveLayoutIfUnchanged(workspaceRoot, layout, expectedRevision);
+      if (!result.saved) {
+        if (result.layout) {
+          this.postMessage({ type: 'layoutLoaded', layout: result.layout, revision: result.revision, workspaceRoot });
+        }
+        throw new Error(result.layout
+          ? 'Saved layout changed in another window. Both versions were kept; resolve the incoming snapshot before retrying Save.'
+          : 'Saved layout was deleted or became malformed. The draft was kept; restore the file and reload before saving.');
+      }
+      void this.context.workspaceState.update(WORKSPACE_KEY_LAYOUT, layout).then(undefined, (error: unknown) => {
+        this.postMessage({ type: 'layoutError', error: `Layout saved on disk but workspace cache failed: ${String(error)}` });
+      });
+      this.postMessage({ type: 'layoutSaved', layout, revision: result.revision });
+    } catch (error) {
+      this.postMessage({ type: 'layoutError', error: `Squad Pod: ${String(error)}` });
     }
-    this.context.workspaceState.update(WORKSPACE_KEY_LAYOUT, layout);
   }
 
   private async onExportLayout(): Promise<void> {
@@ -486,15 +525,16 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async onImportLayout(): Promise<void> {
+    const workspaceRoot = this.getWorkspaceRoot();
     const layout = await importLayoutFromFile(vscode);
     if (!layout) {return;}
-
-    const workspaceRoot = this.getWorkspaceRoot();
-    if (workspaceRoot) {
-      writePersistedLayout(workspaceRoot, layout);
+    if (!workspaceRoot || workspaceRoot !== this.getWorkspaceRoot()) {
+      this.postMessage({ type: 'layoutError', error: 'Workspace changed during import. The source file and draft were not changed; import again in the intended workspace.' });
+      return;
     }
-    this.context.workspaceState.update(WORKSPACE_KEY_LAYOUT, layout);
-    this.postMessage({ type: 'layoutLoaded', layout });
+
+    // Stage only. A dirty webview must retain both versions before any disk write.
+    this.postMessage({ type: 'layoutLoaded', layout, source: 'import', workspaceRoot });
   }
 
   // ─── Agent Actions ────────────────────────────────────────────
@@ -748,25 +788,6 @@ function getNonce(): string {
     nonce += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return nonce;
-}
-
-/**
- * Runtime check that a layout object has the shape the webview expects.
- * Guards against stale cached layouts with the old rooms-based schema.
- * Version 2 required — older layouts used blue-gray floor colors that
- * were nearly invisible against the dark blue body background.
- */
-function isValidLayout(layout: unknown): layout is LayoutData {
-  if (!layout || typeof layout !== 'object') { return false; }
-  const l = layout as Record<string, unknown>;
-  return (
-    typeof l.cols === 'number' &&
-    typeof l.rows === 'number' &&
-    Array.isArray(l.tiles) &&
-    Array.isArray(l.furniture) &&
-    typeof l.version === 'number' &&
-    l.version >= 2
-  );
 }
 
 /**

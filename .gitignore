@@ -11,3 +11,8 @@ out/
 .squad-workstream
 .squad/.cache/
 *.tsbuildinfo
+
+# Local layout recovery and cooperating-window save state
+.squad-pod/recovery/
+.squad-pod/layout.json.lock
+.squad-pod/layout.json.*.tmp

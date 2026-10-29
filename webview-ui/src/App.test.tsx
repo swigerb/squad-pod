@@ -6,8 +6,219 @@ import { vscode } from './vscodeApi.js';
 import { isSoundEnabled } from './notificationSound.js';
 import type { OutboundMessage, SourceStatus } from '../../src/types.js';
 import type { AssetSnapshot } from '../../src/manifestAssets.js';
+import type { LayoutRecovery } from './office/editor/layoutDraft.js';
+import type { OfficeLayout } from './office/types.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+
+describe('layout conflict UI and panel-state recovery (simulated host boundary)', () => {
+  let host: HTMLDivElement;
+  let root: Root;
+  let persisted: LayoutRecovery | undefined;
+  const imported: OfficeLayout = {
+    version: 2, cols: 20, rows: 15, tiles: Array(300).fill(1), furniture: [],
+    tileColors: { '0,0': { h: 40, s: 20, b: -5, c: 10 } },
+  };
+  const external: OfficeLayout = {
+    ...imported, furniture: Array.from({ length: 4 }, (_, n) => ({
+      uid: `legacy-${n}`, type: `unknown-${n}`, col: n + 2, row: n + 1, rotation: 90,
+      assetFootprint: { width: 2, height: 1 }, assetRole: 'desk',
+    })),
+  };
+  function send(message: OutboundMessage) {
+    act(() => window.dispatchEvent(new MessageEvent('message', { data: message })));
+  }
+  function click(text: string) {
+    const button = [...host.querySelectorAll('button')].find((b) => b.textContent === text);
+    expect(button, text).toBeDefined();
+    act(() => button!.click());
+  }
+  function snapshot(layout: OfficeLayout, revision: string, source: 'external' | 'import' = 'external') {
+    send({ type: 'layoutLoaded', layout, revision, source, workspaceRoot: 'workspace-A' });
+  }
+  function saves() {
+    return vi.mocked(vscode.postMessage).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout');
+  }
+  function remount() {
+    act(() => root.unmount());
+    root = createRoot(host);
+    act(() => root.render(<App />));
+  }
+  beforeEach(() => {
+    persisted = undefined;
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    vi.spyOn(vscode, 'postMessage').mockImplementation(() => {});
+    vi.spyOn(vscode, 'getState').mockImplementation(() => persisted);
+    vi.spyOn(vscode, 'setState').mockImplementation((value) => {
+      persisted = JSON.parse(JSON.stringify(value)) as LayoutRecovery;
+      return value;
+    });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    act(() => root.render(<App />));
+    snapshot(imported, 'disk-original');
+  });
+  afterEach(() => {
+    act(() => root.unmount());
+    host.remove();
+    vi.restoreAllMocks();
+  });
+
+  it.each(['local', 'incoming'] as const)('protects width21 and four legacy items through explicit %s resolution, export, save and reload', (choice) => {
+    // Same user-visible sequence as the confirmed real-file-watcher loss case.
+    snapshot(imported, 'disk-original', 'import');
+    click('Edit Layout');
+    click('→');
+    const local = JSON.parse(JSON.stringify(persisted!.draft)) as OfficeLayout;
+    expect(local).toEqual({ ...imported, cols: 21, tiles: [...imported.tiles.slice(0, 20), 8,
+      ...Array.from({ length: 14 }, (_, row) => [...imported.tiles.slice((row + 1) * 20, (row + 2) * 20), 8]).flat()] });
+    snapshot(external, 'disk-external');
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(external);
+    expect(host.querySelector('[aria-label="Layout recovery"]')?.textContent).toContain('"cols": 21');
+    expect(host.querySelector('[aria-label="Layout recovery"]')?.textContent).toContain('legacy-3');
+    click('● Save Layout');
+    expect(saves()).toEqual([]);
+    const id = persisted!.pending[0].id;
+    click('Export local draft');
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: local });
+    click(`Export snapshot #${id}`);
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: external });
+    remount();
+    snapshot(external, 'disk-external');
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(external);
+    // Dirty protection works even with Edit Layout switched off after remount.
+    expect(host.textContent).toContain('Layout conflict');
+    if (choice === 'local') click(`Keep local draft #${id}`);
+    else {
+      click(`Use incoming #${id}...`);
+      expect(persisted!.draft).toEqual(local);
+      click(`Cancel replacement`);
+      expect(persisted!.draft).toEqual(local);
+      click(`Use incoming #${id}...`);
+      click(`Confirm incoming #${id}`);
+    }
+    const selected = choice === 'local' ? local : external;
+    expect(persisted!.draft).toEqual(selected);
+    expect(persisted!.pending).toEqual([]);
+    expect(persisted!.retained.map((s) => s.layout)).toContainEqual(local);
+    if (choice === 'local') expect(persisted!.retained.map((s) => s.layout)).toContainEqual(external);
+    click('Edit Layout');
+    click(choice === 'local' ? '● Save Layout' : 'Save Layout');
+    expect(saves().at(-1)).toEqual({
+      type: 'saveLayout', layout: selected, expectedRevision: 'disk-external', workspaceRoot: 'workspace-A',
+    });
+    send({ type: 'layoutSaved', layout: selected, revision: 'disk-saved' });
+    expect(persisted!.baseline).toEqual(selected);
+    expect(host.textContent).not.toContain('● Save Layout');
+    remount();
+    snapshot(selected, 'disk-saved');
+    expect(persisted!.draft).toEqual(selected);
+    expect(persisted!.retained.map((s) => s.layout)).toContainEqual(local);
+  });
+
+  it('queues dirty file imports without replacing either side or suppressing subsequent cross-window snapshots', () => {
+    click('Edit Layout');
+    click('→');
+    const local = JSON.parse(JSON.stringify(persisted!.draft));
+    snapshot(external, 'ignored-import-revision', 'import');
+    const importedId = persisted!.pending[0].id;
+    expect(persisted!.revision).toBe('disk-original');
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(external);
+    click(`Keep local draft #${importedId}`);
+    const later = { ...external, rows: 16, tiles: Array(320).fill(2) };
+    snapshot(later, 'disk-later');
+    const laterId = persisted!.pending[0].id;
+    expect(laterId).not.toBe(importedId);
+    expect(persisted!.pending[0].layout).toEqual(later);
+    expect(persisted!.draft).toEqual(local);
+    click('Reset');
+    expect(persisted!.draft).toEqual(local);
+    click(`Keep local draft #${laterId}`);
+    click('● Save Layout');
+    expect(saves().at(-1)?.layout).toEqual(local);
+    send({ type: 'layoutError', error: 'Disk locked; retry Save.' });
+    expect(host.textContent).toContain('Disk locked');
+    expect(host.textContent).toContain('● Save Layout');
+    click('● Save Layout');
+    send({ type: 'layoutSaved', layout: local, revision: 'disk-final' });
+    expect(persisted!.baseline).toEqual(local);
+    expect(persisted!.retained.map((s) => s.layout)).toContainEqual(external);
+    expect(persisted!.retained.map((s) => s.layout)).toContainEqual(later);
+  });
+
+  it('applies clean imports as unsaved contents, preserves edits made during an in-flight save, and clears dirty on exact undo', () => {
+    snapshot(external, 'ignored', 'import');
+    expect(persisted!.draft).toEqual(external);
+    expect(persisted!.baseline).toEqual(imported);
+    expect(persisted!.pending).toEqual([]);
+    click('Edit Layout');
+    click('● Save Layout');
+    click('→');
+    const duringSave = JSON.parse(JSON.stringify(persisted!.draft));
+    send({ type: 'layoutSaved', layout: external, revision: 'new-disk' });
+    expect(persisted!.draft).toEqual(duringSave);
+    expect(persisted!.baseline).toEqual(external);
+    expect(host.textContent).toContain('● Save Layout');
+    click('Undo');
+    expect(persisted!.draft).toEqual(external);
+    expect(host.textContent).not.toContain('● Save Layout');
+  });
+
+  it('keeps live draft/snapshot exports available when panel-state persistence fails', () => {
+    vi.mocked(vscode.setState).mockImplementation(() => { throw new Error('state quota'); });
+    click('Edit Layout');
+    click('→');
+    snapshot(external, 'disk-external');
+    expect(host.textContent).toContain('Recovery persistence failed');
+    expect(host.textContent).toContain('state quota');
+    click('Export local draft');
+    const exported = vi.mocked(vscode.postMessage).mock.calls.map(([m]) => m).filter((m) => m.type === 'exportLayoutSnapshot').at(-1)!;
+    expect(exported.layout.cols).toBe(21);
+    expect(exported.layout.furniture).toEqual([]);
+    // The failed storage operation never pretends that the stale persisted copy is current.
+    expect(persisted!.draft).toEqual(imported);
+    expect(host.querySelector('[aria-label="Layout recovery"]')?.textContent).toContain('legacy-3');
+  });
+
+  it('isolates malformed incoming messages and preserves malformed recovery state for inspection', () => {
+    click('Edit Layout');
+    click('→');
+    const before = JSON.parse(JSON.stringify(persisted));
+    act(() => window.dispatchEvent(new MessageEvent('message', { data: {
+      type: 'layoutLoaded', layout: { ...external, tiles: [] }, revision: 'bad',
+    } })));
+    expect(persisted).toEqual(before);
+    expect(host.textContent).toContain('Incoming layout is malformed');
+    vi.mocked(vscode.getState).mockReturnValue({ malformedRecovery: 'copy me' });
+    vi.mocked(vscode.setState).mockClear();
+    remount();
+    snapshot(external, 'disk-external');
+    expect(vscode.setState).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Layout recovery state is malformed');
+    expect(host.textContent).toContain('copy me');
+  });
+
+  it('blocks saving an original draft into a different workspace', () => {
+    click('Edit Layout');
+    click('→');
+    const local = JSON.parse(JSON.stringify(persisted!.draft));
+    send({ type: 'layoutLoaded', layout: external, workspaceRoot: 'workspace-B', revision: 'other-disk' });
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.workspaceRoot).toBe('workspace-A');
+    expect(persisted!.pending[0].workspaceRoot).toBe('workspace-B');
+    const id = persisted!.pending[0].id;
+    click(`Keep local draft #${id}`);
+    click('● Save Layout');
+    expect(saves()).toEqual([]);
+    expect(host.textContent).toContain('Recovery/workspace is blocked');
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.retained.map((s) => s.layout)).toContainEqual(external);
+  });
+});
 
 describe('settings and source UI with simulated host messages', () => {
   let host: HTMLDivElement;
@@ -143,6 +354,9 @@ describe('settings and source UI with simulated host messages', () => {
     expect(vscode.postMessage).toHaveBeenCalledWith(expect.objectContaining({
       type: 'saveLayout', layout: expect.objectContaining({ cols: 7, rows: 6, furniture: [] }),
     }));
+    const saved = vi.mocked(vscode.postMessage).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout').at(-1)!;
+    if (saved.type !== 'saveLayout') throw new Error('Expected save');
+    send({ type: 'layoutSaved', layout: saved.layout, revision: JSON.stringify(saved.layout) });
     click('Undo');
     click('● Save Layout');
     expect(vscode.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({

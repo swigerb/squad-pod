@@ -11,6 +11,7 @@ All notable changes to Squad Pod are documented here.
 - Diagnostics moved to the **Squad Pod** output channel (no more workspace debug logs or popups).
 
 ### Added
+- Dirty-layout conflict protection: retain full local/incoming snapshots, queue distinct file/import/cross-window updates, inspect/export both sides, confirm canvas replacement, and retain recovery copies after resolution/save. Imports stage until Save; per-webview recovery state has explicit lifecycle limits (see README). Pets remain deferred.
 - Settings → Add Asset Directory / Unload for validated local furniture manifests, independent failure diagnostics and one-second live reload. New placements persist their dimensions; changed/removed assets cannot silently expand saved furniture. Static group variants are supported; animation, other external pack kinds and pets remain deferred under partial issue #7.
 - Persisted sound/Debug View preferences, host-reported team file and native/polling observer status, and missing-team setup guidance. Launch remains off/unavailable; EventBus / WebSocket has no connected producer, and file observations do not supply authoritative tool/context events. Issue #7 remains partial.
 - Alt-drag furniture copies with fresh IDs and preserved colors; atomic desk + PC/lamp moves and rotations, group previews, and single-step undo/redo.
@@ -22,6 +23,7 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Prevent incoming layouts from silently replacing unsaved edits, even outside edit mode. Save now waits for host acknowledgement, checks the observed disk revision under a cooperating-window lock, and backs up the replaced raw file. Invalid watcher input cannot replace a good draft/cache; legacy colors and unknown layout metadata are preserved instead of deleted by migration.
 - Bound manifest fingerprint/reload work across all roots, including failed attempts: fingerprints read only validated manifest references; isolated per-root byte/read/enumeration/decode allowances report explicit overflow and recover on edits without starving other roots. External roots now allow 48 furniture leaves / 98,304 attempted pixels each.
 - Refresh missing-art warnings on every applied host layout snapshot, including after the office is already ready, without requiring an unrelated UI event or saving the layout.
 - Character wander tests now use deterministic target candidates and cover staying idle with a reset timer when the current cell is selected or no candidates exist; movement behavior is unchanged.
