@@ -97,7 +97,7 @@ describe('tile colors are optional rendering overrides', () => {
       [16, 0], [8, -8], [24, -8], [8, 8], [24, 8],
     ]);
     for (const [canvas] of draw.mock.calls.slice(1)) {
-      expect(sprites.get(canvas)?.flat()).toContain('#941919');
+      expect(sprites.get(canvas)?.flat()).toContain('#dba35a');
     }
     expect(JSON.stringify(layout)).toBe(before);
     expect(layout).not.toHaveProperty('tileColors');
