@@ -283,7 +283,7 @@ export type OutboundMessage =
   | { type: 'agentToolPermission'; agentId: string; tool: string }
   | { type: 'layoutLoaded'; layout: LayoutData; source?: 'external' | 'import'; revision?: string | null; workspaceRoot?: string }
   | { type: 'layoutSaved'; layout: LayoutData; revision: string | null }
-  | { type: 'layoutError'; error: string }
+  | { type: 'layoutError'; error: string; source?: 'watcher' }
   | { type: 'manifestAssetsLoaded'; snapshot: import('./manifestAssets.js').AssetSnapshot }
   | { type: 'characterSpritesLoaded'; sprites: CharacterSpriteSet[] }
   | { type: 'floorTilesLoaded'; tiles: SpriteData[] }

@@ -218,6 +218,7 @@ export function watchLayoutFile(
   function checkForChanges(): void {
     try {
       const stat = fs.statSync(filePath);
+      if (!stat.isFile()) {throw new Error('Layout path is not a regular file.');}
       if (stat.mtimeMs !== lastMtimeMs || stat.size !== lastSize) {
         lastMtimeMs = stat.mtimeMs;
         lastSize = stat.size;
@@ -233,6 +234,9 @@ export function watchLayoutFile(
       }
     } catch (error) {
       lastMtimeMs = 0;
+      lastSize = 0;
+      // Absence is normal, including deletion or a rename between stat and read.
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {return;}
       reportInvalid(`Squad Pod: could not reload external layout; current draft was kept. ${String(error)}`);
     }
   }
