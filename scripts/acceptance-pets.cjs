@@ -10,6 +10,7 @@ const extensionBundle = path.join(extensionPath, 'dist', 'extension.js');
 const webviewScript = path.join(extensionPath, 'dist', 'webview', 'assets', 'index.js');
 const messages = [];
 const serveBrowser = process.argv.includes('--serve');
+const usageAcceptance = process.argv.includes('--usage');
 let provider;
 let receiveMessage;
 let deactivate;
@@ -42,8 +43,26 @@ const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-pet-accep
 fs.mkdirSync(path.join(workspaceRoot, '.squad'), { recursive: true });
 fs.writeFileSync(
   path.join(workspaceRoot, '.squad', 'team.md'),
-  '## Members\n\n| Name | Role | Charter |\n| --- | --- | --- |\n',
+  '## Members\n\n| Name | Role | Charter |\n| --- | --- | --- |\n' + (usageAcceptance
+    ? '| Ada | Developer | .squad/agents/ada/charter.md |\n| Shared | Dev | .squad/agents/first/charter.md |\n| Shared | Dev | .squad/agents/second/charter.md |\n' : ''),
 );
+if (usageAcceptance) {
+  const timestamp = '2026-10-28T15:00:00Z';
+  const report = {
+    version: 1, kind: 'usage', sessionId: 'historical-session', turnId: 'turn-1',
+    agentName: 'Ada', model: 'recorded-model-a', inputTokens: 1200, outputTokens: 300,
+    estimatedCost: 0.04, timestamp,
+  };
+  fs.mkdirSync(path.join(workspaceRoot, '.squad', 'log'));
+  fs.writeFileSync(path.join(workspaceRoot, '.squad', 'log', 'usage.jsonl'), [
+    { version: 1, kind: 'turn-start', sessionId: report.sessionId, turnId: 'turn-1', timestamp },
+    { version: 1, kind: 'turn-start', sessionId: report.sessionId, turnId: 'turn-2', timestamp },
+    report,
+    { ...report, agentName: 'Not on roster', turnId: undefined, model: 'unknown', inputTokens: 0, outputTokens: 0 },
+    { ...report, agentName: 'Shared', turnId: undefined, model: 'recorded-model-b', inputTokens: 200, outputTokens: 100 },
+    { ...report, inputTokens: -1 }, { ...report, version: 2 },
+  ].map(record => JSON.stringify(record)).join('\n') + '\n{"version":1');
+}
 vscode.workspace.workspaceFolders = [{ uri: uri(workspaceRoot) }];
 const storage = {
   get: (_key, fallback) => fallback,
@@ -90,11 +109,25 @@ try {
   assert.deepEqual(assetSnapshot.pets.map((pet) => pet.id).sort(), ['claudio', 'gitcat']);
   const layoutMessage = messages.find((message) => message.type === 'layoutLoaded');
   assert.ok(layoutMessage, 'compiled provider must deliver a layout through the host boundary');
+  if (usageAcceptance) {
+    const snapshot = messages.find(message => message.type === 'recordedUsage')?.snapshot;
+    assert.ok(snapshot, 'compiled provider must publish recorded usage');
+    assert.equal(snapshot.state, 'partial');
+    assert.deepEqual(snapshot.totals, { inputTokens: 1400, outputTokens: 400, estimatedCost: 0.12 });
+    assert.equal(snapshot.coveredTurns, 1);
+    assert.equal(snapshot.attemptedTurns, 2);
+    assert.equal(snapshot.invalidLines, 1);
+    assert.equal(snapshot.unsupportedLines, 1);
+    assert.equal(snapshot.pendingFinalLine, true);
+    assert.deepEqual(snapshot.history.map(entry => entry.attribution), ['roster-match', 'unattributed', 'ambiguous']);
+    assert.equal(messages.some(message => ['agentStatus', 'agentToolStart', 'agentToolDone', 'telemetryEvent', 'agentCreated'].includes(message.type)), false,
+      'historical ledger bootstrap must not emit activity');
+  }
 
   if (serveBrowser) {
     const port = 4173;
     const hostMessages = messages.filter((message) =>
-      ['settingsLoaded', 'sourceStatus', 'characterSpritesLoaded', 'manifestAssetsLoaded', 'layoutLoaded', 'existingAgents', 'squadRosterLoaded'].includes(message.type),
+      ['settingsLoaded', 'sourceStatus', 'recordedUsage', 'characterSpritesLoaded', 'manifestAssetsLoaded', 'layoutLoaded', 'existingAgents', 'squadRosterLoaded'].includes(message.type),
     );
     const fixtures = JSON.stringify(hostMessages).replace(/</g, '\\u003c');
     let html = webview.html;
