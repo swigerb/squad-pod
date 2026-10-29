@@ -416,8 +416,9 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     setEditorTick((t) => t + 1);
   }, [getOfficeState, protection, persist]);
 
-  const layoutError = useCallback((error: string) => {
-    protection.error = error;
+  const layoutError = useCallback((error: string, source?: 'watcher') => {
+    if (source === 'watcher') protection.watcherError = error;
+    else protection.error = error;
     protection.saving = false;
     setEditorTick((t) => t + 1);
   }, [protection]);

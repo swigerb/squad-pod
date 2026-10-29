@@ -261,7 +261,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       void this.context.workspaceState.update(WORKSPACE_KEY_LAYOUT, layout).then(undefined, (error: unknown) => {
         this.postMessage({ type: 'layoutError', error: `Could not cache external layout: ${String(error)}` });
       });
-    }, (error) => this.postMessage({ type: 'layoutError', error }));
+    }, (error) => this.postMessage({ type: 'layoutError', error, source: 'watcher' }));
   }
 
   private stopWatching(): void {

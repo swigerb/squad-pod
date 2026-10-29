@@ -16,6 +16,7 @@ import {
 } from './layoutPersistence.js';
 import { LayoutDraft } from '../webview-ui/src/office/editor/layoutDraft.js';
 import type { OfficeLayout } from '../webview-ui/src/office/types.js';
+import { LAYOUT_FILE_POLL_INTERVAL_MS } from './constants.js';
 
 describe('layoutPersistence', () => {
   let tmpDir: string;
@@ -261,6 +262,82 @@ describe('layoutPersistence', () => {
     } finally {
       watcher.dispose();
     }
+  });
+
+  describe('watcher absence and failures', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it.each([false, true])('silently polls a missing file (directory exists: %s), then loads its creation', (directoryExists) => {
+      if (directoryExists) {fs.mkdirSync(path.join(tmpDir, '.squad-pod'));}
+      const onChange = vi.fn();
+      const onInvalid = vi.fn();
+      const watcher = watchLayoutFile(tmpDir, onChange, onInvalid);
+      try {
+        vi.advanceTimersByTime(3 * LAYOUT_FILE_POLL_INTERVAL_MS);
+        expect(onInvalid).not.toHaveBeenCalled();
+        expect(onChange).not.toHaveBeenCalled();
+        expect(fs.existsSync(path.join(tmpDir, '.squad-pod'))).toBe(directoryExists);
+        writePersistedLayout(tmpDir, sampleLayout);
+        vi.advanceTimersByTime(LAYOUT_FILE_POLL_INTERVAL_MS);
+        expect(onChange).toHaveBeenCalledExactlyOnceWith(sampleLayout, readLayoutRevision(tmpDir));
+        expect(onInvalid).not.toHaveBeenCalled();
+      } finally {
+        watcher.dispose();
+      }
+    });
+
+    it('keeps the dirty draft and revision when deleted, and observes an identical restored file', () => {
+      writePersistedLayout(tmpDir, sampleLayout);
+      const revision = readLayoutRevision(tmpDir);
+      const protection = new LayoutDraft();
+      protection.receive(sampleLayout, 'external', revision, tmpDir);
+      protection.capture({ ...sampleLayout, tiles: Array(80).fill(2) });
+      const before = structuredClone(protection.state);
+      const onChange = vi.fn((layout: LayoutData, raw: string) => protection.receive(layout, 'external', raw, tmpDir));
+      const onInvalid = vi.fn();
+      const watcher = watchLayoutFile(tmpDir, onChange, onInvalid);
+      try {
+        deletePersistedLayout(tmpDir);
+        vi.advanceTimersByTime(3 * LAYOUT_FILE_POLL_INTERVAL_MS);
+        expect(onInvalid).not.toHaveBeenCalled();
+        expect(onChange).not.toHaveBeenCalled();
+        expect(protection.state).toEqual(before);
+        expect(protection.dirty).toBe(true);
+        // Deletion must not authorize overwriting a changed disk revision.
+        expect(saveLayoutIfUnchanged(tmpDir, protection.state.draft!, revision).saved).toBe(false);
+        expect(readLayoutRevision(tmpDir)).toBeNull();
+        writePersistedLayout(tmpDir, sampleLayout);
+        vi.advanceTimersByTime(LAYOUT_FILE_POLL_INTERVAL_MS);
+        expect(onChange).toHaveBeenCalledExactlyOnceWith(sampleLayout, revision);
+        expect(protection.state).toEqual(before);
+      } finally {
+        watcher.dispose();
+      }
+    });
+
+    it.each(['directory', 'malformed JSON'])('reports %s exactly once across repeated polls, retaining the draft', (failure) => {
+      fs.mkdirSync(path.join(tmpDir, '.squad-pod'));
+      const file = path.join(tmpDir, '.squad-pod', 'layout.json');
+      if (failure === 'directory') {fs.mkdirSync(file);}
+      const protection = new LayoutDraft();
+      protection.receive(sampleLayout, 'external', null, tmpDir);
+      protection.capture({ ...sampleLayout, tiles: Array(80).fill(2) });
+      const before = structuredClone(protection.state);
+      const onChange = vi.fn((layout: LayoutData, raw: string) => protection.receive(layout, 'external', raw, tmpDir));
+      const onInvalid = vi.fn((error: string) => { protection.watcherError = error; });
+      const watcher = watchLayoutFile(tmpDir, onChange, onInvalid);
+      try {
+        if (failure === 'malformed JSON') {fs.writeFileSync(file, '{malformed');}
+        vi.advanceTimersByTime(3 * LAYOUT_FILE_POLL_INTERVAL_MS);
+        expect(onInvalid).toHaveBeenCalledTimes(1);
+        expect(onInvalid.mock.calls[0][0]).toContain(failure === 'directory' ? 'not a regular file' : 'malformed');
+        expect(onChange).not.toHaveBeenCalled();
+        expect(protection.state).toEqual(before);
+      } finally {
+        watcher.dispose();
+      }
+    });
   });
 
   describe('validation', () => {

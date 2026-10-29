@@ -8,7 +8,8 @@ export function LayoutConflict({ protection, onResolve }: {
 }) {
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const { draft, pending, retained } = protection.state;
-  if (!pending.length && !retained.length && !protection.error) return null;
+  const error = protection.error ?? protection.watcherError;
+  if (!pending.length && !retained.length && !error) return null;
   return <section aria-label="Layout recovery" style={{
     position: 'absolute', top: 8, right: 8, zIndex: 300, maxWidth: 480,
     maxHeight: '65%', overflow: 'auto', padding: 12, border: '2px solid var(--vscode-focusBorder)',
@@ -18,7 +19,7 @@ export function LayoutConflict({ protection, onResolve }: {
     <p>Both versions are retained. Keep editing locally, or explicitly use an incoming snapshot.
       Save is blocked until every pending snapshot is resolved. Imported layouts need Save to reach disk.</p>
     <p>Recovery uses this VS Code panel&apos;s state, not a durable backup. Export copies before closing the panel or changing workspace.</p>
-    {protection.error && <p role="alert">{protection.error}</p>}
+    {error && <p role="alert">{error}</p>}
     {protection.invalidRecovery && <details><summary>Inspect original recovery state (copy before reopening)</summary>
       <pre>{JSON.stringify(protection.recoveryInput, null, 2)}</pre>
     </details>}
