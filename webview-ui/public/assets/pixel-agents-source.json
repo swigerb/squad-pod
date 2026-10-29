@@ -9,7 +9,7 @@
   "fileCount": 76,
   "sha256": "2a7bc1bb5e851441723d04b0860b012c75d4ff43d12281667d57d6c3b1dc37d1",
   "hashFormat": "Sorted relative POSIX filename, NUL, then raw bytes for every file under the four directories",
-  "verification": "All 48 furniture/floor/wall PNG blobs match originalAssetCommit (PR117). Only COFFEE and LARGE_PLANT manifests differ at the pin; later changes are metadata, not artwork. Carpets are a separate PR316 contribution verified below. Pets and other asset directories were not imported.",
+  "verification": "All 48 furniture/floor/wall PNG blobs match originalAssetCommit (PR117). Only COFFEE and LARGE_PLANT manifests differ at the pin; later changes are metadata, not artwork. Carpets are a separate PR316 contribution verified below. Pet art is a separate contribution trail verified below.",
   "carpets": {
     "introducingCommit": "7a1643fb5e7bab59e1e789fac06c0f9a2fd78d7c",
     "pullRequest": "https://github.com/pixel-agents-hq/pixel-agents/pull/316",
@@ -21,5 +21,22 @@
       { "path": "carpets/carpet_1.png", "gitBlob": "25c9c0105fc0373cfcf89176101035bf64a5010c", "bytes": 380 },
       { "path": "carpets/carpet_2.png", "gitBlob": "28907dc0181b713bf9da57cfac6148a7f7ca6122", "bytes": 363 }
     ]
+  },
+  "pets": {
+    "sourceCommit": "b1bafd02896d90d83457266575a1e8e5011ce997",
+    "license": "MIT",
+    "contributors": ["Pablo De Lucca", "itsManeka"],
+    "pullRequests": [
+      "https://github.com/pixel-agents-hq/pixel-agents/pull/315",
+      "https://github.com/pixel-agents-hq/pixel-agents/pull/219"
+    ],
+    "verification": "Claudio and Gitcat sheets were checked against their exact Git blobs at the v1.5.0 pin. PR219 credits itsManeka's pet sprites, including Claudio and Gitcat; PR315 adds the animated-pet implementation. The pinned CONTRIBUTING states contributions are MIT-licensed and the repository root MIT notice is retained in LICENSE. The two local manifest.json files are Squad Pod metadata, not upstream assets.",
+    "sha256": "e4f6c3f99351750510d5f667af40bf47b225d7568fa26197a26d1b81597002aa",
+    "hashFormat": "Sorted relative POSIX filename, NUL, then LF-normalized UTF-8 bytes for local JSON manifests and raw bytes for other files under pets",
+    "files": [
+      { "path": "pets/claudio/pet.png", "gitBlob": "9433b28259850d8142e3d8e991b0548d20570f2e", "bytes": 3267 },
+      { "path": "pets/gitcat/pet.png", "gitBlob": "d2b7f9b5f39ca3d9106908ff206b7176f377627a", "bytes": 2892 }
+    ],
+    "localManifests": ["pets/claudio/manifest.json", "pets/gitcat/manifest.json"]
   }
 }

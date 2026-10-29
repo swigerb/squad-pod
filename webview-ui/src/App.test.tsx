@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
 import { vscode } from './vscodeApi.js';
 import { isSoundEnabled } from './notificationSound.js';
+import { resetPetTemplates } from './office/sprites/petSpriteData.js';
 import type { OutboundMessage, SourceStatus } from '../../src/types.js';
 import type { AssetSnapshot } from '../../src/manifestAssets.js';
 import type { LayoutRecovery } from './office/editor/layoutDraft.js';
@@ -45,6 +46,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     act(() => root.render(<App />));
   }
   beforeEach(() => {
+    resetPetTemplates();
     persisted = undefined;
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     vi.spyOn(vscode, 'postMessage').mockImplementation(() => {});
@@ -62,6 +64,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   afterEach(() => {
     act(() => root.unmount());
     host.remove();
+    resetPetTemplates();
     vi.restoreAllMocks();
   });
 
@@ -169,6 +172,55 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(persisted!.draft).not.toHaveProperty('tileColors');
   });
 
+  it('adds a pet through the editor, persists identity, acknowledges the save and restores the pet', () => {
+    const sheet = Array.from({ length: 96 }, () => Array(96).fill('#abcdef'));
+    send({ type: 'manifestAssetsLoaded', snapshot: {
+      furniture: [], floors: [], walls: [], carpets: [],
+      pets: [{ id: 'claudio', name: 'Claudio', petType: 0, sprite: sheet }],
+      directories: [], diagnostics: [],
+    } });
+    const layout: OfficeLayout = { ...imported, pets: [] };
+    snapshot(layout, 'pet-disk-revision');
+    click('Edit Layout');
+    click('♥Pets');
+    const petButton = [...host.querySelectorAll('button')].find((button) => button.title === 'Claudio');
+    expect(petButton).toBeDefined();
+    expect(petButton!.getAttribute('aria-pressed')).toBe('false');
+    act(() => petButton!.click());
+    const draftPets = persisted!.draft!.pets!;
+    expect(draftPets).toHaveLength(1);
+    expect(draftPets[0]).toMatchObject({ petType: 0 });
+    expect(draftPets[0].id).toBeTruthy();
+    expect(petButton!.getAttribute('aria-pressed')).toBe('true');
+    expect(host.textContent).toContain('● Save Layout');
+    const incomingPets: OfficeLayout = { ...layout, pets: [{ id: 'remote-companion', petType: 0 }] };
+    snapshot(incomingPets, 'pet-external-revision');
+    expect(persisted!.draft!.pets).toEqual(draftPets);
+    expect(persisted!.pending[0].layout).toEqual(incomingPets);
+    click('● Save Layout');
+    expect(saves()).toEqual([]);
+    const conflictId = persisted!.pending[0].id;
+    click(`Keep local draft #${conflictId}`);
+    expect(persisted!.draft!.pets).toEqual(draftPets);
+    expect(persisted!.retained.map((retained) => retained.layout)).toContainEqual(incomingPets);
+    click('● Save Layout');
+    const savedMessage = saves().at(-1);
+    expect(savedMessage).toMatchObject({
+      type: 'saveLayout', expectedRevision: 'pet-external-revision',
+      layout: { pets: draftPets },
+    });
+    if (savedMessage?.type !== 'saveLayout') throw new Error('Expected pet layout save');
+    send({ type: 'layoutSaved', layout: savedMessage.layout, revision: 'pet-saved-revision' });
+    expect(persisted!.baseline?.pets).toEqual(draftPets);
+    expect(persisted!.revision).toBe('pet-saved-revision');
+    remount();
+    snapshot(savedMessage.layout, 'pet-saved-revision');
+    expect(persisted!.draft?.pets).toEqual(draftPets);
+    expect(host.textContent).not.toContain('● Save Layout');
+    click('Edit Layout');
+    expect(host.textContent).not.toContain('● Save Layout');
+  });
+
   it.each(['local', 'incoming'] as const)('retains real carpet edits and different external carpets through %s resolution, exports, acknowledgement, recovery and staged imports', (choice) => {
     const base: OfficeLayout = { ...imported, carpetTiles: Array(300).fill(null) };
     base.carpetTiles![41] = {
@@ -177,7 +229,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     };
     snapshot(base, 'carpet-base');
     send({ type: 'manifestAssetsLoaded', snapshot: {
-      furniture: [], floors: [], walls: [], directories: [], diagnostics: [],
+      furniture: [], floors: [], walls: [], pets: [], directories: [], diagnostics: [],
       carpets: [0, 1, 2].map(() => Array.from({ length: 16 }, () => [['#111111', '#eeeeee']])),
     } });
     click('Edit Layout');
@@ -532,7 +584,7 @@ describe('settings and source UI with simulated host messages', () => {
     click('→');
     expect(host.textContent).toContain('● Save Layout');
     send({ type: 'manifestAssetsLoaded', snapshot: {
-      furniture: [], floors: [], walls: [], carpets: [], directories: [], diagnostics: ['Root read budget exceeded'],
+      furniture: [], floors: [], walls: [], carpets: [], pets: [], directories: [], diagnostics: ['Root read budget exceeded'],
     } });
     expect(host.textContent).toContain('Root read budget exceeded');
     expect(host.textContent).toContain('● Save Layout');
@@ -561,7 +613,7 @@ describe('settings and source UI with simulated host messages', () => {
         type: 'local_TEST_TEST', label: 'Test fixture asset', width: 1, height: 1,
         sprite: [['#abcdef']], isDesk: false, category: 'decor', canPlaceOnSurfaces: false, canPlaceOnWalls: false,
       }],
-      floors: [], walls: [], carpets: [], directories: ['C:\\fixture-assets'], diagnostics: ['Bad fixture manifest rejected'],
+      floors: [], walls: [], carpets: [], pets: [], directories: ['C:\\fixture-assets'], diagnostics: ['Bad fixture manifest rejected'],
     };
     send({ type: 'manifestAssetsLoaded', snapshot });
     send({ type: 'layoutLoaded', layout });

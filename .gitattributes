@@ -6,5 +6,6 @@
 
 # Preserve source-pinned asset bytes and checksums across Windows/Linux checkouts.
 webview-ui/public/assets/furniture/**/manifest.json text eol=lf
+webview-ui/public/assets/pets/**/manifest.json text eol=lf
 webview-ui/public/assets/pixel-agents-source.json text eol=lf
 webview-ui/public/assets/**/*.png binary

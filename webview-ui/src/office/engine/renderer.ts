@@ -7,7 +7,8 @@ import {
   SpriteData,
   TileType,
   TILE_SIZE,
-  FloorColor
+  FloorColor,
+  Pet,
 } from '../types.js';
 import {
   CHARACTER_SITTING_OFFSET_PX,
@@ -20,6 +21,8 @@ import {
   BUBBLE_VERTICAL_OFFSET_PX,
   BUBBLE_SITTING_OFFSET_PX,
   SEAT_OWN_COLOR,
+  BUBBLE_FADE_DURATION_SEC,
+  PET_BUBBLE_VERTICAL_OFFSET_PX,
   SEAT_AVAILABLE_COLOR,
   SEAT_BUSY_COLOR,
   GRID_LINE_COLOR,
@@ -39,13 +42,16 @@ import { wallColorToHex, getColorizedWallSprite, hasWallSprites } from '../wallT
 import { areCharacterAssetsReady, areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
 import { drawTilesetFurniture, drawTilesetTile, drawMetadataItemScaled } from '../sprites/tilesetRenderer.js';
 import { drawCharacterFromSheet, getCharacterSheetOffset, hasCharacterSheetForPalette } from '../sprites/characterSheetRenderer.js';
+import { getPetSpriteData } from './petEntity.js';
+import { getPetSprites } from '../sprites/petSpriteData.js';
+import { PET_HEART_BUBBLE } from '../sprites/petBubble.js';
 
 interface Drawable {
   sprite: SpriteData;
   x: number;
   y: number;
   z: number;
-  type: 'furniture' | 'character';
+  type: 'furniture' | 'character' | 'pet';
   outlineSprite?: SpriteData;
   outlineAlpha?: number;
   /** Furniture type for PNG tileset lookup. */
@@ -55,6 +61,7 @@ interface Drawable {
   furnitureDestH?: number;
   /** Character reference for PNG sprite sheet rendering. */
   character?: Character;
+  pet?: Pet;
 }
 
 // Track first-time diagnostic logging per render path (avoid 60fps spam)
@@ -147,7 +154,8 @@ export function renderScene(
   offsetY: number,
   zoom: number,
   selectedAgentId: string | null,
-  hoveredAgentId: string | null
+  hoveredAgentId: string | null,
+  pets: Pet[] = [],
 ): void {
   const drawables: Drawable[] = [];
   const tilesetReady = areTilesetAssetsReady();
@@ -224,6 +232,21 @@ export function renderScene(
     });
   }
 
+  for (const pet of pets) {
+    const sprite = getPetSpriteData(pet, getPetSprites(pet.petType));
+    if (!sprite) continue;
+    const x = offsetX + (pet.x - sprite[0].length / 2) * zoom;
+    const y = offsetY + (pet.y - sprite.length) * zoom;
+    drawables.push({
+      sprite,
+      x,
+      y,
+      z: offsetY + pet.y * zoom,
+      type: 'pet',
+      pet,
+    });
+  }
+
   drawables.sort((a, b) => a.z - b.z);
 
   for (const drawable of drawables) {
@@ -251,6 +274,8 @@ export function renderScene(
         }
         drawSpriteDirect(ctx, drawable.sprite, drawable.x, drawable.y, zoom);
       }
+    } else if (drawable.type === 'pet') {
+      ctx.drawImage(getCachedSprite(drawable.sprite, zoom), drawable.x, drawable.y);
     } else {
       // Try PNG tileset first, fall back to inline cached sprite
       const furnitureType = drawable.furnitureType;
@@ -572,6 +597,7 @@ export function renderFrame(
   seats?: Seat[],
   isDebugMode = false,
   carpetTiles?: Array<CarpetTile | null>,
+  pets: Pet[] = [],
 ): void {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -589,7 +615,7 @@ export function renderFrame(
     renderSeatIndicators(ctx, seats, characters, selectedAgentId ?? null, hoveredTile ?? null, offsetX, offsetY, zoom);
   }
 
-  renderScene(ctx, furniture, characters, offsetX, offsetY, zoom, selectedAgentId ?? null, hoveredAgentId ?? null);
+  renderScene(ctx, furniture, characters, offsetX, offsetY, zoom, selectedAgentId ?? null, hoveredAgentId ?? null, pets);
 
   if (editor?.showGrid) {
     renderGridOverlay(ctx, offsetX, offsetY, zoom, cols, rows, tileMap);
@@ -610,8 +636,27 @@ export function renderFrame(
   }
 
   renderBubbles(ctx, characters, offsetX, offsetY, zoom);
+  renderPetBubbles(ctx, pets, offsetX, offsetY, zoom);
 
   if (isDebugMode) drawAssetDiagnosticOverlay(ctx);
+}
+
+function renderPetBubbles(
+  ctx: CanvasRenderingContext2D,
+  pets: Pet[],
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  for (const pet of pets) {
+    if (pet.bubbleType !== 'heart' || pet.bubbleTimer <= 0) continue;
+    const alpha = Math.min(1, pet.bubbleTimer / BUBBLE_FADE_DURATION_SEC);
+    const x = offsetX + (pet.x - PET_HEART_BUBBLE[0].length / 2) * zoom;
+    const y = offsetY + (pet.y - PET_BUBBLE_VERTICAL_OFFSET_PX - PET_HEART_BUBBLE.length) * zoom;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(getCachedSprite(PET_HEART_BUBBLE, zoom), x, y);
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawAssetDiagnosticOverlay(ctx: CanvasRenderingContext2D): void {

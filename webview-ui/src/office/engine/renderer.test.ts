@@ -7,6 +7,9 @@ import * as tilesetRenderer from '../sprites/tilesetRenderer.js';
 import { setFloorSprites } from '../floorTiles.js';
 import { setWallSprites } from '../wallTiles.js';
 import { setCarpetSprites } from '../sprites/carpetTiles.js';
+import { setPetTemplates, getPetSprites, resetPetTemplates } from '../sprites/petSpriteData.js';
+import { createPet, togglePetHeart } from './petEntity.js';
+import { PET_HEART_BUBBLE } from '../sprites/petBubble.js';
 
 describe('tile colors are optional rendering overrides', () => {
   const wall: FloorColor = { h: 240, s: 100, b: 0, c: 0 };
@@ -50,6 +53,7 @@ describe('tile colors are optional rendering overrides', () => {
     setFloorSprites([]);
     setWallSprites([]);
     setCarpetSprites([]);
+    resetPetTemplates();
     vi.restoreAllMocks();
   });
 
@@ -104,6 +108,23 @@ describe('tile colors are optional rendering overrides', () => {
     }
     expect(JSON.stringify(layout)).toBe(before);
     expect(layout).not.toHaveProperty('tileColors');
+  });
+
+  it('renders animated pet sprites and heart bubbles over a layout without tile colors', () => {
+    const sheet = Array.from({ length: 96 }, (_, y) =>
+      Array.from({ length: 96 }, (_, x) => `#${(y * 96 + x).toString(16).padStart(6, '0')}`));
+    setPetTemplates([{ id: 'claudio', name: 'Claudio', petType: 0, sprite: sheet }]);
+    const frames = getPetSprites(0)!;
+    const pet = createPet('pet-1', 0, 'Claudio', 1, 1);
+    togglePetHeart(pet);
+    const draw = vi.fn();
+    ctx.drawImage = draw;
+    renderFrame(ctx, 48, 48, [], [], [], 1, 0, 0, null, undefined, undefined,
+      0, 0, null, null, null, [], false, undefined, [pet]);
+    expect(draw).toHaveBeenCalledTimes(2);
+    expect(sprites.get(draw.mock.calls[0][0])).toBe(frames.idleDown[0]);
+    expect(sprites.get(draw.mock.calls[1][0])).toBe(PET_HEART_BUBBLE);
+    expect(ctx.globalAlpha).toBe(1);
   });
 });
 

@@ -49,14 +49,16 @@
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "vsce package --no-dependencies",
+    "package": "vsce package --no-dependencies && node scripts/audit-pet-package.cjs",
     "check-types": "tsc --noEmit && npm run check-types --prefix webview-ui",
     "lint": "eslint src",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:webview": "npm test --prefix webview-ui",
     "test:all": "npm test && npm run test:webview",
-    "verify": "npm run lint && npm run check-types && npm run test:all && npm run build",
+    "verify": "npm run lint && npm run check-types && npm run test:all && npm run build && npm run test:smoke:pets-provider",
+    "test:smoke:pets-provider": "node scripts/acceptance-pets.cjs",
+    "serve:acceptance:pets": "node scripts/acceptance-pets.cjs --serve",
     "import-tileset": "tsx scripts/0-import-tileset.ts"
   },
   "devDependencies": {

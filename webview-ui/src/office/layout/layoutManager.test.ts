@@ -5,7 +5,9 @@ import {
   layoutToFurnitureInstances,
   getBlockedTiles,
   getSeatTiles,
-  createDefaultLayout
+  createDefaultLayout,
+  serializeLayout,
+  deserializeLayout,
 } from './layoutManager.js';
 import { TileType, Direction } from '../types.js';
 import type { OfficeLayout, PlacedFurniture } from '../types.js';
@@ -235,6 +237,33 @@ describe('layoutManager', () => {
 
       expect(layout.tileColors).toBeDefined();
       expect(Object.keys(layout.tileColors!).length).toBeGreaterThan(0);
+    });
+
+    describe('pet layout compatibility', () => {
+      it('round-trips persisted pet identities and leaves petless legacy imports unchanged', () => {
+        const withPets: OfficeLayout = {
+          version: 2, cols: 2, rows: 2, tiles: Array(4).fill(TileType.FLOOR_1), furniture: [],
+          pets: [{ id: 'companion-1', petType: 1 }],
+        };
+        expect(deserializeLayout(serializeLayout(withPets))).toEqual(withPets);
+        const legacy = { version: 2, cols: 2, rows: 2, tiles: Array(4).fill(TileType.FLOOR_1), furniture: [] };
+        expect(deserializeLayout(JSON.stringify(legacy))).toEqual(legacy);
+      });
+
+      it('rejects invalid pet records before an import can replace the current layout', () => {
+        const valid: OfficeLayout = {
+          version: 2, cols: 2, rows: 2, tiles: Array(4).fill(TileType.FLOOR_1), furniture: [],
+          pets: [{ id: 'companion-1', petType: 0 }],
+        };
+        for (const pets of [
+          [{ id: '', petType: 0 }],
+          [{ id: 'duplicate', petType: 0 }, { id: 'duplicate', petType: 1 }],
+          [{ id: 'bad-type', petType: -1 }],
+          [{ id: 'bad-type', petType: Number.NaN }],
+        ]) {
+          expect(() => deserializeLayout(JSON.stringify({ ...valid, pets }))).toThrow('Invalid layout format');
+        }
+      });
     });
   });
 });
