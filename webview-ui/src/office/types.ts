@@ -80,6 +80,7 @@ export type FurnitureType = (typeof FurnitureType)[keyof typeof FurnitureType];
 export const EditTool = {
   TILE_PAINT: 'tile_paint',
   WALL_PAINT: 'wall_paint',
+  CARPET_PAINT: 'carpet_paint',
   FURNITURE_PLACE: 'furniture_place',
   FURNITURE_PICK: 'furniture_pick',
   SELECT: 'select',
@@ -123,7 +124,11 @@ export interface OfficeLayout {
   tiles: number[];
   furniture: PlacedFurniture[];
   tileColors?: Record<string, FloorColor>;
+  carpetTiles?: Array<CarpetTile | null>;
 }
+
+export type { CarpetTile } from '../../../src/types.js';
+import type { CarpetTile } from '../../../src/types.js';
 
 // KEY SQUAD CHANGE: Character uses string ID (slug) and has name/role
 export interface Character {

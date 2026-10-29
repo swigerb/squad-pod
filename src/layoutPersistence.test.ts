@@ -210,16 +210,22 @@ describe('layoutPersistence', () => {
   }, 20000);
 
   it('protects the real watcher regression: imported 20x15 -> local width21 -> external legacy four-item snapshot', async () => {
-    const imported: OfficeLayout = { version: 2, cols: 20, rows: 15, tiles: Array(300).fill(1), furniture: [] };
+    const imported: OfficeLayout = {
+      version: 2, cols: 20, rows: 15, tiles: Array(300).fill(1), furniture: [],
+      carpetTiles: Array(300).fill(null),
+    };
+    imported.carpetTiles![42] = { variant: 1, color: { h: 20, s: 70, b: -20, c: 0 }, accentColor: { h: 50, s: 80, b: 10, c: 0 }, order: 4 };
     writePersistedLayout(tmpDir, imported);
     let protection = new LayoutDraft();
     protection.receive(imported, 'external', readLayoutRevision(tmpDir), tmpDir);
-    const local = { ...imported, cols: 21, tiles: Array(315).fill(1) };
+    const local = { ...imported, cols: 21, tiles: Array(315).fill(1), carpetTiles: Array(315).fill(null) };
+    local.carpetTiles[44] = { variant: 0, color: { h: 120, s: 70, b: -10, c: 0 }, accentColor: { h: 40, s: 80, b: 20, c: 0 }, order: 5 };
     protection.capture(local);
     const external: OfficeLayout = {
-      ...imported, furniture: Array.from({ length: 4 }, (_, n) =>
+      ...imported, carpetTiles: Array(300).fill(null), furniture: Array.from({ length: 4 }, (_, n) =>
         ({ uid: `legacy-${n}`, type: `unknown-${n}`, col: n + 1, row: n + 1, rotation: 0 })),
     };
+    external.carpetTiles![42] = { variant: 2, color: { h: 210, s: 75, b: -25, c: 0 }, accentColor: { h: 0, s: 90, b: 30, c: 0 }, order: 6 };
     const errors: string[] = [];
     const watcher = watchLayoutFile(tmpDir, (layout, revision) => {
       protection.receive(layout, 'external', revision, tmpDir);
@@ -248,7 +254,7 @@ describe('layoutPersistence', () => {
       fs.writeFileSync(path.join(tmpDir, '.squad-pod', 'layout.json'), '{"cols":0}');
       await vi.waitFor(() => expect(errors).toHaveLength(1));
       expect(protection.state).toEqual(beforeMalformed);
-      const later = { ...external, rows: 16, tiles: Array(320).fill(2) };
+      const later = { ...external, rows: 16, tiles: Array(320).fill(2), carpetTiles: [...external.carpetTiles!, ...Array(20).fill(null)] };
       writePersistedLayout(tmpDir, later);
       await vi.waitFor(() => expect(protection.state.draft).toEqual(later));
       expect(protection.state.retained.some((s) => JSON.stringify(s.layout) === JSON.stringify(external))).toBe(true);

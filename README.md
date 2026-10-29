@@ -20,6 +20,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Stable look and seats** — each member keeps the same appearance and desk across reloads; reopening the panel restores the whole office without duplicating anyone
 - **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
 - **Office layout editor** — design your office with floors, walls, and furniture using the built-in editor
+- **Decorative carpets** — three auto-tiling styles with independent main/accent colors, painted over floors without changing floor IDs or agent walkability.
 - **Manifest furniture and live imports** — verified original Pixel Agents furniture/floors/walls; Settings can load local furniture manifests and pick up edits without restarting VS Code.
 - **Speech bubbles** — visual indicators when an agent needs your attention
 - **Sound notifications** — optional chime when a file-observed active member returns to idle (not proof of task completion; turn it off in Settings if you're in a meeting)
@@ -138,6 +139,7 @@ The built-in editor lets you design your office:
 
 - **Floor** — Full HSB color control
 - **Walls** — Auto-tiling walls with color customization
+- **Carpets** — choose one of three pinned styles and adjust Main/Accent hue, saturation and brightness. Left-drag paints on existing floors (including beneath furniture); right-drag removes only carpet. Eyedrop copies the style and both colors. The generic Erase tool removes carpet first when present, preserving the underlying floor and furniture.
 - **Tools** — Select, paint, erase, place, eyedropper. Floor, wall, and erase tools paint continuously while you drag.
 - **Undo/Redo** — 50 levels with Ctrl+Z / Ctrl+Y. Each drag (a paint stroke or a furniture move) is a single undo step.
 - **Furniture moves and copies** — Select, then drag to move; hold **Alt when releasing** to copy. Desks carry their overlapping PCs and lamps; grabbing a PC or lamp moves just that object. Copies have fresh IDs and preserve the source's color (including no color), independently of the palette's Colorize setting.
@@ -146,6 +148,16 @@ The built-in editor lets you design your office:
 - **Export/Import** — share layouts as JSON files via the Settings modal. Imports are validated first; an invalid file shows an error and leaves your saved layout untouched.
 
 The grid is expandable up to 64×64 tiles. A new host-created office is 20×15 with four verified desk/chair pairs. Existing offices are never reset to this default.
+
+Carpets are an optional `carpetTiles` array parallel to `tiles` (`null` means no
+carpet). Each cell stores `variant` (0–2), optional `color`, `accentColor` and
+overlap `order`. Carpet strokes/right-erase are one undo step; resizing in any
+direction, saving, reloading and JSON export/import retain these fields.
+Existing layouts without carpets are not filled with empty carpet data or
+reset. Walls/void cannot be carpet-painted; changing a floor to wall/void removes
+its carpet within the same undo transaction. Carpet artwork reloads do not save
+or reset the office. Areas, directory launch, pets and full upstream parity
+remain separate work under #7/#4.
 
 ### Unsaved layouts and incoming conflicts
 
@@ -222,10 +234,14 @@ validation, editor transforms and saves. No caller should bypass
 ## Office assets and local manifests
 
 Bundled originals are pinned to Pixel Agents `b1bafd02896d90d83457266575a1e8e5011ce997`.
-Their provenance is the explicit original/open-source asset replacement in
+Furniture/floor/wall provenance is the explicit original/open-source asset replacement in
 [pixel-agents-hq/pixel-agents#117](https://github.com/pixel-agents-hq/pixel-agents/pull/117),
 merged as `3ebb247a8138b2608bf291997562f2854929894b`.
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for verification and MIT attribution.
+The three carpet sheets have a separately verified contribution trail through
+[pixel-agents-hq/pixel-agents#316](https://github.com/pixel-agents-hq/pixel-agents/pull/316);
+they are not part of PR117. Exact source blobs and the combined 76-file checksum
+are recorded in `assets/pixel-agents-source.json`.
 The old unprovenanced office PNG and metadata are removed; they are not a fallback.
 
 **Settings → Add Asset Directory** opens a native folder picker. Select a local directory

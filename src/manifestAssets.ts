@@ -20,6 +20,7 @@ export interface AssetSnapshot {
   furniture: ManifestFurniture[];
   floors: string[][][];
   walls: string[][][];
+  carpets: string[][][][];
   directories: string[];
   diagnostics: string[];
 }
@@ -30,6 +31,7 @@ const MAX_ENTRIES = 128;
 // Independent root allowances prevent one import from consuming another root's work.
 // Nine roots together: 18 MiB read/hashed, 1152 reads, 18432 enumeration calls,
 // 512 attempted furniture decodes / 1048576 pixels (including failed manifests).
+// Bundled floor/wall/carpet sheets share that root's decode allowance too.
 export const ASSET_ROOT_LIMITS = {
   bytes: 2 * 1024 * 1024,
   files: 128,
@@ -58,13 +60,19 @@ class RootBudget {
     this.entries++;
   }
   furniture(leaves: Leaf[]): void {
-    const limit = this.bundled ? ASSET_ROOT_LIMITS.bundled : ASSET_ROOT_LIMITS.external;
     const pixels = leaves.reduce((sum, leaf) => sum + leaf.width * leaf.height, 0);
-    if (this.assets + leaves.length > limit.assets || this.pixels + pixels > limit.pixels) {
-      throw new Error(`Root decode budget exceeded (${limit.assets} furniture assets / ${limit.pixels} pixels per pass)`);
+    this.reserve(leaves.length, pixels);
+  }
+  sheet(width: number, height: number): void {
+    this.reserve(1, width * height);
+  }
+  private reserve(assets: number, pixels: number): void {
+    const limit = this.bundled ? ASSET_ROOT_LIMITS.bundled : ASSET_ROOT_LIMITS.external;
+    if (this.assets + assets > limit.assets || this.pixels + pixels > limit.pixels) {
+      throw new Error(`Root decode budget exceeded (${limit.assets} assets / ${limit.pixels} pixels per pass)`);
     }
     // Reserve the entire manifest before reading PNGs. Failed attempts are not refunded.
-    this.assets += leaves.length;
+    this.assets += assets;
     this.pixels += pixels;
   }
 }
@@ -268,7 +276,7 @@ function directories(root: string, budget: RootBudget): string[] {
 
 /** Manifests are atomic; independent root budgets protect other roots and the bundled catalog. */
 export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] = []): AssetSnapshot {
-  const snapshot: AssetSnapshot = { furniture: [], floors: [], walls: [], directories: externalRoots, diagnostics: [] };
+  const snapshot: AssetSnapshot = { furniture: [], floors: [], walls: [], carpets: [], directories: externalRoots, diagnostics: [] };
   const ids = new Set<string>();
   const bundledBudget = new RootBudget(true);
   const attempt = (label: string, work: () => void): void => {
@@ -305,16 +313,28 @@ export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] =
   if (externalRoots.length > 8) { snapshot.diagnostics.push('Only eight external directories can be loaded'); }
   for (let i = 0; i < 9; i++) {
     attempt(`Bundled floor ${i}`, () => {
+      bundledBudget.sheet(16, 16);
       snapshot.floors[i] = decode(readBounded(safePath(bundledRoot, ['floors', `floor_${i}.png`]), MAX_FILE_BYTES, bundledBudget), 16, 16);
     });
     snapshot.floors[i] ??= Array.from({ length: 16 }, () => Array<string>(16).fill(''));
   }
   attempt('Bundled walls', () => {
+    bundledBudget.sheet(64, 128);
     const sheet = decode(readBounded(safePath(bundledRoot, ['walls', 'wall_0.png']), MAX_FILE_BYTES, bundledBudget), 64, 128);
     snapshot.walls = Array.from({ length: 16 }, (_, mask) => sheet
       .slice(Math.floor(mask / 4) * 32, Math.floor(mask / 4) * 32 + 32)
       .map((row) => row.slice((mask % 4) * 16, (mask % 4) * 16 + 16)));
   });
+  for (let i = 0; i < 3; i++) {
+    attempt(`Bundled carpet ${i}`, () => {
+      bundledBudget.sheet(64, 64);
+      const sheet = decode(readBounded(safePath(bundledRoot, ['carpets', `carpet_${i}.png`]), MAX_FILE_BYTES, bundledBudget), 64, 64);
+      snapshot.carpets[i] = Array.from({ length: 16 }, (_, mask) => sheet
+        .slice(Math.floor(mask / 4) * 16, Math.floor(mask / 4) * 16 + 16)
+        .map((row) => row.slice((mask % 4) * 16, (mask % 4) * 16 + 16)));
+    });
+    snapshot.carpets[i] ??= [];
+  }
   return snapshot;
 }
 
@@ -355,6 +375,7 @@ export function assetSourceFingerprint(bundledRoot: string, externalRoots: strin
   }
   for (let i = 0; i < 9; i++) { file(bundledRoot, ['floors', `floor_${i}.png`], bundledBudget); }
   file(bundledRoot, ['walls', 'wall_0.png'], bundledBudget);
+  for (let i = 0; i < 3; i++) { file(bundledRoot, ['carpets', `carpet_${i}.png`], bundledBudget); }
   return hash.digest('hex');
 }
 

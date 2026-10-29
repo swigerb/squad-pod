@@ -3,7 +3,9 @@ import type { OfficeState } from '../office/engine/officeState.js';
 import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, OfficeLayout } from '../office/types.js';
-import { applyTilePaint, applyErase, applyFurniturePlace, planFurnitureMove, planFurnitureRotate, commitFurniturePlan } from '../office/editor/editorActions.js';
+import { applyTilePaint, applyErase, applyFurniturePlace, planFurnitureMove, planFurnitureRotate, commitFurniturePlan, applyCarpetPaint, applyCarpetErase, pickCarpet } from '../office/editor/editorActions.js';
+import { hasCarpetVariant } from '../office/sprites/carpetTiles.js';
+import { CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR } from '../constants.js';
 import { UndoHistory } from '../office/editor/undoHistory.js';
 import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, MAX_COLS, MAX_ROWS } from '../constants.js';
 import { vscode } from '../vscodeApi.js';
@@ -89,10 +91,56 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     setEditorTick((t) => t + 1);
   }, [editorState]);
 
+  const handleCarpetVariantChange = useCallback((variant: number) => {
+    editorState.carpetVariant = variant;
+    setEditorTick((t) => t + 1);
+  }, [editorState]);
+
+  const handleCarpetColorChange = useCallback((color: FloorColor, accent = false) => {
+    if (accent) editorState.carpetAccentColor = { ...color };
+    else editorState.carpetColor = { ...color };
+    setEditorTick((t) => t + 1);
+  }, [editorState]);
+
+  const handleEyedropper = useCallback((col: number, row: number) => {
+    const layout = getOfficeState().getLayout();
+    const carpet = pickCarpet(layout, col, row);
+    if (carpet) {
+      editorState.carpetVariant = carpet.variant;
+      editorState.carpetColor = { ...(carpet.color ?? CARPET_DEFAULT_COLOR) };
+      editorState.carpetAccentColor = { ...(carpet.accentColor ?? CARPET_DEFAULT_ACCENT_COLOR) };
+      editorState.setTool(EditTool.CARPET_PAINT);
+    } else {
+      const tile = layout.tiles[row * layout.cols + col];
+      if (tile === undefined) return;
+      editorState.setTileType(tile as TileType);
+      editorState.setTool(tile === TileType.WALL ? EditTool.WALL_PAINT : EditTool.TILE_PAINT);
+      const color = layout.tileColors?.[`${col},${row}`];
+      if (color) {
+        if (tile === TileType.WALL) editorState.setWallColor(color);
+        else editorState.setFloorColor(color);
+      }
+    }
+    setEditorTick((t) => t + 1);
+  }, [getOfficeState, editorState]);
+
   const handleEditorTileAction = useCallback(
     (col: number, row: number) => {
       const officeState = getOfficeState();
-      if (editorState.tool === EditTool.TILE_PAINT) {
+      if (editorState.tool === EditTool.CARPET_PAINT) {
+        const layout = officeState.getLayout();
+        editorState.transformError = hasCarpetVariant(editorState.carpetVariant)
+          ? null : 'Carpet style is unavailable. Check the asset diagnostics.';
+        if (!editorState.transformError) {
+          const next = applyCarpetPaint(layout, col, row, {
+            variant: editorState.carpetVariant, color: editorState.carpetColor, accentColor: editorState.carpetAccentColor,
+          });
+          if (next !== layout) {
+            pushUndo();
+            officeState.rebuildFromLayout(next);
+          }
+        }
+      } else if (editorState.tool === EditTool.TILE_PAINT) {
         pushUndo();
         const currentLayout = officeState.getLayout();
         const newLayout = applyTilePaint(
@@ -138,13 +186,16 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   const handleEditorEraseAction = useCallback(
     (col: number, row: number) => {
       const officeState = getOfficeState();
-      pushUndo();
       const currentLayout = officeState.getLayout();
-      const newLayout = applyErase(currentLayout, col, row);
-      officeState.rebuildFromLayout(newLayout);
+      const newLayout = editorState.tool === EditTool.CARPET_PAINT || currentLayout.carpetTiles?.[row * currentLayout.cols + col]
+        ? applyCarpetErase(currentLayout, col, row) : applyErase(currentLayout, col, row);
+      if (newLayout !== currentLayout) {
+        pushUndo();
+        officeState.rebuildFromLayout(newLayout);
+      }
       setEditorTick((t) => t + 1);
     },
-    [getOfficeState, pushUndo]
+    [getOfficeState, pushUndo, editorState]
   );
 
   const handleEditorSelectionChange = useCallback((uid: string | null) => {
@@ -285,6 +336,17 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
       layout.cols = newCols;
       layout.rows = newRows;
       layout.tiles = newTiles;
+      if (layout.carpetTiles) {
+        const shifted = Array(newCols * newRows).fill(null);
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const destR = direction === 'up' ? r + 1 : r;
+            const destC = direction === 'left' ? c + 1 : c;
+            shifted[destR * newCols + destC] = layout.carpetTiles[r * cols + c];
+          }
+        }
+        layout.carpetTiles = shifted;
+      }
 
       // Shift furniture positions for left/up expansion
       if (direction === 'left') {
@@ -389,6 +451,9 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     handleFloorColorChange,
     handleWallColorChange,
     handleFurnitureTypeChange,
+    handleCarpetVariantChange,
+    handleCarpetColorChange,
+    handleEyedropper,
     handleEditorTileAction,
     handleEditorEraseAction,
     handleEditorSelectionChange,

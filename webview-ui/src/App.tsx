@@ -147,6 +147,7 @@ export default function App() {
         editorState={editorState}
         onEditorTileAction={editor.handleEditorTileAction}
         onEditorEraseAction={editor.handleEditorEraseAction}
+        onEditorEyedropper={editor.handleEyedropper}
         onEditorSelectionChange={editor.handleEditorSelectionChange}
         onDeleteSelected={editor.handleDeleteSelected}
         onRotateSelected={editor.handleRotateSelected}
@@ -169,6 +170,8 @@ export default function App() {
         onFloorColorChange={editor.handleFloorColorChange}
         onWallColorChange={editor.handleWallColorChange}
         onFurnitureTypeChange={editor.handleFurnitureTypeChange}
+        onCarpetVariantChange={editor.handleCarpetVariantChange}
+        onCarpetColorChange={editor.handleCarpetColorChange}
         onSave={editor.handleSave}
         onReset={editor.handleReset}
         onUndo={editor.handleUndo}
