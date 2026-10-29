@@ -64,6 +64,11 @@ let _loggedTilesetWaiting = false;
 let _loggedCharFallback = false;
 let _loggedFirstRender = false;
 
+// Rendering defaults only: never synthesize colors in the persisted layout.
+const DEFAULT_FLOOR_COLOR: FloorColor = { h: 35, s: 40, b: 15, c: 0 };
+const DEFAULT_WALL_COLOR: FloorColor = { h: 20, s: 30, b: -25, c: 0 };
+const EMPTY_TILE_COLORS = new Map<string, FloorColor>();
+
 export function renderTileGrid(
   ctx: CanvasRenderingContext2D,
   tileMap: number[][],
@@ -112,26 +117,22 @@ export function renderTileGrid(
       // Fall back to colored rendering
       if (tile === TileType.WALL) {
         const colorKey = `${col},${row}`;
-        const color = tileColors.get(colorKey);
-        if (color) {
-          if (hasWallSprites()) {
-            const { sprite, offsetY: wallOffset } = getColorizedWallSprite(flatTiles, cols, rows, col, row, color);
-            ctx.drawImage(getCachedSprite(sprite, zoom), x, y + wallOffset * zoom);
-            continue;
-          }
-          const hex = wallColorToHex(color);
-          ctx.fillStyle = hex;
-          ctx.fillRect(x, y, TILE_SIZE * zoom, TILE_SIZE * zoom);
+        const color = tileColors.get(colorKey) ?? DEFAULT_WALL_COLOR;
+        if (hasWallSprites()) {
+          const { sprite, offsetY: wallOffset } = getColorizedWallSprite(flatTiles, cols, rows, col, row, color);
+          ctx.drawImage(getCachedSprite(sprite, zoom), x, y + wallOffset * zoom);
+          continue;
         }
+        const hex = wallColorToHex(color);
+        ctx.fillStyle = hex;
+        ctx.fillRect(x, y, TILE_SIZE * zoom, TILE_SIZE * zoom);
       } else {
         const colorKey = `${col},${row}`;
-        const color = tileColors.get(colorKey);
-        if (color) {
-          const sprite = getColorizedFloorSprite(tile - 1, color);
-          if (sprite) {
-            const canvas = getCachedSprite(sprite, zoom);
-            ctx.drawImage(canvas, x, y);
-          }
+        const color = tileColors.get(colorKey) ?? DEFAULT_FLOOR_COLOR;
+        const sprite = getColorizedFloorSprite(tile - 1, color);
+        if (sprite) {
+          const canvas = getCachedSprite(sprite, zoom);
+          ctx.drawImage(canvas, x, y);
         }
       }
     }
@@ -581,9 +582,7 @@ export function renderFrame(
   const offsetX = panX;
   const offsetY = panY;
 
-  if (tileColors) {
-    renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, cols);
-  }
+  renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors ?? EMPTY_TILE_COLORS, cols);
   renderCarpetLayer(ctx, carpetTiles, tileMap, cols, rows, offsetX, offsetY, zoom);
 
   if (seats) {
