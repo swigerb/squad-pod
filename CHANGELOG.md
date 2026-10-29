@@ -20,6 +20,7 @@ All notable changes to Squad Pod are documented here.
 
 ### Fixed
 - Invalid furniture drops and rotations now reject the whole group without partial moves, collisions, or changes to saved layout/history.
+- Sprites with opaque edge pixels no longer crash the animation loop while generating selection outlines.
 - Sound setting was ignored; the chime now plays when a member finishes work.
 - Invalid layout imports could overwrite the saved office; layouts are now validated and written atomically.
 - Roster tables with empty cells or CRLF line endings were misparsed.
