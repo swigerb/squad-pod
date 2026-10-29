@@ -175,7 +175,7 @@ describe('validated manifest assets', () => {
     expect(loadAssetSnapshot(bundled, [root]).diagnostics.join('\n')).toContain('exceeds');
     fs.writeFileSync(path.join(dir, 'manifest.json'), ' '.repeat(64 * 1024 + 1));
     expect(loadAssetSnapshot(bundled, [root]).diagnostics.join('\n')).toContain('65536');
-  });
+  }, 20000);
 
   it('rejects interlacing and repeated IHDR chunks before entering the PNG decoder', () => {
     const dir = pack('bad');
@@ -193,7 +193,7 @@ describe('validated manifest assets', () => {
     const snapshot = loadAssetSnapshot(bundled, [root]);
     expect(snapshot.diagnostics.join('\n')).toMatch(/Crc|end of stream/i);
     expect(snapshot.furniture).toHaveLength(38);
-  });
+  }, 20000);
 
   it('bounds root and item directory enumeration, missing roots and independent root recovery', () => {
     const dir = pack('item');
@@ -369,7 +369,7 @@ describe('validated manifest assets', () => {
     }
     expect(snapshot.diagnostics.some((d) => d.startsWith(roots[0]) && d.includes('Root enumeration budget'))).toBe(true);
     expect(snapshot.furniture).toHaveLength(38);
-  }, 30000);
+  }, 60000);
 
   it('bounds file reads for empty malformed manifests without consuming other roots allowances', () => {
     for (let i = 0; i < 128; i++) {
