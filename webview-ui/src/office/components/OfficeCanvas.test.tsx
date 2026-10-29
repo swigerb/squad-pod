@@ -11,6 +11,8 @@ import { TileType } from '../types.js';
 import { vscode } from '../../vscodeApi.js';
 import * as gameLoop from '../engine/gameLoop.js';
 import * as renderer from '../engine/renderer.js';
+import { ZoomControls } from '../../components/ZoomControls.js';
+import { TILE_SIZE } from '../../constants.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -261,5 +263,135 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
     key('z', true);
     expect(office.getLayout()).toEqual(before);
     expect(actions.canUndo).toBe(false);
+  });
+});
+
+describe('zoom keeps the office in view', () => {
+  const VIEW = { width: 356, height: 716 };
+  let host: HTMLDivElement;
+  let root: Root;
+  let office: OfficeState;
+  let actions: ReturnType<typeof useEditorActions>;
+  let frame: { mock: { lastCall?: unknown[] } };
+  const panRef = { current: { x: 0, y: 0 } };
+
+  beforeEach(() => {
+    const ctx = { setTransform: vi.fn(), imageSmoothingEnabled: false };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, left: 0, top: 0, right: VIEW.width, bottom: VIEW.height,
+      width: VIEW.width, height: VIEW.height, toJSON: () => ({}),
+    });
+    vi.spyOn(gameLoop, 'startGameLoop').mockImplementation((_canvas, callbacks) => {
+      callbacks.render(ctx as unknown as CanvasRenderingContext2D);
+      return () => {};
+    });
+    frame = vi.spyOn(renderer, 'renderFrame').mockImplementation(() => {});
+    // Initial zoom is floor(2 * devicePixelRatio); DPR 2 reproduces zoom 4.
+    vi.stubGlobal('devicePixelRatio', 2);
+    office = new OfficeState({ version: 2, cols: 20, rows: 15, tiles: Array(300).fill(TileType.FLOOR_1), furniture: [] });
+    for (let i = 0; i < 6; i++) office.addAgent(`a${i}`, `Agent ${i}`, 'Dev');
+    panRef.current = { x: 0, y: 0 };
+    const getOffice = () => office;
+    function Harness() {
+      actions = useEditorActions(getOffice, new EditorState());
+      return <>
+        <OfficeCanvas officeState={office} editorState={new EditorState()} isEditMode={false}
+          editorTick={0} zoom={actions.zoom} onZoomChange={actions.handleZoomChange} panRef={panRef} />
+        <ZoomControls zoom={actions.zoom} onZoomChange={actions.handleZoomChange} />
+      </>;
+    }
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    act(() => root.render(<Harness />));
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** Office rectangle actually handed to the renderer on the latest frame. */
+  function renderedOffice() {
+    const args = frame.mock.lastCall!;
+    const zoom = args[6] as number, x = args[7] as number, y = args[8] as number;
+    return { zoom, x, y, width: 20 * TILE_SIZE * zoom, height: 15 * TILE_SIZE * zoom };
+  }
+
+  function visibleArea(r: { x: number; y: number; width: number; height: number }) {
+    const w = Math.max(0, Math.min(r.x + r.width, VIEW.width) - Math.max(r.x, 0));
+    const h = Math.max(0, Math.min(r.y + r.height, VIEW.height) - Math.max(r.y, 0));
+    return w * h;
+  }
+
+  function charactersOnScreen(r: { zoom: number; x: number; y: number }) {
+    return [...office.characters.values()].filter((c) => {
+      const sx = c.x * r.zoom + r.x, sy = c.y * r.zoom + r.y;
+      return sx >= 0 && sx <= VIEW.width && sy >= 0 && sy <= VIEW.height;
+    }).length;
+  }
+
+  const button = (label: string) => [...host.querySelectorAll('button')].find((b) => b.textContent === label)!;
+  const click = (label: string) => act(() => button(label).dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+  it('356x716 panel, 20x15 office: three minus clicks from zoom 4 to 1 leave the whole office and every agent visible', () => {
+    const start = renderedOffice();
+    expect(start.zoom).toBe(4);
+    expect(start.x).toBeCloseTo((VIEW.width - start.width) / 2);
+    const centerWorldX = (VIEW.width / 2 - start.x) / 4;
+
+    click('−');
+    click('−');
+    click('−');
+
+    const end = renderedOffice();
+    expect(end.zoom).toBe(1);
+    // 320x240 office fits in 356x716 and is fully drawn, not offscreen left.
+    expect(end.x).toBeGreaterThanOrEqual(0);
+    expect(end.x + end.width).toBeLessThanOrEqual(VIEW.width);
+    expect(end.y).toBeGreaterThanOrEqual(0);
+    expect(end.y + end.height).toBeLessThanOrEqual(VIEW.height);
+    expect(visibleArea(end)).toBe(end.width * end.height);
+    expect(charactersOnScreen(end)).toBe(6);
+    // Viewport-center anchor: the same world point stays under the panel center.
+    expect((VIEW.width / 2 - end.x) / 1).toBeCloseTo(centerWorldX);
+    expect(button('−').disabled).toBe(true);
+  });
+
+  it('repeated button and Ctrl/Meta-wheel zoom across the full range never loses the office', () => {
+    const canvas = host.querySelector('canvas')!;
+    const wheel = (deltaY: number, clientX: number, clientY: number, metaKey = false) => act(() =>
+      canvas.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY, clientX, clientY, ctrlKey: !metaKey, metaKey })));
+    const check = () => {
+      const r = renderedOffice();
+      const axis = (map: number, view: number) => (map <= view ? map : view * 0.75);
+      expect(visibleArea(r)).toBeGreaterThanOrEqual(axis(r.width, VIEW.width) * axis(r.height, VIEW.height) - 1e-6);
+    };
+    for (let i = 0; i < 8; i++) { click('+'); check(); }
+    expect(renderedOffice().zoom).toBe(10);
+    for (let i = 0; i < 12; i++) { wheel(100, 5, 5, i % 2 === 1); check(); }
+    expect(renderedOffice().zoom).toBe(1);
+    for (let i = 0; i < 12; i++) { wheel(-100, 350, 700); check(); }
+    expect(renderedOffice().zoom).toBe(10);
+    for (let i = 0; i < 9; i++) { click('−'); check(); }
+    expect(renderedOffice().zoom).toBe(1);
+    expect(charactersOnScreen(renderedOffice())).toBe(6);
+  });
+
+  it('Ctrl-wheel zoom keeps the world point under the cursor fixed', () => {
+    const canvas = host.querySelector('canvas')!;
+    const before = renderedOffice();
+    const cursor = { x: 200, y: 300 };
+    const world = { x: (cursor.x - before.x) / before.zoom, y: (cursor.y - before.y) / before.zoom };
+    act(() => canvas.dispatchEvent(new WheelEvent('wheel', {
+      bubbles: true, cancelable: true, deltaY: -100, clientX: cursor.x, clientY: cursor.y, ctrlKey: true,
+    })));
+    const after = renderedOffice();
+    expect(after.zoom).toBe(5);
+    expect((cursor.x - after.x) / after.zoom).toBeCloseTo(world.x);
+    expect((cursor.y - after.y) / after.zoom).toBeCloseTo(world.y);
   });
 });
