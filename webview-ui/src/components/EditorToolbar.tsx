@@ -541,7 +541,7 @@ export function EditorToolbar({
                 style={styles.furnitureBtn(editorState.carpetVariant === variant)}
                 onClick={() => onCarpetVariantChange(variant)}>
                 <SpritePreview sprite={getCarpetPreview(variant, editorState.carpetColor, editorState.carpetAccentColor)} size={52} />
-                <span>Style {variant + 1}</span>
+                <span style={{ fontSize: '10px' }}>Style {variant + 1}</span>
               </button>
             ))}
           </div>

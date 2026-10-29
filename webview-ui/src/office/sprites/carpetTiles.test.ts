@@ -62,6 +62,12 @@ describe('pinned three-style marching-squares carpet sprites', () => {
     expect(recolored.flat()).toContain('#199419');
     expect(recolored.flat()).toContain('#5a5adb');
     expect(palette.length).toBe(2);
+    const mainOnly = getCarpetSprite(0, 1, { ...main, h: 120 }, accent)!;
+    const accentOnly = getCarpetSprite(0, 1, main, { ...accent, h: 240 })!;
+    original.forEach((row, y) => row.forEach((hex, x) => {
+      expect(mainOnly[y][x]).toBe(hex === '#941919' ? '#199419' : hex);
+      expect(accentOnly[y][x]).toBe(hex === '#dba35a' ? '#5a5adb' : hex);
+    }));
     const translucent = Array.from({ length: 16 }, () => [['#11111180', '#eeeeee40', '']]);
     setCarpetSprites([translucent]);
     expect(getCarpetSprite(0, 15)).toEqual([['#94191980', '#dba35a40', '']]);
