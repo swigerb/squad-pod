@@ -46,6 +46,11 @@ html, body, #root {
   flex-direction: column;
 }
 
+.bottom-toolbar > button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 /* Reserve a separate top strip without changing the canvas viewport or pan anchor. */
 .office-panel[data-edit-mode="true"] {
   --editor-toolbar-top: 64px;

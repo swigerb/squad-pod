@@ -136,6 +136,21 @@ Save/Undo actions. Outside edit mode, zoom buttons keep their vertical top-left
 placement. This rearranges controls only: the canvas viewport and zoom/pan
 anchors do not move, and switching tools or leaving/reopening the editor keeps
 the current draft and undo history.
+The bottom toolbar scrolls horizontally when its buttons do not fit, keeping
+Directories, Settings and the editor toggle reachable without shifting the canvas.
+
+For the control hit-target regression, build production assets, run
+`npm run serve:acceptance:pets`, then run `node scripts/acceptance-controls.cjs`
+in another terminal. It uses an **existing** Playwright installation
+(`PLAYWRIGHT_MODULE` can name its module path) and installed Microsoft Edge;
+it never downloads either. Optional `ACCEPTANCE_OUTPUT_DIR` writes JSON hit
+stacks and screenshots, and `ACCEPTANCE_URL` overrides the fixture URL.
+The check uses `elementsFromPoint` and normal, unforced clicks on zoom and
+Select after Pets at 1280×900, 360×640, 240×480 and 320×240, including editor
+scrolling, draft save/undo/redo and directory-launch request compatibility.
+It supplies Dark+ theme variables normally supplied by VS Code. This is a
+production-browser fixture with a mocked host boundary, **not** native VS Code
+or installed-VSIX acceptance; no terminal/CLI launch is executed.
 
 ### Source status and missing-team setup
 
