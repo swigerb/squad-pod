@@ -19,6 +19,7 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Canvas characters are no longer covered by duplicate opaque HTML avatars; transparent, keyboard-accessible name labels retain roles, activity/waiting indicators, tool text and card navigation.
 - Invalid furniture drops and rotations now reject the whole group without partial moves, collisions, or changes to saved layout/history.
 - Sprites with opaque edge pixels no longer crash the animation loop while generating selection outlines.
 - Sound setting was ignored; the chime now plays when a member finishes work.
