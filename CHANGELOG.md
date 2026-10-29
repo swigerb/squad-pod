@@ -22,6 +22,7 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Refreshed compatible development-tool transitive dependencies: `@humanfs/node` 0.16.8, `brace-expansion` 1.1.21 and `shell-quote` 1.12.0. The 2026-10-29 root audit decreased from five affected package entries to two high Azure Identity/MSAL entries; those remain unresolved pending a compatible stable parent release (#21). The separate webview audit reported zero findings; neither result establishes application exploitability or exploit freedom.
 - Bound manifest fingerprint/reload work across all roots, including failed attempts: fingerprints read only validated manifest references; isolated per-root byte/read/enumeration/decode allowances report explicit overflow and recover on edits without starving other roots. External roots now allow 48 furniture leaves / 98,304 attempted pixels each.
 - Refresh missing-art warnings on every applied host layout snapshot, including after the office is already ready, without requiring an unrelated UI event or saving the layout.
 - Character wander tests now use deterministic target candidates and cover staying idle with a reset timer when the current cell is selected or no candidates exist; movement behavior is unchanged.
