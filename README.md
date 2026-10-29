@@ -169,11 +169,14 @@ Carpet rendering caches masked junctions and palettes until the tile map,
 carpet array, dimensions or artwork generation changes. Frames draw only the
 visible region plus edge junctions, without rescanning off-screen cells.
 Opaque sheets use one cropped composite (at most 1040x1040 pixels, about
-4.13 MiB RGBA per canvas). Translucent art, fractional device-pixel scales,
+4.13 MiB RGBA per canvas). Translucent art, fractional device-pixel scales or
+fractional device-pixel offsets (including the context translation),
 larger maps or unavailable detached contexts use cached, viewport-culled
 direct draws instead. Previous composites are released on layout changes;
 unmounted contexts are weakly held. The first frame after an edit rebuilds
 derived rendering data; no cache is written to layouts or recovery snapshots.
+Fractional offsets keep individual sprite edges because GPU rasterization can
+antialias those edges against the floor; merging them would change seam pixels.
 
 ### Unsaved layouts and incoming conflicts
 

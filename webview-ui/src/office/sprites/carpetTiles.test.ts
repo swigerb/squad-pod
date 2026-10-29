@@ -117,7 +117,7 @@ describe('pinned three-style marching-squares carpet sprites', () => {
   });
 
   function context(width = 160, height = 100, dpr = 2) {
-    return { drawImage: vi.fn(), canvas: { width: width * dpr, height: height * dpr }, getTransform: vi.fn(() => ({ a: dpr, d: dpr })) };
+    return { drawImage: vi.fn(), canvas: { width: width * dpr, height: height * dpr }, getTransform: vi.fn(() => ({ a: dpr, d: dpr, e: 0, f: 0 })) };
   }
   function draw(ctx: ReturnType<typeof context>, tiles: Array<CarpetTile | null> | undefined, map: number[][],
     cols: number, rows: number, x = 0, y = 0, zoom = 1) {
@@ -190,6 +190,27 @@ describe('pinned three-style marching-squares carpet sprites', () => {
       expect(ctx.drawImage.mock.calls.every(call => !(call[0] instanceof HTMLCanvasElement))).toBe(true);
     });
 
+    it.each([
+      [-73, -45, 0, 0, true],
+      [-73.5, -45.5, 0, 0, true],
+      [-73.25, -45.5, 0, 0, false],
+      [-73.125, -45.125, 0, 0, false],
+      [-73, -45.125, 0, 0, false],
+      [-73.25, -45.5, 0.5, 0, true],
+      [-73, -45, 0.25, 0, false],
+      [-73, -45, 0, 0.25, false],
+    ])('preserves sprite edges at pan %s,%s translation %s,%s (composite %s)', (x, y, e, f, composite) => {
+      const ctx = context(160, 100, 2), cols = 8, rows = 6, zoom = 4;
+      ctx.getTransform.mockReturnValue({ a: 2, d: 2, e, f });
+      const tiles = Array<CarpetTile | null>(cols * rows).fill({ variant: 0 });
+      const map = Array.from({ length: rows }, () => Array<number>(cols).fill(1));
+      const expected = reference(tiles, map, cols, rows, x, y, zoom).filter(([, dx, dy]) =>
+        dx <= 160 && dy <= 100 && dx + 16 * zoom >= 0 && dy + 16 * zoom >= 0);
+      expect(draw(ctx, tiles, map, cols, rows, x, y, zoom)).toEqual(expected);
+      expect(ctx.drawImage.mock.calls.some(call => call[0] instanceof HTMLCanvasElement)).toBe(composite);
+      if (composite) expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+    });
+
     it('short-circuits absent/empty/all-null or fully masked layers and caches the empty result', () => {
       const ctx = context(), map = [[1, 1]];
       for (const tiles of [undefined, [], [null, null], [{ variant: 0 }, { variant: 1 }]]) {
@@ -254,7 +275,7 @@ describe('pinned three-style marching-squares carpet sprites', () => {
   });
 
   it('draws centered junctions above floors, orders overlapping palettes, and hides carpet on wall/void', () => {
-    const ctx = { drawImage: vi.fn(), canvas: { width: 1280, height: 720 }, getTransform: () => ({ a: 1, d: 1 }) };
+    const ctx = { drawImage: vi.fn(), canvas: { width: 1280, height: 720 }, getTransform: () => ({ a: 1, d: 1, e: 0, f: 0 }) };
     const red = { variant: 0, color: main, accentColor: accent, order: 2 };
     const blue = { ...red, color: { ...main, h: 210 }, order: 1 };
     const tiles = [red, blue];

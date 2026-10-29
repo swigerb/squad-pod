@@ -111,12 +111,14 @@ export function renderCarpetLayer(
   const top = Math.max(0, Math.ceil(-offsetY / s - 0.5));
   const bottom = Math.min(rows, Math.floor((height - offsetY) / s + 0.5));
   if (right < left || bottom < top) return;
-  // Fractional device scales can sample a scaled mosaic differently at cell
-  // boundaries than separately scaled sprites. Retain the reference path.
-  if (layer.canvas && Number.isInteger(zoom * transform.a) && Number.isInteger(zoom * transform.d)) {
+  const dstX = offsetX + left * s - s / 2, dstY = offsetY + top * s - s / 2;
+  // Fractional device scales change sampling; fractional device offsets let GPU
+  // rasterization antialias each sprite edge against the floor. Keep those edges.
+  if (layer.canvas && Number.isInteger(zoom * transform.a) && Number.isInteger(zoom * transform.d)
+    && Number.isInteger(dstX * transform.a + transform.e) && Number.isInteger(dstY * transform.d + transform.f)) {
     const w = (right - left + 1) * TILE_SIZE, h = (bottom - top + 1) * TILE_SIZE;
     ctx.drawImage(layer.canvas, left * TILE_SIZE, top * TILE_SIZE, w, h,
-      offsetX + left * s - s / 2, offsetY + top * s - s / 2, w * zoom, h * zoom);
+      dstX, dstY, w * zoom, h * zoom);
     return;
   }
   for (let jy = top; jy <= bottom; jy++) {

@@ -31,7 +31,7 @@ describe('tile colors are optional rendering overrides', () => {
     });
     ctx = {
       canvas: { width: 48, height: 16 },
-      getTransform: () => ({ a: 1, d: 1 }),
+      getTransform: () => ({ a: 1, d: 1, e: 0, f: 0 }),
       clearRect: vi.fn(),
       fillStyle: '',
       fillRect(x: number, y: number) {

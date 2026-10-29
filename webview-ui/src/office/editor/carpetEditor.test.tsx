@@ -199,7 +199,7 @@ describe('carpets through real canvas/editor transactions', () => {
       composites.set(this, drawImage);
       return { drawImage, imageSmoothingEnabled: false } as unknown as CanvasRenderingContext2D;
     });
-    const ctx = { drawImage: vi.fn(), canvas: { width: 1280, height: 720 }, getTransform: () => ({ a: 1, d: 1 }) };
+    const ctx = { drawImage: vi.fn(), canvas: { width: 1280, height: 720 }, getTransform: () => ({ a: 1, d: 1, e: 0, f: 0 }) };
     const render = () => {
       ctx.drawImage.mockClear();
       renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, office.layout.carpetTiles,
