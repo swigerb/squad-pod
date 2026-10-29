@@ -20,6 +20,8 @@ interface OfficeCanvasProps {
   onRotateSelected?: () => void;
   onDragMove?: (uid: string, newCol: number, newRow: number) => void;
   onExpandGrid?: (direction: 'left' | 'right' | 'up' | 'down') => void;
+  onGestureStart?: () => void;
+  onGestureEnd?: () => void;
   editorTick: number;
   zoom: number;
   onZoomChange?: (zoom: number) => void;
@@ -37,6 +39,8 @@ export function OfficeCanvas({
   onEditorSelectionChange,
   onDragMove,
   onExpandGrid,
+  onGestureStart,
+  onGestureEnd,
   zoom,
   onZoomChange,
   panRef,
@@ -49,6 +53,9 @@ export function OfficeCanvas({
   const panOriginRef = useRef<{ x: number; y: number } | null>(null);
   const spaceKeyRef = useRef(false);
   const draggedFurnitureRef = useRef<{ uid: string; offsetCol: number; offsetRow: number } | null>(null);
+  // Tile last touched by an in-progress paint/erase stroke.
+  const strokeRef = useRef<{ col: number; row: number } | null>(null);
+  const gestureOpenRef = useRef(false);
   const hasCenteredRef = useRef(false);
   const frameCountRef = useRef(0);
 
@@ -205,11 +212,16 @@ export function OfficeCanvas({
             if (col >= furn.col && col < furn.col + furnWidth && row >= furn.row && row < furn.row + furnHeight) {
               selectedUid = furn.uid;
               draggedFurnitureRef.current = { uid: furn.uid, offsetCol: col - furn.col, offsetRow: row - furn.row };
+              gestureOpenRef.current = true;
+              onGestureStart?.();
               break;
             }
           }
           onEditorSelectionChange?.(selectedUid);
         } else if (editorState.tool === 'erase') {
+          gestureOpenRef.current = true;
+          onGestureStart?.();
+          strokeRef.current = { col, row };
           onEditorEraseAction?.(col, row);
         } else if (editorState.tool === 'eyedropper') {
           const tile = officeState.tileMap[row]?.[col];
@@ -218,6 +230,11 @@ export function OfficeCanvas({
             editorState.setTool(EditTool.TILE_PAINT);
           }
         } else {
+          if (editorState.tool === EditTool.TILE_PAINT || editorState.tool === EditTool.WALL_PAINT) {
+            gestureOpenRef.current = true;
+            onGestureStart?.();
+            strokeRef.current = { col, row };
+          }
           onEditorTileAction?.(col, row);
         }
       } else {
@@ -288,6 +305,7 @@ export function OfficeCanvas({
       onEditorEraseAction,
       onEditorSelectionChange,
       onExpandGrid,
+      onGestureStart,
       zoom,
       panRef,
       onDeskClick,
@@ -322,6 +340,18 @@ export function OfficeCanvas({
       const { col, row } = screenToWorld(screenX, screenY);
       officeState.hoveredTile = { col, row };
 
+      const stroke = strokeRef.current;
+      if (stroke && isEditMode && (stroke.col !== col || stroke.row !== row)) {
+        const inGrid = col >= 0 && row >= 0 && col < officeState.layout.cols && row < officeState.layout.rows;
+        if (inGrid) {
+          strokeRef.current = { col, row };
+          if (editorState.tool === EditTool.ERASE) onEditorEraseAction?.(col, row);
+          else if (editorState.tool === EditTool.TILE_PAINT || editorState.tool === EditTool.WALL_PAINT) {
+            onEditorTileAction?.(col, row);
+          }
+        }
+      }
+
       let hoveredId: string | null = null;
       for (const [id, char] of officeState.characters) {
         const charScreenX = char.x * zoom + panRef.current!.x;
@@ -337,7 +367,7 @@ export function OfficeCanvas({
       }
       officeState.hoveredAgentId = hoveredId;
     },
-    [isPanning, isEditMode, editorState.tool, screenToWorld, officeState, zoom, panRef, clampPan, onDragMove]
+    [isPanning, isEditMode, editorState.tool, screenToWorld, officeState, zoom, panRef, clampPan, onDragMove, onEditorEraseAction, onEditorTileAction]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -345,7 +375,12 @@ export function OfficeCanvas({
     panStartRef.current = null;
     panOriginRef.current = null;
     draggedFurnitureRef.current = null;
-  }, []);
+    strokeRef.current = null;
+    if (gestureOpenRef.current) {
+      gestureOpenRef.current = false;
+      onGestureEnd?.();
+    }
+  }, [onGestureEnd]);
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {

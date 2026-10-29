@@ -7,6 +7,8 @@ import {
   readPersistedLayout,
   writePersistedLayout,
   deletePersistedLayout,
+  isValidLayout,
+  parseLayoutJson,
 } from './layoutPersistence.js';
 
 describe('layoutPersistence', () => {
@@ -77,5 +79,41 @@ describe('layoutPersistence', () => {
     expect(result!.version).toBe(2);
     // v1→v2 migration strips tileColors so ensureTileColors regenerates with warm colors
     expect(result!.tileColors).toBeUndefined();
+  });
+
+  describe('validation', () => {
+    it('accepts a well-formed layout and defaults missing furniture', () => {
+      expect(isValidLayout(sampleLayout)).toBe(true);
+      const parsed = parseLayoutJson(JSON.stringify({ cols: 2, rows: 1, tiles: [1, 1] }));
+      expect(parsed?.furniture).toEqual([]);
+    });
+
+    it('accepts a UTF-8 BOM', () => {
+      expect(parseLayoutJson('\uFEFF' + JSON.stringify(sampleLayout))).not.toBeNull();
+    });
+
+    it.each([
+      ['not JSON', '{oops'],
+      ['an array', '[]'],
+      ['tile count mismatch', JSON.stringify({ cols: 2, rows: 2, tiles: [1] })],
+      ['non-integer tiles', JSON.stringify({ cols: 1, rows: 1, tiles: ['x'] })],
+      ['zero size', JSON.stringify({ cols: 0, rows: 0, tiles: [] })],
+      ['oversized grid', JSON.stringify({ cols: 1000, rows: 1, tiles: Array(1000).fill(1) })],
+      ['bad furniture', JSON.stringify({ cols: 1, rows: 1, tiles: [1], furniture: [{ type: 'desk' }] })],
+    ])('rejects %s', (_label, content) => {
+      expect(parseLayoutJson(content)).toBeNull();
+    });
+
+    it('ignores a malformed file on disk instead of loading it', () => {
+      writePersistedLayout(tmpDir, sampleLayout);
+      const file = path.join(tmpDir, '.squad-pod', 'layout.json');
+      fs.writeFileSync(file, JSON.stringify({ cols: 3, rows: 3, tiles: [1] }));
+      expect(readPersistedLayout(tmpDir)).toBeNull();
+    });
+
+    it('leaves no temp files after saving', () => {
+      writePersistedLayout(tmpDir, sampleLayout);
+      expect(fs.readdirSync(path.join(tmpDir, '.squad-pod'))).toEqual(['layout.json']);
+    });
   });
 });

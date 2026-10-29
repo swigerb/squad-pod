@@ -4,7 +4,8 @@ import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, OfficeLayout } from '../office/types.js';
 import { applyTilePaint, applyErase, applyFurniturePlace } from '../office/editor/editorActions.js';
-import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, UNDO_STACK_MAX_SIZE, MAX_COLS, MAX_ROWS } from '../constants.js';
+import { UndoHistory } from '../office/editor/undoHistory.js';
+import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, MAX_COLS, MAX_ROWS } from '../constants.js';
 import { vscode } from '../vscodeApi.js';
 
 export function useEditorActions(getOfficeState: () => OfficeState, editorState: EditorState) {
@@ -12,17 +13,23 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   const [editorTick, setEditorTick] = useState(0);
   const [zoom, setZoom] = useState(Math.floor(ZOOM_DEFAULT_DPR_FACTOR * (window.devicePixelRatio || 1)));
   const panRef = useRef({ x: 0, y: 0 });
-  const undoStack = useRef<OfficeLayout[]>([]);
-  const redoStack = useRef<OfficeLayout[]>([]);
+  const historyRef = useRef(new UndoHistory());
   const lastSavedLayoutRef = useRef<OfficeLayout | null>(null);
 
+  // Inside a gesture the starting layout is already captured, so edits don't add entries.
   const pushUndo = useCallback(() => {
-    const currentLayout = getOfficeState().getLayout();
-    undoStack.current.push(JSON.parse(JSON.stringify(currentLayout)));
-    if (undoStack.current.length > UNDO_STACK_MAX_SIZE) {
-      undoStack.current.shift();
+    if (historyRef.current.inGesture) return;
+    historyRef.current.record(getOfficeState().getLayout());
+  }, [getOfficeState]);
+
+  const handleGestureStart = useCallback(() => {
+    historyRef.current.beginGesture(getOfficeState().getLayout());
+  }, [getOfficeState]);
+
+  const handleGestureEnd = useCallback(() => {
+    if (historyRef.current.endGesture(getOfficeState().getLayout())) {
+      setEditorTick((t) => t + 1);
     }
-    redoStack.current = [];
   }, [getOfficeState]);
 
   const isDirty = useCallback(() => {
@@ -32,11 +39,9 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   }, [getOfficeState]);
 
   const handleToggleEditMode = useCallback(() => {
+    historyRef.current.endGesture(getOfficeState().getLayout());
     setIsEditMode((prev) => !prev);
-    if (!isEditMode) {
-      pushUndo();
-    }
-  }, [isEditMode, pushUndo]);
+  }, [getOfficeState]);
 
   const handleToolChange = useCallback((tool: EditTool) => {
     editorState.setTool(tool);
@@ -160,19 +165,17 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   }, [editorState, getOfficeState, pushUndo]);
 
   const handleUndo = useCallback(() => {
-    if (undoStack.current.length === 0) return;
     const officeState = getOfficeState();
-    redoStack.current.push(JSON.parse(JSON.stringify(officeState.getLayout())));
-    const prevLayout = undoStack.current.pop()!;
+    const prevLayout = historyRef.current.undo(officeState.getLayout());
+    if (!prevLayout) return;
     officeState.rebuildFromLayout(prevLayout);
     setEditorTick((t) => t + 1);
   }, [getOfficeState]);
 
   const handleRedo = useCallback(() => {
-    if (redoStack.current.length === 0) return;
     const officeState = getOfficeState();
-    undoStack.current.push(JSON.parse(JSON.stringify(officeState.getLayout())));
-    const nextLayout = redoStack.current.pop()!;
+    const nextLayout = historyRef.current.redo(officeState.getLayout());
+    if (!nextLayout) return;
     officeState.rebuildFromLayout(nextLayout);
     setEditorTick((t) => t + 1);
   }, [getOfficeState]);
@@ -187,9 +190,8 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   const handleReset = useCallback(() => {
     if (!lastSavedLayoutRef.current) return;
     const officeState = getOfficeState();
-    officeState.rebuildFromLayout(lastSavedLayoutRef.current);
-    undoStack.current = [];
-    redoStack.current = [];
+    officeState.rebuildFromLayout(JSON.parse(JSON.stringify(lastSavedLayoutRef.current)));
+    historyRef.current.clear();
     setEditorTick((t) => t + 1);
   }, [getOfficeState]);
 
@@ -198,14 +200,21 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
       const officeState = getOfficeState();
       const layout = officeState.getLayout();
       const furniture = layout.furniture.find((f) => f.uid === uid);
-      if (furniture) {
-        furniture.col = newCol;
-        furniture.row = newRow;
-        officeState.rebuildFromLayout(layout);
-        setEditorTick((t) => t + 1);
-      }
+      if (!furniture || (furniture.col === newCol && furniture.row === newRow)) return;
+      const placed = officeState.furniture.find((f) => f.uid === uid);
+      const width = placed?.width ?? 1;
+      const height = placed?.height ?? 1;
+      // Reject moves that would push any part of the item off the grid.
+      if (newCol < 0 || newRow < 0 || newCol + width > layout.cols || newRow + height > layout.rows) return;
+      pushUndo();
+      const next = JSON.parse(JSON.stringify(layout)) as OfficeLayout;
+      const moved = next.furniture.find((f) => f.uid === uid)!;
+      moved.col = newCol;
+      moved.row = newRow;
+      officeState.rebuildFromLayout(next);
+      setEditorTick((t) => t + 1);
     },
-    [getOfficeState]
+    [getOfficeState, pushUndo]
   );
 
   const handleExpandGrid = useCallback(
@@ -269,10 +278,6 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     setZoom(clamped);
   }, []);
 
-  const handleOpenClaude = useCallback(() => {
-    vscode.postMessage({ type: 'openClaude' });
-  }, []);
-
   const handleSelectedFurnitureColorChange = useCallback(
     (color: FloorColor) => {
       if (!editorState.selectedFurnitureUid) return;
@@ -299,8 +304,10 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     editorTick,
     zoom,
     panRef,
-    canUndo: undoStack.current.length > 0,
-    canRedo: redoStack.current.length > 0,
+    canUndo: historyRef.current.canUndo,
+    canRedo: historyRef.current.canRedo,
+    handleGestureStart,
+    handleGestureEnd,
     handleToggleEditMode,
     handleToolChange,
     handleTileTypeChange,
@@ -320,7 +327,6 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     handleDragMove,
     handleExpandGrid,
     handleZoomChange,
-    handleOpenClaude,
     handleSelectedFurnitureColorChange,
     setLastSavedLayout,
   };
