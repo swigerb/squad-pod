@@ -8,6 +8,7 @@ import { OfficeCanvas } from '../components/OfficeCanvas.js';
 import { useEditorActions } from '../../hooks/useEditorActions.js';
 import { EditorToolbar } from '../../components/EditorToolbar.js';
 import { setCarpetSprites } from '../sprites/carpetTiles.js';
+import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
 import { applyCarpetPaint, applyCarpetErase, applyTilePaint } from './editorActions.js';
 import { deserializeLayout, serializeLayout } from '../layout/layoutManager.js';
 import { vscode } from '../../vscodeApi.js';
@@ -51,7 +52,7 @@ describe('carpets through real canvas/editor transactions', () => {
         <EditorToolbar editorState={state} {...actions} onToolChange={actions.handleToolChange}
           onTileTypeChange={actions.handleTileTypeChange} onFloorColorChange={actions.handleFloorColorChange}
           onWallColorChange={actions.handleWallColorChange} onFurnitureTypeChange={actions.handleFurnitureTypeChange}
-          activePetTypes={[]} onPetToggle={actions.handlePetToggle}
+          activePetTypes={office.getActivePetTypes()} onPetToggle={actions.handlePetToggle}
           onCarpetVariantChange={actions.handleCarpetVariantChange} onCarpetColorChange={actions.handleCarpetColorChange}
           onSave={actions.handleSave} onReset={actions.handleReset} onUndo={actions.handleUndo} onRedo={actions.handleRedo}
           onDeleteSelected={actions.handleDeleteSelected} onRotateSelected={actions.handleRotateSelected}
@@ -75,6 +76,7 @@ describe('carpets through real canvas/editor transactions', () => {
     act(() => root.unmount());
     host.remove();
     setCarpetSprites([]);
+    resetPetTemplates();
     vi.restoreAllMocks();
   });
 
@@ -272,5 +274,31 @@ describe('carpets through real canvas/editor transactions', () => {
     act(() => actions.acknowledgeSave(painted, 'saved-again'));
     act(() => actions.receiveLayout(incoming, 'external', 'external-next', 'C:\\carpet-fixture'));
     expect(render()).toEqual(imported);
+  });
+
+  it('keeps unavailable active pet types removable and preserves other unknown types through undo and redo', () => {
+    setPetTemplates([]);
+    const unrelated = { id: 'unavailable-511', petType: 511 };
+    const incoming: OfficeLayout = {
+      ...structuredClone(before),
+      pets: [{ id: 'unavailable-23', petType: 23 }, unrelated],
+    };
+    act(() => actions.receiveLayout(incoming, 'external', 'pets-revision', 'C:\\carpet-fixture'));
+    act(() => actions.handleToolChange(EditTool.PETS));
+
+    const remove = host.querySelector<HTMLButtonElement>('[data-pet-type="23"]');
+    expect(remove).not.toBeNull();
+    expect(remove!.disabled).toBe(false);
+    expect(remove!.getAttribute('aria-label')).toContain('unavailable');
+    expect(remove!.textContent).toContain('Unavailable');
+
+    act(() => remove!.click());
+    expect(office.layout.pets).toEqual([unrelated]);
+    expect(actions.isDirty).toBe(true);
+
+    act(() => actions.handleUndo());
+    expect(office.layout.pets).toEqual(incoming.pets);
+    act(() => actions.handleRedo());
+    expect(office.layout.pets).toEqual([unrelated]);
   });
 });

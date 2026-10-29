@@ -129,9 +129,7 @@ describe('validated manifest assets', () => {
       for (const relative of petFiles.sort()) {
         petHash.update(`${relative}\0`);
         const bytes = fs.readFileSync(path.join(bundled, relative));
-        petHash.update(relative.endsWith('.json')
-          ? Buffer.from(bytes.toString('utf8').replace(/\r\n?/g, '\n'))
-          : bytes);
+        petHash.update(bytes);
       }
       expect(petFiles).toHaveLength(4);
       expect(petHash.digest('hex')).toBe(pets.sha256);

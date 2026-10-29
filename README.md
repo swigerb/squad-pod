@@ -80,7 +80,7 @@ Then press **F5** in VS Code to launch the Extension Development Host.
 | `npm run test:all` | Run extension host and webview unit tests |
 | `npm run build` | Production build of the webview (Vite) and extension (esbuild) |
 | `npm run verify` | Lint, type-check, test, and build: the same checks CI runs |
-| `npm run package` | Build `squad-pod-<version>.vsix` with `@vscode/vsce` |
+| `npm run package` | Build `squad-pod-<version>.vsix` and verify shipped pet manifests against their committed Git blobs |
 | `npm run test:smoke:pets-provider` | Verify the compiled provider and production bundle markers through a mocked VS Code boundary (does not execute the webview UI) |
 | `npm run serve:acceptance:pets` | Serve the production webview with asset/layout snapshots from the compiled provider through a mocked boundary for browser interaction (not a native VS Code host) |
 
@@ -321,6 +321,42 @@ introduces or removes legacy/unknown IDs; no unrelated UI action or save is need
 Incoming host layouts now use the draft-conflict protection described above;
 missing-art warnings follow the selected canvas rather than an unresolved
 incoming snapshot. Asset-only refreshes do not replace the layout or editor history.
+
+### Custom pet sheets
+
+Put pet assets under `pets/<id>/` inside an already registered asset directory.
+Each pet folder needs a `manifest.json` and sibling `pet.png`:
+
+```text
+my-assets/
+  pets/
+    my-dog/
+      manifest.json
+      pet.png
+```
+
+```json
+{
+  "id": "my-dog",
+  "name": "My Dog",
+  "petType": 2
+}
+```
+
+`id` must match the folder name. `petType` is a stable integer from 0 to 511, unique across all pet manifests:
+bundled Claudio and Gitcat reserve 0 and 1, so custom sheets should use an
+unused value from 2 through 511. A valid type stays reserved even if its image
+fails to load, preventing a repaired or later-added sheet from changing a
+saved pet's species. Duplicate IDs or types and invalid types are rejected
+with asset diagnostics. A pet sheet
+must be exactly 96×96 pixels and no larger than 512 KiB. Upstream Pixel Agents
+pet manifests contain `id` and `name`; Squad Pod additionally requires
+`petType`, so add this field before loading an upstream pet pack.
+
+Saved pet placements keep their identity and numeric type if a sheet becomes
+unavailable. The Pets editor labels those placements unavailable and still
+lets you remove them; it does not substitute another species or add a new
+placement without a valid sheet.
 
 **Aggregate reload work is bounded, including failed attempts.** Each root has
 its own non-transferable allowance per fingerprint/load pass: **2 MiB of file

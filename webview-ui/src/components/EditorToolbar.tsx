@@ -563,7 +563,7 @@ export function EditorToolbar({
         <div style={styles.section}>
           <div style={styles.sectionLabel}>Pets</div>
           <div className="pets-carousel" data-testid="pets-carousel" style={styles.furnitureGrid}>
-            {getPetTypes().map((petType) => {
+            {[...new Set([...getPetTypes(), ...activePetTypes])].sort((a, b) => a - b).map((petType) => {
               const sprites = getPetSprites(petType);
               const name = getPetName(petType);
               const active = activePetTypes.includes(petType);
@@ -571,20 +571,23 @@ export function EditorToolbar({
                 <button
                   key={petType}
                   type="button"
-                  title={name}
+                  data-pet-type={petType}
+                  title={sprites ? name : `${name} unavailable`}
+                  aria-label={sprites ? name : `${name} unavailable; click to remove saved pet`}
                   aria-pressed={active}
-                  disabled={!sprites}
+                  disabled={!sprites && !active}
                   style={styles.furnitureBtn(active)}
                   onClick={() => onPetToggle(petType)}
                 >
                   {sprites && <SpritePreview sprite={sprites.idleDown[0]} size={48} />}
                   <span style={{ fontSize: '9px' }}>{name}</span>
+                  {!sprites && <span style={{ fontSize: '8px', color: TEXT_DIM }}>Unavailable</span>}
                 </button>
               );
             })}
             {getPetCount() === 0 && (
               <div style={{ fontSize: '10px', color: TEXT_DIM, padding: '4px' }}>
-                No valid pet sheets are loaded. Check asset diagnostics.
+                No valid pet sheets are loaded. Saved unavailable pets can still be removed; check asset diagnostics.
               </div>
             )}
           </div>
