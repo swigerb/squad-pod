@@ -22,6 +22,8 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Bound manifest fingerprint/reload work across all roots, including failed attempts: fingerprints read only validated manifest references; isolated per-root byte/read/enumeration/decode allowances report explicit overflow and recover on edits without starving other roots. External roots now allow 48 furniture leaves / 98,304 attempted pixels each.
+- Refresh missing-art warnings on every applied host layout snapshot, including after the office is already ready, without requiring an unrelated UI event or saving the layout.
 - Character wander tests now use deterministic target candidates and cover staying idle with a reset timer when the current cell is selected or no candidates exist; movement behavior is unchanged.
 - Zooming out with the zoom buttons or Ctrl/Meta-wheel could leave the whole office offscreen (e.g. a narrow panel zoomed 4→1). Zoom now keeps the panel center (buttons) or cursor (wheel) anchored and re-clamps the view; an office that fits the panel stays fully visible, and pan bounds no longer invert for small maps.
 - Canvas characters are no longer covered by duplicate opaque HTML avatars; transparent, keyboard-accessible name labels retain roles, activity/waiting indicators, tool text and card navigation.

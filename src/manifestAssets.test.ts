@@ -4,8 +4,29 @@ import * as os from 'os';
 import * as path from 'path';
 import { PNG } from 'pngjs';
 import { createHash } from 'crypto';
-import { assetSourceFingerprint, loadAssetSnapshot, validateManifest, watchAssetSnapshots } from './manifestAssets.js';
+import { ASSET_ROOT_LIMITS, assetSourceFingerprint, loadAssetSnapshot, validateManifest, watchAssetSnapshots } from './manifestAssets.js';
 import { parseLayoutJson, writePersistedLayout, readPersistedLayout } from './layoutPersistence.js';
+
+const work = vi.hoisted(() => ({ bytes: 0, reads: 0, enumeration: 0 }));
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    readSync: (fd: number, buffer: Buffer, offset: number, length: number, position: number) => {
+      work.reads++;
+      const read = actual.readSync(fd, buffer, offset, length, position);
+      work.bytes += read;
+      return read;
+    },
+    opendirSync: (directory: string) => {
+      const dir = actual.opendirSync(directory);
+      return {
+        readSync: () => { work.enumeration++; return dir.readSync(); },
+        closeSync: () => dir.closeSync(),
+      };
+    },
+  };
+});
 
 const bundled = path.resolve('webview-ui', 'public', 'assets');
 const manifest = {
@@ -26,7 +47,7 @@ describe('validated manifest assets', () => {
     return dir;
   }
   beforeEach(() => { root = fs.mkdtempSync(path.join(os.tmpdir(), 'pod-assets-')); });
-  afterEach(() => { vi.useRealTimers(); fs.rmSync(root, { recursive: true, force: true }); });
+  afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); fs.rmSync(root, { recursive: true, force: true }); });
 
   it('decodes the actual verified bundle, including exact desk footprints and all tile sheets', () => {
     const snapshot = loadAssetSnapshot(bundled);
@@ -151,7 +172,7 @@ describe('validated manifest assets', () => {
     expect(loadAssetSnapshot(bundled, Array(9).fill(root)).diagnostics.join('\n')).toContain('eight');
   });
 
-  it('enforces aggregate pixel and asset budgets atomically while allowing smaller later manifests', () => {
+  it('reserves decode work even for failed manifests, while allowing smaller later manifests', () => {
     const oversized = {
       ...manifest, type: 'group', groupType: 'rotation',
       members: Array.from({ length: 16 }, (_, i) => ({
@@ -161,18 +182,231 @@ describe('validated manifest assets', () => {
     const dir = pack('large', oversized);
     expect(loadAssetSnapshot(bundled, [root]).diagnostics.join('\n')).toContain('budget');
     fs.rmSync(dir, { recursive: true });
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 2; i++) {
       pack(`batch${i}`, {
         ...manifest, id: `BATCH${i}`, type: 'group', groupType: 'rotation',
-        members: Array.from({ length: 64 }, (_, j) => ({ ...manifest, id: `LEAF_${j}`, file: 'TEST.png' })),
+        members: Array.from({ length: 32 }, (_, j) => ({ ...manifest, id: `LEAF_${j}`, file: 'TEST.png' })),
       });
     }
     pack('zgood');
     const snapshot = loadAssetSnapshot(bundled, [root]);
     expect(snapshot.diagnostics).toHaveLength(1);
     expect(snapshot.diagnostics[0]).toContain('budget');
-    expect(snapshot.furniture).toHaveLength(38 + 7 * 64 + 1);
+    expect(snapshot.furniture).toHaveLength(38 + 32 + 1);
     expect(snapshot.furniture.some((f) => f.type === 'local_TEST_TEST')).toBe(true);
+  });
+
+  it('does not read/hash unreferenced PNGs or PNGs mentioned by invalid manifests', () => {
+    const dir = pack('valid');
+    const bad = pack('invalid', { ...manifest, type: 'invalid' });
+    work.bytes = work.reads = work.enumeration = 0;
+    const before = assetSourceFingerprint(bundled, [root]);
+    const beforeReads = work.reads;
+    const beforeBytes = work.bytes;
+    fs.writeFileSync(path.join(dir, 'UNREFERENCED.png'), Buffer.alloc(1024 * 1024));
+    fs.writeFileSync(path.join(bad, 'TEST.png'), Buffer.alloc(1024 * 1024));
+    work.bytes = work.reads = work.enumeration = 0;
+    expect(assetSourceFingerprint(bundled, [root])).toBe(before);
+    expect(work.reads).toBe(beforeReads);
+    expect(work.bytes).toBe(beforeBytes);
+    fs.writeFileSync(path.join(dir, 'UNREFERENCED.png'), Buffer.alloc(1024 * 1024, 1));
+    expect(assetSourceFingerprint(bundled, [root])).toBe(before);
+    expect(loadAssetSnapshot(bundled, [root]).furniture).toHaveLength(39);
+  });
+
+  it('reads a shared PNG once per manifest but reserves every leaf decode', () => {
+    pack('shared', {
+      ...manifest, type: 'group', groupType: 'state',
+      members: Array.from({ length: 48 }, (_, i) => ({ ...manifest, id: `LEAF${i}`, file: 'TEST.png' })),
+    });
+    for (const scan of [
+      (roots: string[]) => assetSourceFingerprint(bundled, roots),
+      (roots: string[]) => loadAssetSnapshot(bundled, roots),
+    ]) {
+      work.reads = 0;
+      scan([]);
+      const baselineReads = work.reads;
+      work.reads = 0;
+      scan([root]);
+      expect(work.reads - baselineReads).toBe(2); // One manifest, one PNG.
+    }
+    pack('z_extra');
+    expect(loadAssetSnapshot(bundled, [root]).diagnostics).toEqual([
+      expect.stringContaining('z_extra: Root decode budget'),
+    ]);
+  });
+
+  it('allows exactly the external decode count and reports overflow without starving other roots', () => {
+    for (let i = 0; i <= ASSET_ROOT_LIMITS.external.assets; i++) {
+      pack(`item${String(i).padStart(3, '0')}`, { ...manifest, id: `ITEM${i}`, file: 'TEST.png' });
+    }
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), 'pod-independent-'));
+    try {
+      const good = path.join(other, 'good');
+      fs.mkdirSync(good);
+      fs.copyFileSync(path.join(root, 'item000', 'TEST.png'), path.join(good, 'TEST.png'));
+      fs.writeFileSync(path.join(good, 'manifest.json'), JSON.stringify(manifest));
+      for (const roots of [[root, other], [other, root]]) {
+        const snapshot = loadAssetSnapshot(bundled, roots);
+        expect(snapshot.furniture).toHaveLength(38 + 48 + 1);
+        expect(snapshot.furniture.some((f) => f.type === 'local_TEST_TEST')).toBe(true);
+        expect(snapshot.diagnostics).toHaveLength(1);
+        expect(snapshot.diagnostics[0]).toContain(`${root} / item048: Root decode budget`);
+      }
+      fs.rmSync(path.join(root, 'item000'), { recursive: true });
+      expect(loadAssetSnapshot(bundled, [root, other]).diagnostics).toEqual([]);
+    } finally { fs.rmSync(other, { recursive: true, force: true }); }
+  });
+
+  it('counts attempted decode pixels even when corrupt art causes atomic failure', () => {
+    const size = { width: 256, height: 256, footprintW: 16, footprintH: 16 };
+    const failed = pack('a_failed', { ...manifest, ...size, id: 'FAILED', file: 'TEST.png' });
+    fs.writeFileSync(path.join(failed, 'TEST.png'), 'invalid PNG');
+    pack('b_large', { ...manifest, ...size, id: 'LARGE', file: 'TEST.png' });
+    pack('z_small');
+    const snapshot = loadAssetSnapshot(bundled, [root]);
+    expect(snapshot.diagnostics).toHaveLength(2);
+    expect(snapshot.diagnostics[0]).toContain('a_failed');
+    expect(snapshot.diagnostics[1]).toContain('b_large: Root decode budget');
+    expect(snapshot.furniture.some((f) => f.type === 'local_TEST_TEST')).toBe(true);
+    expect(snapshot.furniture).toHaveLength(39);
+  });
+
+  it('accepts the exact byte allowance, rejects overflow visibly and recovers in the same watcher', () => {
+    vi.useFakeTimers();
+    for (let i = 0; i < 32; i++) {
+      const dir = pack(`item${String(i).padStart(3, '0')}`, { ...manifest, id: `BYTE${i}`, file: 'TEST.png' });
+      const file = path.join(dir, 'manifest.json');
+      const contents = fs.readFileSync(file, 'utf8');
+      const target = 65536 - fs.statSync(path.join(dir, 'TEST.png')).size;
+      fs.writeFileSync(file, contents.padEnd(target, ' '));
+    }
+    const snapshot = loadAssetSnapshot(bundled, [root]);
+    expect(snapshot.diagnostics).toEqual([]);
+    expect(snapshot.furniture).toHaveLength(70);
+    work.bytes = work.reads = work.enumeration = 0;
+    assetSourceFingerprint(bundled, []);
+    const bundledBytes = work.bytes;
+    work.bytes = work.reads = work.enumeration = 0;
+    assetSourceFingerprint(bundled, [root]);
+    expect(work.bytes - bundledBytes).toBe(ASSET_ROOT_LIMITS.bytes);
+    const publish = vi.fn();
+    const watcher = watchAssetSnapshots(() => loadAssetSnapshot(bundled, [root]), publish, 10,
+      () => assetSourceFingerprint(bundled, [root]));
+    pack('z_overflow', { ...manifest, id: 'EXTRA', file: 'TEST.png' });
+    vi.advanceTimersByTime(10);
+    expect(publish.mock.lastCall![0].diagnostics).toEqual([
+      expect.stringContaining(`${root} / z_overflow: Root read budget exceeded`),
+    ]);
+    expect(publish.mock.lastCall![0].furniture).toHaveLength(70);
+    fs.rmSync(path.join(root, 'item000'), { recursive: true });
+    vi.advanceTimersByTime(10);
+    expect(publish.mock.lastCall![0].diagnostics).toEqual([]);
+    expect(publish.mock.lastCall![0].furniture.some((f: { type: string }) => f.type === 'local_EXTRA_EXTRA')).toBe(true);
+    watcher.dispose();
+  });
+
+  it('bounds total actual reads, bytes and enumeration across eight hostile roots on both paths', () => {
+    const roots = Array.from({ length: 8 }, (_, i) => path.join(root, `root${i}`));
+    for (const [index, dir] of roots.entries()) {
+      fs.mkdirSync(dir);
+      for (let i = 0; i < 34; i++) {
+        const folder = path.join(dir, `item${String(i).padStart(3, '0')}`);
+        fs.mkdirSync(folder);
+        fs.writeFileSync(path.join(folder, 'manifest.json'), '{'.padEnd(65536));
+        if (index === 0) {
+          for (let j = 0; j < 80; j++) { fs.writeFileSync(path.join(folder, `${j}.png`), 'unreferenced'); }
+        }
+      }
+    }
+    for (const scan of [
+      () => assetSourceFingerprint(bundled, roots),
+      () => loadAssetSnapshot(bundled, roots),
+    ]) {
+      work.bytes = work.reads = work.enumeration = 0;
+      scan();
+      expect(work.bytes).toBeLessThanOrEqual(9 * ASSET_ROOT_LIMITS.bytes);
+      expect(work.reads).toBeLessThanOrEqual(9 * ASSET_ROOT_LIMITS.files);
+      expect(work.enumeration).toBeLessThanOrEqual(9 * ASSET_ROOT_LIMITS.entries);
+    }
+    const snapshot = loadAssetSnapshot(bundled, roots);
+    for (const dir of roots.slice(1)) {
+      expect(snapshot.diagnostics.some((d) => d.startsWith(dir) && d.includes('Root read budget'))).toBe(true);
+    }
+    expect(snapshot.diagnostics.some((d) => d.startsWith(roots[0]) && d.includes('Root enumeration budget'))).toBe(true);
+    expect(snapshot.furniture).toHaveLength(38);
+  }, 30000);
+
+  it('bounds file reads for empty malformed manifests without consuming other roots allowances', () => {
+    for (let i = 0; i < 128; i++) {
+      const dir = path.join(root, `item${String(i).padStart(3, '0')}`);
+      fs.mkdirSync(dir);
+      fs.writeFileSync(path.join(dir, 'manifest.json'), '');
+    }
+    // Exactly 128 manifests fit the read-count allowance, independent of byte size.
+    work.bytes = work.reads = work.enumeration = 0;
+    const baseline = loadAssetSnapshot(bundled);
+    const bundledReads = work.reads;
+    work.bytes = work.reads = work.enumeration = 0;
+    const snapshot = loadAssetSnapshot(bundled, [root]);
+    expect(work.reads - bundledReads).toBe(ASSET_ROOT_LIMITS.files);
+    expect(snapshot.diagnostics).toHaveLength(128);
+    expect(snapshot.furniture).toEqual(baseline.furniture);
+    expect(snapshot.diagnostics.every((d) => d.startsWith(`${root} / item`))).toBe(true);
+    fs.writeFileSync(path.join(root, 'item127', 'manifest.json'), JSON.stringify(manifest));
+    fs.writeFileSync(path.join(root, 'item127', 'TEST.png'), PNG.sync.write(new PNG({ width: 16, height: 16 })));
+    const overflow = loadAssetSnapshot(bundled, [root]);
+    expect(overflow.diagnostics.at(-1)).toContain('item127: Root read budget exceeded');
+    expect(overflow.furniture).toEqual(baseline.furniture);
+  });
+
+  it('accepts exactly the per-root pixel allowance across multiple manifests', () => {
+    for (const [folder, width] of [['large', 256], ['small', 128]] as const) {
+      const dir = pack(folder, {
+        ...manifest, id: folder, file: 'TEST.png', width, height: 256, footprintW: width / 16, footprintH: 16,
+      });
+      const png = new PNG({ width, height: 256 });
+      png.data.fill(255);
+      fs.writeFileSync(path.join(dir, 'TEST.png'), PNG.sync.write(png));
+    }
+    expect(loadAssetSnapshot(bundled, [root]).diagnostics).toEqual([]);
+    pack('z_overflow');
+    const snapshot = loadAssetSnapshot(bundled, [root]);
+    expect(snapshot.furniture).toHaveLength(40);
+    expect(snapshot.diagnostics).toEqual([expect.stringContaining('z_overflow: Root decode budget')]);
+  });
+
+  it('reserves equal decode shares across eight roots and bounds actual decoder calls/pixels', () => {
+    expect(ASSET_ROOT_LIMITS.bundled.assets + 8 * ASSET_ROOT_LIMITS.external.assets).toBe(512);
+    expect(ASSET_ROOT_LIMITS.bundled.pixels + 8 * ASSET_ROOT_LIMITS.external.pixels).toBe(1048576);
+    const roots = Array.from({ length: 8 }, (_, i) => path.join(root, `root${i}`));
+    for (const [index, dir] of roots.entries()) {
+      fs.mkdirSync(dir);
+      for (const [folder, width] of [['large', 256], ['small', 128], ['z_overflow', 16]] as const) {
+        const item = path.join(dir, folder);
+        fs.mkdirSync(item);
+        const height = width === 16 ? 16 : 256;
+        fs.writeFileSync(path.join(item, 'manifest.json'), JSON.stringify({
+          ...manifest, id: `ROOT${index}_${folder}`, file: 'TEST.png',
+          width, height, footprintW: width / 16, footprintH: height / 16,
+        }));
+        const png = new PNG({ width, height });
+        png.data.fill(255);
+        fs.writeFileSync(path.join(item, 'TEST.png'), PNG.sync.write(png));
+      }
+    }
+    const decode = vi.spyOn(PNG.sync, 'read');
+    const snapshot = loadAssetSnapshot(bundled, roots);
+    expect(snapshot.furniture).toHaveLength(38 + 16);
+    expect(snapshot.diagnostics).toHaveLength(8);
+    for (const dir of roots) {
+      expect(snapshot.diagnostics).toContainEqual(expect.stringContaining(`${dir} / z_overflow: Root decode budget`));
+    }
+    expect(decode).toHaveBeenCalledTimes(38 + 16 + 10);
+    const pixels = decode.mock.results.reduce((sum, result) =>
+      sum + (result.type === 'return' ? result.value.width * result.value.height : 0), 0);
+    expect(pixels).toBeLessThanOrEqual(1048576 + 10496);
+    expect(pixels).toBeGreaterThanOrEqual(8 * ASSET_ROOT_LIMITS.external.pixels);
   });
 
   it('reloads content, additions, deletion, failure and recovery in the same running watcher; disposal stops it', () => {
