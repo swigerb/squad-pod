@@ -42,7 +42,6 @@ const BORDER = '#3c3c3c';
 const TEXT = '#cccccc';
 const TEXT_DIM = '#888888';
 const ACCENT = '#0078d4';
-const ACCENT_HOVER = '#1a8fff';
 const DANGER = '#c83232';
 
 const TOOL_DEFS: { tool: EditToolType; icon: string; label: string }[] = [

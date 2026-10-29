@@ -8,7 +8,10 @@ const watch = process.argv.includes('--watch');
 const copyAssetsPlugin = {
   name: 'copy-assets',
   setup(build) {
-    build.onEnd(() => {
+    build.onEnd((result) => {
+      if (result.errors.length > 0) {
+        return;
+      }
       const sourceDir = path.join(__dirname, 'webview-ui', 'public', 'assets');
       const targetDir = path.join(__dirname, 'dist', 'assets');
       
@@ -60,8 +63,11 @@ async function main() {
     await ctx.watch();
     console.log('👀 Watching for changes...');
   } else {
-    await ctx.rebuild();
+    const result = await ctx.rebuild();
     await ctx.dispose();
+    if (result.errors.length > 0) {
+      process.exit(1);
+    }
     console.log('✓ Build complete');
   }
 }

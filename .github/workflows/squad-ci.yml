@@ -1,24 +1,53 @@
-name: Squad CI
+name: Squad Pod CI
 
 on:
   pull_request:
-    branches: [dev, preview, main, insider]
-    types: [opened, synchronize, reopened]
+    branches: [master, dev]
   push:
-    branches: [dev, insider]
+    branches: [master, dev]
 
 permissions:
   contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 #v4
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 #v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            webview-ui/package-lock.json
 
-      - name: Run tests
-        run: node --test test/*.test.cjs
+      - name: Install dependencies
+        run: npm run install:all
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run check-types
+
+      - name: Unit tests
+        run: npm run test:all
+
+      - name: Build
+        run: npm run build
+
+      - name: Package VSIX
+        run: npm run package
+
+      - name: Upload VSIX
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4
+        with:
+          name: squad-pod-vsix
+          path: '*.vsix'

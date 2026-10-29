@@ -232,7 +232,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
   private writeDiagnosticLog(section: string, data: string): void {
     const workspaceRoot = this.getWorkspaceRoot();
-    if (!workspaceRoot) return;
+    if (!workspaceRoot) {return;}
     const logPath = path.join(workspaceRoot, 'squad-pod-debug.log');
     const timestamp = new Date().toISOString();
     const entry = `\n=== ${section} [${timestamp}] ===\n${data}\n`;

@@ -16,6 +16,13 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['out', 'dist'],
+    // Test doubles intentionally stand in for loosely typed VS Code APIs.
+    files: ['src/**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    ignores: ['out', 'dist', 'webview-ui', 'scripts'],
   }
 );
