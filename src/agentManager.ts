@@ -1,22 +1,24 @@
 /**
  * agentManager.ts — Manage Squad agent lifecycle and webview synchronization.
  *
- * Reads the team roster, creates SquadAgentState objects, assigns deterministic
- * palette indices and seats, persists metadata, and pushes updates to the
- * webview via postMessage.
+ * The Squad roster (`team.md`) is authoritative: every visible member gets a
+ * persistent character whose palette and seat survive reloads. Activity
+ * events from the watcher only change status; they never create or remove
+ * characters, so a finished task cannot make a team member disappear.
  */
 
 import type * as vscode from 'vscode';
 import type { SquadAgentState, SquadTeamMember, PersistedAgentMeta, OutboundMessage, TelemetryEvent } from './types.js';
 import {
-  CHAR_COUNT,
   WORKSPACE_KEY_AGENTS,
   WORKSPACE_KEY_AGENT_SEATS,
   ACTIVITY_TIMEOUT_MS,
   TASK_DESCRIPTION_DISPLAY_MAX_LENGTH,
 } from './constants.js';
 import { readTeamRoster } from './teamParser.js';
-import { resetActivityTimer, cancelAllTimers } from './timerManager.js';
+import { resetActivityTimer, cancelActivityTimer, cancelAllTimers } from './timerManager.js';
+
+export type AgentStatus = SquadAgentState['status'];
 
 // ─── Module State ───────────────────────────────────────────────────
 
@@ -42,48 +44,99 @@ function makeTelemetryEvent(
   };
 }
 
+// ─── Identity ───────────────────────────────────────────────────────
+
+export function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Map a name or slug seen in Squad files to a roster agent ID.
+ *
+ * Squad writes agents as their cast slug (`lisa-simpson`), display name
+ * (`Lisa Simpson`), first name (`Lisa`), or a slug followed by a suffix
+ * (`lisa-simpson-review`). Ambiguous first names resolve to nothing rather
+ * than animating the wrong character.
+ */
+export function resolveAgentId(
+  raw: string,
+  roster: ReadonlyMap<string, Pick<SquadAgentState, 'id' | 'name'>> = agents,
+): string | null {
+  const key = slugify(raw);
+  if (!key) {
+    return null;
+  }
+  if (roster.has(key)) {
+    return key;
+  }
+
+  const all = Array.from(roster.values());
+  const byName = all.filter(a => slugify(a.name) === key);
+  if (byName.length === 1) {
+    return byName[0].id;
+  }
+
+  const byPrefix = all
+    .filter(a => key.startsWith(`${a.id}-`))
+    .sort((a, b) => b.id.length - a.id.length);
+  if (byPrefix.length > 0) {
+    return byPrefix[0].id;
+  }
+
+  const byFirstName = all.filter(
+    a => a.id.split('-')[0] === key || slugify(a.name).split('-')[0] === key,
+  );
+  if (byFirstName.length === 1) {
+    return byFirstName[0].id;
+  }
+  return null;
+}
+
 // ─── Public API ─────────────────────────────────────────────────────
 
 /**
- * Read the team roster from disk, create an agent state for each visible
- * member, restore persisted palette/seat assignments, and send `agentCreated`
- * messages to the webview.
+ * Read the roster and build agent state, restoring persisted palette and
+ * seat assignments. Nothing is posted here: the caller sends a single
+ * `existingAgents` snapshot so the webview never sees duplicate creates.
  */
 export function initializeAgents(
   workspaceRoot: string,
   context: vscode.ExtensionContext,
-  webview: vscode.Webview,
+  _webview?: vscode.Webview,
 ): Map<string, SquadAgentState> {
   const members = readTeamRoster(workspaceRoot);
   const persisted = loadPersistedMeta(context);
+  const previous = agents;
 
+  cancelAllTimers();
   agents = new Map();
   disposed = false;
 
-  members.forEach((member, index) => {
-    const state = memberToState(member, index, persisted);
+  // Members with a saved appearance claim it first so new members never collide.
+  const ordered = [...members].sort(
+    (a, b) => Number(persisted[b.slug]?.palette !== undefined) - Number(persisted[a.slug]?.palette !== undefined),
+  );
+  ordered.forEach((member, index) => {
+    const state = memberToState(member, index, persisted, usedPalettes());
+    const prior = previous.get(state.id);
+    if (prior) {
+      state.status = prior.status;
+      state.currentTask = prior.currentTask;
+      state.lastActiveAt = prior.lastActiveAt;
+    }
     agents.set(state.id, state);
   });
 
-  // Send each agent to the webview
-  for (const agent of agents.values()) {
-    postToWebview(webview, {
-      type: 'agentCreated',
-      agent: {
-        id: agent.id,
-        name: agent.name,
-        role: agent.role,
-        paletteIndex: agent.paletteIndex,
-      },
-    });
-  }
-
+  persistAgentMeta(agents, context);
   return agents;
 }
 
 /**
- * Refresh agents from the roster. Adds new members, removes departed ones,
- * and notifies the webview accordingly.
+ * Re-read the roster: add new members, remove departed ones, and update
+ * name/role changes for existing members.
  */
 export function refreshAgents(
   workspaceRoot: string,
@@ -92,96 +145,116 @@ export function refreshAgents(
 ): Map<string, SquadAgentState> {
   const members = readTeamRoster(workspaceRoot);
   const persisted = loadPersistedMeta(context);
-  const currentIds = new Set(agents.keys());
-  const newIds = new Set(members.map(m => memberSlug(m)));
+  const newIds = new Set(members.map(m => m.slug));
 
-  // Remove agents that are no longer on the roster
-  for (const id of currentIds) {
+  for (const id of Array.from(agents.keys())) {
     if (!newIds.has(id)) {
+      cancelActivityTimer(id);
       agents.delete(id);
       postToWebview(webview, { type: 'agentClosed', agentId: id });
     }
   }
 
-  // Add or update agents
   members.forEach((member, index) => {
-    const slug = memberSlug(member);
-    if (!agents.has(slug)) {
-      const state = memberToState(member, index, persisted);
-      agents.set(state.id, state);
-      postToWebview(webview, {
-        type: 'agentCreated',
-        agent: {
-          id: state.id,
-          name: state.name,
-          role: state.role,
-          paletteIndex: state.paletteIndex,
-        },
-      });
+    const existing = agents.get(member.slug);
+    if (existing) {
+      existing.name = member.name;
+      existing.role = member.role;
+      return;
     }
+    const state = memberToState(member, index, persisted, usedPalettes());
+    agents.set(state.id, state);
+    postToWebview(webview, {
+      type: 'agentCreated',
+      agent: {
+        id: state.id,
+        name: state.name,
+        role: state.role,
+        paletteIndex: state.paletteIndex,
+        seatId: state.seatId,
+      },
+    });
   });
 
+  persistAgentMeta(agents, context);
   return agents;
 }
 
 /**
- * Update a single agent's status and current task, then notify the webview.
+ * Update an agent's status and current task, then notify the webview.
+ *
+ * Every `active` event restarts the idle countdown, so an agent that keeps
+ * producing activity stays active instead of timing out mid-task.
  */
 export function updateAgentStatus(
-  agentId: string,
-  status: 'active' | 'idle' | 'waiting',
+  rawAgentId: string,
+  status: AgentStatus,
   task: string | null,
   webview: vscode.Webview,
 ): void {
-  const agent = agents.get(agentId);
-  if (!agent) {
+  const agentId = resolveAgentId(rawAgentId);
+  const agent = agentId ? agents.get(agentId) : undefined;
+  if (!agentId || !agent) {
     return;
   }
 
   const prevStatus = agent.status;
+  const prevTask = agent.currentTask;
   agent.status = status;
   agent.lastActiveAt = Date.now();
-
   if (task !== null) {
     agent.currentTask = truncateTask(task);
   }
+  const statusChanged = prevStatus !== status;
+  const taskChanged = prevTask !== agent.currentTask;
 
-  // Notify webview of status change
-  postToWebview(webview, { type: 'agentStatus', agentId, status });
+  if (statusChanged) {
+    postToWebview(webview, { type: 'agentStatus', agentId, status });
+  }
 
-  // Emit telemetry for the status transition
-  const statusLabel = status === 'active' ? 'became active' : status === 'waiting' ? 'is waiting for input' : 'went idle';
-  const taskSuffix = agent.currentTask ? `: ${agent.currentTask}` : '';
-  postToWebview(webview, {
-    type: 'telemetryEvent',
-    event: makeTelemetryEvent('status', agentId, agent.name, `${agent.name} ${statusLabel}${taskSuffix}`),
-  });
-
-  // If going active, send a tool-start message so the character animates
-  if (status === 'active' && prevStatus !== 'active') {
-    const toolName = agent.currentTask ?? 'working';
-    postToWebview(webview, { type: 'agentToolStart', agentId, tool: toolName });
-
-    // Start idle timeout — will flip to idle after ACTIVITY_TIMEOUT_MS
-    resetActivityTimer(agentId, ACTIVITY_TIMEOUT_MS, () => {
-      updateAgentStatus(agentId, 'idle', null, webview);
+  if (statusChanged || taskChanged) {
+    const statusLabel = status === 'active' ? 'became active' : status === 'waiting' ? 'is waiting for input' : 'went idle';
+    const taskSuffix = agent.currentTask ? `: ${agent.currentTask}` : '';
+    postToWebview(webview, {
+      type: 'telemetryEvent',
+      event: makeTelemetryEvent('status', agentId, agent.name, `${agent.name} ${statusLabel}${taskSuffix}`),
     });
   }
 
-  // If going idle, send tool-done so character stops typing animation
-  if (status === 'idle') {
-    postToWebview(webview, { type: 'agentToolDone', agentId });
+  if (status === 'active') {
+    if (statusChanged || taskChanged) {
+      if (prevStatus === 'waiting') {
+        postToWebview(webview, { type: 'agentToolPermissionClear', agentId });
+      }
+      postToWebview(webview, { type: 'agentToolsClear', agentId });
+      postToWebview(webview, {
+        type: 'agentToolStart',
+        agentId,
+        tool: agent.currentTask ?? 'working',
+        status: agent.currentTask ?? 'Working',
+      });
+    }
+    resetActivityTimer(agentId, ACTIVITY_TIMEOUT_MS, () => {
+      updateAgentStatus(agentId, 'idle', null, webview);
+    });
+    return;
+  }
+
+  cancelActivityTimer(agentId);
+
+  if (status === 'idle' && statusChanged) {
+    postToWebview(webview, { type: 'agentToolDone', agentId, tool: prevTask ?? 'working' });
     postToWebview(webview, { type: 'agentToolsClear', agentId });
   }
 }
 
 /**
- * Send the full list of existing agents to the webview. Called on
- * `webviewReady` so the frontend can render the full office.
+ * Send the full roster snapshot. The webview reconciles against it, so it
+ * is safe to send on every (re)connect and after roster changes.
  */
 export function sendExistingAgents(
   agentMap: Map<string, SquadAgentState>,
-  context: vscode.ExtensionContext,
+  _context: vscode.ExtensionContext | undefined,
   webview: vscode.Webview,
 ): void {
   const agentArray = Array.from(agentMap.values()).map(a => ({
@@ -198,50 +271,48 @@ export function sendExistingAgents(
 }
 
 /**
- * Persist agent palette/seat assignments to workspace state
- * so they survive extension restarts.
+ * Persist agent palette/seat assignments so they survive restarts.
  */
 export function persistAgentMeta(
   agentMap: Map<string, SquadAgentState>,
   context: vscode.ExtensionContext,
 ): void {
-  const meta: PersistedAgentMeta = {};
+  const meta: PersistedAgentMeta = { ...loadPersistedMeta(context) };
   for (const [id, agent] of agentMap) {
     meta[id] = {
       palette: agent.paletteIndex,
       seatId: agent.seatId ?? undefined,
     };
   }
-  context.workspaceState.update(WORKSPACE_KEY_AGENTS, meta);
+  void context.workspaceState.update(WORKSPACE_KEY_AGENTS, meta);
 }
 
 /**
- * Save seat assignments from the webview.
+ * Save the complete seat map from the webview. Agents missing from the map
+ * have no seat.
  */
 export function saveAgentSeats(
-  seatAssignments: Record<string, string>,
+  seatAssignments: Record<string, string | null>,
   context: vscode.ExtensionContext,
 ): void {
-  for (const [agentId, seatId] of Object.entries(seatAssignments)) {
-    const agent = agents.get(agentId);
-    if (agent) {
-      agent.seatId = seatId;
+  const clean: Record<string, string> = {};
+  for (const agent of agents.values()) {
+    const seatId = seatAssignments[agent.id];
+    agent.seatId = typeof seatId === 'string' && seatId ? seatId : null;
+    if (agent.seatId) {
+      clean[agent.id] = agent.seatId;
     }
   }
-  context.workspaceState.update(WORKSPACE_KEY_AGENT_SEATS, seatAssignments);
+  void context.workspaceState.update(WORKSPACE_KEY_AGENT_SEATS, clean);
   persistAgentMeta(agents, context);
 }
 
-/**
- * Get current agents map (for external access).
- */
+/** Current agents map (for external access). */
 export function getAgents(): Map<string, SquadAgentState> {
   return agents;
 }
 
-/**
- * Clean up all timers (call on extension deactivation).
- */
+/** Clean up all timers (call on view disposal or deactivation). */
 export function disposeAgentManager(): void {
   disposed = true;
   cancelAllTimers();
@@ -250,23 +321,33 @@ export function disposeAgentManager(): void {
 
 // ─── Internal Helpers ───────────────────────────────────────────────
 
-function memberSlug(member: SquadTeamMember): string {
-  return member.slug;
+function usedPalettes(): Set<number> {
+  return new Set(Array.from(agents.values()).map(a => a.paletteIndex));
 }
 
 function memberToState(
   member: SquadTeamMember,
   rosterIndex: number,
   persisted: PersistedAgentMeta,
+  taken?: Set<number>,
 ): SquadAgentState {
   const id = member.slug;
   const savedMeta = persisted[id];
+  // Appearance index: the webview derives sprite palette (index % 6) and hue
+  // shift (index / 6) from it, so every client renders the same look.
+  let paletteIndex = savedMeta?.palette;
+  if (paletteIndex === undefined || taken?.has(paletteIndex)) {
+    paletteIndex = taken ? 0 : rosterIndex;
+    while (taken?.has(paletteIndex)) {
+      paletteIndex++;
+    }
+  }
 
   return {
     id,
     name: member.name,
     role: member.role,
-    paletteIndex: savedMeta?.palette ?? (rosterIndex % CHAR_COUNT),
+    paletteIndex,
     seatId: savedMeta?.seatId ?? null,
     status: 'idle',
     currentTask: null,
@@ -275,17 +356,29 @@ function memberToState(
 }
 
 function loadPersistedMeta(context: vscode.ExtensionContext): PersistedAgentMeta {
-  return (context.workspaceState.get<PersistedAgentMeta>(WORKSPACE_KEY_AGENTS) ?? {});
+  const meta = context.workspaceState.get<PersistedAgentMeta>(WORKSPACE_KEY_AGENTS) ?? {};
+  const seats = context.workspaceState.get<Record<string, string>>(WORKSPACE_KEY_AGENT_SEATS) ?? {};
+  const merged: PersistedAgentMeta = {};
+  for (const [id, value] of Object.entries(meta)) {
+    merged[id] = { ...value };
+  }
+  for (const [id, seatId] of Object.entries(seats)) {
+    if (typeof seatId === 'string' && !merged[id]?.seatId) {
+      merged[id] = { ...merged[id], seatId };
+    }
+  }
+  return merged;
 }
 
 function truncateTask(task: string): string {
-  if (task.length <= TASK_DESCRIPTION_DISPLAY_MAX_LENGTH) {
-    return task;
+  const oneLine = task.replace(/\s+/g, ' ').trim();
+  if (oneLine.length <= TASK_DESCRIPTION_DISPLAY_MAX_LENGTH) {
+    return oneLine;
   }
-  return task.slice(0, TASK_DESCRIPTION_DISPLAY_MAX_LENGTH - 3) + '...';
+  return oneLine.slice(0, TASK_DESCRIPTION_DISPLAY_MAX_LENGTH - 3) + '...';
 }
 
 function postToWebview(webview: vscode.Webview, message: OutboundMessage): void {
   if (disposed) { return; }
-  webview.postMessage(message);
+  void webview.postMessage(message);
 }

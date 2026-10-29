@@ -5,6 +5,7 @@ import { EditTool, TileType } from '../types.js';
 import { startGameLoop } from '../engine/gameLoop.js';
 import { renderFrame } from '../engine/renderer.js';
 import { updateCharacter } from '../engine/characters.js';
+import { vscode } from '../../vscodeApi.js';
 import { TILE_SIZE, CHARACTER_HIT_HALF_WIDTH, CHARACTER_HIT_HEIGHT, PAN_MARGIN_FRACTION, ZOOM_SCROLL_THRESHOLD } from '../../constants.js';
 
 interface OfficeCanvasProps {
@@ -252,12 +253,20 @@ export function OfficeCanvas({
             }
           }
           
-          if (seatId) {
-            const seat = officeState.seats.find(s => s.id === seatId);
-            if (seat?.occupant) {
-              clickedAgentId = seat.occupant;
-              onDeskClick?.(seat.occupant, e.clientX, e.clientY);
+          const selected = officeState.selectedAgentId;
+          const seat = seatId ? officeState.seats.find(s => s.id === seatId) : undefined;
+          if (seat && selected && seat.occupant !== selected) {
+            // A selected agent plus a click on another seat moves the agent there.
+            if (officeState.reassignSeat(selected, seat.id)) {
+              vscode.postMessage({ type: 'saveAgentSeats', seats: officeState.getSeatAssignments() });
             }
+            officeState.selectedAgentId = null;
+            onClick?.(col, row);
+            return;
+          }
+          if (seat?.occupant) {
+            clickedAgentId = seat.occupant;
+            onDeskClick?.(seat.occupant, e.clientX, e.clientY);
           }
         }
         

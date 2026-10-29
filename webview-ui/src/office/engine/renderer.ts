@@ -59,9 +59,7 @@ interface Drawable {
 let _loggedPngReady = false;
 let _loggedPngFallback = false;
 let _loggedTilesetWaiting = false;
-let _loggedCharPng = false;
 let _loggedCharFallback = false;
-let _loggedCharWaiting = false;
 let _loggedFirstRender = false;
 
 export function renderTileGrid(
@@ -235,19 +233,12 @@ export function renderScene(
       // Try PNG sprite sheet first, fall back to inline
       const pngDrawn = ch !== undefined && drawCharacterFromSheet(
         ctx, ch.palette, ch.direction, ch.frameIndex,
-        drawable.x, drawable.y, zoom,
+        drawable.x, drawable.y, zoom, ch.hueShift,
       );
-      if (pngDrawn && !_loggedCharPng) {
-        _loggedCharPng = true;
-        console.error('[SPRITE-DEBUG] ✅ Character drawn from PNG sprite sheet (palette', ch?.palette, ')', getAssetLoadSnapshot());
-      }
       if (!pngDrawn) {
-        if (!characterAssetsReady && !_loggedCharWaiting) {
-          _loggedCharWaiting = true;
-          console.error('[SPRITE-DEBUG] ⏳ Character PNG sheets not ready — using inline sprites. characterAssetsReady=false', getAssetLoadSnapshot());
-        } else if (characterAssetsReady && !_loggedCharFallback) {
+        if (characterAssetsReady && !_loggedCharFallback) {
           _loggedCharFallback = true;
-          console.error('[SPRITE-DEBUG] ⚠️ Character PNG draw FAILED for palette', ch?.palette, '— using inline sprite. hasSheet:', ch ? hasCharacterSheetForPalette(ch.palette) : 'N/A', getAssetLoadSnapshot());
+          console.warn('[renderer] Character PNG draw failed for palette', ch?.palette, '— using inline sprite. hasSheet:', ch ? hasCharacterSheetForPalette(ch.palette) : 'N/A');
         }
         drawSpriteDirect(ctx, drawable.sprite, drawable.x, drawable.y, zoom);
       }

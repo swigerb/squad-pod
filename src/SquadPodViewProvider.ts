@@ -29,7 +29,8 @@ import {
   getAgents,
   disposeAgentManager,
 } from './agentManager.js';
-import { startSquadWatching } from './squadWatcher.js';
+import { startSquadWatching, type ActivitySource } from './squadWatcher.js';
+import { pickSquadWorkspace, resolveSquadDir } from './squadPaths.js';
 import {
   loadFurnitureAssets,
   loadFloorTiles,
@@ -58,6 +59,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private disposeLayoutWatcher: { dispose: () => void } | undefined;
   private disposables: vscode.Disposable[] = [];
   private telemetryCounter = 0;
+  private watchedRoot: string | undefined;
+  private output: vscode.OutputChannel | undefined;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -88,6 +91,14 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       this.disposables,
     );
 
+    // Re-target the office when the user adds or removes workspace folders
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      if (this.watchedRoot !== this.getWorkspaceRoot()) {
+        this.stopWatching();
+        this.onWebviewReady();
+      }
+    }, undefined, this.disposables);
+
     // Teardown on view dispose
     webviewView.onDidDispose(() => this.teardown(), undefined, this.disposables);
   }
@@ -114,10 +125,14 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'setSoundEnabled':
-        this.context.globalState.update(
+        void this.context.globalState.update(
           GLOBAL_KEY_SOUND_ENABLED,
           message.enabled ?? false,
         );
+        break;
+
+      case 'getSettings':
+        this.postMessage({ type: 'settingsLoaded', soundEnabled: this.isSoundEnabled() });
         break;
 
       case 'focusAgent':
@@ -161,164 +176,89 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     if (!webview) {return;}
 
     const workspaceRoot = this.getWorkspaceRoot();
-    console.log('[SquadPod] webviewReady received; workspaceRoot=', workspaceRoot ?? '<none>');
+    this.log(`webviewReady; workspaceRoot=${workspaceRoot ?? '<none>'}`);
     if (!workspaceRoot) {
       this.postMessage({ type: 'noWorkspace' });
       return;
     }
 
-    // 1. Read team roster and initialize agents
-    const agents = initializeAgents(workspaceRoot, this.context, webview);
+    // A reloaded webview only needs a fresh snapshot; keep agent state,
+    // timers and watchers alive so in-flight activity is not lost.
+    let agents = getAgents();
+    if (this.watchedRoot !== workspaceRoot || !this.disposeSquadWatcher) {
+      this.stopWatching();
+      agents = initializeAgents(workspaceRoot, this.context, webview);
+      this.startWatching(workspaceRoot, webview);
+    }
 
-    // 2. Start watching .squad/ for activity
-    this.disposeSquadWatcher?.();
+    // Assets first, then layout, then the roster snapshot (the webview
+    // buffers roster until layout arrives, so either order is safe).
+    this.loadAndSendAssets();
+    this.loadAndSendCustomAssetUris();
+    this.loadAndSendLayout(workspaceRoot);
+    sendExistingAgents(agents, this.context, webview);
+    this.postMessage({ type: 'soundEnabled', enabled: this.isSoundEnabled() });
+  }
+
+  private startWatching(workspaceRoot: string, webview: vscode.Webview): void {
+    this.watchedRoot = workspaceRoot;
     this.disposeSquadWatcher = startSquadWatching(workspaceRoot, {
       onRosterChanged: () => {
-        // Re-read roster, add/remove agents
         const updated = refreshAgents(workspaceRoot, this.context, webview);
         sendExistingAgents(updated, this.context, webview);
         this.emitTelemetry('log', null, null, 'Team roster updated');
       },
       onAgentActivity: (event) => {
-        // Emit detailed telemetry for the raw file event
-        const agents = getAgents();
-        const agent = agents.get(event.agentId);
+        const agent = getAgents().get(event.agentId)
+          ?? [...getAgents().values()].find(a => event.agentId.startsWith(a.id));
         const displayName = agent?.name ?? event.agentId;
-        const sourceLabel = event.source === 'orchestration-log' ? 'orchestration' : event.source;
         this.emitTelemetry(
-          sourceLabel as TelemetryEvent['category'],
-          event.agentId,
+          telemetryCategoryFor(event.source),
+          agent?.id ?? event.agentId,
           displayName,
           `[${event.source}] ${displayName} — ${event.task ?? 'activity detected'}`,
           event.task,
         );
-
         updateAgentStatus(event.agentId, event.status, event.task, webview);
       },
     });
 
-    // 3. Load and send assets (inline pixel data — legacy/fallback)
-    this.loadAndSendAssets();
-
-    // 4. Send custom asset URIs (tileset + character PNGs for browser-side loading)
-    console.log('[SquadPod] Starting custom asset URI send');
-    this.loadAndSendCustomAssetUris();
-
-    // 5. Load and send layout
-    this.loadAndSendLayout(workspaceRoot);
-
-    // 6. Send existing agents (full state dump)
-    sendExistingAgents(agents, this.context, webview);
-
-    // 7. Send sound setting
-    const soundEnabled = this.context.globalState.get<boolean>(
-      GLOBAL_KEY_SOUND_ENABLED,
-      true,
-    );
-    this.postMessage({ type: 'soundEnabled', enabled: soundEnabled });
-
-    // 8a. Write extension-side diagnostics to log file
-    this.writeExtensionDiagnostics();
-
-    // 8. Start watching layout file for external changes
-    this.disposeLayoutWatcher?.dispose();
     this.disposeLayoutWatcher = watchLayoutFile(workspaceRoot, (layout) => {
       this.postMessage({ type: 'layoutLoaded', layout });
-      this.context.workspaceState.update(WORKSPACE_KEY_LAYOUT, layout);
+      void this.context.workspaceState.update(WORKSPACE_KEY_LAYOUT, layout);
     });
+  }
+
+  private stopWatching(): void {
+    this.disposeSquadWatcher?.();
+    this.disposeSquadWatcher = undefined;
+    this.disposeLayoutWatcher?.dispose();
+    this.disposeLayoutWatcher = undefined;
+    this.watchedRoot = undefined;
+  }
+
+  private isSoundEnabled(): boolean {
+    return this.context.globalState.get<boolean>(GLOBAL_KEY_SOUND_ENABLED, true);
   }
 
   // ─── Diagnostics ─────────────────────────────────────────────────
 
-  private writeDiagnosticLog(section: string, data: string): void {
-    const workspaceRoot = this.getWorkspaceRoot();
-    if (!workspaceRoot) {return;}
-    const logPath = path.join(workspaceRoot, 'squad-pod-debug.log');
-    const timestamp = new Date().toISOString();
-    const entry = `\n=== ${section} [${timestamp}] ===\n${data}\n`;
-    try {
-      fs.appendFileSync(logPath, entry, 'utf-8');
-    } catch (e) {
-      console.error('[SquadPod] Failed to write diagnostic log:', e);
-    }
-  }
-
-  private writeExtensionDiagnostics(): void {
-    const extPath = this.context.extensionPath;
-    const webviewAssetsDir = path.join(extPath, 'dist', 'webview', 'assets');
-    const charAssetsDir = path.join(extPath, 'dist', 'assets');
-
-    const lines: string[] = [
-      `Extension path: ${extPath}`,
-      `Extension version: ${this.context.extension?.packageJSON?.version ?? 'unknown'}`,
-      '',
-    ];
-
-    // List webview assets
-    lines.push('--- dist/webview/assets/ ---');
-    try {
-      const files = fs.readdirSync(webviewAssetsDir);
-      for (const f of files) {
-        const stat = fs.statSync(path.join(webviewAssetsDir, f));
-        lines.push(`  ${f}: ${stat.size} bytes, modified ${stat.mtime.toISOString()}`);
-      }
-    } catch (e) {
-      lines.push(`  ERROR reading dir: ${e}`);
-    }
-
-    // List character assets
-    lines.push('', '--- dist/assets/ ---');
-    try {
-      const files = fs.readdirSync(charAssetsDir);
-      for (const f of files) {
-        const stat = fs.statSync(path.join(charAssetsDir, f));
-        lines.push(`  ${f}: ${stat.size} bytes, modified ${stat.mtime.toISOString()}`);
-      }
-    } catch (e) {
-      lines.push(`  ERROR reading dir: ${e}`);
-    }
-
-    // Show generated HTML (first 300 chars + script URIs)
-    const webview = this.view?.webview;
-    if (webview) {
-      const html = this.getWebviewHtml(webview);
-      const scriptMatch = html.match(/src="([^"]+)"/);
-      const cssMatch = html.match(/href="([^"]+\.css[^"]*)"/);
-      lines.push('', '--- Generated HTML URIs ---');
-      lines.push(`  Script: ${scriptMatch?.[1] ?? 'NOT FOUND'}`);
-      lines.push(`  CSS: ${cssMatch?.[1] ?? 'NOT FOUND'}`);
-      lines.push(`  HTML length: ${html.length}`);
-      lines.push(`  HTML preview: ${html.substring(0, 300)}...`);
-    }
-
-    this.writeDiagnosticLog('EXTENSION HOST', lines.join('\n'));
+  private log(line: string): void {
+    this.output ??= vscode.window.createOutputChannel('Squad Pod');
+    this.output.appendLine(`[${new Date().toISOString()}] ${line}`);
   }
 
   private onDiagnosticReport(message: WebviewMessage): void {
     const report = message as WebviewMessage & {
       characterSheetsSize?: number;
       characterSheetKeys?: string[];
-      embeddedCharactersLength?: number;
       bootstrapRan?: boolean;
       errors?: string[];
-      timestamp?: string;
-      bundleVersion?: string;
     };
-    const lines: string[] = [
-      `Webview JS loaded at: ${report.timestamp ?? 'unknown'}`,
-      `Bundle version marker: ${report.bundleVersion ?? 'none'}`,
-      `characterSheets.size: ${report.characterSheetsSize ?? 'unknown'}`,
-      `characterSheets keys: [${(report.characterSheetKeys ?? []).join(', ')}]`,
-      `EMBEDDED_CHARACTERS.length: ${report.embeddedCharactersLength ?? 'unknown'}`,
-      `Bootstrap ran: ${report.bootstrapRan ?? 'unknown'}`,
-      `Errors: ${(report.errors ?? []).join('; ') || 'none'}`,
-    ];
-    this.writeDiagnosticLog('WEBVIEW REPORT', lines.join('\n'));
-
-    // Also show a notification so Brian can see it immediately
-    const sheetsMsg = `Sheets: ${report.characterSheetsSize ?? '?'} [${(report.characterSheetKeys ?? []).join(',')}]`;
-    const embeddedMsg = `Embedded: ${report.embeddedCharactersLength ?? '?'}`;
-    vscode.window.showInformationMessage(`[Squad Pod Diag] ${sheetsMsg} | ${embeddedMsg} | Bootstrap: ${report.bootstrapRan}`);
+    this.log(
+      `webview assets: sheets=${report.characterSheetsSize ?? '?'} [${(report.characterSheetKeys ?? []).join(', ')}]` +
+      ` bootstrap=${report.bootstrapRan ?? '?'} errors=${(report.errors ?? []).join('; ') || 'none'}`,
+    );
   }
 
   // ─── Asset Loading ─────────────────────────────────────────────
@@ -559,46 +499,28 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   // ─── Agent Actions ────────────────────────────────────────────
 
   private onFocusAgent(agentId: string | undefined): void {
-    if (!agentId) {return;}
-    const agents = getAgents();
-    const agent = agents.get(agentId);
-    if (!agent) {return;}
-
-    // Show agent info in an information message
-    const task = agent.currentTask ? ` — ${agent.currentTask}` : '';
-    vscode.window.showInformationMessage(
-      `${agent.name} (${agent.role}) [${agent.status}]${task}`,
-    );
+    this.openAgentFile(agentId, ['history.md', 'charter.md']);
   }
 
   private onOpenSquadAgent(agentId: string | undefined): void {
+    this.openAgentFile(agentId, ['charter.md', 'history.md']);
+  }
+
+  private openAgentFile(agentId: string | undefined, candidates: string[]): void {
     if (!agentId) {return;}
-
     const workspaceRoot = this.getWorkspaceRoot();
-    if (!workspaceRoot) {return;}
+    const agent = agentId ? getAgents().get(agentId) : undefined;
+    if (!workspaceRoot || !agent) {return;}
 
-    const agents = getAgents();
-    const agent = agents.get(agentId);
-    if (!agent) {return;}
-
-    // Open the agent's charter.md in the editor
-    const charterPath = path.join(
-      workspaceRoot,
-      '.squad',
-      'agents',
-      agent.id,
-      'charter.md',
-    );
-
-    const uri = vscode.Uri.file(charterPath);
-    vscode.window.showTextDocument(uri, { preview: true }).then(
-      () => {},
-      () => {
-        // Charter doesn't exist — try opening the agent directory
-        const agentDir = path.join(workspaceRoot, '.squad', 'agents', agent.id);
-        vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(agentDir));
-      },
-    );
+    const agentDir = path.join(resolveSquadDir(workspaceRoot), 'agents', agent.id);
+    const target = candidates.map(f => path.join(agentDir, f)).find(f => fs.existsSync(f));
+    if (target) {
+      void vscode.window.showTextDocument(vscode.Uri.file(target), { preview: true });
+    } else if (fs.existsSync(agentDir)) {
+      void vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(agentDir));
+    } else {
+      void vscode.window.showInformationMessage(`Squad Pod: ${agent.name} has no charter or history yet.`);
+    }
   }
 
   private onRequestAgentDetail(agentId: string | undefined): void {
@@ -639,7 +561,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         type: 'squadInfoLoaded',
         info: {
           teamName: null,
-          description: 'No .squad/team.md found. Open a Squad-configured project.',
+          description: 'No .squad/team.md found. Run `squad init` or open a Squad-configured project.',
           members: [],
           hiddenMembers: [],
           projectContext: null,
@@ -744,7 +666,6 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   <title>Squad Pod</title>
 </head>
 <body>
-  <div id="squad-diag" style="position:fixed;top:0;left:0;z-index:99999;background:#c00;color:#fff;font:bold 10px monospace;padding:2px 6px;pointer-events:none;opacity:0.9">DIAG: waiting for JS...</div>
   <div id="root"></div>
   <script nonce="${nonce}" type="module" src="${scriptUri}?v=${cacheBuster}"></script>
 </body>
@@ -754,22 +675,11 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   // ─── Utilities ────────────────────────────────────────────────
 
   private getWorkspaceRoot(): string | undefined {
-    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    return pickSquadWorkspace((vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath));
   }
 
   private postMessage(message: OutboundMessage): void {
-    const result = this.view?.webview?.postMessage(message);
-    if (
-      message.type === 'tilesetMetadataLoaded' ||
-      message.type === 'tilesetAssetsLoaded' ||
-      message.type === 'characterAssetsLoaded'
-    ) {
-      console.log('[SquadPod] postMessage queued:', message.type);
-      void result?.then(
-        (delivered) => console.log('[SquadPod] postMessage result:', message.type, 'delivered=', delivered),
-        (error) => console.error('[SquadPod] postMessage failed:', message.type, error),
-      );
-    }
+    void this.view?.webview?.postMessage(message);
   }
 
   private emitTelemetry(
@@ -796,11 +706,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   // ─── Teardown ─────────────────────────────────────────────────
 
   private teardown(): void {
-    this.disposeSquadWatcher?.();
-    this.disposeSquadWatcher = undefined;
-
-    this.disposeLayoutWatcher?.dispose();
-    this.disposeLayoutWatcher = undefined;
+    this.stopWatching();
 
     const agents = getAgents();
     if (agents.size > 0) {
@@ -816,6 +722,17 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       d.dispose();
     }
     this.disposables = [];
+    this.output?.dispose();
+    this.output = undefined;
+  }
+}
+
+function telemetryCategoryFor(source: ActivitySource): TelemetryEvent['category'] {
+  switch (source) {
+    case 'orchestration-log': return 'orchestration';
+    case 'agent-files': return 'agent';
+    case 'decision': return 'decision';
+    default: return source;
   }
 }
 
@@ -937,7 +854,8 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
 
   // Read charter summary
   let charterSummary: string | null = null;
-  const charterPath = path.join(workspaceRoot, '.squad', 'agents', agentId, 'charter.md');
+  const squadDir = resolveSquadDir(workspaceRoot);
+  const charterPath = path.join(squadDir, 'agents', agentId, 'charter.md');
   try {
     const charterContent = fs.readFileSync(charterPath, 'utf8');
     const lines = charterContent.split('\n');
@@ -979,24 +897,30 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
 
   // Scan log directory for recent activity
   const recentActivity: string[] = [];
-  const logDir = path.join(workspaceRoot, '.squad', 'log');
+  const logFiles: { name: string; path: string }[] = [];
+  for (const dirName of ['orchestration-log', 'log']) {
+    const dir = path.join(squadDir, dirName);
+    try {
+      for (const f of fs.readdirSync(dir)) {
+        if (f.endsWith('.md')) {
+          logFiles.push({ name: f, path: path.join(dir, f) });
+        }
+      }
+    } catch {
+      // Directory missing
+    }
+  }
+  logFiles.sort((x, y) => y.name.localeCompare(x.name));
   try {
-    const logFiles = fs.readdirSync(logDir)
-      .filter(f => f.endsWith('.md'))
-      .sort()
-      .reverse()
-      .slice(0, 5);
-
-    for (const logFile of logFiles) {
-      const logPath = path.join(logDir, logFile);
+    for (const { name: logFile, path: logPath } of logFiles.slice(0, 40)) {
       try {
         const logContent = fs.readFileSync(logPath, 'utf8');
         const lowerContent = logContent.toLowerCase();
         const agentNameLower = agent.name.toLowerCase();
         const agentIdLower = agentId.toLowerCase();
-        
-        // Check if log mentions this agent
-        if (lowerContent.includes(agentNameLower) || lowerContent.includes(agentIdLower)) {
+
+        // Check if the log is this agent's (by filename) or mentions it
+        if (logFile.toLowerCase().includes(agentIdLower) || lowerContent.includes(agentNameLower) || lowerContent.includes(agentIdLower)) {
           // Extract first meaningful line (not a heading)
           const lines = logContent.split('\n');
           for (const line of lines) {

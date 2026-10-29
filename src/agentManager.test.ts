@@ -9,10 +9,12 @@ vi.mock('./teamParser.js', () => ({
 // Mock timerManager to avoid real timers interfering
 vi.mock('./timerManager.js', () => ({
   resetActivityTimer: vi.fn(),
+  cancelActivityTimer: vi.fn(),
   cancelAllTimers: vi.fn(),
 }));
 
 import { readTeamRoster } from './teamParser.js';
+import { resetActivityTimer } from './timerManager.js';
 import {
   initializeAgents,
   refreshAgents,
@@ -20,6 +22,7 @@ import {
   saveAgentSeats,
   disposeAgentManager,
   getAgents,
+  resolveAgentId,
 } from './agentManager.js';
 
 const mockReadTeamRoster = readTeamRoster as ReturnType<typeof vi.fn>;
@@ -63,7 +66,7 @@ describe('agentManager', () => {
   });
 
   describe('initializeAgents', () => {
-    it('creates agents from roster and sends agentCreated messages', () => {
+    it('creates agents from roster without posting (snapshot is sent separately)', () => {
       const members = [
         makeMember('Homer Simpson', 'homer-simpson', 'Lead'),
         makeMember('Lisa Simpson', 'lisa-simpson', 'Core Dev'),
@@ -77,12 +80,9 @@ describe('agentManager', () => {
       expect(agents.get('homer-simpson')?.name).toBe('Homer Simpson');
       expect(agents.get('lisa-simpson')?.role).toBe('Core Dev');
 
-      // Verify 3 agentCreated messages
-      const createdCalls = webview.postMessage.mock.calls.filter(
-        ([msg]: [any]) => msg.type === 'agentCreated',
-      );
-      expect(createdCalls).toHaveLength(3);
-      expect(createdCalls[0][0].agent.id).toBe('homer-simpson');
+      expect(webview.postMessage).not.toHaveBeenCalled();
+      const palettes = new Set([...agents.values()].map(a => a.paletteIndex));
+      expect(palettes.size).toBe(3);
     });
 
     it('agents start with idle status and no current task', () => {
@@ -181,6 +181,7 @@ describe('agentManager', () => {
       it('summary says "went idle" when going idle', () => {
         mockReadTeamRoster.mockReturnValue([makeMember('Homer Simpson', 'homer')]);
         initializeAgents('/workspace', context, webview);
+        updateAgentStatus('homer', 'active', 'task', webview);
         webview.postMessage.mockClear();
 
         updateAgentStatus('homer', 'idle', null, webview);
@@ -323,6 +324,88 @@ describe('agentManager', () => {
       const agents = getAgents();
       expect(agents.get('homer')?.seatId).toBe('seat-1');
       expect(agents.get('lisa')?.seatId).toBe('seat-2');
+    });
+  });
+
+  describe('resolveAgentId', () => {
+    it('maps display names, first names and suffixed slugs to roster ids', () => {
+      mockReadTeamRoster.mockReturnValue([
+        makeMember('Homer Simpson', 'homer-simpson'),
+        makeMember('Lisa Simpson', 'lisa'),
+      ]);
+      initializeAgents('/workspace', context, webview);
+
+      expect(resolveAgentId('homer-simpson')).toBe('homer-simpson');
+      expect(resolveAgentId('Homer Simpson')).toBe('homer-simpson');
+      expect(resolveAgentId('Homer')).toBe('homer-simpson');
+      expect(resolveAgentId('lisa-auth-choice')).toBe('lisa');
+      expect(resolveAgentId('marge')).toBeNull();
+    });
+
+    it('routes activity reported by display name to the roster member', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('Homer Simpson', 'homer-simpson')]);
+      initializeAgents('/workspace', context, webview);
+      webview.postMessage.mockClear();
+
+      updateAgentStatus('Homer Simpson', 'active', 'reviewing', webview);
+
+      expect(getAgents().get('homer-simpson')?.status).toBe('active');
+    });
+  });
+
+  describe('activity lifecycle', () => {
+    it('resets the idle timer on every active event but posts status once', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('Homer', 'homer')]);
+      initializeAgents('/workspace', context, webview);
+      webview.postMessage.mockClear();
+
+      updateAgentStatus('homer', 'active', 'task', webview);
+      updateAgentStatus('homer', 'active', 'task', webview);
+
+      expect(resetActivityTimer).toHaveBeenCalledTimes(2);
+      const statusCalls = webview.postMessage.mock.calls.filter(
+        ([msg]: [any]) => msg.type === 'agentStatus',
+      );
+      expect(statusCalls).toHaveLength(1);
+    });
+
+    it('clears tools when an agent goes idle', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('Homer', 'homer')]);
+      initializeAgents('/workspace', context, webview);
+      updateAgentStatus('homer', 'active', 'task', webview);
+      webview.postMessage.mockClear();
+
+      updateAgentStatus('homer', 'idle', null, webview);
+
+      const types = webview.postMessage.mock.calls.map(([msg]: [any]) => msg.type);
+      expect(types).toContain('agentToolDone');
+      expect(types).toContain('agentToolsClear');
+    });
+  });
+
+  describe('refreshAgents', () => {
+    it('updates name and role of existing members', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('Homer', 'homer', 'Dev')]);
+      initializeAgents('/workspace', context, webview);
+
+      mockReadTeamRoster.mockReturnValue([makeMember('Homer J.', 'homer', 'Lead')]);
+      const agents = refreshAgents('/workspace', context, webview);
+
+      expect(agents.get('homer')?.name).toBe('Homer J.');
+      expect(agents.get('homer')?.role).toBe('Lead');
+    });
+  });
+
+  describe('saveAgentSeats', () => {
+    it('clears seats missing from the latest map', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('Homer', 'homer'), makeMember('Lisa', 'lisa')]);
+      initializeAgents('/workspace', context, webview);
+      saveAgentSeats({ homer: 'seat-1', lisa: 'seat-2' }, context);
+
+      saveAgentSeats({ homer: 'seat-3' }, context);
+
+      expect(getAgents().get('homer')?.seatId).toBe('seat-3');
+      expect(getAgents().get('lisa')?.seatId ?? null).toBeNull();
     });
   });
 

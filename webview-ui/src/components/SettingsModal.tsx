@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { vscode } from '../vscodeApi.js';
+import { isSoundEnabled, setSoundEnabled as setGlobalSoundEnabled } from '../notificationSound.js';
 
 interface SettingsModalProps {
   onClose: () => void;
 }
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(isSoundEnabled);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -23,6 +24,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const handleSoundToggle = () => {
     const newValue = !soundEnabled;
     setSoundEnabled(newValue);
+    setGlobalSoundEnabled(newValue);
     vscode.postMessage({ type: 'setSoundEnabled', enabled: newValue });
   };
 

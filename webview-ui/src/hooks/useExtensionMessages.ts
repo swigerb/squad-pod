@@ -4,6 +4,14 @@ import type { OfficeLayout, ToolActivity, SquadTeamMember, TelemetryEvent } from
 import { vscode } from '../vscodeApi.js';
 import type { AgentDetailInfo } from '../components/AgentCard.js';
 import type { SquadInfoData } from '../components/SquadInfoCard.js';
+import {
+  addSnapshotAgent,
+  applyAgentStatus,
+  reconcileAgents,
+  type AgentSnapshot,
+  type AgentStatus,
+} from '../office/engine/agentSync.js';
+import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
@@ -20,8 +28,6 @@ import {
   setTilesetMetadata,
   setLegacyTilesetAssets,
   loadCharacterSheetsFromUris,
-  areAssetsReady,
-  getAssetLoadSnapshot,
   getFullDiagnosticReport,
 } from '../office/sprites/assetLoader.js';
 
@@ -43,12 +49,6 @@ export interface ExtensionMessageState {
   clearTelemetry: () => void;
 }
 
-interface AgentInfo {
-  id: string;
-  name: string;
-  role: string;
-}
-
 export function useExtensionMessages(
   getOfficeState: () => OfficeState,
   onLayoutLoaded?: (layout: OfficeLayout) => void,
@@ -64,26 +64,47 @@ export function useExtensionMessages(
   const [agentDetail, setAgentDetail] = useState<AgentDetailInfo | null>(null);
   const [squadInfo, setSquadInfo] = useState<SquadInfoData | null>(null);
   const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
-  const bufferedAgentsRef = useRef<AgentInfo[]>([]);
+  const bufferedAgentsRef = useRef<AgentSnapshot[] | null>(null);
+  const statusesRef = useRef<Record<string, string>>({});
   const agentsRef = useRef<string[]>([]);
   const layoutReadyRef = useRef(false);
 
   // Keep refs in sync with state so the message handler always sees current values
   agentsRef.current = agents;
   layoutReadyRef.current = layoutReady;
+  statusesRef.current = agentStatuses;
 
   const clearTelemetry = useCallback(() => setTelemetryEvents([]), []);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
-      if (
-        message?.type === 'tilesetMetadataLoaded' ||
-        message?.type === 'tilesetAssetsLoaded' ||
-        message?.type === 'characterAssetsLoaded'
-      ) {
-        console.log('[useExtensionMessages] Asset message received:', message.type, getAssetLoadSnapshot());
-      }
+      if (!message || typeof message.type !== 'string') return;
+
+      const applySnapshot = (snapshot: AgentSnapshot[]) => {
+        const officeState = getOfficeState();
+        reconcileAgents(officeState, snapshot);
+        const seats = officeState.getSeatAssignments();
+        if (snapshot.some((a) => (a.seatId ?? undefined) !== seats[a.id])) {
+          vscode.postMessage({ type: 'saveAgentSeats', seats });
+        }
+        const ids = snapshot.map((a) => a.id);
+        agentsRef.current = ids;
+        setAgents(ids);
+        const statuses: Record<string, string> = {};
+        for (const a of snapshot) {
+          if (a.status) statuses[a.id] = a.status;
+        }
+        statusesRef.current = statuses;
+        setAgentStatuses(statuses);
+        setAgentTools((prev) => {
+          const next: Record<string, ToolActivity[]> = {};
+          for (const id of ids) {
+            if (prev[id]) next[id] = prev[id];
+          }
+          return next;
+        });
+      };
 
       switch (message.type) {
         case 'squadRosterLoaded': {
@@ -92,18 +113,27 @@ export function useExtensionMessages(
         }
 
         case 'agentCreated': {
-          const agent = message.agent;
-          if (!agent) break;
-          const { id, name, role } = agent;
-          if (!agents.includes(id)) {
-            setAgents((prev) => [...prev, id]);
-            getOfficeState().addAgent(id, name, role);
+          const agent = message.agent as AgentSnapshot | undefined;
+          if (!agent?.id) break;
+          const officeState = getOfficeState();
+          if (!layoutReadyRef.current && officeState.layout.cols === 0) {
+            bufferedAgentsRef.current = [...(bufferedAgentsRef.current ?? []), agent];
+            break;
+          }
+          addSnapshotAgent(officeState, agent);
+          if (!agentsRef.current.includes(agent.id)) {
+            agentsRef.current = [...agentsRef.current, agent.id];
+            setAgents((prev) => (prev.includes(agent.id) ? prev : [...prev, agent.id]));
           }
           break;
         }
 
         case 'agentClosed': {
           const id = message.agentId;
+          agentsRef.current = agentsRef.current.filter((a) => a !== id);
+          if (bufferedAgentsRef.current) {
+            bufferedAgentsRef.current = bufferedAgentsRef.current.filter((a) => a.id !== id);
+          }
           setAgents((prev) => prev.filter((a) => a !== id));
           setAgentTools((prev) => {
             const next = { ...prev };
@@ -121,15 +151,13 @@ export function useExtensionMessages(
 
         case 'agentStatus': {
           const id = message.agentId;
-          const { status } = message;
+          const status = message.status as AgentStatus;
+          const previous = statusesRef.current[id];
+          statusesRef.current = { ...statusesRef.current, [id]: status };
           setAgentStatuses((prev) => ({ ...prev, [id]: status }));
-          const officeState = getOfficeState();
-          if (status === 'active') {
-            officeState.setAgentActive(id, true);
-          } else if (status === 'idle') {
-            officeState.setAgentActive(id, false);
-          } else if (status === 'waiting') {
-            officeState.showWaitingBubble(id);
+          applyAgentStatus(getOfficeState(), id, status);
+          if (previous === 'active' && status !== 'active') {
+            playDoneSound();
           }
           break;
         }
@@ -137,7 +165,7 @@ export function useExtensionMessages(
         case 'agentToolStart': {
           const id = message.agentId;
           const toolId = message.tool ?? message.toolId;
-          const { status } = message;
+          const status = message.status ?? toolId;
           setAgentTools((prev) => {
             const tools = prev[id] || [];
             const existing = tools.find((t) => t.toolId === toolId);
@@ -207,31 +235,13 @@ export function useExtensionMessages(
         }
 
         case 'existingAgents': {
-          const { agents: existingAgents, agentMeta } = message;
-          // Check both the ref AND the officeState directly — the ref might
-          // be stale if React hasn't re-rendered since layoutLoaded was handled.
+          const snapshot: AgentSnapshot[] = Array.isArray(message.agents) ? message.agents : [];
+          // Roster and layout can arrive in either order; buffer until seats exist.
           const layoutIsReady = layoutReadyRef.current || getOfficeState().layout.cols > 0;
           if (!layoutIsReady) {
-            bufferedAgentsRef.current = existingAgents;
+            bufferedAgentsRef.current = snapshot;
           } else {
-            const officeState = getOfficeState();
-            for (const agent of existingAgents) {
-              if (!agentsRef.current.includes(agent.id)) {
-                setAgents((prev) => [...prev, agent.id]);
-                const meta = agentMeta?.[agent.id];
-                officeState.addAgent(
-                  agent.id,
-                  agent.name,
-                  agent.role,
-                  meta?.palette,
-                  meta?.hueShift,
-                  meta?.seatId
-                );
-                if (meta?.isActive) {
-                  officeState.setAgentActive(agent.id, true);
-                }
-              }
-            }
+            applySnapshot(snapshot);
           }
           break;
         }
@@ -247,15 +257,10 @@ export function useExtensionMessages(
           officeState.rebuildFromLayout(layout, true);
           onLayoutLoaded?.(layout);
 
-          if (bufferedAgentsRef.current.length > 0) {
-            const existingAgents = bufferedAgentsRef.current;
-            for (const agent of existingAgents) {
-              if (!agentsRef.current.includes(agent.id)) {
-                setAgents((prev) => [...prev, agent.id]);
-                officeState.addAgent(agent.id, agent.name, agent.role);
-              }
-            }
-            bufferedAgentsRef.current = [];
+          if (bufferedAgentsRef.current) {
+            const buffered = bufferedAgentsRef.current;
+            bufferedAgentsRef.current = null;
+            applySnapshot(buffered);
           }
           break;
         }
@@ -286,6 +291,12 @@ export function useExtensionMessages(
         }
 
         case 'settingsLoaded': {
+          setSoundEnabled(message.soundEnabled ?? true);
+          break;
+        }
+
+        case 'soundEnabled': {
+          setSoundEnabled(message.enabled ?? true);
           break;
         }
 
@@ -301,9 +312,7 @@ export function useExtensionMessages(
         case 'tilesetMetadataLoaded': {
           const { metadata, tilesetPngUri } = message;
           if (metadata && tilesetPngUri) {
-            console.log('[useExtensionMessages] tilesetMetadataLoaded received:', metadata.items?.length, 'items');
             setTilesetMetadata(metadata, tilesetPngUri);
-            console.log('[useExtensionMessages] tilesetMetadataLoaded dispatched to assetLoader', getAssetLoadSnapshot());
           } else {
             console.error('[useExtensionMessages] tilesetMetadataLoaded missing metadata or tilesetPngUri');
           }
@@ -313,9 +322,7 @@ export function useExtensionMessages(
         case 'tilesetAssetsLoaded': {
           const { tilesetData, tilesetPngUri } = message;
           if (tilesetData && tilesetPngUri) {
-            console.log('[useExtensionMessages] tilesetAssetsLoaded received');
             setLegacyTilesetAssets(tilesetData as { tile_size?: number; objects: Record<string, { x: number; y: number; w: number; h: number }> }, tilesetPngUri as string);
-            console.log('[useExtensionMessages] tilesetAssetsLoaded dispatched to assetLoader', getAssetLoadSnapshot());
           } else {
             console.error('[useExtensionMessages] tilesetAssetsLoaded missing tilesetData or tilesetPngUri');
           }
@@ -325,14 +332,9 @@ export function useExtensionMessages(
         case 'characterAssetsLoaded': {
           const { characters } = message;
           if (characters && Array.isArray(characters)) {
-            console.error('[SPRITE-DEBUG] characterAssetsLoaded received, count:', characters.length, 'ids:', characters.map((c: { id: string }) => c.id));
             loadCharacterSheetsFromUris(characters);
-            console.error('[SPRITE-DEBUG] characterAssetsLoaded dispatched to assetLoader', getAssetLoadSnapshot());
-            setTimeout(() => {
-              console.error('[SPRITE-DEBUG] ⏱️ Asset check (3s after characterAssetsLoaded): areAssetsReady()=' + areAssetsReady(), getAssetLoadSnapshot());
-            }, 3000);
           } else {
-            console.error('[SPRITE-DEBUG] ❌ characterAssetsLoaded missing characters array, got:', typeof characters, message);
+            console.error('[useExtensionMessages] characterAssetsLoaded missing characters array');
           }
           break;
         }
@@ -371,13 +373,8 @@ export function useExtensionMessages(
     };
 
     window.addEventListener('message', handleMessage);
-    console.log('[useExtensionMessages] Posting webviewReady to extension host');
     vscode.postMessage({ type: 'webviewReady' });
-
-    // Send diagnostic report to extension host for file-based logging
-    const diagReport = getFullDiagnosticReport();
-    console.error('[SPRITE-DEBUG] Sending diagnostic report to extension:', JSON.stringify(diagReport));
-    vscode.postMessage({ type: 'diagnosticReport', ...diagReport });
+    vscode.postMessage({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
 
     return () => window.removeEventListener('message', handleMessage);
   // eslint-disable-next-line react-hooks/exhaustive-deps

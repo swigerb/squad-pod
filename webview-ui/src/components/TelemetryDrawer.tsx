@@ -13,6 +13,8 @@ const CATEGORY_COLORS: Record<TelemetryCategory, string> = {
   session: '#569cd6',
   log: '#dcdcaa',
   orchestration: '#c586c0',
+  agent: '#ce9178',
+  decision: '#d7ba7d',
 };
 
 const CATEGORY_LABELS: Record<TelemetryCategory, string> = {
@@ -20,6 +22,8 @@ const CATEGORY_LABELS: Record<TelemetryCategory, string> = {
   session: 'SESSION',
   log: 'LOG',
   orchestration: 'ORCH',
+  agent: 'AGENT',
+  decision: 'DECISION',
 };
 
 function formatTimestamp(ts: number): string {
