@@ -369,6 +369,10 @@ export class SquadWatcher {
       if (!entry.isFile()) {
         continue;
       }
+      // The structured ledger is historical data, never an activity signal.
+      if (entry.name.toLowerCase() === 'usage.jsonl') {
+        continue;
+      }
       const filePath = path.join(dir, entry.name);
       const stamp = statFile(filePath);
       if (!stamp) {

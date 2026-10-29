@@ -19,6 +19,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Live activity tracking** — watches Squad's sessions, logs, orchestration log, decision inbox, and per-agent folders to animate the right character when real work happens (see [File Watching & Activity Detection](#file-watching--activity-detection))
 - **Stable look and seats** — each member keeps the same appearance and desk across reloads; reopening the panel restores the whole office without duplicating anyone
 - **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
+- **Recorded usage / model history** — the same telemetry drawer passively reads a bounded local Squad usage ledger, with freshness, coverage and explicit partial/unavailable states; historical reports never drive activity or chimes.
 - **Office layout editor** — design your office with floors, walls, and furniture using the built-in editor
 - **Decorative carpets** — three auto-tiling styles with independent main/accent colors, painted over floors without changing floor IDs or agent walkability.
 - **Animated pets** — add or remove Claudio and Gitcat in the Layout editor; pets wander, follow nearby agents, and show a timed heart when clicked. Pet IDs/types survive save, reload, import and export; asset type numbers stay stable when another pet sheet fails to load.
@@ -156,6 +157,63 @@ or installed-VSIX acceptance; no terminal/CLI launch is executed.
 ### Source status and missing-team setup
 
 Settings reports whether `team.md` exists in the selected Squad directory and whether the file observer is running (native watch plus polling, or polling alone). Native-watch errors are shown with the polling fallback; EventBus / WebSocket is **not connected** because no producer is wired. These are file-observation hints, **not authoritative lifecycle, tool or context events**. The idle timeout is not proof that a task finished.
+
+### Recorded usage and capability limits
+
+The **Telemetry** drawer also shows historical version-1 records from
+`log/usage.jsonl` under the resolved `.squad` / legacy `.ai-team` directory.
+It refreshes every two seconds and on panel reload, independently of live
+activity. It shows reported input/output event sums and estimated cost (producer
+units), distinct-turn-ID coverage against recorded turn-start records (matching
+the pinned `squad cost` consumer), last valid record / usage timestamps, and the
+40 newest reports with their reported model. Expand **Recorded usage / model
+history** inside the drawer; it defaults collapsed so the activity feed remains
+accessible. Additional source diagnostics and report history expand separately.
+Scope is all valid complete local records, without agent/time filtering or the
+CLI's default latest-Markdown-log cutoff. Coverage is only for this ledger, not
+proof that every runtime turn was observed; it follows the source's turn-ID
+identity assumption rather than introducing a session/turn composite key.
+Repeated usage events are counted as reported, not silently deduplicated.
+Roster name/slug matches are exact apart from case/outer whitespace; unknown or
+ambiguous names stay unattributed. They never create or promote characters.
+
+Missing or unreadable sources, empty ledgers and turn starts without usage do
+**not** become zero totals. Invalid fields and unsupported versions/kinds are
+counted; partial sums explicitly include only valid complete records. An
+unterminated final line is held pending until its newline arrives, even if its
+JSON is already parseable. Rewrites, truncation and deletion replace the prior
+snapshot instead of accumulating stale totals. Files over 2 MiB or 10,000 complete
+lines are rejected without totals; per-record strings and numeric sums are bounded.
+Roster matching is disabled above 1,000 members rather than ignoring potential
+collisions outside a slice. Nothing writes to the ledger.
+
+The source contract is pinned to [Squad v1.1.0's ledger schema and producer](https://github.com/bradygaster/squad/blob/c24da2aad2ab7576f6b68dec2bc50b2fe2dc7a8a/packages/squad-sdk/src/runtime/usage-ledger.ts)
+and its [cost consumer](https://github.com/bradygaster/squad/blob/c24da2aad2ab7576f6b68dec2bc50b2fe2dc7a8a/packages/squad-cli/src/cli/commands/cost.ts).
+The deprecated interactive shell automatically persists usage when events arrive
+and writes succeed, but recommended `copilot --agent squad`, VS Code and App paths
+do not guarantee this producer; nonlocal state backends need not materialize a
+local file. **Do not start the deprecated shell to populate this view.** Its
+normalization may substitute zero / unknown for missing values, so these are
+reported historical values, not billing-grade accounting, measured-zero proof
+or evidence of the currently selected model.
+
+**Live context utilization and parent-child hierarchy / roster promotion remain
+unavailable.** Token sums are not context occupancy or context-window percentages.
+Exact context requires an actually connected runtime `context:utilization` colon
+bus; the opt-in bridge is not automatic and supplies neither replay nor workspace
+identity. No bridge is started here. Charters, UI focus, directory launches and
+persistence flags do not establish hierarchy or membership.
+
+For production UI evidence, build, then run
+`node scripts/acceptance-pets.cjs --serve --usage` and, in another terminal,
+`node scripts/acceptance-usage.cjs`. Use existing Playwright via `PLAYWRIGHT_MODULE`
+and installed Microsoft Edge (no downloads); `ACCEPTANCE_OUTPUT_DIR` writes
+screenshots and a JSON report. The fixture obtains real snapshots from the
+compiled provider and exercises the production webview at 1280, 360 and 240 pixel
+widths. It is a **mocked VS Code boundary**, not native-host or real-Squad-session
+acceptance, and never launches a terminal/CLI.
+
+### Missing-team and directory behavior
 
 If no team file exists, the office shows setup guidance: open the correct project folder or follow [Squad's setup instructions](https://github.com/bradygaster/squad#readme) and initialize a team yourself. The observer detects a newly created roster without a reload. Saved layouts, seats and hidden-member rules are unchanged.
 

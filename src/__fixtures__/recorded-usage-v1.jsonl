@@ -1,0 +1,8 @@
+{"version":1,"kind":"turn-start","turnId":"s1:1:1","sessionId":"s1","timestamp":"2026-09-15T17:00:00.000Z","agentName":"Flight"}
+{"version":1,"kind":"usage","sessionId":"s1","model":"claude-sonnet-5","inputTokens":1000,"outputTokens":200,"estimatedCost":0.01,"timestamp":"2026-09-15T17:00:05.000Z","turnId":"s1:1:1","agentName":"Flight"}
+{"version":1,"kind":"usage","sessionId":"s1","model":"claude-sonnet-5","inputTokens":500,"outputTokens":100,"estimatedCost":0.005,"timestamp":"2026-09-15T17:00:09.000Z","turnId":"s1:1:1","agentName":"Flight"}
+{"version":1,"kind":"turn-start","turnId":"s1:2:2","sessionId":"s1","timestamp":"2026-09-15T17:01:00.000Z","agentName":"coordinator"}
+{"version":1,"kind":"usage","sessionId":"s2","model":"gpt-5.6-sol","inputTokens":300,"outputTokens":50,"estimatedCost":0.003,"timestamp":"2026-09-15T17:02:00.000Z","turnId":"s2:9:9","agentName":"Control"}
+{"version":1,"kind":"usage","sessionId":"s2","model":"gpt-5.6-sol","inputTokens":200,"outputTokens":0,"estimatedCost":0,"timestamp":"2026-09-15T17:03:00.000Z"}
+{"version":1,"kind":"usage","sessionId":"s3","turnId":null,"model":"m","inputTokens":1,"outputTokens":0,"estimatedCost":0,"timestamp":"2026-09-15T17:05:00.000Z"}
+{not-json

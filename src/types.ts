@@ -296,6 +296,7 @@ export interface SquadInfoData {
 }
 
 export type OutboundMessage =
+  | { type: 'recordedUsage'; snapshot: import('./recordedUsage.js').RecordedUsageSnapshot }
   | AgentCreatedMessage
   | AgentStatusMessage
   | AgentToolStartMessage
