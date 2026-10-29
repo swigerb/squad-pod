@@ -96,7 +96,9 @@ The built-in editor lets you design your office:
 - **Walls** — Auto-tiling walls with color customization
 - **Tools** — Select, paint, erase, place, eyedropper. Floor, wall, and erase tools paint continuously while you drag.
 - **Undo/Redo** — 50 levels with Ctrl+Z / Ctrl+Y. Each drag (a paint stroke or a furniture move) is a single undo step.
-- **Furniture moves** — drag selected furniture; moves that would leave the grid are rejected
+- **Furniture moves and copies** — Select, then drag to move; hold **Alt when releasing** to copy. Desks carry their overlapping PCs and lamps; grabbing a PC or lamp moves just that object. Copies have fresh IDs and preserve the source's color (including no color), independently of the palette's Colorize setting.
+- **Atomic groups** — green/red outlines preview the entire group; only the final drop commits. Moves, copies, and **R** rotations reject the whole group if any member collides, leaves the grid, or lands on walls/void. A rejected operation shows an error and does not change the layout or undo history. Leaving the canvas or losing window focus cancels a furniture drag.
+- **Group rotation** — select a desk and press **R** (or Rotate) to turn the desk and its PCs/lamps together. Each move, copy, or rotation is one undo step; redo restores all members with the same IDs. Groups are inferred from overlapping catalog surfaces, not new saved group fields; existing layout files need no migration.
 - **Export/Import** — share layouts as JSON files via the Settings modal. Imports are validated first; an invalid file shows an error and leaves your saved layout untouched.
 
 The grid is expandable up to 64×64 tiles. The default layout is a 20×11 office with 6 desk/chair pairs — enough for a solid Squad team.
@@ -188,7 +190,8 @@ Squad Pod tracks [Pixel Agents v1.5.0](https://github.com/pixel-agents-hq/pixel-
 | Reconnect snapshot, stable appearance, persisted seats with swap | ✅ |
 | Sound on completion, Debug View, diagnostics output channel | ✅ |
 | Editor: drag painting, one undo per gesture, safe import, atomic save | ✅ |
-| Alt-drag copy, grouped desk + PC moves, carpets, Areas | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
+| Alt-drag copy, atomic catalog desk + PC/lamp moves and rotations | ✅ |
+| Carpets, Areas and remaining editor parity | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
 | Directory launch drawer, pets, external asset directories | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
 | Standalone browser server, embedded terminal, mobile layout | ⏳ [#8](https://github.com/swigerb/squad-pod/issues/8) |
 | Per-tool overlays and context gauges | ❌ Needs a Squad event API |

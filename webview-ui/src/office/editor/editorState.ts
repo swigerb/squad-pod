@@ -11,6 +11,7 @@ export class EditorState {
   tileType: TileType = TileType.FLOOR_1;
   furnitureType: string = FurnitureType.DESK;
   selectedFurnitureUid: string | null = null;
+  transformError: string | null = null;
   floorColor: FloorColor = { ...DEFAULT_FLOOR_COLOR };
   wallColor: FloorColor = { ...DEFAULT_WALL_COLOR };
   undoStack: UndoEntry[] = [];
@@ -30,6 +31,7 @@ export class EditorState {
     this.tileType = TileType.FLOOR_1;
     this.furnitureType = FurnitureType.DESK;
     this.selectedFurnitureUid = null;
+    this.transformError = null;
     this.floorColor = { ...DEFAULT_FLOOR_COLOR };
     this.wallColor = { ...DEFAULT_WALL_COLOR };
     this.undoStack = [];

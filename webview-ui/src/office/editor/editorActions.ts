@@ -1,6 +1,129 @@
 import { OfficeLayout, TileType, FloorColor, PlacedFurniture } from '../types.js';
 import { EditorState, UndoEntry } from './editorState.js';
 import { UNDO_STACK_MAX_SIZE } from '../../constants.js';
+import { getCatalogEntry } from '../layout/furnitureCatalog.js';
+import { getFurnitureFootprint } from '../layout/layoutManager.js';
+
+function overlapArea(a: PlacedFurniture, b: PlacedFurniture): number {
+  const af = getFurnitureFootprint(a);
+  const bf = getFurnitureFootprint(b);
+  if (!af || !bf) return 0;
+  return Math.max(0, Math.min(a.col + af.width, b.col + bf.width) - Math.max(a.col, b.col))
+    * Math.max(0, Math.min(a.row + af.height, b.row + bf.height) - Math.max(a.row, b.row));
+}
+
+// Ownership is geometric, so existing saved offices need no group-ID migration.
+// A rider straddling desks belongs to the largest overlap, then layout order.
+export function getSurfaceRiders(layout: OfficeLayout, uid: string): PlacedFurniture[] {
+  const desks = layout.furniture.filter((f) => getCatalogEntry(f.type)?.isDesk);
+  if (!desks.some((f) => f.uid === uid)) return [];
+  return layout.furniture.filter((item) => {
+    if (!getCatalogEntry(item.type)?.canPlaceOnSurfaces) return false;
+    let owner: string | null = null;
+    let area = 0;
+    for (const desk of desks) {
+      const overlap = overlapArea(item, desk);
+      if (overlap > area) {
+        area = overlap;
+        owner = desk.uid;
+      }
+    }
+    return owner === uid;
+  });
+}
+
+export interface FurnitureTransformPlan {
+  items: PlacedFurniture[];
+  error: string | null;
+}
+
+function groupPlacementError(layout: OfficeLayout, items: PlacedFurniture[], duplicate: boolean): string | null {
+  const excluded = new Set(duplicate ? [] : items.map((f) => f.uid));
+  const obstacles = layout.furniture.filter((f) => !excluded.has(f.uid));
+  for (const item of items) {
+    const footprint = getFurnitureFootprint(item);
+    if (!footprint) return `Cannot transform furniture with unknown dimensions: ${item.type}.`;
+    const { width, height } = footprint;
+    if (!Number.isInteger(item.col) || !Number.isInteger(item.row)
+      || item.col < 0 || item.row < 0 || item.col + width > layout.cols || item.row + height > layout.rows) {
+      return 'Furniture group must stay entirely inside the grid.';
+    }
+    for (let r = item.row; r < item.row + height; r++) {
+      for (let c = item.col; c < item.col + width; c++) {
+        const tile = layout.tiles[r * layout.cols + c];
+        if (tile === TileType.WALL || tile === TileType.VOID || tile === undefined) {
+          return 'Furniture group must stay on floor tiles.';
+        }
+      }
+    }
+    for (const obstacle of [...obstacles, ...items.filter((f) => f.uid !== item.uid)]) {
+      if (!getFurnitureFootprint(obstacle)) {
+        return `Cannot check collisions with unknown furniture: ${obstacle.type}.`;
+      }
+      if (!overlapArea(item, obstacle)) continue;
+      const entry = getCatalogEntry(item.type);
+      const other = getCatalogEntry(obstacle.type);
+      const internal = items.includes(obstacle);
+      if ((entry?.canPlaceOnSurfaces && other?.isDesk)
+        || (internal && entry?.isDesk && other?.canPlaceOnSurfaces)) continue;
+      return 'Furniture group overlaps other furniture.';
+    }
+  }
+  return null;
+}
+
+export function planFurnitureMove(
+  layout: OfficeLayout, uid: string, col: number, row: number, duplicate = false,
+): FurnitureTransformPlan {
+  const item = layout.furniture.find((f) => f.uid === uid);
+  if (!item) return { items: [], error: 'The selected furniture no longer exists.' };
+  const items = [item, ...getSurfaceRiders(layout, uid)].map((f) => ({
+    ...f, col: f.col + col - item.col, row: f.row + row - item.row,
+  }));
+  return { items, error: groupPlacementError(layout, items, duplicate) };
+}
+
+export function planFurnitureRotate(layout: OfficeLayout, uid: string): FurnitureTransformPlan {
+  const item = layout.furniture.find((f) => f.uid === uid);
+  const footprint = item && getFurnitureFootprint(item);
+  if (!item || !footprint) return { items: [], error: 'Cannot rotate furniture with unknown dimensions.' };
+  const items = [
+    { ...item, rotation: ((item.rotation || 0) + 90) % 360 },
+    ...getSurfaceRiders(layout, uid).map((rider) => {
+      const size = getFurnitureFootprint(rider)!;
+      return {
+        ...rider,
+        col: item.col + footprint.height - (rider.row - item.row) - size.height,
+        row: item.row + rider.col - item.col,
+        rotation: ((rider.rotation || 0) + 90) % 360,
+      };
+    }),
+  ];
+  return { items, error: groupPlacementError(layout, items, false) };
+}
+
+export function commitFurniturePlan(
+  layout: OfficeLayout, plan: FurnitureTransformPlan, duplicate = false,
+): { layout: OfficeLayout; selectedUid: string } | null {
+  if (plan.error || !plan.items.length) return null;
+  if (duplicate) {
+    const taken = new Set(layout.furniture.map((f) => f.uid));
+    const copies = plan.items.map((f) => {
+      const base = `f-${crypto.randomUUID()}`;
+      let uid = base;
+      let suffix = 0;
+      while (taken.has(uid)) uid = `${base}-${++suffix}`;
+      taken.add(uid);
+      return { ...f, uid, ...(f.color ? { color: { ...f.color } } : {}) };
+    });
+    return { layout: { ...layout, furniture: [...layout.furniture, ...copies] }, selectedUid: copies[0].uid };
+  }
+  const updates = new Map(plan.items.map((f) => [f.uid, f]));
+  return {
+    layout: { ...layout, furniture: layout.furniture.map((f) => updates.get(f.uid) ?? f) },
+    selectedUid: plan.items[0].uid,
+  };
+}
 
 export function applyTilePaint(
   layout: OfficeLayout,
@@ -74,14 +197,7 @@ export function applyFurnitureRotate(
   layout: OfficeLayout,
   uid: string
 ): OfficeLayout {
-  const newLayout = cloneLayout(layout);
-  const furniture = newLayout.furniture.find(f => f.uid === uid);
-  
-  if (furniture) {
-    furniture.rotation = (furniture.rotation + 90) % 360;
-  }
-  
-  return newLayout;
+  return commitFurniturePlan(layout, planFurnitureRotate(layout, uid))?.layout ?? layout;
 }
 
 export function applyEyedropper(
