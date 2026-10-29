@@ -82,9 +82,20 @@ export function ensureUniqueDirectoryName(
 }
 
 export function sameDirectoryPath(left: string, right: string, platform = process.platform): boolean {
-  const a = path.resolve(left);
-  const b = path.resolve(right);
+  const a = resolveDirectoryIdentity(left);
+  const b = resolveDirectoryIdentity(right);
   return platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
+function resolveDirectoryIdentity(directoryPath: string): string {
+  try {
+    return fs.realpathSync.native(directoryPath);
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+      return path.resolve(directoryPath);
+    }
+    throw error;
+  }
 }
 
 function storedRecords<T>(value: unknown, label: string, isRecord: (item: unknown) => item is T): T[] {

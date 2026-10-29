@@ -96,6 +96,15 @@ describe('saved launch directories', () => {
     expect(sameDirectoryPath('C:\\Work\\Demo', 'c:\\work\\demo', 'win32')).toBe(true);
     expect(sameDirectoryPath('/Work/Demo', '/work/demo', 'linux')).toBe(false);
   });
+
+  it('recognizes existing directory aliases while retaining lexical comparison for removed paths', () => {
+    const directory = makeDirectory('canonical');
+    const alias = path.join(path.dirname(directory), 'alias');
+    fs.symlinkSync(directory, alias, process.platform === 'win32' ? 'junction' : 'dir');
+    expect(sameDirectoryPath(alias, fs.realpathSync.native(directory))).toBe(true);
+    const removed = path.join(path.dirname(directory), 'removed');
+    expect(sameDirectoryPath(removed, path.join(removed, '..', 'removed'))).toBe(true);
+  });
 });
 
 describe('explicit Squad CLI launch', () => {
