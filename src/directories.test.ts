@@ -86,9 +86,13 @@ describe('saved launch directories', () => {
     const first = createSavedDirectory('Project', makeDirectory('project'));
     const second = { ...first, name: 'Renamed' };
     await recordDirectoryLaunch(storage, first, '2026-10-29T18:00:00.000Z');
+    const firstLaunchId = readLaunchHistory(storage)[0].id;
     await recordDirectoryLaunch(storage, second, '2026-10-29T19:00:00.000Z');
-    expect(readLaunchHistory(storage)).toEqual([{ ...second, lastLaunchedAt: '2026-10-29T19:00:00.000Z' }]);
-    await forgetDirectoryLaunch(storage, first.id);
+    const [recent] = readLaunchHistory(storage);
+    expect(recent).toMatchObject({ name: 'Renamed', path: second.path, lastLaunchedAt: '2026-10-29T19:00:00.000Z' });
+    expect(recent.id).not.toBe(first.id);
+    expect(recent.id).not.toBe(firstLaunchId);
+    await forgetDirectoryLaunch(storage, recent.id);
     expect(storage.values.get(GLOBAL_KEY_DIRECTORY_LAUNCH_HISTORY)).toEqual([]);
   });
 

@@ -140,7 +140,7 @@ export async function recordDirectoryLaunch(
   launchedAt = new Date().toISOString(),
 ): Promise<void> {
   const recent = readLaunchHistory(storage).filter((entry) => !sameDirectoryPath(entry.path, directory.path));
-  recent.unshift({ ...directory, lastLaunchedAt: launchedAt });
+  recent.unshift({ ...directory, id: randomUUID(), lastLaunchedAt: launchedAt });
   await storage.update(GLOBAL_KEY_DIRECTORY_LAUNCH_HISTORY, recent.slice(0, MAX_RECENT_LAUNCHES));
 }
 

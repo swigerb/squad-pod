@@ -16,6 +16,7 @@ export interface AgentSnapshot {
   role: string;
   paletteIndex?: number;
   seatId?: string | null;
+  directoryId?: string | null;
   status?: AgentStatus;
 }
 
@@ -27,8 +28,10 @@ export interface AgentSyncTarget {
     role: string,
     preferredPalette?: number,
     preferredHueShift?: number,
-    preferredSeatId?: string
+    preferredSeatId?: string,
+    preferredDirectoryId?: string,
   ): void;
+  setAgentDirectoryId?(id: string, directoryId: string | null | undefined): void;
   removeAgent(id: string): void;
   setAgentActive(id: string, active: boolean): void;
   showWaitingBubble(id: string): void;
@@ -43,7 +46,10 @@ export function appearanceFromIndex(index: number | undefined): { palette: numbe
 }
 
 export function addSnapshotAgent(target: AgentSyncTarget, agent: AgentSnapshot): boolean {
-  if (target.characters.has(agent.id)) return false;
+  if (target.characters.has(agent.id)) {
+    target.setAgentDirectoryId?.(agent.id, agent.directoryId);
+    return false;
+  }
   const hasAppearance = typeof agent.paletteIndex === 'number';
   const { palette, hueShift } = appearanceFromIndex(agent.paletteIndex);
   target.addAgent(
@@ -52,7 +58,8 @@ export function addSnapshotAgent(target: AgentSyncTarget, agent: AgentSnapshot):
     agent.role,
     hasAppearance ? palette : undefined,
     hasAppearance ? hueShift : undefined,
-    agent.seatId ?? undefined
+    agent.seatId ?? undefined,
+    agent.directoryId ?? undefined,
   );
   return true;
 }

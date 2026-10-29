@@ -142,6 +142,7 @@ export function refreshAgents(
   workspaceRoot: string,
   context: vscode.ExtensionContext,
   webview: vscode.Webview,
+  directoryId?: string | null,
 ): Map<string, SquadAgentState> {
   const members = readTeamRoster(workspaceRoot);
   const persisted = loadPersistedMeta(context);
@@ -172,6 +173,7 @@ export function refreshAgents(
         role: state.role,
         paletteIndex: state.paletteIndex,
         seatId: state.seatId,
+        ...(directoryId ? { directoryId } : {}),
       },
     });
   });
@@ -256,6 +258,7 @@ export function sendExistingAgents(
   agentMap: Map<string, SquadAgentState>,
   _context: vscode.ExtensionContext | undefined,
   webview: vscode.Webview,
+  directoryId?: string | null,
 ): void {
   const agentArray = Array.from(agentMap.values()).map(a => ({
     id: a.id,
@@ -263,6 +266,7 @@ export function sendExistingAgents(
     role: a.role,
     paletteIndex: a.paletteIndex,
     seatId: a.seatId,
+    ...(directoryId ? { directoryId } : {}),
     status: a.status,
     currentTask: a.currentTask,
   }));

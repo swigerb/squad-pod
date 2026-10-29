@@ -82,7 +82,8 @@ export class OfficeState {
     role: string,
     preferredPalette?: number,
     preferredHueShift?: number,
-    preferredSeatId?: string
+    preferredSeatId?: string,
+    preferredDirectoryId?: string,
   ) {
     if (this.characters.has(id)) return;
 
@@ -117,17 +118,27 @@ export class OfficeState {
     }
 
     if (!seatId) {
-      for (const seat of this.seats) {
-        if (!seat.occupant) {
-          seatId = seat.id;
-          seat.occupant = id;
-          break;
-        }
+      const freeSeats = this.seats.filter((seat) => !seat.occupant);
+      const mappedAreas = preferredDirectoryId
+        ? this.layout.areaMappings?.[preferredDirectoryId] ?? []
+        : [];
+      const areaLabels = new Set(mappedAreas);
+      const areaSeats = freeSeats.filter((seat) => {
+        const label = this.layout.areaTiles?.[seat.row * this.layout.cols + seat.col];
+        return label !== undefined && label !== null && areaLabels.has(label);
+      });
+      const unzonedSeats = freeSeats.filter((seat) =>
+        !this.layout.areaTiles?.[seat.row * this.layout.cols + seat.col],
+      );
+      const seat = areaSeats[0] ?? unzonedSeats[0] ?? freeSeats[0];
+      if (seat) {
+        seatId = seat.id;
+        seat.occupant = id;
       }
     }
 
     const seatObj = seatId ? this.seats.find(s => s.id === seatId) ?? null : null;
-    const character = createCharacter(id, name, role, palette!, seatId, seatObj, hueShift!);
+    const character = createCharacter(id, name, role, palette!, seatId, seatObj, hueShift!, preferredDirectoryId);
     this.characters.set(id, character);
 
     if (seatId) {
@@ -135,6 +146,11 @@ export class OfficeState {
     }
 
     this.rebuildFurnitureInstances();
+  }
+
+  setAgentDirectoryId(id: string, directoryId: string | null | undefined): void {
+    const character = this.characters.get(id);
+    if (character) character.directoryId = directoryId ?? undefined;
   }
 
   removeAgent(id: string) {

@@ -371,6 +371,32 @@ describe('layoutPersistence', () => {
       expect(JSON.parse(readLayoutRevision(tmpDir)!)).not.toHaveProperty('pets');
     });
 
+    it('preserves legacy layouts without Area fields and accepts stable-ID mappings to unavailable directories', () => {
+      const { pets: _pets, ...legacy } = sampleLayout;
+      const parsedLegacy = parseLayoutJson(JSON.stringify(legacy));
+      expect(parsedLegacy).not.toHaveProperty('areas');
+      expect(parsedLegacy).not.toHaveProperty('areaTiles');
+      expect(parsedLegacy).not.toHaveProperty('areaMappings');
+
+      const withAreas = {
+        ...legacy,
+        areas: [{ label: 'Engineering', color: '#50c878' }],
+        areaTiles: Array(80).fill(null).map((value, index) => index === 0 ? 'Engineering' : value),
+        areaMappings: { 'saved-id-no-longer-in-catalog': ['Engineering'] },
+      };
+      expect(parseLayoutJson(JSON.stringify(withAreas))).toEqual(withAreas);
+    });
+
+    it.each([
+      ['unknown label', { areas: [{ label: 'Engineering', color: '#50c878' }], areaTiles: ['Missing', ...Array(79).fill(null)] }],
+      ['wall membership', { areas: [{ label: 'Engineering', color: '#50c878' }], areaTiles: ['Engineering', ...Array(79).fill(null)], tiles: [0, ...Array(79).fill(1)] }],
+      ['void membership', { areas: [{ label: 'Engineering', color: '#50c878' }], areaTiles: ['Engineering', ...Array(79).fill(null)], tiles: [8, ...Array(79).fill(1)] }],
+      ['duplicate labels', { areas: [{ label: 'Engineering', color: '#50c878' }, { label: 'engineering', color: '#123456' }] }],
+      ['malformed mapping', { areas: [{ label: 'Engineering', color: '#50c878' }], areaMappings: { saved: ['Missing'] } }],
+    ])('rejects invalid Area %s', (_label, fields) => {
+      expect(isValidLayout({ ...sampleLayout, ...fields })).toBe(false);
+    });
+
     it.each([
       ['not JSON', '{oops'],
       ['an array', '[]'],

@@ -54,6 +54,11 @@ describe('carpets through real canvas/editor transactions', () => {
           onWallColorChange={actions.handleWallColorChange} onFurnitureTypeChange={actions.handleFurnitureTypeChange}
           activePetTypes={office.getActivePetTypes()} onPetToggle={actions.handlePetToggle}
           onCarpetVariantChange={actions.handleCarpetVariantChange} onCarpetColorChange={actions.handleCarpetColorChange}
+          areas={office.layout.areas ?? []} areaMappings={office.layout.areaMappings} directories={[]}
+          selectedAreaLabel={state.selectedAreaLabel} transformError={state.transformError}
+          onAreaAdd={actions.handleAreaAdd} onAreaRename={actions.handleAreaRename}
+          onAreaColorChange={actions.handleAreaColorChange} onAreaRemove={actions.handleAreaRemove}
+          onAreaMappingChange={actions.handleAreaMappingChange} onAreaSelect={actions.handleAreaSelect}
           onSave={actions.handleSave} onReset={actions.handleReset} onUndo={actions.handleUndo} onRedo={actions.handleRedo}
           onDeleteSelected={actions.handleDeleteSelected} onRotateSelected={actions.handleRotateSelected}
           hasSelection={false} />

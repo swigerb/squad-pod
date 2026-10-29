@@ -4,6 +4,7 @@ const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const Module = require('node:module');
+const { pathToFileURL } = require('node:url');
 
 const extensionPath = path.resolve(__dirname, '..');
 const extensionBundle = path.join(extensionPath, 'dist', 'extension.js');
@@ -14,7 +15,7 @@ let provider;
 let receiveMessage;
 let deactivate;
 const disposable = { dispose() {} };
-const uri = (fsPath) => ({ fsPath });
+const uri = (fsPath) => ({ fsPath, toString: () => pathToFileURL(fsPath).toString() });
 const vscode = {
   Uri: {
     file: (fsPath) => uri(fsPath),
@@ -39,15 +40,22 @@ assert.ok(fs.existsSync(webviewScript), 'production webview bundle must exist');
 assert.ok(fs.readFileSync(webviewScript, 'utf8').includes('pets-carousel'), 'production webview must include the Pets editor');
 
 const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-pet-acceptance-'));
+const savedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-directory-acceptance-'));
 fs.mkdirSync(path.join(workspaceRoot, '.squad'), { recursive: true });
 fs.writeFileSync(
   path.join(workspaceRoot, '.squad', 'team.md'),
-  '## Members\n\n| Name | Role | Charter |\n| --- | --- | --- |\n',
+  '## Members\n\n| Name | Role | Charter | Status |\n| --- | --- | --- | --- |\n| Synthetic Fixture Agent | Dev | `.squad/agents/fixture-agent/charter.md` | ✅ Active |\n',
 );
-vscode.workspace.workspaceFolders = [{ uri: uri(workspaceRoot) }];
+vscode.workspace.workspaceFolders = [{ uri: uri(workspaceRoot), name: 'Selected fixture root' }];
+const savedDirectory = {
+  id: '00000000-0000-4000-8000-000000000001',
+  name: 'Synthetic alternate project',
+  path: savedRoot,
+};
+const storageValues = new Map([['squad-pod.directories', [savedDirectory]]]);
 const storage = {
-  get: (_key, fallback) => fallback,
-  update: async () => {},
+  get: (key, fallback) => storageValues.has(key) ? storageValues.get(key) : fallback,
+  update: async (key, value) => { storageValues.set(key, value); },
 };
 const context = {
   subscriptions: [],
@@ -85,16 +93,27 @@ try {
   assert.equal(typeof receiveMessage, 'function');
 
   receiveMessage({ type: 'webviewReady' });
+  receiveMessage({ type: 'getDirectories' });
   const assetSnapshot = messages.find((message) => message.type === 'manifestAssetsLoaded')?.snapshot;
   assert.ok(assetSnapshot, 'compiled provider must publish its production asset snapshot');
   assert.deepEqual(assetSnapshot.pets.map((pet) => pet.id).sort(), ['claudio', 'gitcat']);
   const layoutMessage = messages.find((message) => message.type === 'layoutLoaded');
   assert.ok(layoutMessage, 'compiled provider must deliver a layout through the host boundary');
+  const expectedDirectoryId = `workspace:${vscode.workspace.workspaceFolders[0].uri.toString()}`;
+  const observedRoster = messages.find((message) => message.type === 'existingAgents');
+  assert.deepEqual(
+    observedRoster.agents.map(({ id, directoryId }) => ({ id, directoryId })),
+    [{ id: 'fixture-agent', directoryId: expectedDirectoryId }],
+    'compiled provider must attach only the selected real roster and its stable workspace URI identity',
+  );
+  const directoryCatalog = messages.find((message) => message.type === 'directoryCatalog')?.catalog;
+  assert.ok(directoryCatalog?.workspaceDirectories.some((entry) => entry.id === expectedDirectoryId));
+  assert.ok(directoryCatalog?.savedDirectories.some((entry) => entry.id === savedDirectory.id));
 
   if (serveBrowser) {
     const port = 4173;
     const hostMessages = messages.filter((message) =>
-      ['settingsLoaded', 'sourceStatus', 'characterSpritesLoaded', 'manifestAssetsLoaded', 'layoutLoaded', 'existingAgents', 'squadRosterLoaded'].includes(message.type),
+    ['settingsLoaded', 'sourceStatus', 'characterSpritesLoaded', 'manifestAssetsLoaded', 'layoutLoaded', 'existingAgents', 'squadRosterLoaded', 'directoryCatalog'].includes(message.type),
     );
     const fixtures = JSON.stringify(hostMessages).replace(/</g, '\\u003c');
     let html = webview.html;
@@ -153,4 +172,5 @@ try {
   deactivate?.();
   Module._load = originalLoad;
   fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  fs.rmSync(savedRoot, { recursive: true, force: true });
 }

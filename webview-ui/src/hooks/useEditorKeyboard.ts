@@ -15,6 +15,11 @@ export function useEditorKeyboard(
     if (!isEditMode) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target;
+      if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
+        return;
+      }
+
       if ((e.key === 'Delete' || e.key === 'Backspace') && editorState.selectedFurnitureUid) {
         e.preventDefault();
         onDelete();

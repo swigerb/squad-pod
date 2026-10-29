@@ -10,10 +10,11 @@ interface SettingsModalProps {
   onToggleDebugMode?: () => void;
   settings: PodSettings;
   onSoundChange: (enabled: boolean) => void;
+  onShowAreasChange: (enabled: boolean) => void;
   sourceStatus: SourceStatus | null;
 }
 
-export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, sourceStatus }: SettingsModalProps) {
+export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
   const handleExport = () => {
     vscode.postMessage({ type: 'exportLayout' });
   };
@@ -74,6 +75,17 @@ export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onTog
               type="checkbox"
               checked={settings.soundEnabled}
               onChange={() => onSoundChange(!settings.soundEnabled)}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label htmlFor="squad-pod-show-areas" style={{ fontSize: '13px' }}>Show Named Areas</label>
+            <input
+              id="squad-pod-show-areas"
+              type="checkbox"
+              checked={settings.showAreas}
+              onChange={() => onShowAreasChange(!settings.showAreas)}
               style={{ width: '18px', height: '18px', cursor: 'pointer' }}
             />
           </div>

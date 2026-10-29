@@ -19,7 +19,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Live activity tracking** — watches Squad's sessions, logs, orchestration log, decision inbox, and per-agent folders to animate the right character when real work happens (see [File Watching & Activity Detection](#file-watching--activity-detection))
 - **Stable look and seats** — each member keeps the same appearance and desk across reloads; reopening the panel restores the whole office without duplicating anyone
 - **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
-- **Office layout editor** — design your office with floors, walls, and furniture using the built-in editor
+- **Office layout editor** — design your office with floors, walls, furniture and named Areas using the built-in editor
 - **Decorative carpets** — three auto-tiling styles with independent main/accent colors, painted over floors without changing floor IDs or agent walkability.
 - **Animated pets** — add or remove Claudio and Gitcat in the Layout editor; pets wander, follow nearby agents, and show a timed heart when clicked. Pet IDs/types survive save, reload, import and export; asset type numbers stay stable when another pet sheet fails to load.
 - **Manifest furniture and live imports** — verified original Pixel Agents furniture/floors/walls; Settings can load local furniture manifests and pick up edits without restarting VS Code.
@@ -146,9 +146,10 @@ in another terminal. It uses an **existing** Playwright installation
 it never downloads either. Optional `ACCEPTANCE_OUTPUT_DIR` writes JSON hit
 stacks and screenshots, and `ACCEPTANCE_URL` overrides the fixture URL.
 The check uses `elementsFromPoint` and normal, unforced clicks on zoom and
-every editor tool (including Carpet and Select after Pets) at 1280×900,
+every editor tool (including Area, Carpet and Select after Pets) at 1280×900,
 640×900, 360×640, 320×640, 240×480 and 320×240, including editor scrolling,
-draft save/undo/redo and directory-launch request compatibility.
+draft save/undo/redo, Area naming/mapping text-key isolation, stable selected-root
+identity and explicit directory-launch request compatibility.
 It supplies Dark+ theme variables normally supplied by VS Code. This is a
 production-browser fixture with a mocked host boundary, **not** native VS Code
 or installed-VSIX acceptance; no terminal/CLI launch is executed.
@@ -161,7 +162,7 @@ If no team file exists, the office shows setup guidance: open the correct projec
 
 Automatic launch on startup or panel refocus is **off**. Directory launches are available only after an explicit click in **Directories**; Squad Pod opens a new VS Code terminal with `copilot --agent squad` and the selected folder as its working directory. VS Code workspace trust is required, the Copilot CLI must be on `PATH`, and normal terminal/Copilot permission prompts are preserved. Removing a saved directory does not close a terminal that was already launched.
 
-The directory picker lists current workspace folders, user-saved named directories and recent launch requests recorded by Squad Pod when it submits the command. A record is not proof that the CLI started. **Squad history suggestions are unavailable**: current Squad session JSON contains conversation envelopes, not a supported directory launch-history source, so Squad Pod does not infer a directory from it. These app-owned records are not presented as Squad history. Directory-to-Area/seat mapping is not implemented. Tool activity and context gauges are likewise not offered as working integrations without supported producers. Only sound and Debug View are persistent preferences in this slice; transient editor/drawer state is unchanged. This is a partial [#7](https://github.com/swigerb/squad-pod/issues/7) implementation, not full upstream parity. VS Code Development Host/installed-VSIX behavior still needs host verification; browser fixtures and unit tests do not establish that.
+The directory picker lists current workspace folders, user-saved named directories and recent launch requests recorded by Squad Pod when it submits the command. A record is not proof that the CLI started. **Squad history suggestions are unavailable**: current Squad session JSON contains conversation envelopes, not a supported directory launch-history source, so Squad Pod does not infer a directory from it. These app-owned records are not presented as Squad history. Saved-directory IDs remain stable across name and path edits; workspace mapping IDs use the workspace-folder URI. Recent launch records are not mapping choices, and mappings to unavailable directories are retained rather than reassigned. Tool activity and context gauges are likewise not offered as working integrations without supported producers. Sound, Debug View and Show Named Areas are persistent preferences in this slice; transient editor/drawer state is unchanged. This is a partial [#7](https://github.com/swigerb/squad-pod/issues/7) implementation, not full upstream parity. The office observes agents only from its selected Squad root; explicitly launching another directory does not attach its roster or start another observer. VS Code Development Host/installed-VSIX behavior still needs host verification; browser fixtures and unit tests do not establish that.
 
 Pending folder/name dialogs revalidate the latest catalog before saving, preserving intervening renames and removals and checking current duplicates and capacity. Layout keyboard shortcuts are suspended while the directory picker is open so editing a name cannot delete, rotate or undo office furniture. Regression tests exercise the compiled provider with delayed mock VS Code dialogs and the App with selected furniture and a focused name field; these are not native-host observations.
 
@@ -171,6 +172,7 @@ The built-in editor lets you design your office:
 
 - **Floor** — Full HSB color control
 - **Walls** — Auto-tiling walls with color customization
+- **Named Areas** — define labeled/colorized Areas, paint or erase membership on floor tiles, and eyedrop an existing Area. Areas are optional layout data: legacy layouts keep their original JSON shape until an Area is edited. The Show Named Areas preference controls the canvas overlay. Map a directory to one or more Areas to prefer seats in those Areas for its currently observed agents; if mapped seats are full, allocation falls back to free seats outside Areas and then any free seat. Existing manual/persisted seats remain preferred. Only directories with durable workspace/saved IDs can be mapped; recent launch records are excluded, and starting a directory does not make its roster observable.
 - **Carpets** — choose one of three pinned styles and adjust Main/Accent hue, saturation and brightness. Left-drag paints on existing floors (including beneath furniture); right-drag removes only carpet. Eyedrop copies the style and both colors. The generic Erase tool removes carpet first when present, preserving the underlying floor and furniture.
 - **Pets** — use the Pets tool to add/remove the pinned Claudio and Gitcat companions. They wander across walkable tiles, sometimes follow nearby agents, and respond to a click with a heart. Each placement's `id` and stable manifest `petType` are saved; older layouts behave as having no pets without rewriting the legacy JSON shape.
 - **Tools** — Select, paint, erase, place, eyedropper. Floor, wall, and erase tools paint continuously while you drag.
@@ -188,6 +190,14 @@ defaults; existing colors are unchanged. These fallbacks are display-only:
 opening a layout does not dirty the draft, alter its revision, or add synthesized
 colors to the saved JSON.
 
+Areas are optional `areas` definitions (`{label, color}`) with floor-only
+membership in an `areaTiles` array parallel to `tiles`; directory preferences
+are stored separately in `areaMappings` by directory ID. Adding, removing,
+renaming, recoloring, mapping, painting and erasing Areas are editor
+transactions, so undo/redo and protected drafts include them. Missing Area
+fields remain missing until an Area edit; validation, import/export, save
+acknowledgements and recovery preserve the optional shape and unknown metadata.
+
 Carpets are an optional `carpetTiles` array parallel to `tiles` (`null` means no
 carpet). Each cell stores `variant` (0–2), optional `color`, `accentColor` and
 overlap `order`. Carpet strokes/right-erase are one undo step; resizing in any
@@ -195,8 +205,11 @@ direction, saving, reloading and JSON export/import retain these fields.
 Existing layouts without carpets are not filled with empty carpet data or
 reset. Walls/void cannot be carpet-painted; changing a floor to wall/void removes
 its carpet within the same undo transaction. Carpet artwork reloads do not save
-or reset the office. Areas and full upstream parity remain
-separate work under #7/#4.
+or reset the office. Area name and directory mapping controls keep native text
+editing/undo local and do not send Delete, rotate or office-undo shortcuts to
+the canvas while focused. Areas are a bounded partial parity slice; tool and
+context history and other unsupported upstream behavior remain separate work
+under #7/#4.
 
 Carpet rendering caches masked junctions and palettes until the tile map,
 carpet array, dimensions or artwork generation changes. Frames draw only the

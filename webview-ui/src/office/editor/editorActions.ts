@@ -174,6 +174,9 @@ export function applyTilePaint(
     if ((tileType === TileType.WALL || tileType === TileType.VOID) && newLayout.carpetTiles) {
       newLayout.carpetTiles[index] = null;
     }
+    if ((tileType === TileType.WALL || tileType === TileType.VOID) && newLayout.areaTiles) {
+      newLayout.areaTiles[index] = null;
+    }
   }
   
   return newLayout;
@@ -191,6 +194,7 @@ export function applyErase(
   if (index >= 0 && index < newLayout.tiles.length) {
     newLayout.tiles[index] = TileType.VOID;
     if (newLayout.carpetTiles) newLayout.carpetTiles[index] = null;
+    if (newLayout.areaTiles) newLayout.areaTiles[index] = null;
     if (newLayout.tileColors) {
       delete newLayout.tileColors[`${col},${row}`];
     }

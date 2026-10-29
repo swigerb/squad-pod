@@ -76,16 +76,24 @@ it('passes live Debug View changes into every rendered frame', () => {
   const frame = vi.spyOn(renderer, 'renderFrame').mockImplementation(() => {});
   const host = document.createElement('div');
   const root = createRoot(host);
-  const office = new OfficeState();
+  const areas = [{ label: 'Engineering', color: '#50c878' }];
+  const areaTiles = ['Engineering', null];
+  const office = new OfficeState({
+    version: 2, cols: 2, rows: 1, tiles: [TileType.FLOOR_1, TileType.FLOOR_1],
+    furniture: [], areas, areaTiles,
+  });
   const editor = new EditorState();
   const pan = { current: { x: 0, y: 0 } };
   try {
-    for (const enabled of [false, true, false]) {
+    for (const [enabled, areasVisible] of [[false, false], [true, true], [false, false]] as const) {
       act(() => root.render(<OfficeCanvas officeState={office} editorState={editor} isEditMode={false}
-        isDebugMode={enabled} editorTick={0} zoom={1} panRef={pan} />));
-      expect(frame.mock.lastCall?.at(-3)).toBe(enabled);
-      expect(frame.mock.lastCall?.at(-2)).toBe(office.layout.carpetTiles);
-      expect(frame.mock.lastCall?.at(-1)).toBe(office.pets);
+        isDebugMode={enabled} showAreas={areasVisible} editorTick={0} zoom={1} panRef={pan} />));
+      expect(frame.mock.lastCall?.at(-7)).toBe(enabled);
+      expect(frame.mock.lastCall?.at(-6)).toBe(office.layout.carpetTiles);
+      expect(frame.mock.lastCall?.at(-5)).toBe(office.pets);
+      expect(frame.mock.lastCall?.at(-4)).toBe(areas);
+      expect(frame.mock.lastCall?.at(-3)).toBe(areaTiles);
+      expect(frame.mock.lastCall?.at(-2)).toBe(areasVisible);
     }
   } finally {
     act(() => root.unmount());

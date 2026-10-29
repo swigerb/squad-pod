@@ -13,6 +13,8 @@ import {
 } from '../office/sprites/assetLoader.js';
 import type { ItemType } from '../office/sprites/assetLoader.js';
 import { getPetCount, getPetName, getPetSprites, getPetTypes } from '../office/sprites/petSpriteData.js';
+import type { AreaDefinition } from '../office/types.js';
+import type { DirectoryEntry } from '../../../src/types.js';
 
 // ─── Props ─────────────────────────────────────────────────────
 export interface EditorToolbarProps {
@@ -27,6 +29,17 @@ export interface EditorToolbarProps {
   onPetToggle: (petType: number) => void;
   onCarpetVariantChange: (variant: number) => void;
   onCarpetColorChange: (color: FloorColor, accent?: boolean) => void;
+  areas: AreaDefinition[];
+  areaMappings?: Record<string, string[]>;
+  directories: DirectoryEntry[];
+  selectedAreaLabel: string | null;
+  transformError: string | null;
+  onAreaAdd: (label: string, color: string) => boolean;
+  onAreaRename: (oldLabel: string, newLabel: string) => void;
+  onAreaColorChange: (label: string, color: string) => void;
+  onAreaRemove: (label: string) => void;
+  onAreaMappingChange: (directoryId: string, label: string, mapped: boolean) => void;
+  onAreaSelect: (label: string) => void;
   onSave: () => void;
   onReset: () => void;
   onUndo: () => void;
@@ -55,6 +68,7 @@ const TOOL_DEFS: { tool: EditToolType; icon: string; label: string }[] = [
   { tool: EditTool.TILE_PAINT, icon: '▦', label: 'Floor' },
   { tool: EditTool.WALL_PAINT, icon: '▥', label: 'Wall' },
   { tool: EditTool.CARPET_PAINT, icon: '▦', label: 'Carpet' },
+  { tool: EditTool.AREA_PAINT, icon: '⬚', label: 'Area' },
   { tool: EditTool.FURNITURE_PLACE, icon: '♜', label: 'Furniture' },
   { tool: EditTool.PETS, icon: '♥', label: 'Pets' },
   { tool: EditTool.ERASE, icon: '✕', label: 'Erase' },
@@ -125,6 +139,17 @@ const styles = {
     color: TEXT_DIM,
     marginBottom: '6px',
     letterSpacing: '0.5px',
+  },
+
+  input: {
+    boxSizing: 'border-box' as const,
+    minWidth: 0,
+    padding: '4px',
+    background: BG_SECTION,
+    color: TEXT,
+    border: `1px solid ${BORDER}`,
+    borderRadius: '3px',
+    fontSize: '11px',
   },
 
   toolGrid: {
@@ -483,6 +508,17 @@ export function EditorToolbar({
   onPetToggle,
   onCarpetVariantChange,
   onCarpetColorChange,
+  areas,
+  areaMappings,
+  directories,
+  selectedAreaLabel,
+  transformError,
+  onAreaAdd,
+  onAreaRename,
+  onAreaColorChange,
+  onAreaRemove,
+  onAreaMappingChange,
+  onAreaSelect,
   onSave,
   onReset,
   onUndo,
@@ -497,6 +533,9 @@ export function EditorToolbar({
 }: EditorToolbarProps) {
   // Force re-render when tileset assets become available
   const [_assetTick, setAssetTick] = useState(0);
+  const [newAreaLabel, setNewAreaLabel] = useState('');
+  const [newAreaColor, setNewAreaColor] = useState('#50c878');
+  const [selectedDirectoryId, setSelectedDirectoryId] = useState('');
   useEffect(() => {
     const refresh = () => setAssetTick(t => t + 1);
     window.addEventListener('officeAssetsChanged', refresh);
@@ -510,7 +549,10 @@ export function EditorToolbar({
   const showWallOptions = activeTool === EditTool.WALL_PAINT;
   const showFurnitureOptions = activeTool === EditTool.FURNITURE_PLACE;
   const showCarpetOptions = activeTool === EditTool.CARPET_PAINT;
+  const showAreaOptions = activeTool === EditTool.AREA_PAINT;
   const showPetOptions = activeTool === EditTool.PETS;
+  const directoryOptions = directories;
+  const selectedArea = areas.find((area) => area.label === selectedAreaLabel) ?? null;
 
   // Gather tileset metadata items for each placeable category
   const metadataCategories = PLACEABLE_CATEGORIES.map(cat => ({
@@ -559,6 +601,119 @@ export function EditorToolbar({
           {!hasCarpetVariant(editorState.carpetVariant) && <p role="alert">Carpet style unavailable. Check asset diagnostics.</p>}
           <ColorSliders label="Carpet Main" color={editorState.carpetColor} onChange={(color) => onCarpetColorChange(color)} flat />
           <ColorSliders label="Carpet Accent" color={editorState.carpetAccentColor} onChange={(color) => onCarpetColorChange(color, true)} flat />
+        </div>
+      )}
+
+      {showAreaOptions && (
+        <div style={styles.section} data-testid="area-editor">
+          <div style={styles.sectionLabel}>Named Areas</div>
+          <p style={{ margin: '0 0 8px', fontSize: '10px', color: TEXT_DIM, lineHeight: 1.4 }}>
+            Paint floor tiles, then map an Area to a stable directory. Mappings only affect real agents observed in the selected Squad root; launching another directory does not add its agents.
+          </p>
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+            <input
+              aria-label="New Area name"
+              data-testid="new-area-name"
+              value={newAreaLabel}
+              onChange={(event) => setNewAreaLabel(event.target.value)}
+              placeholder="Area name"
+              style={{ ...styles.input, minWidth: 0, flex: 1 }}
+            />
+            <input
+              aria-label="New Area color"
+              type="color"
+              value={newAreaColor}
+              onChange={(event) => setNewAreaColor(event.target.value)}
+              style={{ width: '32px', height: '28px', padding: 0, border: `1px solid ${BORDER}`, background: BG }}
+            />
+            <button
+              type="button"
+              data-testid="add-area"
+              style={styles.actionBtn(false)}
+              onClick={() => {
+                if (onAreaAdd(newAreaLabel, newAreaColor)) setNewAreaLabel('');
+              }}
+            >Add</button>
+          </div>
+          {areas.map((area) => (
+            <div key={area.label} style={{ display: 'grid', gridTemplateColumns: '1fr 30px 28px', gap: '4px', alignItems: 'center', marginBottom: '4px' }}>
+              <input
+                aria-label={`Rename Area ${area.label}`}
+                key={area.label}
+                defaultValue={area.label}
+                onBlur={(event) => {
+                  const value = event.currentTarget.value.trim();
+                  if (value && value !== area.label) onAreaRename(area.label, value);
+                  else event.currentTarget.value = area.label;
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur();
+                  if (event.key === 'Escape') {
+                    event.currentTarget.value = area.label;
+                    event.currentTarget.blur();
+                  }
+                }}
+                style={styles.input}
+              />
+              <input
+                aria-label={`Color for Area ${area.label}`}
+                type="color"
+                value={area.color}
+                onChange={(event) => onAreaColorChange(area.label, event.target.value)}
+                style={{ width: '28px', height: '26px', padding: 0, border: `1px solid ${BORDER}`, background: BG }}
+              />
+              <button
+                type="button"
+                aria-label={`Remove Area ${area.label}`}
+                title={`Remove ${area.label}`}
+                style={styles.actionBtn(false, true)}
+                onClick={() => onAreaRemove(area.label)}
+              >×</button>
+              <button
+                type="button"
+                aria-pressed={selectedAreaLabel === area.label}
+                data-testid={`select-area-${area.label}`}
+                style={{ ...styles.actionBtn(false), gridColumn: '1 / -1', textAlign: 'left', borderColor: selectedAreaLabel === area.label ? ACCENT : BORDER }}
+                onClick={() => onAreaSelect(area.label)}
+              >{selectedAreaLabel === area.label ? `Painting: ${area.label}` : `Select ${area.label}`}</button>
+            </div>
+          ))}
+          {selectedArea && (
+            <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: '8px', marginTop: '8px' }}>
+              <label htmlFor="area-directory" style={{ display: 'block', marginBottom: '4px', fontSize: '10px', color: TEXT_DIM }}>
+                Map {selectedArea.label} to directory
+              </label>
+              <select
+                id="area-directory"
+                data-testid="area-directory"
+                value={selectedDirectoryId}
+                onChange={(event) => setSelectedDirectoryId(event.target.value)}
+                style={{ ...styles.input, width: '100%', marginBottom: '6px' }}
+              >
+                <option value="">Choose workspace or saved directory</option>
+                {directoryOptions.map((directory) => (
+                  <option key={directory.id} value={directory.id}>
+                    {directory.name}{directory.valid ? '' : ' (unavailable)'}
+                  </option>
+                ))}
+              </select>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                <input
+                  type="checkbox"
+                  aria-label={`Map ${selectedArea.label} to selected directory`}
+                  data-testid="area-mapping"
+                  disabled={!selectedDirectoryId || !directoryOptions.some((directory) => directory.id === selectedDirectoryId)}
+                  checked={selectedDirectoryId ? (areaMappings?.[selectedDirectoryId] ?? []).includes(selectedArea.label) : false}
+                  onChange={(event) => onAreaMappingChange(selectedDirectoryId, selectedArea.label, event.target.checked)}
+                />
+                Prefer this Area for observed agents
+              </label>
+              {directoryOptions.length === 0 && (
+                <p style={{ margin: '6px 0 0', fontSize: '10px', color: TEXT_DIM }}>No workspace or saved directories are available. Recent launch entries are not mapping identities.</p>
+              )}
+            </div>
+          )}
+          {transformError && <p role="alert" style={{ color: '#f14c4c', fontSize: '10px', margin: '8px 0 0' }}>{transformError}</p>}
         </div>
       )}
 

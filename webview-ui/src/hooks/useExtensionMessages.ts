@@ -67,7 +67,7 @@ export function useExtensionMessages(
   onLayoutError?: (error: string, source?: 'watcher') => void,
 ): ExtensionMessageState {
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
-  const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false });
+  const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false, showAreas: false });
   const [sourceStatus, setSourceStatus] = useState<SourceStatus | null>(null);
   const [directoryCatalog, setDirectoryCatalog] = useState<DirectoryCatalog | null>(null);
   const [directoryError, setDirectoryError] = useState<string | null>(null);
@@ -98,7 +98,9 @@ export function useExtensionMessages(
   const updateSetting = useCallback((setting: keyof PodSettings, enabled: boolean) => {
     setSettings((prev) => ({ ...prev, [setting]: enabled }));
     if (setting === 'soundEnabled') setSoundEnabled(enabled);
-    vscode.postMessage({ type: setting === 'soundEnabled' ? 'setSoundEnabled' : 'setDebugEnabled', enabled });
+    const type = setting === 'soundEnabled' ? 'setSoundEnabled'
+      : setting === 'debugEnabled' ? 'setDebugEnabled' : 'setShowAreas';
+    vscode.postMessage({ type, enabled });
   }, []);
 
   useEffect(() => {
@@ -333,7 +335,11 @@ export function useExtensionMessages(
         }
 
         case 'settingsLoaded': {
-          setSettings({ soundEnabled: message.soundEnabled, debugEnabled: message.debugEnabled });
+          setSettings({
+            soundEnabled: message.soundEnabled,
+            debugEnabled: message.debugEnabled,
+            showAreas: message.showAreas === true,
+          });
           setSoundEnabled(message.soundEnabled);
           break;
         }

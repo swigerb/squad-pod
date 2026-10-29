@@ -200,6 +200,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         void this.onSaveSetting('debugEnabled', message.enabled);
         break;
 
+      case 'setShowAreas':
+        void this.onSaveSetting('showAreas', message.enabled);
+        break;
+
       case 'getSettings':
         this.postMessage({ type: 'settingsLoaded', ...readSettings(this.context.globalState) });
         break;
@@ -268,7 +272,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.loadAndSendAssets();
     this.loadAndSendCustomAssetUris();
     this.loadAndSendLayout(workspaceRoot);
-    sendExistingAgents(agents, this.context, webview);
+    sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryId(workspaceRoot));
     this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
   }
 
@@ -281,8 +285,9 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         if (status.error) { this.log(status.error); }
       },
       onRosterChanged: () => {
-        const updated = refreshAgents(workspaceRoot, this.context, webview);
-        sendExistingAgents(updated, this.context, webview);
+        const directoryId = this.getWorkspaceDirectoryId(workspaceRoot);
+        const updated = refreshAgents(workspaceRoot, this.context, webview, directoryId);
+        sendExistingAgents(updated, this.context, webview, directoryId);
         this.emitTelemetry('log', null, null, 'Team roster updated');
       },
       onAgentActivity: (event) => {
@@ -942,6 +947,13 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
   private getWorkspaceRoot(): string | undefined {
     return pickSquadWorkspace((vscode.workspace.workspaceFolders ?? []).map(f => f.uri.fsPath));
+  }
+
+  private getWorkspaceDirectoryId(workspaceRoot: string): string | undefined {
+    const folder = (vscode.workspace.workspaceFolders ?? []).find((candidate) =>
+      sameDirectoryPath(candidate.uri.fsPath, workspaceRoot),
+    );
+    return folder ? `workspace:${folder.uri.toString()}` : undefined;
   }
 
   private postMessage(message: OutboundMessage): void {

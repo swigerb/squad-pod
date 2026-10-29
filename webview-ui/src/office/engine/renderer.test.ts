@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderFrame } from './renderer.js';
+import { renderAreaLabels, renderAreaOverlay, renderFrame } from './renderer.js';
 import { TileType, type CarpetTile, type FloorColor, type SpriteData } from '../types.js';
 import * as assetLoader from '../sprites/assetLoader.js';
 import * as spriteCache from '../sprites/spriteCache.js';
@@ -47,6 +47,40 @@ describe('tile colors are optional rendering overrides', () => {
         pixels.push({ x, y, color: sprite[0][0] });
       },
     } as unknown as CanvasRenderingContext2D;
+  });
+
+  describe('named Area overlays', () => {
+    it('draws the selected Area with a stronger floor overlay and labels only painted Areas', () => {
+      const fills: Array<{ x: number; y: number; color: string; alpha: number }> = [];
+      const labels: Array<{ text: string; x: number; y: number }> = [];
+      const ctx = {
+        globalAlpha: 1,
+        fillStyle: '',
+        save: vi.fn(),
+        restore: vi.fn(),
+        fillRect(x: number, y: number) {
+          fills.push({ x, y, color: String(ctx.fillStyle), alpha: ctx.globalAlpha });
+        },
+        fillText(text: string, x: number, y: number) { labels.push({ text, x, y }); },
+      } as unknown as CanvasRenderingContext2D;
+      const areas = [
+        { label: 'Engineering', color: '#50c878' },
+        { label: 'Research', color: '#123456' },
+      ];
+      const tiles = ['Engineering', 'Research', null, 'Unknown'];
+
+      renderAreaOverlay(ctx, tiles, areas, 2, 2, 3, 5, 2, 'Engineering');
+      renderAreaLabels(ctx, tiles, areas, 2, 2, 3, 5, 2);
+
+      expect(fills).toEqual([
+        { x: 3, y: 5, color: '#50c878', alpha: 0.4 },
+        { x: 35, y: 5, color: '#123456', alpha: 0.22 },
+      ]);
+      expect(labels.map(({ text }) => text)).toEqual(['Engineering', 'Engineering', 'Research', 'Research']);
+      expect(labels[0]).toMatchObject({ text: 'Engineering', x: 20, y: 22 });
+      expect(labels[1]).toMatchObject({ text: 'Engineering', x: 19, y: 21 });
+      expect(ctx.restore).toHaveBeenCalledTimes(2);
+    });
   });
 
   afterEach(() => {

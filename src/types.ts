@@ -83,6 +83,11 @@ export interface PlacedPet {
   petType: number;
 }
 
+export interface AreaDefinition {
+  label: string;
+  color: string;
+}
+
 export interface LayoutData {
   version?: number;
   cols: number;
@@ -92,6 +97,9 @@ export interface LayoutData {
   tileColors?: Record<string, FloorColor>;
   carpetTiles?: Array<CarpetTile | null>;
   pets?: PlacedPet[];
+  areas?: AreaDefinition[];
+  areaTiles?: Array<string | null>;
+  areaMappings?: Record<string, string[]>;
 }
 
 export interface CarpetTile {
@@ -199,7 +207,7 @@ export type WebviewMessage =
   | { type: 'changeDirectoryPath' | 'removeDirectory' | 'forgetDirectoryLaunch'; id: string }
   | { type: 'launchDirectory'; id: string; source: 'workspace' | 'saved' | 'recent' }
   | { type: 'webviewReady' | 'getSettings' | 'exportLayout' | 'importLayout' | 'openSquadInfo' }
-  | { type: 'setSoundEnabled' | 'setDebugEnabled'; enabled: boolean }
+  | { type: 'setSoundEnabled' | 'setDebugEnabled' | 'setShowAreas'; enabled: boolean }
   | { type: 'saveAgentSeats'; seats: Record<string, string> }
   | { type: 'saveLayout'; layout: LayoutData; expectedRevision?: string | null; workspaceRoot?: string | null }
   | { type: 'exportLayoutSnapshot'; layout: LayoutData }
@@ -209,6 +217,7 @@ export type WebviewMessage =
 export interface PodSettings {
   soundEnabled: boolean;
   debugEnabled: boolean;
+  showAreas: boolean;
 }
 
 export interface DirectoryEntry {
@@ -244,6 +253,7 @@ export interface AgentCreatedMessage {
     role: string;
     paletteIndex: number;
     seatId?: string | null;
+    directoryId?: string | null;
   };
 }
 
@@ -274,6 +284,7 @@ export interface ExistingAgentsMessage {
     role: string;
     paletteIndex: number;
     seatId: string | null;
+    directoryId?: string | null;
     status: 'active' | 'idle' | 'waiting';
     currentTask: string | null;
   }>;

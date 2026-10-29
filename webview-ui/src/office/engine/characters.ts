@@ -49,7 +49,8 @@ export function createCharacter(
   palette: number,
   seatId: string | null,
   seat: Seat | null,
-  hueShift: number
+  hueShift: number,
+  directoryId?: string,
 ): Character {
   const startCol = seat ? seat.col : 1;
   const startRow = seat ? seat.row : 1;
@@ -57,6 +58,7 @@ export function createCharacter(
     id,
     name,
     role,
+    directoryId,
     col: startCol,
     row: startRow,
     x: startCol * TILE_SIZE + TILE_SIZE / 2,

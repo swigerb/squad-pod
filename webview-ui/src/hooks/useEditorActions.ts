@@ -10,6 +10,16 @@ import { UndoHistory } from '../office/editor/undoHistory.js';
 import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, MAX_COLS, MAX_ROWS } from '../constants.js';
 import { vscode } from '../vscodeApi.js';
 import { LayoutDraft } from '../office/editor/layoutDraft.js';
+import {
+  addArea,
+  applyAreaErase,
+  applyAreaPaint,
+  changeAreaColor,
+  pickArea,
+  removeArea,
+  renameArea,
+  setAreaMapping,
+} from '../office/editor/areaEditor.js';
 import { MAX_LAYOUT_PETS } from '../../../src/layoutValidation.js';
 import { getPetSprites } from '../office/sprites/petSpriteData.js';
 
@@ -104,6 +114,62 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     setEditorTick((t) => t + 1);
   }, [editorState]);
 
+  const mutateAreas = useCallback((mutate: (layout: OfficeLayout) => OfficeLayout): boolean => {
+    const officeState = getOfficeState();
+    const layout = officeState.getLayout();
+    try {
+      const next = mutate(layout);
+      editorState.transformError = null;
+      if (next !== layout) {
+        pushUndo();
+        officeState.rebuildFromLayout(next);
+      }
+      setEditorTick((t) => t + 1);
+      return next !== layout;
+    } catch (error) {
+      editorState.transformError = error instanceof Error ? error.message : 'Area update failed.';
+      setEditorTick((t) => t + 1);
+      return false;
+    }
+  }, [getOfficeState, editorState, pushUndo]);
+
+  const handleAreaAdd = useCallback((label: string, color: string): boolean => {
+    if (!mutateAreas((layout) => addArea(layout, label, color))) return false;
+    editorState.selectedAreaLabel = label.trim();
+    editorState.setTool(EditTool.AREA_PAINT);
+    setEditorTick((t) => t + 1);
+    return true;
+  }, [mutateAreas, editorState]);
+
+  const handleAreaRename = useCallback((oldLabel: string, newLabel: string) => {
+    if (mutateAreas((layout) => renameArea(layout, oldLabel, newLabel)) && editorState.selectedAreaLabel === oldLabel) {
+      editorState.selectedAreaLabel = newLabel.trim();
+      setEditorTick((t) => t + 1);
+    }
+  }, [mutateAreas, editorState]);
+
+  const handleAreaColorChange = useCallback((label: string, color: string) => {
+    mutateAreas((layout) => changeAreaColor(layout, label, color));
+  }, [mutateAreas]);
+
+  const handleAreaRemove = useCallback((label: string) => {
+    if (mutateAreas((layout) => removeArea(layout, label)) && editorState.selectedAreaLabel === label) {
+      editorState.selectedAreaLabel = null;
+      setEditorTick((t) => t + 1);
+    }
+  }, [mutateAreas, editorState]);
+
+  const handleAreaMappingChange = useCallback((directoryId: string, label: string, mapped: boolean) => {
+    mutateAreas((layout) => setAreaMapping(layout, directoryId, label, mapped));
+  }, [mutateAreas]);
+
+  const handleAreaSelect = useCallback((label: string) => {
+    editorState.selectedAreaLabel = label;
+    editorState.setTool(EditTool.AREA_PAINT);
+    editorState.transformError = null;
+    setEditorTick((t) => t + 1);
+  }, [editorState]);
+
   const handlePetToggle = useCallback((petType: number) => {
     const officeState = getOfficeState();
     const layout = officeState.getLayout();
@@ -132,6 +198,14 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
 
   const handleEyedropper = useCallback((col: number, row: number) => {
     const layout = getOfficeState().getLayout();
+    if (editorState.tool === EditTool.AREA_PAINT) {
+      const area = pickArea(layout, col, row);
+      if (!area) return;
+      editorState.selectedAreaLabel = area.label;
+      editorState.setTool(EditTool.AREA_PAINT);
+      setEditorTick((t) => t + 1);
+      return;
+    }
     const carpet = pickCarpet(layout, col, row);
     if (carpet) {
       editorState.carpetVariant = carpet.variant;
@@ -155,7 +229,20 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   const handleEditorTileAction = useCallback(
     (col: number, row: number) => {
       const officeState = getOfficeState();
-      if (editorState.tool === EditTool.CARPET_PAINT) {
+      if (editorState.tool === EditTool.AREA_PAINT) {
+        const label = editorState.selectedAreaLabel;
+        if (!label) {
+          editorState.transformError = 'Add or select an Area before painting.';
+        } else {
+          const layout = officeState.getLayout();
+          const next = applyAreaPaint(layout, col, row, label);
+          if (next !== layout) {
+            editorState.transformError = null;
+            pushUndo();
+            officeState.rebuildFromLayout(next);
+          }
+        }
+      } else if (editorState.tool === EditTool.CARPET_PAINT) {
         const layout = officeState.getLayout();
         editorState.transformError = hasCarpetVariant(editorState.carpetVariant)
           ? null : 'Carpet style is unavailable. Check the asset diagnostics.';
@@ -215,7 +302,9 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     (col: number, row: number) => {
       const officeState = getOfficeState();
       const currentLayout = officeState.getLayout();
-      const newLayout = editorState.tool === EditTool.CARPET_PAINT || currentLayout.carpetTiles?.[row * currentLayout.cols + col]
+      const newLayout = editorState.tool === EditTool.AREA_PAINT
+        ? applyAreaErase(currentLayout, col, row)
+        : editorState.tool === EditTool.CARPET_PAINT || currentLayout.carpetTiles?.[row * currentLayout.cols + col]
         ? applyCarpetErase(currentLayout, col, row) : applyErase(currentLayout, col, row);
       if (newLayout !== currentLayout) {
         pushUndo();
@@ -375,6 +464,17 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
         }
         layout.carpetTiles = shifted;
       }
+      if (layout.areaTiles) {
+        const shifted: Array<string | null> = Array(newCols * newRows).fill(null);
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const destR = direction === 'up' ? r + 1 : r;
+            const destC = direction === 'left' ? c + 1 : c;
+            shifted[destR * newCols + destC] = layout.areaTiles[r * cols + c];
+          }
+        }
+        layout.areaTiles = shifted;
+      }
 
       // Shift furniture positions for left/up expansion
       if (direction === 'left') {
@@ -482,6 +582,12 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     handleFurnitureTypeChange,
     handleCarpetVariantChange,
     handleCarpetColorChange,
+    handleAreaAdd,
+    handleAreaRename,
+    handleAreaColorChange,
+    handleAreaRemove,
+    handleAreaMappingChange,
+    handleAreaSelect,
     handlePetToggle,
     handleEyedropper,
     handleEditorTileAction,

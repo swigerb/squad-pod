@@ -18,9 +18,10 @@ interface BottomToolbarProps {
   settings: PodSettings;
   sourceStatus: SourceStatus | null;
   onSoundChange: (enabled: boolean) => void;
+  onShowAreasChange: (enabled: boolean) => void;
 }
 
-export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode, settings, sourceStatus, onSoundChange }: BottomToolbarProps) {
+export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode, settings, sourceStatus, onSoundChange, onShowAreasChange }: BottomToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleSquadInfo = () => {
@@ -152,7 +153,7 @@ export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpe
         </button>
       </div>
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} isDebugMode={isDebugMode} onToggleDebugMode={onToggleDebugMode}
-        settings={settings} sourceStatus={sourceStatus} assetStatus={assetStatus} onSoundChange={onSoundChange} />}
+        settings={settings} sourceStatus={sourceStatus} assetStatus={assetStatus} onSoundChange={onSoundChange} onShowAreasChange={onShowAreasChange} />}
     </>
   );
 }
