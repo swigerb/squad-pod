@@ -65,6 +65,52 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     vi.restoreAllMocks();
   });
 
+  it('keeps colorless layouts clean on open and preserves baseline, raw revision and Save contents', () => {
+    const layout: OfficeLayout = {
+      version: 2, cols: 20, rows: 15,
+      tiles: Array.from({ length: 300 }, (_, i) => i < 20 ? 0 : 1), furniture: [],
+      carpetTiles: Array.from({ length: 300 }, (_, i) => i === 41 ? { variant: 0 } : null),
+    };
+    const revision = '\uFEFF' + JSON.stringify(layout, null, 4) + '\r\n';
+    snapshot(layout, revision);
+    click('Edit Layout');
+    expect(host.textContent).not.toContain('● Save Layout');
+    expect(persisted!.draft).toEqual(layout);
+    expect(persisted!.baseline).toEqual(layout);
+    expect(persisted!.revision).toBe(revision);
+    expect(persisted!.draft).not.toHaveProperty('tileColors');
+    click('Save Layout');
+    expect(saves().at(-1)).toEqual({
+      type: 'saveLayout', layout, expectedRevision: revision, workspaceRoot: 'workspace-A',
+    });
+    expect(persisted!.revision).toBe(revision);
+    expect(JSON.stringify(saves().at(-1)!.layout)).toBe(JSON.stringify(layout));
+  });
+
+  it('preserves colorless snapshots through import, external update and Use incoming', () => {
+    const layout: OfficeLayout = {
+      version: 2, cols: 20, rows: 15, tiles: Array(300).fill(1), furniture: [],
+    };
+    snapshot(layout, 'colorless-import', 'import');
+    expect(persisted!.draft).toEqual(layout);
+    expect(persisted!.revision).toBe('disk-original');
+    snapshot(layout, 'colorless-external');
+    expect(persisted!.baseline).toEqual(layout);
+    expect(persisted!.pending).toEqual([]);
+    click('Edit Layout');
+    click('→');
+    const incoming = { ...layout, tiles: layout.tiles.map(() => 2) };
+    snapshot(incoming, 'colorless-incoming');
+    const id = persisted!.pending[0].id;
+    click(`Use incoming #${id}...`);
+    click(`Confirm incoming #${id}`);
+    expect(persisted!.draft).toEqual(incoming);
+    expect(persisted!.baseline).toEqual(incoming);
+    expect(persisted!.revision).toBe('colorless-incoming');
+    expect(host.textContent).not.toContain('● Save Layout');
+    expect(persisted!.draft).not.toHaveProperty('tileColors');
+  });
+
   it.each(['local', 'incoming'] as const)('retains real carpet edits and different external carpets through %s resolution, exports, acknowledgement, recovery and staged imports', (choice) => {
     const base: OfficeLayout = { ...imported, carpetTiles: Array(300).fill(null) };
     base.carpetTiles![41] = {
