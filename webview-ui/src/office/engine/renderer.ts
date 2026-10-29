@@ -34,7 +34,7 @@ import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
 import { getColorizedFloorSprite } from '../floorTiles.js';
 import { wallColorToHex } from '../wallTiles.js';
-import { areAssetsReady, areCharacterAssetsReady, areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
+import { areCharacterAssetsReady, areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
 import { drawTilesetFurniture, drawTilesetTile, drawMetadataItemScaled } from '../sprites/tilesetRenderer.js';
 import { drawCharacterFromSheet, getCharacterSheetOffset, hasCharacterSheetForPalette } from '../sprites/characterSheetRenderer.js';
 
@@ -144,7 +144,6 @@ export function renderScene(
 ): void {
   const drawables: Drawable[] = [];
   const tilesetReady = areTilesetAssetsReady();
-  const anyAssetsReady = areAssetsReady();
   const characterAssetsReady = areCharacterAssetsReady();
 
   for (const furn of furniture) {
@@ -234,7 +233,7 @@ export function renderScene(
     if (drawable.type === 'character') {
       const ch = drawable.character;
       // Try PNG sprite sheet first, fall back to inline
-      const pngDrawn = Boolean(ch) && drawCharacterFromSheet(
+      const pngDrawn = ch !== undefined && drawCharacterFromSheet(
         ctx, ch.palette, ch.direction, ch.frameIndex,
         drawable.x, drawable.y, zoom,
       );
@@ -254,15 +253,16 @@ export function renderScene(
       }
     } else {
       // Try PNG tileset first, fall back to inline cached sprite
-      const tilesetDrawn = Boolean(tilesetReady && drawable.furnitureType) && drawTilesetFurniture(
-        ctx, drawable.furnitureType,
+      const furnitureType = drawable.furnitureType;
+      const tilesetDrawn = tilesetReady && furnitureType !== undefined && drawTilesetFurniture(
+        ctx, furnitureType,
         drawable.x, drawable.y,
         drawable.furnitureDestW!, drawable.furnitureDestH!,
       );
       if (!tilesetDrawn) {
         // Try tileset metadata rendering (for items placed from metadata catalog)
-        const metadataDrawn = Boolean(tilesetReady && drawable.furnitureType) && drawMetadataItemScaled(
-          ctx, drawable.furnitureType,
+        const metadataDrawn = tilesetReady && furnitureType !== undefined && drawMetadataItemScaled(
+          ctx, furnitureType,
           drawable.x, drawable.y,
           drawable.furnitureDestW!, drawable.furnitureDestH!,
         );

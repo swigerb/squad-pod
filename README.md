@@ -50,6 +50,7 @@ The original [Pixel Agents](https://github.com/pablodelucca/pixel-agents) by [Pa
 
 - VS Code 1.107.0 or later
 - A [Squad](https://github.com/bradygaster/squad)-powered project (needs a `.squad/` directory with `team.md`)
+- Node.js 22.13 or later to build from source (see `.nvmrc`)
 
 ## Getting Started
 
@@ -58,12 +59,23 @@ The original [Pixel Agents](https://github.com/pablodelucca/pixel-agents) by [Pa
 ```bash
 git clone https://github.com/swigerb/squad-pod.git
 cd squad-pod
-npm install
-cd webview-ui && npm install && cd ..
+npm run install:all
 npm run build
 ```
 
 Then press **F5** in VS Code to launch the Extension Development Host.
+
+### Development commands
+
+| Command | What it does |
+|---|---|
+| `npm run install:all` | Clean install for the extension and the webview |
+| `npm run lint` | ESLint for the extension host |
+| `npm run check-types` | Type-check the extension host and the webview |
+| `npm run test:all` | Run extension host and webview unit tests |
+| `npm run build` | Production build of the webview (Vite) and extension (esbuild) |
+| `npm run verify` | Lint, type-check, test, and build: the same checks CI runs |
+| `npm run package` | Build `squad-pod-<version>.vsix` with `@vscode/vsce` |
 
 ### Usage
 
@@ -159,7 +171,7 @@ squad-pod/
 
 - **Activity detection is heuristic** — Squad doesn't emit real-time status events, so agent activity is inferred from file modification times and content changes. Characters may briefly show the wrong status.
 - **Windows-only testing** — developed and tested on Windows 11. May work on macOS/Linux but file watching behavior could differ.
-- **No premium tileset** — the built-in office uses basic sprites. For the full furniture catalog from Pixel Agents, you'd need the [Office Interior Tileset](https://donarg.itch.io/officetileset) by Donarg ($2 USD) and the import pipeline.
+- **No premium tileset** — the built-in office uses basic sprites. For the full furniture catalog from Pixel Agents, you'd need the [Office Interior Tileset](https://donarg.itch.io/officetileset) by Donarg and the import pipeline. Its license forbids redistribution, so imported tiles must stay local and must never be committed or packaged.
 
 ## Roadmap
 
@@ -171,7 +183,7 @@ squad-pod/
 
 ## Credits
 
-Squad Pod is adapted from [Pixel Agents](https://github.com/pablodelucca/pixel-agents) by [Pablo De Lucca](https://github.com/pablodelucca) — a brilliant extension that inspired this project. Character sprites are based on the work of [JIK-A-4, Metro City](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack).
+Squad Pod is adapted from [Pixel Agents](https://github.com/pablodelucca/pixel-agents) by [Pablo De Lucca](https://github.com/pablodelucca) — a brilliant extension that inspired this project. Character sprites are based on the work of [JIK-A-4, Metro City](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for bundled code and asset licenses.
 
 Built for use with [Squad](https://github.com/bradygaster/squad) by [Brady Gaster](https://github.com/bradygaster).
 

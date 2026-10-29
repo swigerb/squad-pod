@@ -5,7 +5,8 @@
   "version": "0.1.0",
   "publisher": "squad-pod",
   "engines": {
-    "vscode": "^1.107.0"
+    "vscode": "^1.107.0",
+    "node": ">=22.13.0"
   },
   "main": "./dist/extension.js",
   "activationEvents": [],
@@ -40,34 +41,42 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run check-types && npm run build",
+    "vscode:prepublish": "npm run build",
+    "install:all": "npm ci && npm ci --prefix webview-ui",
     "compile": "npm run check-types && node esbuild.js",
-    "build": "npm run check-types && node esbuild.js --production",
-    "build:webview": "cd webview-ui && npm run build",
+    "build": "npm run check-types && npm run build:webview && node esbuild.js --production",
+    "build:webview": "npm run build --prefix webview-ui",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "vsce package",
-    "check-types": "tsc --noEmit",
+    "package": "vsce package --no-dependencies",
+    "check-types": "tsc --noEmit && npm run check-types --prefix webview-ui",
     "lint": "eslint src",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:all": "vitest run && cd webview-ui && npx vitest run",
+    "test:webview": "npm test --prefix webview-ui",
+    "test:all": "npm test && npm run test:webview",
+    "verify": "npm run lint && npm run check-types && npm run test:all && npm run build",
     "import-tileset": "tsx scripts/0-import-tileset.ts"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
-    "@types/node": "22.x",
+    "@types/node": "^22.19.0",
     "@types/pngjs": "^6.0.5",
-    "@types/vscode": "^1.107.0",
-    "esbuild": "^0.27.2",
-    "eslint": "^9.39.2",
+    "@types/vscode": "~1.107.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.13.0",
     "npm-run-all": "^4.1.5",
     "pngjs": "^7.0.0",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0",
-    "vitest": "^4.0.18"
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^4.1.12",
+    "@vscode/vsce": "^4.1.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swigerb/squad-pod.git"
+  }
 }

@@ -174,13 +174,13 @@ export function parseAllMembers(content: string): SquadTeamMember[] {
     if (inMembersSection && /^##\s+/.test(trimmed) && !/^##\s+Members/i.test(trimmed)) {
       break;
     }
-    if (!inMembersSection || !trimmed.startsWith('|')) continue;
+    if (!inMembersSection || !trimmed.startsWith('|')) {continue;}
 
     const cells = trimmed.split('|').map(c => c.trim()).filter(c => c.length > 0);
-    if (cells.length < 2) continue;
+    if (cells.length < 2) {continue;}
 
     if (!headerParsed) {
-      if (cells.every(c => /^[-:]+$/.test(c))) continue;
+      if (cells.every(c => /^[-:]+$/.test(c))) {continue;}
       const lowerCells = cells.map(c => c.toLowerCase());
       columnIndices = {
         name: Math.max(0, lowerCells.findIndex(c => c.includes('name'))),
@@ -191,15 +191,15 @@ export function parseAllMembers(content: string): SquadTeamMember[] {
       headerParsed = true;
       continue;
     }
-    if (cells.every(c => /^[-:]+$/.test(c))) continue;
-    if (!columnIndices) continue;
+    if (cells.every(c => /^[-:]+$/.test(c))) {continue;}
+    if (!columnIndices) {continue;}
 
     const name = cells[columnIndices.name] ?? '';
     const role = cells[columnIndices.role] ?? '';
     const charterRaw = columnIndices.charter >= 0 ? (cells[columnIndices.charter] ?? '') : '';
     const status = columnIndices.status >= 0 ? (cells[columnIndices.status] ?? '') : '✅ Active';
 
-    if (!name) continue;
+    if (!name) {continue;}
 
     members.push({
       name,
@@ -229,13 +229,13 @@ export function parseProjectContext(content: string): string | null {
   const ctxMatch = /^##\s+Project Context\s*\n([\s\S]*?)(?=\n##\s|\n#\s|$)/mi.exec(content);
   if (ctxMatch) {
     const text = ctxMatch[1].trim();
-    if (text) return text;
+    if (text) {return text;}
   }
   // Fall back: text between first # heading and first ## heading
   const introMatch = /^#\s+.+\n([\s\S]*?)(?=\n##\s)/m.exec(content);
   if (introMatch) {
     const text = introMatch[1].trim();
-    if (text) return text;
+    if (text) {return text;}
   }
   return null;
 }
