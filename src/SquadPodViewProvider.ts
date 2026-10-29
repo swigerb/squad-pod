@@ -453,8 +453,9 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async addDirectory(): Promise<void> {
-    const current = readSavedDirectories(this.context.globalState);
-    if (current.length >= 100) { throw new Error('At most 100 saved directories are supported.'); }
+    if (readSavedDirectories(this.context.globalState).length >= 100) {
+      throw new Error('At most 100 saved directories are supported.');
+    }
 
     const selection = await vscode.window.showOpenDialog({
       canSelectFiles: false,
@@ -468,7 +469,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       this.directoryNotice('That folder is already listed under Workspace folders.');
       return;
     }
-    if (current.some((entry) => sameDirectoryPath(entry.path, directoryPath))) {
+    if (readSavedDirectories(this.context.globalState).some((entry) => sameDirectoryPath(entry.path, directoryPath))) {
       this.directoryNotice('That folder is already in Saved directories.');
       return;
     }
@@ -479,7 +480,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       value: defaultName,
       validateInput: (value) => {
         try {
-          ensureUniqueDirectoryName(value, current);
+          ensureUniqueDirectoryName(value, readSavedDirectories(this.context.globalState));
           return undefined;
         } catch (error) {
           return error instanceof Error ? error.message : String(error);
@@ -487,6 +488,13 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       },
     });
     if (nameInput === undefined) { return; }
+    const current = readSavedDirectories(this.context.globalState);
+    if (current.some((entry) => sameDirectoryPath(entry.path, directoryPath))) {
+      throw new Error('That folder is already in Saved directories.');
+    }
+    if ((vscode.workspace.workspaceFolders ?? []).some((folder) => sameDirectoryPath(folder.uri.fsPath, directoryPath))) {
+      throw new Error('That folder is already listed under Workspace folders.');
+    }
     const name = ensureUniqueDirectoryName(nameInput, current);
     const directory = createSavedDirectory(name, directoryPath);
     await writeSavedDirectories(this.context.globalState, [...current, directory]);
@@ -507,10 +515,9 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async changeDirectoryPath(id: unknown): Promise<void> {
-    const directories = readSavedDirectories(this.context.globalState);
-    const directory = this.savedDirectory(id, directories);
+    const original = this.savedDirectory(id);
     const selection = await vscode.window.showOpenDialog({
-      defaultUri: vscode.Uri.file(directory.path),
+      defaultUri: vscode.Uri.file(original.path),
       canSelectFiles: false,
       canSelectFolders: true,
       canSelectMany: false,
@@ -518,6 +525,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     });
     if (!selection?.[0]) { return; }
     const directoryPath = validateDirectoryPath(selection[0].fsPath);
+    const directories = readSavedDirectories(this.context.globalState);
+    const directory = this.savedDirectory(id, directories);
     if (directories.some((entry) => entry.id !== directory.id && sameDirectoryPath(entry.path, directoryPath))) {
       throw new Error('That folder is already in Saved directories.');
     }

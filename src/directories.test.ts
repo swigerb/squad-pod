@@ -137,6 +137,11 @@ describe('explicit Squad CLI launch', () => {
       PATH: root,
       PATHEXT: process.platform === 'win32' ? '.COM;.EXE;.BAT;.CMD' : undefined,
     };
+    if (process.platform !== 'win32') {
+      fs.chmodSync(command, 0o644);
+      expect(findCopilotExecutable(env)).toBeNull();
+      fs.chmodSync(command, 0o755);
+    }
     expect(findCopilotExecutable(env)).toBe(command);
   });
 });

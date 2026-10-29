@@ -65,6 +65,67 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     vi.restoreAllMocks();
   });
 
+  it('keeps directory text editing native and suspends layout shortcuts until the modal closes', () => {
+    const layout: OfficeLayout = {
+      ...imported,
+      furniture: [{
+        uid: 'selected-desk', type: 'fixture-desk', col: 2, row: 2, rotation: 0,
+        assetFootprint: { width: 2, height: 1 }, assetRole: 'desk',
+      }],
+    };
+    snapshot(layout, 'directory-keyboard-base');
+    click('Edit Layout');
+    click('→');
+    const select = host.querySelector<HTMLButtonElement>('button[title="Select"]')!;
+    act(() => select.click());
+    const canvas = host.querySelector('canvas')!;
+    for (const type of ['mousedown', 'mouseup']) {
+      act(() => canvas.dispatchEvent(new MouseEvent(type, {
+        bubbles: true, button: 0, buttons: type === 'mousedown' ? 1 : 0,
+        clientX: 2 * 32 + 16, clientY: 2 * 32 + 16,
+      })));
+    }
+    expect(host.querySelector('button[title="Delete (Del)"]')).not.toBeNull();
+    const draft = structuredClone(persisted!.draft);
+    expect(draft!.cols).toBe(21);
+    send({
+      type: 'directoryCatalog',
+      catalog: {
+        workspaceDirectories: [], recentLaunches: [], squadHistoryAvailable: false,
+        savedDirectories: [{ id: 'saved-1', name: 'Original', path: 'C:\\Projects\\Original', valid: true }],
+      },
+    });
+    click('Directories');
+    const input = host.querySelector<HTMLInputElement>('input[aria-label="Name for Original"]')!;
+    input.focus();
+    for (const options of [
+      { key: 'Backspace' }, { key: 'Delete' }, { key: 'r' },
+      { key: 'z', ctrlKey: true }, { key: 'z', metaKey: true },
+      { key: 'z', ctrlKey: true, shiftKey: true }, { key: 'y', ctrlKey: true },
+    ]) {
+      const event = new KeyboardEvent('keydown', { ...options, bubbles: true, cancelable: true });
+      act(() => input.dispatchEvent(event));
+      expect(event.defaultPrevented, JSON.stringify(options)).toBe(false);
+      expect(persisted!.draft).toEqual(draft);
+      expect(host.querySelector('button[title="Delete (Del)"]')).not.toBeNull();
+    }
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Native rename');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    click('Save name');
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({
+      type: 'updateDirectoryName', id: 'saved-1', name: 'Native rename',
+    });
+    click('Close');
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
+    expect(persisted!.draft!.furniture).toEqual([]);
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
+    expect(persisted!.draft).toEqual(draft);
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
+    expect(persisted!.draft).toEqual(layout);
+  });
+
   it('clears only a watcher error after a valid external load, not an import or malformed message', () => {
     const error = 'External layout could not be read; current draft was kept.';
     send({ type: 'layoutError', error, source: 'watcher' });

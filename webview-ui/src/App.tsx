@@ -46,7 +46,7 @@ export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEditorKeyboard(
-    editor.isEditMode,
+    editor.isEditMode && !isDirectoryModalOpen,
     editorState,
     editor.handleDeleteSelected,
     editor.handleRotateSelected,

@@ -137,6 +137,8 @@ Automatic launch on startup or panel refocus is **off**. Directory launches are 
 
 The directory picker lists current workspace folders, user-saved named directories and recent launch requests recorded by Squad Pod when it submits the command. A record is not proof that the CLI started. **Squad history suggestions are unavailable**: current Squad session JSON contains conversation envelopes, not a supported directory launch-history source, so Squad Pod does not infer a directory from it. These app-owned records are not presented as Squad history. Directory-to-Area/seat mapping is not implemented. Tool activity and context gauges are likewise not offered as working integrations without supported producers. Only sound and Debug View are persistent preferences in this slice; transient editor/drawer state is unchanged. This is a partial [#7](https://github.com/swigerb/squad-pod/issues/7) implementation, not full upstream parity. VS Code Development Host/installed-VSIX behavior still needs host verification; browser fixtures and unit tests do not establish that.
 
+Pending folder/name dialogs revalidate the latest catalog before saving, preserving intervening renames and removals and checking current duplicates and capacity. Layout keyboard shortcuts are suspended while the directory picker is open so editing a name cannot delete, rotate or undo office furniture. Regression tests exercise the compiled provider with delayed mock VS Code dialogs and the App with selected furniture and a focused name field; these are not native-host observations.
+
 ## Layout Editor
 
 The built-in editor lets you design your office:
