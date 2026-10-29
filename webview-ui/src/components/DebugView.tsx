@@ -42,6 +42,7 @@ export function DebugView({ officeState, agentTools, agentStatuses, onClose }: D
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p>Statuses are inferred from file observations. Authoritative tool/context data is unavailable; EventBus / WebSocket has no connected producer.</p>
           <div>
             <h3 style={{ margin: '0 0 8px 0', color: '#4ade80' }}>Agents ({officeState.characters.size})</h3>
             {Array.from(officeState.characters.entries()).map(([id, char]) => {
