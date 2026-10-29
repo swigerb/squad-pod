@@ -22,7 +22,9 @@ async function main() {
   try {
     for (const viewport of [
       { width: 1280, height: 900 },
+      { width: 640, height: 900 },
       { width: 360, height: 640 },
+      { width: 320, height: 640 },
       { width: 240, height: 480 },
       { width: 320, height: 240 },
     ]) {
@@ -89,6 +91,13 @@ async function main() {
         const zoomBox = await zoom.boundingBox();
         record.editor = editorBox;
         record.zoom = zoomBox;
+        for (const name of ['Select', 'Floor', 'Wall', 'Carpet', 'Furniture', 'Pets', 'Erase', 'Eyedrop']) {
+          const tool = page.getByTitle(name, { exact: true });
+          const level = await zoom.textContent();
+          await hitClick(tool, `Editor tool: ${name}`);
+          assert.equal(await tool.getAttribute('aria-pressed'), 'true', `${name} must activate normally`);
+          assert.equal(await zoom.textContent(), level, `${name} must not zoom`);
+        }
         await hitClick(pets, 'Pets');
         assert.equal(await pets.getAttribute('aria-pressed'), 'true');
         const levelBeforeSelect = await zoom.textContent();

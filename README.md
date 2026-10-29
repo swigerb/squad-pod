@@ -146,8 +146,9 @@ in another terminal. It uses an **existing** Playwright installation
 it never downloads either. Optional `ACCEPTANCE_OUTPUT_DIR` writes JSON hit
 stacks and screenshots, and `ACCEPTANCE_URL` overrides the fixture URL.
 The check uses `elementsFromPoint` and normal, unforced clicks on zoom and
-Select after Pets at 1280×900, 360×640, 240×480 and 320×240, including editor
-scrolling, draft save/undo/redo and directory-launch request compatibility.
+every editor tool (including Carpet and Select after Pets) at 1280×900,
+640×900, 360×640, 320×640, 240×480 and 320×240, including editor scrolling,
+draft save/undo/redo and directory-launch request compatibility.
 It supplies Dark+ theme variables normally supplied by VS Code. This is a
 production-browser fixture with a mocked host boundary, **not** native VS Code
 or installed-VSIX acceptance; no terminal/CLI launch is executed.
