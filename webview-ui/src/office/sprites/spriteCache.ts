@@ -41,7 +41,7 @@ export function getOutlineSprite(sprite: SpriteData): SpriteData {
               outline[ny + 1][nx + 1] = '#ffffff';
             }
           } else {
-            outline[ny + n.dy + 1][nx + n.dx + 1] = '#ffffff';
+            outline[ny + 1][nx + 1] = '#ffffff';
           }
         }
       }
