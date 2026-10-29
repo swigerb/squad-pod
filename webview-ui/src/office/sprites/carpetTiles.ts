@@ -4,15 +4,21 @@ import { CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR } from '../../constan
 import { flatColorizeSprite } from '../colorize.js';
 
 let sets: SpriteData[][] = [];
+let revision = 0;
 let palettes: string[][] = [];
 const cache = new Map<string, SpriteData>();
 const CACHE_LIMIT = 1024;
 
 export function setCarpetSprites(sprites: SpriteData[][]): void {
+  revision++;
   sets = sprites;
   palettes = sprites.map((variant) => [...new Set(variant.flat(2).filter(Boolean).map((hex) => hex.slice(0, 7)))]
     .sort((a, b) => luminance(a) - luminance(b)));
   cache.clear();
+}
+
+export function getCarpetSpriteRevision(): number {
+  return revision;
 }
 
 function luminance(hex: string): number {

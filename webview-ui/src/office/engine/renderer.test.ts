@@ -20,6 +20,7 @@ describe('tile colors are optional rendering overrides', () => {
   beforeEach(() => {
     pixels = [];
     sprites = new WeakMap();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     setFloorSprites([]);
     setWallSprites([]);
     vi.spyOn(assetLoader, 'areTilesetAssetsReady').mockReturnValue(false);
@@ -29,6 +30,8 @@ describe('tile colors are optional rendering overrides', () => {
       return canvas;
     });
     ctx = {
+      canvas: { width: 48, height: 16 },
+      getTransform: () => ({ a: 1, d: 1, e: 0, f: 0 }),
       clearRect: vi.fn(),
       fillStyle: '',
       fillRect(x: number, y: number) {
