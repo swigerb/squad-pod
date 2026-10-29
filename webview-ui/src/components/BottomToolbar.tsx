@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SettingsModal } from './SettingsModal.js';
 import { vscode } from '../vscodeApi.js';
+import type { PodSettings, SourceStatus } from '../../../src/types.js';
 
 interface BottomToolbarProps {
   isEditMode: boolean;
@@ -11,9 +12,12 @@ interface BottomToolbarProps {
   telemetryCount: number;
   isDebugMode?: boolean;
   onToggleDebugMode?: () => void;
+  settings: PodSettings;
+  sourceStatus: SourceStatus | null;
+  onSoundChange: (enabled: boolean) => void;
 }
 
-export function BottomToolbar({ isEditMode, onToggleEditMode, onOpenSquadInfo, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode }: BottomToolbarProps) {
+export function BottomToolbar({ isEditMode, onToggleEditMode, onOpenSquadInfo, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode, settings, sourceStatus, onSoundChange }: BottomToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleSquadInfo = () => {
@@ -125,7 +129,8 @@ export function BottomToolbar({ isEditMode, onToggleEditMode, onOpenSquadInfo, i
           Settings
         </button>
       </div>
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} isDebugMode={isDebugMode} onToggleDebugMode={onToggleDebugMode} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} isDebugMode={isDebugMode} onToggleDebugMode={onToggleDebugMode}
+        settings={settings} sourceStatus={sourceStatus} onSoundChange={onSoundChange} />}
     </>
   );
 }

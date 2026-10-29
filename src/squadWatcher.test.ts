@@ -2,6 +2,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import type { SourceStatus } from './types.js';
 import {
   parseSessionFile,
   parseLogEntry,
@@ -235,5 +236,67 @@ describe('SquadWatcher', () => {
     write('team.md', '# Team');
     watcher.scan();
     expect(rosterChanges).toBe(1);
+  });
+
+  it('reports real polling, team creation/removal, and disposal without emitting invented activity', () => {
+    const statuses: SourceStatus[] = [];
+    watcher = new SquadWatcher(root, {
+      onRosterChanged: () => { rosterChanges++; },
+      onAgentActivity: e => events.push(e),
+      onStatusChanged: status => statuses.push(status),
+    }, { useFsWatch: false });
+    watcher.start();
+    expect(statuses.at(-1)).toEqual({
+      workspaceRoot: root, squadDir: path.join(root, '.squad'),
+      teamFound: false, observer: 'watching', nativeWatch: false, error: null,
+    });
+    watcher.start();
+    watcher.scan();
+    expect(statuses).toHaveLength(1);
+    write('team.md', '# Team');
+    watcher.scan();
+    expect(statuses.at(-1)?.teamFound).toBe(true);
+    fs.unlinkSync(path.join(root, '.squad', 'team.md'));
+    watcher.scan();
+    expect(statuses.at(-1)?.teamFound).toBe(false);
+    expect(rosterChanges).toBe(2);
+    expect(events).toEqual([]);
+    watcher.dispose();
+    expect(statuses.at(-1)).toMatchObject({ observer: 'stopped', nativeWatch: false });
+  });
+
+  it('reports legacy team presence and native watcher registration separately from polling', () => {
+    write('team.md', '# Legacy team', '.ai-team');
+    const statuses: SourceStatus[] = [];
+    watcher = new SquadWatcher(root, {
+      onRosterChanged: () => {},
+      onAgentActivity: e => events.push(e),
+      onStatusChanged: status => statuses.push(status),
+    });
+    watcher.start();
+    expect(statuses.at(-1)).toMatchObject({
+      squadDir: path.join(root, '.ai-team'), teamFound: true, observer: 'watching',
+    });
+    // Native recursive watch is platform-dependent; it must either register
+    // or explain why polling is the only observer.
+    const status = statuses.at(-1)!;
+    expect(status.nativeWatch || status.error?.includes('polling fallback')).toBeTruthy();
+    expect(events).toEqual([]);
+  });
+
+  it('surfaces filesystem inspection failures instead of claiming a healthy source', () => {
+    fs.writeFileSync(path.join(root, '.squad'), 'not a directory');
+    const statuses: SourceStatus[] = [];
+    watcher = new SquadWatcher(root, {
+      onRosterChanged: () => {},
+      onAgentActivity: e => events.push(e),
+      onStatusChanged: status => statuses.push(status),
+    }, { useFsWatch: false });
+    watcher.start();
+    expect(statuses.at(-1)).toMatchObject({
+      teamFound: false, observer: 'watching', nativeWatch: false,
+      error: expect.stringContaining('Cannot inspect Squad team file'),
+    });
+    expect(events).toEqual([]);
   });
 });

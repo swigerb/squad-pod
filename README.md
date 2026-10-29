@@ -6,7 +6,7 @@
 
 A VS Code extension that turns your [Squad](https://github.com/bradygaster/squad) agent team into animated pixel art characters in a virtual office. Homer reviews architecture. Lisa writes TypeScript. Bart animates the canvas. Marge catches every edge case. Ned writes the docs with a smile.
 
-Each agent on your Squad roster gets their own character that walks around, sits at desks, and visually reflects what the agent is doing — typing when writing code, reading when searching files, waiting when it needs your attention.
+Each visible agent on your Squad roster gets their own character that walks around and sits at desks. Squad file changes drive activity animations; they do not establish which tool is running, context usage, or authoritative task completion.
 
 > Built in one session by a Simpsons-themed Squad team, because of course it was.
 
@@ -21,11 +21,11 @@ Each agent on your Squad roster gets their own character that walks around, sits
 - **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
 - **Office layout editor** — design your office with floors, walls, and furniture using the built-in editor
 - **Speech bubbles** — visual indicators when an agent needs your attention
-- **Sound notifications** — optional chime when an agent finishes its work (turn it off in Settings if you're in a meeting)
+- **Sound notifications** — optional chime when a file-observed active member returns to idle (not proof of task completion; turn it off in Settings if you're in a meeting)
 - **Persistent layouts** — your office design is saved and shared across VS Code windows
 - **6 distinct characters** — two bundled character sheets, color-shifted into six looks (more members cycle through further hue shifts), no external assets required
 - **Desk-as-directory** — click any occupied desk to see the agent's charter summary, current task, and recent activity
-- **Diagnostics** — extension logs go to the **Squad Pod** output channel; Settings → **Debug View** shows live per-agent state
+- **Settings and diagnostics** — sound and Debug View persist in VS Code global storage across webview reloads; Debug View defaults off and gates the canvas asset strip. Settings shows the host-reported team file and file-observer status.
 
 ## How We Built This
 
@@ -87,6 +87,14 @@ Then press **F5** in VS Code to launch the Extension Development Host.
 4. Click a character to select it, then click another desk to move it there (an occupant is swapped into the old seat). Seat choices are saved.
 5. Click **Layout** to open the office editor and customize your space
 6. Open **Settings** for sound, layout export/import, and the Debug View
+
+### Source status and missing-team setup
+
+Settings reports whether `team.md` exists in the selected Squad directory and whether the file observer is running (native watch plus polling, or polling alone). Native-watch errors are shown with the polling fallback; EventBus / WebSocket is **not connected** because no producer is wired. These are file-observation hints, **not authoritative lifecycle, tool or context events**. The idle timeout is not proof that a task finished.
+
+If no team file exists, the office shows setup guidance: open the correct project folder or follow [Squad's setup instructions](https://github.com/bradygaster/squad#readme) and initialize a team yourself. The observer detects a newly created roster without a reload. Saved layouts, seats and hidden-member rules are unchanged.
+
+Automatic launch on startup or panel refocus is **off and unavailable**; Squad Pod never runs launch commands. Launch controls, tool activity and context gauges are not offered as working integrations without a supported producer. Only sound and Debug View are persistent preferences in this slice; transient editor/drawer state is unchanged. This is a partial [#7](https://github.com/swigerb/squad-pod/issues/7) implementation, not full upstream parity. VS Code Development Host/installed-VSIX behavior still needs host verification; browser fixtures and unit tests do not establish that.
 
 ## Layout Editor
 
@@ -186,9 +194,10 @@ Squad Pod tracks [Pixel Agents v1.5.0](https://github.com/pixel-agents-hq/pixel-
 
 | Area | Status |
 |---|---|
-| Activity/lifecycle from real Squad files, roster add/remove | ✅ |
+| File-observed activity hints, roster add/remove (not authoritative lifecycle) | ✅ |
 | Reconnect snapshot, stable appearance, persisted seats with swap | ✅ |
-| Sound on completion, Debug View, diagnostics output channel | ✅ |
+| Sound on observed active-to-idle, persisted sound/Debug View, diagnostics output channel | ✅ |
+| Settings source status and missing-Squad guidance | ✅ File observer only; launch off/unavailable, EventBus / WebSocket not connected |
 | Editor: drag painting, one undo per gesture, safe import, atomic save | ✅ |
 | Alt-drag copy, atomic catalog desk + PC/lamp moves and rotations | ✅ |
 | Carpets, Areas and remaining editor parity | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |

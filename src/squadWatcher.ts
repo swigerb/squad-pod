@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FILE_WATCHER_POLL_INTERVAL_MS } from './constants.js';
 import { resolveSquadDir } from './squadPaths.js';
-import type { SquadSession } from './types.js';
+import type { SourceStatus, SquadSession } from './types.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -27,6 +27,7 @@ export interface AgentActivityEvent {
 }
 
 export interface SquadWatcherCallbacks {
+  onStatusChanged?: (status: SourceStatus) => void;
   /** Called when the team roster file changes (re-read and refresh agents). */
   onRosterChanged: () => void;
   /** Called when agent activity is detected from any watched source. */
@@ -232,6 +233,8 @@ export class SquadWatcher {
   private watchedDir: string | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private scanQueued: ReturnType<typeof setTimeout> | null = null;
+  private lastStatus: string | undefined;
+  private watchError: string | null = null;
 
   constructor(
     private readonly workspaceRoot: string,
@@ -240,8 +243,9 @@ export class SquadWatcher {
   ) {}
 
   start(): void {
-    this.scan();
+    if (this.pollTimer || this.disposed) { return; }
     this.pollTimer = setInterval(() => this.scan(), this.options.pollIntervalMs ?? FILE_WATCHER_POLL_INTERVAL_MS);
+    this.scan();
   }
 
   dispose(): void {
@@ -254,6 +258,38 @@ export class SquadWatcher {
     }
     this.fsWatcher?.close();
     this.fsWatcher = null;
+    this.pollTimer = null;
+    this.publishStatus();
+  }
+
+  private publishStatus(): void {
+    const squadDir = resolveSquadDir(this.workspaceRoot);
+    let error = this.watchError;
+    let teamFound = false;
+    try {
+      if (!fs.statSync(squadDir).isDirectory()) {
+        error = `Cannot inspect Squad team file: ${squadDir} is not a directory`;
+      } else {
+        teamFound = fs.statSync(path.join(squadDir, 'team.md')).isFile();
+      }
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+        error = `Cannot inspect Squad team file: ${String(e)}`;
+      }
+    }
+    const status: SourceStatus = {
+      workspaceRoot: this.workspaceRoot,
+      squadDir,
+      teamFound,
+      observer: this.pollTimer && !this.disposed ? 'watching' : 'stopped',
+      nativeWatch: this.fsWatcher !== null,
+      error,
+    };
+    const serialized = JSON.stringify(status);
+    if (serialized !== this.lastStatus) {
+      this.lastStatus = serialized;
+      this.callbacks.onStatusChanged?.(status);
+    }
   }
 
   /** Compare the Squad directory with the last scan and emit changes. */
@@ -263,6 +299,7 @@ export class SquadWatcher {
     }
     const squadDir = resolveSquadDir(this.workspaceRoot);
     this.ensureFsWatch(squadDir);
+    this.publishStatus();
 
     const emit = this.baselined;
     this.baselined = true;
@@ -292,24 +329,28 @@ export class SquadWatcher {
   }
 
   private ensureFsWatch(squadDir: string): void {
-    if (this.options.useFsWatch === false || this.watchedDir === squadDir) {
+    if (this.options.useFsWatch === false || (this.watchedDir === squadDir && fs.existsSync(squadDir))) {
       return;
     }
     this.fsWatcher?.close();
     this.fsWatcher = null;
     this.watchedDir = null;
+    this.watchError = null;
     try {
       if (!fs.existsSync(squadDir)) {
         return;
       }
       this.fsWatcher = fs.watch(squadDir, { persistent: false, recursive: true }, () => this.queueScan());
-      this.fsWatcher.on('error', () => {
+      this.fsWatcher.on('error', (error) => {
         this.fsWatcher?.close();
         this.fsWatcher = null;
+        this.watchedDir = null;
+        this.watchError = `Native watch unavailable; polling fallback: ${error.message}`;
+        this.publishStatus();
       });
       this.watchedDir = squadDir;
-    } catch {
-      // Polling still covers platforms without recursive fs.watch.
+    } catch (error) {
+      this.watchError = `Native watch unavailable; polling fallback: ${String(error)}`;
     }
   }
 

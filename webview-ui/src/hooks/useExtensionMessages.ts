@@ -12,6 +12,7 @@ import {
   type AgentStatus,
 } from '../office/engine/agentSync.js';
 import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
+import type { PodSettings, SourceStatus } from '../../../src/types.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
@@ -34,6 +35,9 @@ import {
 const MAX_TELEMETRY_EVENTS = 200;
 
 export interface ExtensionMessageState {
+  settings: PodSettings;
+  sourceStatus: SourceStatus | null;
+  updateSetting: (setting: keyof PodSettings, enabled: boolean) => void;
   agents: string[];
   selectedAgent: string | null;
   agentTools: Record<string, ToolActivity[]>;
@@ -54,6 +58,8 @@ export function useExtensionMessages(
   onLayoutLoaded?: (layout: OfficeLayout) => void,
   _isEditDirty?: () => boolean
 ): ExtensionMessageState {
+  const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false });
+  const [sourceStatus, setSourceStatus] = useState<SourceStatus | null>(null);
   const [agents, setAgents] = useState<string[]>([]);
   const [selectedAgent] = useState<string | null>(null);
   const [agentTools, setAgentTools] = useState<Record<string, ToolActivity[]>>({});
@@ -75,6 +81,11 @@ export function useExtensionMessages(
   statusesRef.current = agentStatuses;
 
   const clearTelemetry = useCallback(() => setTelemetryEvents([]), []);
+  const updateSetting = useCallback((setting: keyof PodSettings, enabled: boolean) => {
+    setSettings((prev) => ({ ...prev, [setting]: enabled }));
+    if (setting === 'soundEnabled') setSoundEnabled(enabled);
+    vscode.postMessage({ type: setting === 'soundEnabled' ? 'setSoundEnabled' : 'setDebugEnabled', enabled });
+  }, []);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -291,7 +302,14 @@ export function useExtensionMessages(
         }
 
         case 'settingsLoaded': {
-          setSoundEnabled(message.soundEnabled ?? true);
+          setSettings({ soundEnabled: message.soundEnabled, debugEnabled: message.debugEnabled });
+          setSoundEnabled(message.soundEnabled);
+          break;
+        }
+
+        case 'sourceStatus': {
+          setSourceStatus(message.status);
+          setNoWorkspace(message.status.workspaceRoot === null);
           break;
         }
 
@@ -381,6 +399,9 @@ export function useExtensionMessages(
   }, [getOfficeState, onLayoutLoaded]);
 
   return {
+    settings,
+    sourceStatus,
+    updateSetting,
     agents,
     selectedAgent,
     agentTools,

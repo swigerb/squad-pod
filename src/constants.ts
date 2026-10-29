@@ -41,6 +41,7 @@ export const LAYOUT_FILE_POLL_INTERVAL_MS = 2000;
 
 // ─── Settings ───────────────────────────────────────────────────────
 export const GLOBAL_KEY_SOUND_ENABLED = 'squad-pod.soundEnabled';
+export const GLOBAL_KEY_DEBUG_ENABLED = 'squad-pod.debugEnabled';
 
 // ─── VS Code Identifiers ────────────────────────────────────────────
 export const VIEW_ID = 'squad-pod.panelView';

@@ -9,8 +9,38 @@ import { useEditorActions } from '../../hooks/useEditorActions.js';
 import { useEditorKeyboard } from '../../hooks/useEditorKeyboard.js';
 import { TileType } from '../types.js';
 import { vscode } from '../../vscodeApi.js';
+import * as gameLoop from '../engine/gameLoop.js';
+import * as renderer from '../engine/renderer.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+
+it('passes live Debug View changes into every rendered frame', () => {
+  const ctx = { setTransform: vi.fn(), imageSmoothingEnabled: false };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600, toJSON: () => ({}),
+  });
+  vi.spyOn(gameLoop, 'startGameLoop').mockImplementation((_canvas, callbacks) => {
+    callbacks.render(ctx as unknown as CanvasRenderingContext2D);
+    return () => {};
+  });
+  const frame = vi.spyOn(renderer, 'renderFrame').mockImplementation(() => {});
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  const office = new OfficeState();
+  const editor = new EditorState();
+  const pan = { current: { x: 0, y: 0 } };
+  try {
+    for (const enabled of [false, true, false]) {
+      act(() => root.render(<OfficeCanvas officeState={office} editorState={editor} isEditMode={false}
+        isDebugMode={enabled} editorTick={0} zoom={1} panRef={pan} />));
+      expect(frame.mock.lastCall?.at(-1)).toBe(enabled);
+    }
+  } finally {
+    act(() => root.unmount());
+    vi.restoreAllMocks();
+  }
+});
 
 describe('real canvas gestures with editor actions and keyboard history', () => {
   let host: HTMLDivElement;

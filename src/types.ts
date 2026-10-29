@@ -175,9 +175,26 @@ export interface TelemetryEvent {
   detail: string | null;
 }
 
-export interface WebviewMessage {
-  type: string;
-  [key: string]: unknown;
+export type WebviewMessage =
+  | { type: 'webviewReady' | 'getSettings' | 'exportLayout' | 'importLayout' | 'openSquadInfo' }
+  | { type: 'setSoundEnabled' | 'setDebugEnabled'; enabled: boolean }
+  | { type: 'saveAgentSeats'; seats: Record<string, string> }
+  | { type: 'saveLayout'; layout: LayoutData }
+  | { type: 'focusAgent' | 'openSquadAgent' | 'requestAgentDetail'; agentId: string }
+  | { type: 'diagnosticReport'; characterSheetsSize?: number; characterSheetKeys?: string[]; bootstrapRan?: boolean; errors?: string[] };
+
+export interface PodSettings {
+  soundEnabled: boolean;
+  debugEnabled: boolean;
+}
+
+export interface SourceStatus {
+  workspaceRoot: string | null;
+  squadDir: string | null;
+  teamFound: boolean;
+  observer: 'watching' | 'stopped';
+  nativeWatch: boolean;
+  error: string | null;
 }
 
 export interface AgentCreatedMessage {
@@ -248,7 +265,8 @@ export type OutboundMessage =
   | { type: 'agentClosed'; agentId: string }
   | { type: 'agentToolsClear'; agentId: string }
   | { type: 'agentToolPermissionClear'; agentId: string }
-  | { type: 'settingsLoaded'; soundEnabled: boolean }
+  | ({ type: 'settingsLoaded' } & PodSettings)
+  | { type: 'sourceStatus'; status: SourceStatus }
   | { type: 'agentToolPermission'; agentId: string; tool: string }
   | { type: 'layoutLoaded'; layout: LayoutData }
   | { type: 'characterSpritesLoaded'; sprites: CharacterSpriteSet[] }

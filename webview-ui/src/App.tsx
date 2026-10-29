@@ -10,6 +10,7 @@ import { DebugView } from './components/DebugView.js';
 import { AgentCard } from './components/AgentCard.js';
 import { SquadInfoCard } from './components/SquadInfoCard.js';
 import { TelemetryDrawer } from './components/TelemetryDrawer.js';
+import { MissingSquad } from './components/MissingSquad.js';
 import { EditorToolbar } from './components/EditorToolbar.js';
 import { EditorState } from './office/editor/editorState.js';
 import { useExtensionMessages } from './hooks/useExtensionMessages.js';
@@ -29,12 +30,12 @@ function getOfficeState(): OfficeState {
 export default function App() {
   const editor = useEditorActions(getOfficeState, editorState);
   const isEditDirty = useCallback(() => editor.isEditMode && editor.isDirty, [editor.isEditMode, editor.isDirty]);
-  const { agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { settings, sourceStatus, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.setLastSavedLayout,
     isEditDirty
   );
-  const [isDebugMode, setIsDebugMode] = useState(false);
+  const isDebugMode = settings.debugEnabled;
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
   const [telemetrySeenCount, setTelemetrySeenCount] = useState(0);
   const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
@@ -87,7 +88,7 @@ export default function App() {
     setTelemetrySeenCount(0);
   }, [clearTelemetry]);
 
-  if (!layoutReady) {
+  if (!layoutReady && !noWorkspace) {
     return (
       <div
         style={{
@@ -137,6 +138,7 @@ export default function App() {
       <style>{`@keyframes pixel-agents-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} } .pixel-agents-pulse{animation:pixel-agents-pulse ${PULSE_ANIMATION_DURATION_SEC}s ease-in-out infinite}`}</style>
 
       <OfficeCanvas
+        isDebugMode={isDebugMode}
         officeState={getOfficeState()}
         isEditMode={editor.isEditMode}
         editorState={editorState}
@@ -191,7 +193,12 @@ export default function App() {
 
       <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef} onAgentClick={handleDeskClick} />
 
+      <MissingSquad status={sourceStatus} />
+
       <BottomToolbar
+        settings={settings}
+        sourceStatus={sourceStatus}
+        onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
         isEditMode={editor.isEditMode}
         onToggleEditMode={editor.handleToggleEditMode}
         onOpenSquadInfo={handleOpenSquadInfo}
@@ -199,7 +206,7 @@ export default function App() {
         onToggleTelemetry={handleToggleTelemetry}
         telemetryCount={telemetryEvents.length - telemetrySeenCount}
         isDebugMode={isDebugMode}
-        onToggleDebugMode={() => setIsDebugMode((v) => !v)}
+        onToggleDebugMode={() => updateSetting('debugEnabled', !isDebugMode)}
       />
 
       <TelemetryDrawer
@@ -221,7 +228,7 @@ export default function App() {
           officeState={getOfficeState()}
           agentTools={agentTools}
           agentStatuses={agentStatuses}
-          onClose={() => setIsDebugMode(false)}
+          onClose={() => updateSetting('debugEnabled', false)}
         />
       )}
 
