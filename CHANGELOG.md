@@ -25,6 +25,7 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Reserved a separate horizontal zoom strip above the layout editor so zoom and tool buttons remain independently clickable, including Select after Pets. Narrow editor panels fit the available width and retain vertical scrolling; the bottom toolbar scrolls horizontally instead of clipping actions or shifting the panel. Canvas bounds, zoom/pan anchoring and draft/undo state are unchanged (#33).
 - Bound per-frame carpet rendering to the visible region, cache masked junctions/palettes until inputs or artwork change, and precompose opaque sheets within a 4.13 MiB per-context cap. Retain direct draws for translucent art, fractional device scales or fractional device offsets (preserving GPU sprite-edge antialiasing) and unchanged saved data, editing and protected drafts (#28).
 - Fresh workspaces and deleted layout files no longer show false layout-recovery warnings. Successful external reads clear only watcher errors, preserving unrelated recovery errors and local/incoming draft protection.
 - Layouts with missing, empty or partial `tileColors` now draw floors and walls on initial load, import, external reload and incoming-conflict acceptance. Renderer-only defaults preserve existing colors, draft baselines, revisions and saved layout data.

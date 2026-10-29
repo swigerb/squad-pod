@@ -34,6 +34,7 @@ export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpe
   return (
     <>
       <div
+        className="bottom-toolbar"
         style={{
           position: 'absolute',
           bottom: 0,
@@ -44,7 +45,10 @@ export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpe
           borderTop: '1px solid var(--vscode-panel-border)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'safe center',
+          overflowX: 'auto',
+          boxSizing: 'border-box',
+          scrollbarWidth: 'thin',
           gap: '8px',
           padding: '0 16px',
           zIndex: 50,

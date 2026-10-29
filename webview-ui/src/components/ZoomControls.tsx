@@ -42,18 +42,21 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
 
   return (
     <div
+      className="zoom-controls"
+      role="group"
+      aria-label="Office zoom"
       style={{
         position: 'absolute',
         top: '16px',
         left: '16px',
         display: 'flex',
-        flexDirection: 'column',
         gap: '8px',
         zIndex: 100,
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div className="zoom-buttons" style={{ display: 'flex', gap: '4px' }}>
         <button
+          aria-label="Zoom in"
           onClick={handleZoomIn}
           disabled={zoom >= ZOOM_MAX}
           style={{
@@ -72,6 +75,7 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
           +
         </button>
         <button
+          aria-label="Zoom out"
           onClick={handleZoomOut}
           disabled={zoom <= ZOOM_MIN}
           style={{

@@ -40,3 +40,24 @@ html, body, #root {
 * {
   font-family: 'Courier New', 'Consolas', monospace;
 }
+
+.zoom-controls,
+.zoom-buttons {
+  flex-direction: column;
+}
+
+.bottom-toolbar > button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Reserve a separate top strip without changing the canvas viewport or pan anchor. */
+.office-panel[data-edit-mode="true"] {
+  --editor-toolbar-top: 64px;
+}
+
+.office-panel[data-edit-mode="true"] .zoom-controls,
+.office-panel[data-edit-mode="true"] .zoom-buttons {
+  flex-direction: row;
+  align-items: center;
+}

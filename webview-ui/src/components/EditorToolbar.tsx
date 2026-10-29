@@ -94,10 +94,12 @@ const PLACEABLE_CATEGORIES: { type: ItemType; label: string }[] = [
 const styles = {
   root: {
     position: 'absolute' as const,
-    top: 0,
+    top: 'var(--editor-toolbar-top, 0px)',
     left: 0,
     bottom: 48, // above BottomToolbar
     width: `${TOOLBAR_WIDTH}px`,
+    maxWidth: '100%',
+    boxSizing: 'border-box' as const,
     background: BG,
     borderRight: `1px solid ${BORDER}`,
     overflowY: 'auto' as const,
@@ -517,7 +519,7 @@ export function EditorToolbar({
   })).filter(cat => cat.items.length > 0);
 
   return (
-    <div style={styles.root}>
+    <div style={styles.root} role="region" aria-label="Layout editor">
       {/* ── Tool Buttons ── */}
       <div style={styles.section}>
         <div style={styles.sectionLabel}>Tools</div>
@@ -528,6 +530,7 @@ export function EditorToolbar({
               style={styles.toolBtn(activeTool === tool)}
               onClick={() => onToolChange(tool)}
               title={label}
+              aria-pressed={activeTool === tool}
             >
               <span>{icon}</span>
               <span style={styles.toolLabel}>{label}</span>
