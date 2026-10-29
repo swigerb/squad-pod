@@ -13,8 +13,54 @@ import * as gameLoop from '../engine/gameLoop.js';
 import * as renderer from '../engine/renderer.js';
 import { ZoomControls } from '../../components/ZoomControls.js';
 import { TILE_SIZE } from '../../constants.js';
+import type { FloorColor, OfficeLayout } from '../types.js';
+import { setFloorSprites } from '../floorTiles.js';
+import { setWallSprites } from '../wallTiles.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+
+it.each([
+  ['missing', undefined],
+  ['empty', {}],
+  ['partial', { '1,0': { h: 120, s: 100, b: 0, c: 0, colorize: true } }],
+  ['complete', {
+    '0,0': { h: 240, s: 100, b: 0, c: 0 },
+    '1,0': { h: 120, s: 100, b: 0, c: 0, colorize: true },
+  }],
+] as Array<[string, Record<string, FloorColor> | undefined]>)('renders a live OfficeCanvas with %s colors without altering its layout', (_name, tileColors) => {
+  const ctx = {
+    setTransform: vi.fn(), clearRect: vi.fn(), fillRect: vi.fn(), drawImage: vi.fn(),
+    imageSmoothingEnabled: false,
+  };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600, toJSON: () => ({}),
+  });
+  vi.spyOn(gameLoop, 'startGameLoop').mockImplementation((_canvas, callbacks) => {
+    callbacks.render(ctx as unknown as CanvasRenderingContext2D);
+    return () => {};
+  });
+  setFloorSprites([]);
+  setWallSprites([]);
+  const layout: OfficeLayout = {
+    version: 2, cols: 3, rows: 1, tiles: [TileType.WALL, TileType.FLOOR_1, TileType.VOID], furniture: [],
+    ...(tileColors === undefined ? {} : { tileColors }),
+  };
+  const before = JSON.stringify(layout);
+  const office = new OfficeState(layout);
+  const root = createRoot(document.createElement('div'));
+  try {
+    act(() => root.render(<OfficeCanvas officeState={office} editorState={new EditorState()}
+      isEditMode={false} editorTick={0} zoom={1} panRef={{ current: { x: 0, y: 0 } }} />));
+    expect(ctx.clearRect).toHaveBeenCalled();
+    expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+    expect(ctx.fillRect).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 16, 16);
+    expect(JSON.stringify(office.layout)).toBe(before);
+  } finally {
+    act(() => root.unmount());
+    vi.restoreAllMocks();
+  }
+});
 
 it('passes live Debug View changes into every rendered frame', () => {
   const ctx = { setTransform: vi.fn(), imageSmoothingEnabled: false };

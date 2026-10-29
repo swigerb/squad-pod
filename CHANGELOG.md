@@ -23,6 +23,7 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Layouts with missing, empty or partial `tileColors` now draw floors and walls on initial load, import, external reload and incoming-conflict acceptance. Renderer-only defaults preserve existing colors, draft baselines, revisions and saved layout data.
 - Prevent incoming layouts from silently replacing unsaved edits, even outside edit mode. Save now waits for host acknowledgement, checks the observed disk revision under a cooperating-window lock, and backs up the replaced raw file. Invalid watcher input cannot replace a good draft/cache; legacy colors and unknown layout metadata are preserved instead of deleted by migration.
 - Bound manifest fingerprint/reload work across all roots, including failed attempts: fingerprints read only validated manifest references; isolated per-root byte/read/enumeration/decode allowances report explicit overflow and recover on edits without starving other roots. External roots now allow 48 furniture leaves / 98,304 attempted pixels each.
 - Refresh missing-art warnings on every applied host layout snapshot, including after the office is already ready, without requiring an unrelated UI event or saving the layout.

@@ -112,6 +112,12 @@ The built-in editor lets you design your office:
 
 The grid is expandable up to 64×64 tiles. A new host-created office is 20×15 with four verified desk/chair pairs. Existing offices are never reset to this default.
 
+Layouts without `tileColors` (including imports and external updates) still draw
+floors and walls. Missing per-tile entries use warm floor and dark wall rendering
+defaults; existing colors are unchanged. These fallbacks are display-only:
+opening a layout does not dirty the draft, alter its revision, or add synthesized
+colors to the saved JSON.
+
 ### Unsaved layouts and incoming conflicts
 
 Dirty state compares the **actual layout contents**, including metadata, not
