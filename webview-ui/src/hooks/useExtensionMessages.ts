@@ -12,7 +12,7 @@ import {
   type AgentStatus,
 } from '../office/engine/agentSync.js';
 import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
-import type { PodSettings, SourceStatus } from '../../../src/types.js';
+import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
@@ -40,6 +40,9 @@ export interface ExtensionMessageState {
   assetStatus: Pick<AssetSnapshot, 'directories' | 'diagnostics'>;
   settings: PodSettings;
   sourceStatus: SourceStatus | null;
+  directoryCatalog: DirectoryCatalog | null;
+  directoryError: string | null;
+  directoryNotice: string | null;
   updateSetting: (setting: keyof PodSettings, enabled: boolean) => void;
   agents: string[];
   selectedAgent: string | null;
@@ -65,6 +68,9 @@ export function useExtensionMessages(
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false });
   const [sourceStatus, setSourceStatus] = useState<SourceStatus | null>(null);
+  const [directoryCatalog, setDirectoryCatalog] = useState<DirectoryCatalog | null>(null);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
+  const [directoryNotice, setDirectoryNotice] = useState<string | null>(null);
   const [agents, setAgents] = useState<string[]>([]);
   const [selectedAgent] = useState<string | null>(null);
   const [agentTools, setAgentTools] = useState<Record<string, ToolActivity[]>>({});
@@ -330,6 +336,24 @@ export function useExtensionMessages(
           break;
         }
 
+        case 'directoryCatalog': {
+          setDirectoryCatalog(message.catalog);
+          setDirectoryError(null);
+          break;
+        }
+
+        case 'directoryError': {
+          setDirectoryError(message.error);
+          setDirectoryNotice(null);
+          break;
+        }
+
+        case 'directoryNotice': {
+          setDirectoryNotice(message.notice);
+          setDirectoryError(null);
+          break;
+        }
+
         case 'sourceStatus': {
           setSourceStatus(message.status);
           setNoWorkspace(message.status.workspaceRoot === null);
@@ -425,6 +449,9 @@ export function useExtensionMessages(
     assetStatus,
     settings,
     sourceStatus,
+    directoryCatalog,
+    directoryError,
+    directoryNotice,
     updateSetting,
     agents,
     selectedAgent,

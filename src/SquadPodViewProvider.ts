@@ -13,7 +13,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, CharacterAssetEntry, SourceStatus, PodSettings } from './types.js';
+import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, CharacterAssetEntry, SourceStatus, PodSettings, DirectoryCatalog } from './types.js';
 import {
   CUSTOM_CHAR_SPRITE_PREFIX,
   WORKSPACE_KEY_LAYOUT,
@@ -53,6 +53,20 @@ import {
 import { readSettings, saveSetting } from './settings.js';
 import { assetSourceFingerprint, loadAssetSnapshot, watchAssetSnapshots } from './manifestAssets.js';
 import { defaultFurniture } from './defaultFurniture.js';
+import {
+  asDirectoryEntry,
+  createSavedDirectory,
+  ensureUniqueDirectoryName,
+  forgetDirectoryLaunch,
+  readLaunchHistory,
+  readSavedDirectories,
+  recordDirectoryLaunch,
+  sameDirectoryPath,
+  validateDirectoryPath,
+  writeSavedDirectories,
+  type SavedDirectory,
+} from './directories.js';
+import { launchSquadInTerminal } from './directoryLaunch.js';
 
 export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
@@ -100,6 +114,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     // Re-target the office when the user adds or removes workspace folders
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      this.sendDirectoryCatalog();
       if (this.watchedRoot !== this.getWorkspaceRoot()) {
         this.stopWatching();
         this.onWebviewReady();
@@ -124,6 +139,34 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
       case 'removeAssetDirectory':
         void this.removeAssetDirectory(message.directory).catch((error: unknown) => this.assetDirectoryError(error));
+        break;
+
+      case 'getDirectories':
+        this.sendDirectoryCatalog();
+        break;
+
+      case 'addDirectory':
+        void this.addDirectory().catch((error: unknown) => this.directoryError(error));
+        break;
+
+      case 'updateDirectoryName':
+        void this.updateDirectoryName(message.id, message.name).catch((error: unknown) => this.directoryError(error));
+        break;
+
+      case 'changeDirectoryPath':
+        void this.changeDirectoryPath(message.id).catch((error: unknown) => this.directoryError(error));
+        break;
+
+      case 'removeDirectory':
+        void this.removeDirectory(message.id).catch((error: unknown) => this.directoryError(error));
+        break;
+
+      case 'forgetDirectoryLaunch':
+        void this.forgetDirectoryLaunch(message.id).catch((error: unknown) => this.directoryError(error));
+        break;
+
+      case 'launchDirectory':
+        void this.launchDirectory(message.id, message.source).catch((error: unknown) => this.directoryError(error));
         break;
 
       case 'saveAgentSeats':
@@ -203,6 +246,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     const workspaceRoot = this.getWorkspaceRoot();
     this.postMessage({ type: 'settingsLoaded', ...readSettings(this.context.globalState) });
+    this.sendDirectoryCatalog();
     this.log(`webviewReady; workspaceRoot=${workspaceRoot ?? '<none>'}`);
     if (!workspaceRoot) {
       this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
@@ -359,6 +403,178 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private async removeAssetDirectory(directory: string): Promise<void> {
     await this.context.globalState.update('squad-pod.assetDirectories', this.assetDirectories().filter((d) => d !== directory));
     this.startAssetWatching();
+  }
+
+  // ─── Explicit directory management and launch ───────────────────
+
+  private directoryCatalog(): DirectoryCatalog {
+    const workspaceDirectories = (vscode.workspace.workspaceFolders ?? []).map((folder) =>
+      asDirectoryEntry({
+        id: `workspace:${folder.uri.toString()}`,
+        name: folder.name,
+        path: folder.uri.fsPath,
+      }),
+    );
+    const savedDirectories = readSavedDirectories(this.context.globalState)
+      .map((directory) => asDirectoryEntry(directory));
+    const recentLaunches = readLaunchHistory(this.context.globalState)
+      .map((directory) => asDirectoryEntry(directory, directory.lastLaunchedAt));
+    return {
+      workspaceDirectories,
+      savedDirectories,
+      recentLaunches,
+      squadHistoryAvailable: false,
+    };
+  }
+
+  private sendDirectoryCatalog(): void {
+    try {
+      this.postMessage({ type: 'directoryCatalog', catalog: this.directoryCatalog() });
+    } catch (error) {
+      this.directoryError(error);
+    }
+  }
+
+  private directoryError(error: unknown): void {
+    const message = `Squad Pod directory: ${error instanceof Error ? error.message : String(error)}`;
+    this.log(message);
+    this.postMessage({ type: 'directoryError', error: message });
+  }
+
+  private directoryNotice(notice: string): void {
+    this.postMessage({ type: 'directoryNotice', notice });
+  }
+
+  private savedDirectory(id: unknown, directories = readSavedDirectories(this.context.globalState)): SavedDirectory {
+    if (typeof id !== 'string' || !id) { throw new Error('A saved directory ID is required.'); }
+    const directory = directories.find((entry) => entry.id === id);
+    if (!directory) { throw new Error('That saved directory no longer exists. Refresh the directory list and try again.'); }
+    return directory;
+  }
+
+  private async addDirectory(): Promise<void> {
+    const current = readSavedDirectories(this.context.globalState);
+    if (current.length >= 100) { throw new Error('At most 100 saved directories are supported.'); }
+
+    const selection = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: 'Add launch directory',
+    });
+    if (!selection?.[0]) { return; }
+    const directoryPath = validateDirectoryPath(selection[0].fsPath);
+    if ((vscode.workspace.workspaceFolders ?? []).some((folder) => sameDirectoryPath(folder.uri.fsPath, directoryPath))) {
+      this.directoryNotice('That folder is already listed under Workspace folders.');
+      return;
+    }
+    if (current.some((entry) => sameDirectoryPath(entry.path, directoryPath))) {
+      this.directoryNotice('That folder is already in Saved directories.');
+      return;
+    }
+
+    const defaultName = path.basename(directoryPath) || directoryPath;
+    const nameInput = await vscode.window.showInputBox({
+      prompt: 'Name this launch directory',
+      value: defaultName,
+      validateInput: (value) => {
+        try {
+          ensureUniqueDirectoryName(value, current);
+          return undefined;
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error);
+        }
+      },
+    });
+    if (nameInput === undefined) { return; }
+    const name = ensureUniqueDirectoryName(nameInput, current);
+    const directory = createSavedDirectory(name, directoryPath);
+    await writeSavedDirectories(this.context.globalState, [...current, directory]);
+    this.sendDirectoryCatalog();
+    this.directoryNotice(`Saved "${name}". Launch it explicitly from the directory list.`);
+  }
+
+  private async updateDirectoryName(id: unknown, nameInput: unknown): Promise<void> {
+    const directories = readSavedDirectories(this.context.globalState);
+    const directory = this.savedDirectory(id, directories);
+    const name = ensureUniqueDirectoryName(nameInput, directories, directory.id);
+    await writeSavedDirectories(
+      this.context.globalState,
+      directories.map((entry) => entry.id === directory.id ? { ...entry, name } : entry),
+    );
+    this.sendDirectoryCatalog();
+    this.directoryNotice(`Renamed directory to "${name}".`);
+  }
+
+  private async changeDirectoryPath(id: unknown): Promise<void> {
+    const directories = readSavedDirectories(this.context.globalState);
+    const directory = this.savedDirectory(id, directories);
+    const selection = await vscode.window.showOpenDialog({
+      defaultUri: vscode.Uri.file(directory.path),
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: 'Change launch directory',
+    });
+    if (!selection?.[0]) { return; }
+    const directoryPath = validateDirectoryPath(selection[0].fsPath);
+    if (directories.some((entry) => entry.id !== directory.id && sameDirectoryPath(entry.path, directoryPath))) {
+      throw new Error('That folder is already in Saved directories.');
+    }
+    if ((vscode.workspace.workspaceFolders ?? []).some((folder) => sameDirectoryPath(folder.uri.fsPath, directoryPath))) {
+      throw new Error('That folder is already listed under Workspace folders.');
+    }
+    await writeSavedDirectories(
+      this.context.globalState,
+      directories.map((entry) => entry.id === directory.id ? { ...entry, path: directoryPath } : entry),
+    );
+    this.sendDirectoryCatalog();
+    this.directoryNotice(`Updated the folder for "${directory.name}". Existing terminals are unchanged.`);
+  }
+
+  private async removeDirectory(id: unknown): Promise<void> {
+    const directories = readSavedDirectories(this.context.globalState);
+    const directory = this.savedDirectory(id, directories);
+    await writeSavedDirectories(this.context.globalState, directories.filter((entry) => entry.id !== directory.id));
+    this.sendDirectoryCatalog();
+    this.directoryNotice(`Removed "${directory.name}". Any terminal already launched keeps running.`);
+  }
+
+  private async forgetDirectoryLaunch(id: unknown): Promise<void> {
+    if (typeof id !== 'string' || !id) { throw new Error('A recent launch ID is required.'); }
+    const history = readLaunchHistory(this.context.globalState);
+    if (!history.some((entry) => entry.id === id)) { throw new Error('That recent launch no longer exists.'); }
+    await forgetDirectoryLaunch(this.context.globalState, id);
+    this.sendDirectoryCatalog();
+  }
+
+  private async launchDirectory(id: unknown, source: 'workspace' | 'saved' | 'recent'): Promise<void> {
+    const catalog = this.directoryCatalog();
+    const entries = source === 'workspace' ? catalog.workspaceDirectories
+      : source === 'saved' ? catalog.savedDirectories
+        : source === 'recent' ? catalog.recentLaunches : undefined;
+    if (!entries) { throw new Error('Unsupported directory source.'); }
+    if (typeof id !== 'string' || !id) { throw new Error('A directory ID is required.'); }
+    const entry = entries.find((candidate) => candidate.id === id);
+    if (!entry) { throw new Error('That directory is no longer available. Refresh the directory list and try again.'); }
+    if (!entry.valid) { throw new Error(entry.error ?? 'This directory is invalid. Edit it before launching.'); }
+
+    const cwd = launchSquadInTerminal(entry.name, entry.path, {
+      isTrusted: vscode.workspace.isTrusted,
+      createTerminal: (name, directory) => vscode.window.createTerminal({
+        name,
+        cwd: vscode.Uri.file(directory),
+      }),
+    });
+
+    try {
+      const record = createSavedDirectory(entry.name, cwd);
+      await recordDirectoryLaunch(this.context.globalState, record);
+      this.sendDirectoryCatalog();
+      this.directoryNotice(`Launch requested in a new terminal at ${cwd}. Check that terminal for CLI output or permission prompts.`);
+    } catch (error) {
+      this.directoryNotice(`Launch requested in a new terminal at ${cwd}, but Squad Pod could not save its recent-launch record: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   // ─── Custom Asset URIs ──────────────────────────────────────────

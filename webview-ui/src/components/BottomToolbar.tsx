@@ -9,6 +9,7 @@ interface BottomToolbarProps {
   isEditMode: boolean;
   onToggleEditMode: () => void;
   onOpenSquadInfo?: () => void;
+  onOpenDirectories: () => void;
   isTelemetryOpen: boolean;
   onToggleTelemetry: () => void;
   telemetryCount: number;
@@ -19,7 +20,7 @@ interface BottomToolbarProps {
   onSoundChange: (enabled: boolean) => void;
 }
 
-export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpenSquadInfo, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode, settings, sourceStatus, onSoundChange }: BottomToolbarProps) {
+export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode, settings, sourceStatus, onSoundChange }: BottomToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
 
   const handleSquadInfo = () => {
@@ -114,6 +115,21 @@ export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpe
           }}
         >
           {isEditMode ? 'Exit Layout Editor' : 'Edit Layout'}
+        </button>
+        <button
+          onClick={onOpenDirectories}
+          style={{
+            padding: '8px 12px',
+            background: 'var(--vscode-button-background)',
+            color: 'var(--vscode-button-foreground)',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: 500,
+          }}
+        >
+          Directories
         </button>
         <button
           onClick={() => setShowSettings(true)}

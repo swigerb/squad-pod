@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
 import { vscode } from './vscodeApi.js';
 import { isSoundEnabled } from './notificationSound.js';
-import type { OutboundMessage, SourceStatus } from '../../src/types.js';
+import type { DirectoryCatalog, OutboundMessage, SourceStatus } from '../../src/types.js';
 import type { AssetSnapshot } from '../../src/manifestAssets.js';
 import type { LayoutRecovery } from './office/editor/layoutDraft.js';
 import type { OfficeLayout } from './office/types.js';
@@ -474,7 +474,7 @@ describe('settings and source UI with simulated host messages', () => {
     expect(host.textContent).toContain('Team file: Found');
     expect(host.textContent).toContain('Watching (polling)');
     expect(host.textContent).toContain('EventBus / WebSocket bridge: Not connected (no producer)');
-    expect(host.textContent).toContain('Automatic launch on startup/refocus: Off (unavailable)');
+    expect(host.textContent).toContain('Automatic launch on startup/refocus: Off');
     send({ type: 'sourceStatus', status: { ...status, observer: 'stopped', nativeWatch: false, error: 'Observer stopped' } });
     expect(host.textContent).toContain('File observer: Stopped');
     expect(host.querySelector('[role=alert]')?.textContent).toBe('Observer stopped');
@@ -502,9 +502,86 @@ describe('settings and source UI with simulated host messages', () => {
     send({ type: 'noWorkspace' });
     expect(host.textContent).toContain('Open a folder to get started');
     expect(host.textContent).not.toContain('Loading office');
+    click('Manage / Launch Directories');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('No workspace folders are open.');
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Close directories"]')!.click());
     load();
     expect(host.textContent).not.toContain('Open a folder to get started');
     expect(host.querySelector('canvas')).not.toBeNull();
+  });
+
+  it('lists workspace and saved folders in a scrollable directory picker and launches only the selected entry', () => {
+    load();
+    const catalog: DirectoryCatalog = {
+      workspaceDirectories: [{
+        id: 'workspace:project', name: 'Workspace & Repo',
+        path: 'C:\\Users\\Me\\Work & Projects\\Repo', valid: true,
+      }],
+      savedDirectories: Array.from({ length: 35 }, (_, index) => ({
+        id: `saved-${index}`, name: `Saved ${index}`,
+        path: `C:\\Projects\\Saved ${index}`, valid: true,
+      })),
+      recentLaunches: [{
+        id: 'recent-1', name: 'Recently launched',
+        path: 'C:\\Projects\\Recent', valid: true, lastLaunchedAt: '2026-10-29T18:00:00.000Z',
+      }],
+      squadHistoryAvailable: false,
+    };
+    send({ type: 'directoryCatalog', catalog });
+    click('Directories');
+    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'getDirectories' });
+    expect(host.textContent).toContain('Squad history suggestions are unavailable');
+    expect(host.textContent).toContain('Recent launch requests below are recorded by Squad Pod');
+    expect(host.textContent).toContain('Workspace & Repo');
+    expect(host.textContent).toContain('Saved 34');
+    expect(host.textContent).toContain('Recently launched');
+
+    const list = host.querySelector<HTMLElement>('[aria-label="Directory list"]')!;
+    expect(list.style.overflowY).toBe('auto');
+    const launch = host.querySelector<HTMLButtonElement>('[aria-label="Launch Workspace & Repo"]')!;
+    act(() => launch.click());
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({
+      type: 'launchDirectory', id: 'workspace:project', source: 'workspace',
+    });
+
+    send({ type: 'directoryError', error: 'Copilot CLI not found on PATH.' });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('not found on PATH');
+  });
+
+  it('routes saved-directory edits, folder changes, removals, and recent-record forgetting to the host', () => {
+    load();
+    send({
+      type: 'directoryCatalog',
+      catalog: {
+        workspaceDirectories: [],
+        savedDirectories: [{ id: 'saved-1', name: 'Original', path: 'C:\\Projects\\Original', valid: true }],
+        recentLaunches: [{ id: 'recent-1', name: 'Recent', path: 'C:\\Projects\\Recent', valid: true }],
+        squadHistoryAvailable: false,
+      },
+    });
+    click('Directories');
+    const input = host.querySelector<HTMLInputElement>('input[aria-label="Name for Original"]')!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Renamed');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const buttons = [...host.querySelectorAll('button')];
+    const saveName = buttons.find((button) => button.textContent === 'Save name')!;
+    act(() => saveName.click());
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({
+      type: 'updateDirectoryName', id: 'saved-1', name: 'Renamed',
+    });
+    const changeFolder = buttons.find((button) => button.textContent === 'Change folder')!;
+    act(() => changeFolder.click());
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'changeDirectoryPath', id: 'saved-1' });
+    const remove = buttons.find((button) => button.textContent === 'Remove')!;
+    act(() => remove.click());
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'removeDirectory', id: 'saved-1' });
+    const forget = buttons.find((button) => button.textContent === 'Forget')!;
+    act(() => forget.click());
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'forgetDirectoryLaunch', id: 'recent-1' });
+    click('Add directory');
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'addDirectory' });
   });
 
   it('reacts to later layout messages alone to show and clear missing-art warnings after ready', () => {

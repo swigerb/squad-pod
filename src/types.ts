@@ -188,6 +188,10 @@ export interface TelemetryEvent {
 export type WebviewMessage =
   | { type: 'addAssetDirectory' }
   | { type: 'removeAssetDirectory'; directory: string }
+  | { type: 'getDirectories' | 'addDirectory' }
+  | { type: 'updateDirectoryName'; id: string; name: string }
+  | { type: 'changeDirectoryPath' | 'removeDirectory' | 'forgetDirectoryLaunch'; id: string }
+  | { type: 'launchDirectory'; id: string; source: 'workspace' | 'saved' | 'recent' }
   | { type: 'webviewReady' | 'getSettings' | 'exportLayout' | 'importLayout' | 'openSquadInfo' }
   | { type: 'setSoundEnabled' | 'setDebugEnabled'; enabled: boolean }
   | { type: 'saveAgentSeats'; seats: Record<string, string> }
@@ -199,6 +203,22 @@ export type WebviewMessage =
 export interface PodSettings {
   soundEnabled: boolean;
   debugEnabled: boolean;
+}
+
+export interface DirectoryEntry {
+  id: string;
+  name: string;
+  path: string;
+  valid: boolean;
+  error?: string;
+  lastLaunchedAt?: string;
+}
+
+export interface DirectoryCatalog {
+  workspaceDirectories: DirectoryEntry[];
+  savedDirectories: DirectoryEntry[];
+  recentLaunches: DirectoryEntry[];
+  squadHistoryAvailable: false;
 }
 
 export interface SourceStatus {
@@ -279,6 +299,9 @@ export type OutboundMessage =
   | { type: 'agentToolsClear'; agentId: string }
   | { type: 'agentToolPermissionClear'; agentId: string }
   | ({ type: 'settingsLoaded' } & PodSettings)
+  | { type: 'directoryCatalog'; catalog: DirectoryCatalog }
+  | { type: 'directoryError'; error: string }
+  | { type: 'directoryNotice'; notice: string }
   | { type: 'sourceStatus'; status: SourceStatus }
   | { type: 'agentToolPermission'; agentId: string; tool: string }
   | { type: 'layoutLoaded'; layout: LayoutData; source?: 'external' | 'import'; revision?: string | null; workspaceRoot?: string }

@@ -94,8 +94,8 @@ export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onTog
           <SourceStatusView status={sourceStatus} />
           <AssetDirectories status={assetStatus} />
           <p style={{ fontSize: '12px', margin: 0 }}>
-            Automatic launch on startup/refocus: Off (unavailable). Squad Pod never runs commands.
-            Launch, authoritative tool events and context usage are unavailable without a supported Squad producer.
+            Automatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code&apos;s normal terminal and Copilot permission prompts.
+            Authoritative tool events and context usage are unavailable without a supported Squad producer.
           </p>
 
           <div style={{ borderTop: '1px solid var(--vscode-panel-border)', paddingTop: '16px' }}>
