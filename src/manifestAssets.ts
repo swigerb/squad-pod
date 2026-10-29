@@ -27,8 +27,47 @@ export interface AssetSnapshot {
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_MANIFEST_BYTES = 64 * 1024;
 const MAX_ENTRIES = 128;
-const MAX_ASSETS = 512;
-const MAX_PIXELS = 1024 * 1024;
+// Independent root allowances prevent one import from consuming another root's work.
+// Nine roots together: 18 MiB read/hashed, 1152 reads, 18432 enumeration calls,
+// 512 attempted furniture decodes / 1048576 pixels (including failed manifests).
+export const ASSET_ROOT_LIMITS = {
+  bytes: 2 * 1024 * 1024,
+  files: 128,
+  entries: 2048,
+  bundled: { assets: 128, pixels: 262144 },
+  external: { assets: 48, pixels: 98304 },
+} as const;
+class RootBudget {
+  private bytes = 0;
+  private files = 0;
+  private entries = 0;
+  private assets = 0;
+  private pixels = 0;
+  constructor(private readonly bundled: boolean) {}
+  read(bytes: number): void {
+    if (this.files + 1 > ASSET_ROOT_LIMITS.files || this.bytes + bytes > ASSET_ROOT_LIMITS.bytes) {
+      throw new Error('Root read budget exceeded (128 files / 2097152 bytes per pass)');
+    }
+    this.files++;
+    this.bytes += bytes;
+  }
+  entry(): void {
+    if (this.entries >= ASSET_ROOT_LIMITS.entries) {
+      throw new Error('Root enumeration budget exceeded (2048 entries per pass)');
+    }
+    this.entries++;
+  }
+  furniture(leaves: Leaf[]): void {
+    const limit = this.bundled ? ASSET_ROOT_LIMITS.bundled : ASSET_ROOT_LIMITS.external;
+    const pixels = leaves.reduce((sum, leaf) => sum + leaf.width * leaf.height, 0);
+    if (this.assets + leaves.length > limit.assets || this.pixels + pixels > limit.pixels) {
+      throw new Error(`Root decode budget exceeded (${limit.assets} furniture assets / ${limit.pixels} pixels per pass)`);
+    }
+    // Reserve the entire manifest before reading PNGs. Failed attempts are not refunded.
+    this.assets += leaves.length;
+    this.pixels += pixels;
+  }
+}
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/;
 const PNG_FILE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,119}\.png$/i;
 
@@ -77,12 +116,13 @@ function safePath(root: string, segments: string[]): string {
   return current;
 }
 
-function readBounded(file: string, max: number): Buffer {
+function readBounded(file: string, max: number, budget: RootBudget): Buffer {
   if (!fs.lstatSync(file).isFile()) { throw new Error('Asset is not a regular file'); }
   const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
   try {
     const stat = fs.fstatSync(fd);
     if (!stat.isFile() || stat.size > max) { throw new Error(`File exceeds ${max} bytes or is not a regular file`); }
+    budget.read(stat.size);
     const buffer = Buffer.alloc(stat.size);
     if (fs.readSync(fd, buffer, 0, buffer.length, 0) !== buffer.length) {
       throw new Error('Asset changed while reading');
@@ -93,8 +133,7 @@ function readBounded(file: string, max: number): Buffer {
   }
 }
 
-function decode(root: string, segments: string[], width: number, height: number): string[][] {
-  const buffer = readBounded(safePath(root, segments), MAX_FILE_BYTES);
+function decode(buffer: Buffer, width: number, height: number): string[][] {
   if (buffer.length < 33 || buffer.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a'
     || buffer.readUInt32BE(8) !== 13
     || buffer.toString('ascii', 12, 16) !== 'IHDR'
@@ -188,11 +227,34 @@ export function validateManifest(value: unknown): { root: Record<string, unknown
   return { root, leaves };
 }
 
-function entries(root: string): fs.Dirent[] {
+function readManifest(
+  root: string, folder: string, budget: RootBudget,
+  observe: (name: string, bytes: Buffer) => void = () => {},
+): { root: Record<string, unknown>; leaves: Leaf[]; buffers: Map<string, Buffer> } {
+  entries(safePath(root, [folder]), budget);
+  const manifest = readBounded(safePath(root, [folder, 'manifest.json']), MAX_MANIFEST_BYTES, budget);
+  observe('manifest.json', manifest);
+  const validated = validateManifest(JSON.parse(manifest.toString('utf8')));
+  budget.furniture(validated.leaves);
+  const buffers = new Map<string, Buffer>();
+  for (const leaf of validated.leaves) {
+    if (!buffers.has(leaf.file)) {
+      const buffer = readBounded(safePath(root, [folder, leaf.file]), MAX_FILE_BYTES, budget);
+      observe(leaf.file, buffer);
+      buffers.set(leaf.file, buffer);
+    }
+  }
+  return { ...validated, buffers };
+}
+
+function entries(root: string, budget: RootBudget): fs.Dirent[] {
   const directory = fs.opendirSync(root);
   const result: fs.Dirent[] = [];
   try {
-    for (let entry = directory.readSync(); entry; entry = directory.readSync()) {
+    for (;;) {
+      budget.entry();
+      const entry = directory.readSync();
+      if (!entry) { break; }
       result.push(entry);
       if (result.length > MAX_ENTRIES) { throw new Error(`Directory exceeds ${MAX_ENTRIES} entries`); }
     }
@@ -200,59 +262,55 @@ function entries(root: string): fs.Dirent[] {
   } finally { directory.closeSync(); }
 }
 
-function directories(root: string): string[] {
-  return entries(root).filter((e) => e.isDirectory() || e.isSymbolicLink()).map((e) => e.name).sort();
+function directories(root: string, budget: RootBudget): string[] {
+  return entries(root, budget).filter((e) => e.isDirectory() || e.isSymbolicLink()).map((e) => e.name).sort();
 }
 
-/** Each manifest is atomic; a bad pack never discards another pack or the bundled catalog. */
+/** Manifests are atomic; independent root budgets protect other roots and the bundled catalog. */
 export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] = []): AssetSnapshot {
   const snapshot: AssetSnapshot = { furniture: [], floors: [], walls: [], directories: externalRoots, diagnostics: [] };
   const ids = new Set<string>();
-  let pixels = 0;
+  const bundledBudget = new RootBudget(true);
   const attempt = (label: string, work: () => void): void => {
     try { work(); } catch (error) {
       snapshot.diagnostics.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
   for (const [index, root] of [bundledRoot, ...externalRoots.slice(0, 8)].entries()) {
+    const budget = index === 0 ? bundledBudget : new RootBudget(false);
     attempt(root, () => {
       if (!path.isAbsolute(root)) { throw new Error('Asset directory must be absolute'); }
       // External roots contain item folders, each with manifest.json and sibling PNGs.
       const furnitureRoot = index === 0 ? safePath(root, ['furniture']) : fs.realpathSync(root);
-      for (const folder of directories(furnitureRoot)) {
+      for (const folder of directories(furnitureRoot, budget)) {
         attempt(`${root} / ${folder}`, () => {
-          entries(safePath(furnitureRoot, [folder]));
-          const manifest = JSON.parse(readBounded(safePath(furnitureRoot, [folder, 'manifest.json']), MAX_MANIFEST_BYTES).toString('utf8'));
-          const { root: meta, leaves } = validateManifest(manifest);
-          const addedPixels = leaves.reduce((sum, leaf) => sum + leaf.width * leaf.height, 0);
-          if (snapshot.furniture.length + leaves.length > MAX_ASSETS || pixels + addedPixels > MAX_PIXELS) {
-            throw new Error('Asset catalog exceeds asset/pixel budget');
-          }
+          const { root: meta, leaves, buffers } = readManifest(furnitureRoot, folder, budget);
           const loaded = leaves.map((leaf): ManifestFurniture => {
             // Separate namespaces protect old layout IDs and the verified bundled assets.
             const type = index === 0 ? `pa_${leaf.id}` : `local_${text(meta.id, 'id', ID)}_${leaf.id}`;
             if (ids.has(type)) { throw new Error(`Duplicate asset id: ${type}`); }
             return {
               type, label: `${meta.name} (${leaf.id})`, width: leaf.footprintW, height: leaf.footprintH,
-              sprite: decode(furnitureRoot, [folder, leaf.file], leaf.width, leaf.height),
+              sprite: decode(buffers.get(leaf.file)!, leaf.width, leaf.height),
               isDesk: meta.category === 'desks', category: String(meta.category), orientation: leaf.orientation,
               canPlaceOnSurfaces: meta.canPlaceOnSurfaces === true, canPlaceOnWalls: meta.canPlaceOnWalls === true,
             };
           });
           for (const asset of loaded) { ids.add(asset.type); }
           snapshot.furniture.push(...loaded);
-          pixels += addedPixels;
         });
       }
     });
   }
   if (externalRoots.length > 8) { snapshot.diagnostics.push('Only eight external directories can be loaded'); }
   for (let i = 0; i < 9; i++) {
-    attempt(`Bundled floor ${i}`, () => { snapshot.floors[i] = decode(bundledRoot, ['floors', `floor_${i}.png`], 16, 16); });
+    attempt(`Bundled floor ${i}`, () => {
+      snapshot.floors[i] = decode(readBounded(safePath(bundledRoot, ['floors', `floor_${i}.png`]), MAX_FILE_BYTES, bundledBudget), 16, 16);
+    });
     snapshot.floors[i] ??= Array.from({ length: 16 }, () => Array<string>(16).fill(''));
   }
   attempt('Bundled walls', () => {
-    const sheet = decode(bundledRoot, ['walls', 'wall_0.png'], 64, 128);
+    const sheet = decode(readBounded(safePath(bundledRoot, ['walls', 'wall_0.png']), MAX_FILE_BYTES, bundledBudget), 64, 128);
     snapshot.walls = Array.from({ length: 16 }, (_, mask) => sheet
       .slice(Math.floor(mask / 4) * 32, Math.floor(mask / 4) * 32 + 32)
       .map((row) => row.slice((mask % 4) * 16, (mask % 4) * 16 + 16)));
@@ -263,36 +321,40 @@ export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] =
 /** Hash bounded input files so idle polling does not repeatedly decode PNGs or allocate sprite arrays. */
 export function assetSourceFingerprint(bundledRoot: string, externalRoots: string[]): string {
   const hash = createHash('sha256');
-  const attempt = (work: () => void): void => {
+  const attempt = (label: string, work: () => void): void => {
+    hash.update(label);
     try { work(); } catch (error) {
       // The loader surfaces this same filesystem failure as a visible diagnostic.
       hash.update(error instanceof Error ? error.message : String(error));
     }
   };
-  const file = (root: string, segments: string[]): void => {
+  const file = (root: string, segments: string[], budget: RootBudget): void => {
     hash.update(JSON.stringify([root, segments]));
-    attempt(() => {
-      hash.update(readBounded(safePath(root, segments), segments.at(-1) === 'manifest.json' ? MAX_MANIFEST_BYTES : MAX_FILE_BYTES));
+    attempt(segments.join('/'), () => {
+      hash.update(readBounded(safePath(root, segments), MAX_FILE_BYTES, budget));
     });
   };
+  const bundledBudget = new RootBudget(true);
+  hash.update(JSON.stringify([externalRoots.length, externalRoots.slice(0, 8)]));
   for (const [index, root] of [bundledRoot, ...externalRoots.slice(0, 8)].entries()) {
+    const budget = index === 0 ? bundledBudget : new RootBudget(false);
     hash.update(root);
-    attempt(() => {
+    attempt(root, () => {
       if (!path.isAbsolute(root)) { throw new Error('Asset directory must be absolute'); }
       const furnitureRoot = index === 0 ? safePath(root, ['furniture']) : fs.realpathSync(root);
-      for (const folder of directories(furnitureRoot)) {
+      for (const folder of directories(furnitureRoot, budget)) {
         hash.update(folder);
-        attempt(() => {
-          const names = entries(safePath(furnitureRoot, [folder])).map((e) => e.name).sort();
-          for (const name of names) {
-            if (name === 'manifest.json' || PNG_FILE.test(name)) { file(furnitureRoot, [folder, name]); }
-          }
+        attempt(folder, () => {
+          readManifest(furnitureRoot, folder, budget, (name, bytes) => {
+            hash.update(name);
+            hash.update(bytes);
+          });
         });
       }
     });
   }
-  for (let i = 0; i < 9; i++) { file(bundledRoot, ['floors', `floor_${i}.png`]); }
-  file(bundledRoot, ['walls', 'wall_0.png']);
+  for (let i = 0; i < 9; i++) { file(bundledRoot, ['floors', `floor_${i}.png`], bundledBudget); }
+  file(bundledRoot, ['walls', 'wall_0.png'], bundledBudget);
   return hash.digest('hex');
 }
 

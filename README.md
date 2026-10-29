@@ -165,12 +165,42 @@ Validation rejects absolute/relative traversal, URLs, nested file paths,
 symlinks/junctions, non-PNG content, interlacing, repeated PNG headers, wrong
 dimensions and CRC/decode failures. Export non-interlaced PNGs.
 Limits: 128 entries per root/item directory, 64 KiB JSON, 1 MiB per PNG, 256×256 pixels per sprite,
-16×16 tiles per footprint, 128 nodes/eight levels per manifest, and 512 assets/
-1,048,576 decoded furniture pixels per snapshot (including bundled furniture).
+16×16 tiles per footprint and 128 nodes/eight levels per manifest.
 Dimensions must exactly match the footprint at 16 pixels per tile. A failing
 manifest is skipped atomically; other items remain available. Duplicated IDs are
 rejected, not allowed to override earlier/bundled assets. Diagnostics appear in
 the office warning panel, Settings and the **Squad Pod** output channel.
+
+**Aggregate reload work is bounded, including failed attempts.** Each root has
+its own non-transferable allowance per fingerprint/load pass: **2 MiB of file
+content, 128 file reads and 2,048 directory enumeration calls** (including
+end-of-directory probes). The bundled root reserves 128 furniture leaves /
+262,144 attempted decoded pixels; each of up to eight external roots reserves
+48 leaves / 98,304 pixels. Thus all roots together permit at most 18 MiB read
+and hashed, 1,152 file reads, 18,432 enumeration calls, 512 furniture decodes
+and 1,048,576 furniture pixels per pass. The fixed bundled floor/wall sheets
+add at most 10 decodes / 10,496 pixels, within the bundled read allowance.
+An actual change can run a fingerprint pass followed by a load pass, so those
+I/O limits can be spent twice in that refresh; idle polling runs only the
+fingerprint pass. These are bounded synchronous operations, not an async loader.
+
+The fingerprint reads only validated manifests and their referenced PNGs
+(deduplicated per manifest), plus the fixed bundled floor/wall sheets.
+Unreferenced PNG content is never read or hashed; folder enumeration still
+checks the per-directory/aggregate limits. Both paths use the same manifest
+read plan and work reservations. A failed manifest does not refund work already
+spent or reserved, preventing repeated corrupt PNGs from bypassing decode caps.
+
+Roots cannot borrow each other's allowances: an oversized import cannot starve
+another root or the originals. Within each root, folders are processed in
+lexicographic order, each manifest atomically. An over-budget manifest receives
+a path-specific warning and is not claimed loaded; smaller later manifests can
+still fit unused capacity. When a read/enumeration allowance is exhausted,
+remaining affected manifests each receive warnings. Split large collections
+among the available roots or reduce them to fit; unused allowance in another
+root does not raise a pack's limits. Removing oversized content recovers on the
+next poll without rewriting placed items. These stricter import limits replace
+the earlier shared output-only budget.
 
 **This asset update never migrates or rewrites saved furniture.** The existing
 v1-to-v2 tile-color compatibility handling is unchanged. New bundle IDs use `pa_`; local
