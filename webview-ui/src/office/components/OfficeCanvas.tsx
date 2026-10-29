@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import type { OfficeState } from '../engine/officeState.js';
 import type { EditorState } from '../editor/editorState.js';
 import { EditTool, TileType } from '../types.js';
@@ -8,6 +8,7 @@ import { getFurnitureFootprint } from '../layout/layoutManager.js';
 import { getCatalogEntry } from '../layout/furnitureCatalog.js';
 import { startGameLoop } from '../engine/gameLoop.js';
 import { renderFrame } from '../engine/renderer.js';
+import { clampPanOffset, zoomPanAroundAnchor } from '../engine/viewport.js';
 import { updateCharacter } from '../engine/characters.js';
 import { vscode } from '../../vscodeApi.js';
 import { TILE_SIZE, CHARACTER_HIT_HALF_WIDTH, CHARACTER_HIT_HEIGHT, PAN_MARGIN_FRACTION, ZOOM_SCROLL_THRESHOLD } from '../../constants.js';
@@ -81,16 +82,32 @@ export function OfficeCanvas({
   const clampPan = useCallback(() => {
     if (!canvasRef.current || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const mapWidth = officeState.layout.cols * TILE_SIZE * zoom;
-    const mapHeight = officeState.layout.rows * TILE_SIZE * zoom;
-    const minVisibleWidth = mapWidth * PAN_MARGIN_FRACTION;
-    const minVisibleHeight = mapHeight * PAN_MARGIN_FRACTION;
-
-    panRef.current!.x = Math.max(panRef.current!.x, rect.width - mapWidth - minVisibleWidth);
-    panRef.current!.x = Math.min(panRef.current!.x, minVisibleWidth);
-    panRef.current!.y = Math.max(panRef.current!.y, rect.height - mapHeight - minVisibleHeight);
-    panRef.current!.y = Math.min(panRef.current!.y, minVisibleHeight);
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const map = {
+      width: officeState.layout.cols * TILE_SIZE * zoom,
+      height: officeState.layout.rows * TILE_SIZE * zoom,
+    };
+    Object.assign(panRef.current!, clampPanOffset(panRef.current!, rect, map, PAN_MARGIN_FRACTION));
   }, [officeState.layout.cols, officeState.layout.rows, zoom, panRef]);
+
+  // Zoom from any source (buttons, wheel) keeps the world point under the
+  // anchor fixed, then re-clamps against the new map size. Runs before the
+  // next frame so the office is never drawn with a stale offset.
+  const prevZoomRef = useRef(zoom);
+  const zoomAnchorRef = useRef<{ zoom: number; x: number; y: number } | null>(null);
+  useLayoutEffect(() => {
+    const oldZoom = prevZoomRef.current;
+    prevZoomRef.current = zoom;
+    const pending = zoomAnchorRef.current;
+    zoomAnchorRef.current = null;
+    const container = containerRef.current;
+    if (oldZoom === zoom || !container || !hasCenteredRef.current) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const anchor = pending && pending.zoom === zoom ? pending : { x: rect.width / 2, y: rect.height / 2 };
+    Object.assign(panRef.current!, zoomPanAroundAnchor(panRef.current!, oldZoom, zoom, anchor));
+    clampPan();
+  }, [zoom, panRef, clampPan]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -440,6 +457,8 @@ export function OfficeCanvas({
         const delta = e.deltaY > 0 ? -1 : 1;
         const newZoom = Math.max(1, Math.min(10, Math.floor(zoom + delta)));
         if (newZoom !== zoom) {
+          const rect = canvasRef.current?.getBoundingClientRect();
+          if (rect) zoomAnchorRef.current = { zoom: newZoom, x: e.clientX - rect.left, y: e.clientY - rect.top };
           onZoomChange?.(newZoom);
         }
       } else {

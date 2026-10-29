@@ -20,6 +20,7 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Zooming out with the zoom buttons or Ctrl/Meta-wheel could leave the whole office offscreen (e.g. a narrow panel zoomed 4→1). Zoom now keeps the panel center (buttons) or cursor (wheel) anchored and re-clamps the view; an office that fits the panel stays fully visible, and pan bounds no longer invert for small maps.
 - Canvas characters are no longer covered by duplicate opaque HTML avatars; transparent, keyboard-accessible name labels retain roles, activity/waiting indicators, tool text and card navigation.
 - Canvas asset diagnostics now draw only when Debug View is enabled (default off), including after reload. Settings use one host snapshot instead of a separate modal sound handshake.
 - No-workspace guidance is no longer hidden behind the office-loading state; a newly available team updates onboarding without resetting the saved office.
