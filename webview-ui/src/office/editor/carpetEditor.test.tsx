@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { OfficeState } from '../engine/officeState.js';
 import { EditorState } from './editorState.js';
-import { EditTool, TileType, type OfficeLayout } from '../types.js';
+import { EditTool, TileType, type OfficeLayout, type SpriteData } from '../types.js';
 import { OfficeCanvas } from '../components/OfficeCanvas.js';
 import { useEditorActions } from '../../hooks/useEditorActions.js';
 import { EditorToolbar } from '../../components/EditorToolbar.js';
@@ -11,6 +11,9 @@ import { setCarpetSprites } from '../sprites/carpetTiles.js';
 import { applyCarpetPaint, applyCarpetErase, applyTilePaint } from './editorActions.js';
 import { deserializeLayout, serializeLayout } from '../layout/layoutManager.js';
 import { vscode } from '../../vscodeApi.js';
+import { renderCarpetLayer } from '../sprites/carpetRenderer.js';
+
+vi.mock('../sprites/spriteCache.js', () => ({ getCachedSprite: (sprite: SpriteData) => sprite }));
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -186,5 +189,86 @@ describe('carpets through real canvas/editor transactions', () => {
     const wall = applyTilePaint(painted, 2, 1, TileType.WALL, color);
     expect(wall.carpetTiles?.[8]).toBeNull();
     expect(painted.carpetTiles?.[8]).not.toBeNull();
+  });
+
+  it('invalidates cached renders through real edit/history/expand/import/external/protected-resolution paths', () => {
+    const composites = new WeakMap<HTMLCanvasElement, ReturnType<typeof vi.fn>>();
+    vi.mocked(HTMLCanvasElement.prototype.getContext).mockImplementation(function (this: HTMLCanvasElement) {
+      if (this.isConnected) return null;
+      const drawImage = vi.fn();
+      composites.set(this, drawImage);
+      return { drawImage, imageSmoothingEnabled: false } as unknown as CanvasRenderingContext2D;
+    });
+    const ctx = { drawImage: vi.fn(), canvas: { width: 1280, height: 720 }, getTransform: () => ({ a: 1, d: 1 }) };
+    const render = () => {
+      ctx.drawImage.mockClear();
+      renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, office.layout.carpetTiles,
+        office.tileMap, office.layout.cols, office.layout.rows, 0, 0, 1);
+      const calls = ctx.drawImage.mock.calls.flatMap(([image, ...args]) => image instanceof HTMLCanvasElement
+        ? composites.get(image)!.mock.calls.map(([sprite, x, y]) => [sprite, x - 8, y - 8])
+        : [[image, ...args]]);
+      return structuredClone(calls);
+    };
+    let map = office.tileMap;
+    stroke();
+    expect(office.tileMap).not.toBe(map);
+    const painted = structuredClone(office.layout), painting = render();
+    expect(painting.length).toBeGreaterThan(0);
+    expect(render()).toEqual(painting);
+    map = office.tileMap;
+    stroke(2);
+    expect(office.tileMap).not.toBe(map);
+    expect(render()).toEqual([]);
+    act(() => actions.handleUndo());
+    expect(render()).toEqual(painting);
+    act(() => actions.handleRedo());
+    expect(render()).toEqual([]);
+    act(() => actions.handleUndo());
+    act(() => {
+      actions.handleCarpetColorChange({ ...color, h: 120 });
+      actions.handleCarpetColorChange({ ...accentColor, h: 270 }, true);
+    });
+    stroke();
+    expect(render()).not.toEqual(painting);
+    act(() => actions.handleUndo());
+    expect(render()).toEqual(painting);
+    map = office.tileMap;
+    act(() => {
+      actions.handleToolChange(EditTool.WALL_PAINT);
+      actions.handleEditorTileAction(2, 1);
+    });
+    expect(office.tileMap).not.toBe(map);
+    expect(render()).not.toEqual(painting);
+    act(() => actions.handleUndo());
+    expect(render()).toEqual(painting);
+    act(() => actions.handleExpandGrid('left'));
+    expect(render()).toEqual(painting.map(([sprite, x, y]) => [sprite, x + 16, y]));
+    act(() => actions.handleUndo());
+    expect(render()).toEqual(painting);
+
+    act(() => actions.handleSave());
+    act(() => actions.acknowledgeSave(painted, 'saved'));
+    const incoming = applyCarpetPaint(painted, 3, 1, { variant: 2, color: { ...color, h: 30 }, accentColor });
+    map = office.tileMap;
+    act(() => actions.receiveLayout(incoming, 'import', null, 'C:\\carpet-fixture'));
+    expect(office.tileMap).not.toBe(map);
+    const imported = render();
+    expect(imported).not.toEqual(painting);
+    map = office.tileMap;
+    const external = applyCarpetPaint(painted, 4, 1, { variant: 1, color, accentColor });
+    act(() => actions.receiveLayout(external, 'external', 'external', 'C:\\carpet-fixture'));
+    expect(office.tileMap).toBe(map);
+    expect(render()).toEqual(imported);
+    act(() => actions.resolveLayout(actions.protection.state.pending[0].id, 'local'));
+    expect(office.tileMap).toBe(map);
+    expect(render()).toEqual(imported);
+    act(() => actions.receiveLayout(painted, 'import', null, 'C:\\carpet-fixture'));
+    act(() => actions.resolveLayout(actions.protection.state.pending[0].id, 'incoming'));
+    expect(office.tileMap).not.toBe(map);
+    expect(render()).toEqual(painting);
+    act(() => actions.handleSave());
+    act(() => actions.acknowledgeSave(painted, 'saved-again'));
+    act(() => actions.receiveLayout(incoming, 'external', 'external-next', 'C:\\carpet-fixture'));
+    expect(render()).toEqual(imported);
   });
 });

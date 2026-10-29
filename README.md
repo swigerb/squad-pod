@@ -159,6 +159,16 @@ its carpet within the same undo transaction. Carpet artwork reloads do not save
 or reset the office. Areas, directory launch, pets and full upstream parity
 remain separate work under #7/#4.
 
+Carpet rendering caches masked junctions and palettes until the tile map,
+carpet array, dimensions or artwork generation changes. Frames draw only the
+visible region plus edge junctions, without rescanning off-screen cells.
+Opaque sheets use one cropped composite (at most 1040x1040 pixels, about
+4.13 MiB RGBA per canvas). Translucent art, fractional device-pixel scales,
+larger maps or unavailable detached contexts use cached, viewport-culled
+direct draws instead. Previous composites are released on layout changes;
+unmounted contexts are weakly held. The first frame after an edit rebuilds
+derived rendering data; no cache is written to layouts or recovery snapshots.
+
 ### Unsaved layouts and incoming conflicts
 
 Dirty state compares the **actual layout contents**, including metadata, not
