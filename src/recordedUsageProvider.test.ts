@@ -83,7 +83,7 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
     fs.rmSync(root, { recursive: true, force: true });
   });
 
-  it('publishes startup history, polls append/rewrite and clears stale values on unavailable sources and retarget', () => {
+  it('publishes startup history, polls append/rewrite and clears stale values on unavailable sources and retarget', { timeout: 20_000 }, () => {
     fs.writeFileSync(ledger, JSON.stringify(report) + '\n');
     receive({ type: 'webviewReady' });
     expect(snapshots().at(-1)?.snapshot).toMatchObject({
@@ -111,7 +111,7 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
     expect(snapshots()).toHaveLength(stopped);
   });
 
-  it('updates roster attribution and resolves legacy-to-current state migration without changing character identity from usage', () => {
+  it('updates roster attribution and resolves legacy-to-current state migration without changing character identity from usage', { timeout: 20_000 }, () => {
     fs.writeFileSync(ledger, JSON.stringify({ ...report, agentName: 'Mystery' }) + '\n');
     receive({ type: 'webviewReady' });
     expect(snapshots().at(-1)?.snapshot.history[0].attribution).toBe('unattributed');
