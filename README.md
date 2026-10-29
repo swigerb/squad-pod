@@ -23,6 +23,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Decorative carpets** — three auto-tiling styles with independent main/accent colors, painted over floors without changing floor IDs or agent walkability.
 - **Animated pets** — add or remove Claudio and Gitcat in the Layout editor; pets wander, follow nearby agents, and show a timed heart when clicked. Pet IDs/types survive save, reload, import and export; asset type numbers stay stable when another pet sheet fails to load.
 - **Manifest furniture and live imports** — verified original Pixel Agents furniture/floors/walls; Settings can load local furniture manifests and pick up edits without restarting VS Code.
+- **Explicit directory launches** — manage named directories and open `copilot --agent squad` in a new terminal at the selected working directory; no automatic launch.
 - **Speech bubbles** — visual indicators when an agent needs your attention
 - **Sound notifications** — optional chime when a file-observed active member returns to idle (not proof of task completion; turn it off in Settings if you're in a meeting)
 - **Persistent layouts** — your office design is saved and shared across VS Code windows
@@ -127,6 +128,7 @@ freedom. No publishing or release operation is needed to validate a local VSIX.
 4. Click a character to select it, then click another desk to move it there (an occupant is swapped into the old seat). Seat choices are saved.
 5. Click **Layout** to open the office editor and customize your space
 6. Open **Settings** for sound, layout export/import, and the Debug View
+7. Open **Directories** to launch Squad in an open workspace folder or a saved directory
 
 While editing, zoom buttons occupy a separate top strip above the tool palette.
 The palette fits narrow panels and scrolls vertically to reach its options and
@@ -141,7 +143,11 @@ Settings reports whether `team.md` exists in the selected Squad directory and wh
 
 If no team file exists, the office shows setup guidance: open the correct project folder or follow [Squad's setup instructions](https://github.com/bradygaster/squad#readme) and initialize a team yourself. The observer detects a newly created roster without a reload. Saved layouts, seats and hidden-member rules are unchanged.
 
-Automatic launch on startup or panel refocus is **off and unavailable**; Squad Pod never runs launch commands. Launch controls, tool activity and context gauges are not offered as working integrations without a supported producer. Only sound and Debug View are persistent preferences in this slice; transient editor/drawer state is unchanged. This is a partial [#7](https://github.com/swigerb/squad-pod/issues/7) implementation, not full upstream parity. VS Code Development Host/installed-VSIX behavior still needs host verification; browser fixtures and unit tests do not establish that.
+Automatic launch on startup or panel refocus is **off**. Directory launches are available only after an explicit click in **Directories**; Squad Pod opens a new VS Code terminal with `copilot --agent squad` and the selected folder as its working directory. VS Code workspace trust is required, the Copilot CLI must be on `PATH`, and normal terminal/Copilot permission prompts are preserved. Removing a saved directory does not close a terminal that was already launched.
+
+The directory picker lists current workspace folders, user-saved named directories and recent launch requests recorded by Squad Pod when it submits the command. A record is not proof that the CLI started. **Squad history suggestions are unavailable**: current Squad session JSON contains conversation envelopes, not a supported directory launch-history source, so Squad Pod does not infer a directory from it. These app-owned records are not presented as Squad history. Directory-to-Area/seat mapping is not implemented. Tool activity and context gauges are likewise not offered as working integrations without supported producers. Only sound and Debug View are persistent preferences in this slice; transient editor/drawer state is unchanged. This is a partial [#7](https://github.com/swigerb/squad-pod/issues/7) implementation, not full upstream parity. VS Code Development Host/installed-VSIX behavior still needs host verification; browser fixtures and unit tests do not establish that.
+
+Pending folder/name dialogs revalidate the latest catalog before saving, preserving intervening renames and removals and checking current duplicates and capacity. Layout keyboard shortcuts are suspended while the directory picker is open so editing a name cannot delete, rotate or undo office furniture. Regression tests exercise the compiled provider with delayed mock VS Code dialogs and the App with selected furniture and a focused name field; these are not native-host observations.
 
 ## Layout Editor
 
@@ -173,7 +179,7 @@ direction, saving, reloading and JSON export/import retain these fields.
 Existing layouts without carpets are not filled with empty carpet data or
 reset. Walls/void cannot be carpet-painted; changing a floor to wall/void removes
 its carpet within the same undo transaction. Carpet artwork reloads do not save
-or reset the office. Areas, directory launch and full upstream parity remain
+or reset the office. Areas and full upstream parity remain
 separate work under #7/#4.
 
 Carpet rendering caches masked junctions and palettes until the tile map,
@@ -410,8 +416,8 @@ layout-revision reset or silent movement.
 
 Nine floor PNGs are included; the existing seven floor slots use the first seven
 without changing tile IDs (legacy tile 8 remains VOID). The single bundled wall
-set is active. External floor/wall/character packs and pets are not supported in
-this slice; pets remain excluded pending specific provenance verification.
+set is active. External floor/wall/character packs are not supported.
+Bundled and custom pets use the separately documented manifest and provenance checks above.
 
 ## Telemetry Feed
 
@@ -499,12 +505,16 @@ Squad Pod tracks [Pixel Agents v1.5.0](https://github.com/pixel-agents-hq/pixel-
 | File-observed activity hints, roster add/remove (not authoritative lifecycle) | ✅ |
 | Reconnect snapshot, stable appearance, persisted seats with swap | ✅ |
 | Sound on observed active-to-idle, persisted sound/Debug View, diagnostics output channel | ✅ |
-| Settings source status and missing-Squad guidance | ✅ File observer only; launch off/unavailable, EventBus / WebSocket not connected |
+| Settings source status and missing-Squad guidance | ✅ File observer only; automatic launch off, EventBus / WebSocket not connected |
 | Editor: drag painting, one undo per gesture, safe import, atomic save | ✅ |
 | Alt-drag copy, atomic catalog desk + PC/lamp moves and rotations | ✅ |
-| Carpets, Areas and remaining editor parity | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
+| Carpets | ✅ |
+| Named Areas and directory-to-Area/seat mapping | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
 | Original furniture/floors/walls; validated local furniture manifests and live reload | ✅ (static variants; real VS Code-host verification pending) |
-| Directory launch drawer, pets, other external pack kinds, furniture animation | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
+| Named directory management and explicit `copilot --agent squad` launch requests | ✅ Browser/unit fixtures; VS Code host verification pending |
+| Squad-history directory suggestions | ❌ No supported launch-history producer |
+| Animated pets, stable saved pet types, validated local pet manifests | ✅ Browser/provider fixtures; VS Code host verification pending |
+| Other external pack kinds and furniture animation | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
 | Standalone browser server, embedded terminal, mobile layout | ⏳ [#8](https://github.com/swigerb/squad-pod/issues/8) |
 | Per-tool overlays and context gauges | ❌ Needs a Squad event API |
 

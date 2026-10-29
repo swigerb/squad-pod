@@ -20,6 +20,7 @@ import { useEditorKeyboard } from './hooks/useEditorKeyboard.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
 import { vscode } from './vscodeApi.js';
 import { LayoutConflict } from './components/LayoutConflict.js';
+import { DirectoryModal } from './components/DirectoryModal.js';
 
 const officeStateRef = { current: null as OfficeState | null };
 const editorState = new EditorState();
@@ -31,7 +32,7 @@ function getOfficeState(): OfficeState {
 
 export default function App() {
   const editor = useEditorActions(getOfficeState, editorState);
-  const { assetStatus, settings, sourceStatus, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
@@ -40,11 +41,12 @@ export default function App() {
   const isDebugMode = settings.debugEnabled;
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
   const [telemetrySeenCount, setTelemetrySeenCount] = useState(0);
+  const [isDirectoryModalOpen, setIsDirectoryModalOpen] = useState(false);
   const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEditorKeyboard(
-    editor.isEditMode,
+    editor.isEditMode && !isDirectoryModalOpen,
     editorState,
     editor.handleDeleteSelected,
     editor.handleRotateSelected,
@@ -90,6 +92,11 @@ export default function App() {
     setTelemetrySeenCount(0);
   }, [clearTelemetry]);
 
+  const handleOpenDirectories = useCallback(() => {
+    setIsDirectoryModalOpen(true);
+    vscode.postMessage({ type: 'getDirectories' });
+  }, []);
+
   if (!layoutReady && !noWorkspace) {
     return (
       <div
@@ -132,6 +139,28 @@ export default function App() {
         <div style={{ fontSize: '14px', opacity: 0.7, maxWidth: '400px' }}>
           Squad Pod needs a workspace to discover your AI team. Open a folder with a Squad configuration to see your agents in action.
         </div>
+        <button
+          type="button"
+          onClick={handleOpenDirectories}
+          style={{
+            padding: '8px 12px',
+            border: 'none',
+            borderRadius: '4px',
+            background: 'var(--vscode-button-background)',
+            color: 'var(--vscode-button-foreground)',
+            cursor: 'pointer',
+          }}
+        >
+          Manage / Launch Directories
+        </button>
+        {isDirectoryModalOpen && (
+          <DirectoryModal
+            catalog={directoryCatalog}
+            error={directoryError}
+            notice={directoryNotice}
+            onClose={() => setIsDirectoryModalOpen(false)}
+          />
+        )}
       </div>
     );
   }
@@ -215,6 +244,7 @@ export default function App() {
         onOpenSquadInfo={handleOpenSquadInfo}
         isTelemetryOpen={isTelemetryOpen}
         onToggleTelemetry={handleToggleTelemetry}
+        onOpenDirectories={handleOpenDirectories}
         telemetryCount={telemetryEvents.length - telemetrySeenCount}
         isDebugMode={isDebugMode}
         onToggleDebugMode={() => updateSetting('debugEnabled', !isDebugMode)}
@@ -254,6 +284,14 @@ export default function App() {
         info={squadInfo}
         onClose={handleCloseSquadInfo}
       />
+      {isDirectoryModalOpen && (
+        <DirectoryModal
+          catalog={directoryCatalog}
+          error={directoryError}
+          notice={directoryNotice}
+          onClose={() => setIsDirectoryModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
