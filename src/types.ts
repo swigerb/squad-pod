@@ -67,6 +67,8 @@ export interface FloorColor {
 }
 
 export interface PlacedFurniture {
+  assetFootprint?: { width: number; height: number };
+  assetRole?: 'desk' | 'seat';
   uid: string;
   type: string;
   col: number;
@@ -176,6 +178,8 @@ export interface TelemetryEvent {
 }
 
 export type WebviewMessage =
+  | { type: 'addAssetDirectory' }
+  | { type: 'removeAssetDirectory'; directory: string }
   | { type: 'webviewReady' | 'getSettings' | 'exportLayout' | 'importLayout' | 'openSquadInfo' }
   | { type: 'setSoundEnabled' | 'setDebugEnabled'; enabled: boolean }
   | { type: 'saveAgentSeats'; seats: Record<string, string> }
@@ -269,6 +273,7 @@ export type OutboundMessage =
   | { type: 'sourceStatus'; status: SourceStatus }
   | { type: 'agentToolPermission'; agentId: string; tool: string }
   | { type: 'layoutLoaded'; layout: LayoutData }
+  | { type: 'manifestAssetsLoaded'; snapshot: import('./manifestAssets.js').AssetSnapshot }
   | { type: 'characterSpritesLoaded'; sprites: CharacterSpriteSet[] }
   | { type: 'floorTilesLoaded'; tiles: SpriteData[] }
   | { type: 'wallTilesLoaded'; tiles: SpriteData[] }

@@ -44,7 +44,7 @@ function colorizeSprite(sprite: SpriteData, color: FloorColor): SpriteData {
       lightness = (lightness - 0.5) * (1 + contrast) + 0.5;
       lightness = Math.max(0, Math.min(1, lightness));
 
-      return hslToHex(h, s, lightness);
+      return hslToHex(h, s, lightness) + (hex.length === 9 ? hex.slice(7, 9) : '');
     })
   );
 }
@@ -74,7 +74,7 @@ function adjustSprite(sprite: SpriteData, color: FloorColor): SpriteData {
       l = (l - 0.5) * (1 + contrast) + 0.5;
       l = Math.max(0, Math.min(1, l));
 
-      return hslToHex(h, s, l);
+      return hslToHex(h, s, l) + (hex.length === 9 ? hex.slice(7, 9) : '');
     })
   );
 }

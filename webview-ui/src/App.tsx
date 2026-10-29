@@ -14,6 +14,7 @@ import { MissingSquad } from './components/MissingSquad.js';
 import { EditorToolbar } from './components/EditorToolbar.js';
 import { EditorState } from './office/editor/editorState.js';
 import { useExtensionMessages } from './hooks/useExtensionMessages.js';
+import { AssetWarnings } from './components/AssetStatus.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
 import { useEditorKeyboard } from './hooks/useEditorKeyboard.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
@@ -30,7 +31,7 @@ function getOfficeState(): OfficeState {
 export default function App() {
   const editor = useEditorActions(getOfficeState, editorState);
   const isEditDirty = useCallback(() => editor.isEditMode && editor.isDirty, [editor.isEditMode, editor.isDirty]);
-  const { settings, sourceStatus, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { assetStatus, settings, sourceStatus, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.setLastSavedLayout,
     isEditDirty
@@ -194,10 +195,12 @@ export default function App() {
       <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef} onAgentClick={handleDeskClick} />
 
       <MissingSquad status={sourceStatus} />
+      <AssetWarnings status={assetStatus} furniture={getOfficeState().layout.furniture} />
 
       <BottomToolbar
         settings={settings}
         sourceStatus={sourceStatus}
+        assetStatus={assetStatus}
         onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
         isEditMode={editor.isEditMode}
         onToggleEditMode={editor.handleToggleEditMode}

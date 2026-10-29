@@ -5,6 +5,7 @@ import App from './App.js';
 import { vscode } from './vscodeApi.js';
 import { isSoundEnabled } from './notificationSound.js';
 import type { OutboundMessage, SourceStatus } from '../../src/types.js';
+import type { AssetSnapshot } from '../../src/manifestAssets.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -106,5 +107,34 @@ describe('settings and source UI with simulated host messages', () => {
     load();
     expect(host.textContent).not.toContain('Open a folder to get started');
     expect(host.querySelector('canvas')).not.toBeNull();
+  });
+
+  it('updates the live asset palette and visible diagnostics through simulated host snapshots without saving/resetting layouts', () => {
+    const layout = {
+      version: 2, cols: 6, rows: 6, tiles: Array(36).fill(1),
+      furniture: [{ uid: 'old', type: 'unknown-old-id', col: 2, row: 2, rotation: 0 }],
+    };
+    const snapshot: AssetSnapshot = {
+      furniture: [{
+        type: 'local_TEST_TEST', label: 'Test fixture asset', width: 1, height: 1,
+        sprite: [['#abcdef']], isDesk: false, category: 'decor', canPlaceOnSurfaces: false, canPlaceOnWalls: false,
+      }],
+      floors: [], walls: [], directories: ['C:\\fixture-assets'], diagnostics: ['Bad fixture manifest rejected'],
+    };
+    send({ type: 'manifestAssetsLoaded', snapshot });
+    send({ type: 'layoutLoaded', layout });
+    send({ type: 'sourceStatus', status });
+    expect(host.textContent).toContain('Unavailable asset: unknown-old-id');
+    expect(host.textContent).toContain('Bad fixture manifest rejected');
+    click('Settings');
+    click('Add Asset Directory');
+    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'addAssetDirectory' });
+    click('Unload');
+    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'removeAssetDirectory', directory: 'C:\\fixture-assets' });
+    send({ type: 'manifestAssetsLoaded', snapshot: { ...snapshot, directories: [], diagnostics: [] } });
+    expect(host.textContent).not.toContain('Bad fixture manifest rejected');
+    expect(host.textContent).toContain('Unavailable asset: unknown-old-id');
+    expect(vi.mocked(vscode.postMessage).mock.calls.filter(([m]) => m.type === 'saveLayout')).toEqual([]);
+    expect(layout.furniture[0]).toEqual({ uid: 'old', type: 'unknown-old-id', col: 2, row: 2, rotation: 0 });
   });
 });

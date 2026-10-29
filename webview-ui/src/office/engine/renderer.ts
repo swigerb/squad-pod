@@ -33,7 +33,7 @@ import {
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
 import { getColorizedFloorSprite } from '../floorTiles.js';
-import { wallColorToHex } from '../wallTiles.js';
+import { wallColorToHex, getColorizedWallSprite, hasWallSprites } from '../wallTiles.js';
 import { areCharacterAssetsReady, areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
 import { drawTilesetFurniture, drawTilesetTile, drawMetadataItemScaled } from '../sprites/tilesetRenderer.js';
 import { drawCharacterFromSheet, getCharacterSheetOffset, hasCharacterSheetForPalette } from '../sprites/characterSheetRenderer.js';
@@ -72,6 +72,7 @@ export function renderTileGrid(
   cols: number
 ): void {
   const rows = tileMap.length;
+  const flatTiles = tileMap.flat();
   const tilesetReady = areTilesetAssetsReady();
 
   if (!_loggedFirstRender) {
@@ -111,6 +112,11 @@ export function renderTileGrid(
         const colorKey = `${col},${row}`;
         const color = tileColors.get(colorKey);
         if (color) {
+          if (hasWallSprites()) {
+            const { sprite, offsetY: wallOffset } = getColorizedWallSprite(flatTiles, cols, rows, col, row, color);
+            ctx.drawImage(getCachedSprite(sprite, zoom), x, y + wallOffset * zoom);
+            continue;
+          }
           const hex = wallColorToHex(color);
           ctx.fillStyle = hex;
           ctx.fillRect(x, y, TILE_SIZE * zoom, TILE_SIZE * zoom);
@@ -119,7 +125,7 @@ export function renderTileGrid(
         const colorKey = `${col},${row}`;
         const color = tileColors.get(colorKey);
         if (color) {
-          const sprite = getColorizedFloorSprite(tile, color);
+          const sprite = getColorizedFloorSprite(tile - 1, color);
           if (sprite) {
             const canvas = getCachedSprite(sprite, zoom);
             ctx.drawImage(canvas, x, y);

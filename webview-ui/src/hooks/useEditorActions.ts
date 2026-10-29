@@ -94,7 +94,6 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
         );
         officeState.rebuildFromLayout(newLayout);
       } else if (editorState.tool === EditTool.FURNITURE_PLACE) {
-        pushUndo();
         const currentLayout = officeState.getLayout();
         const newLayout = applyFurniturePlace(
           currentLayout,
@@ -103,7 +102,12 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
           row,
           0
         );
-        officeState.rebuildFromLayout(newLayout);
+        editorState.transformError = newLayout === currentLayout
+          ? 'Cannot place furniture: check grid bounds, collisions and unavailable assets.' : null;
+        if (newLayout !== currentLayout) {
+          pushUndo();
+          officeState.rebuildFromLayout(newLayout);
+        }
       }
       setEditorTick((t) => t + 1);
     },

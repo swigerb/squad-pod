@@ -257,6 +257,19 @@ export class OfficeState {
     return true;
   }
 
+  refreshAssets(): void {
+    const occupied = new Map(this.seats.map((seat) => [seat.id, seat.occupant]));
+    this.seats = layoutToSeats(this.layout.furniture);
+    for (const seat of this.seats) {
+      seat.occupant = occupied.get(seat.id)
+        ?? [...this.characters.values()].find((character) => character.seatId === seat.id)?.id;
+    }
+    this.furniture = layoutToFurnitureInstances(this.layout.furniture);
+    this.blockedTiles = getBlockedTiles(this.layout.furniture);
+    this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles);
+    this.rebuildFurnitureInstances();
+  }
+
   rebuildFurnitureInstances() {
     const activeAgents = new Set<string>();
     for (const char of this.characters.values()) {

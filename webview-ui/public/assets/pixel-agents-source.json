@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/pixel-agents-hq/pixel-agents",
+  "commit": "b1bafd02896d90d83457266575a1e8e5011ce997",
+  "originalAssetCommit": "3ebb247a8138b2608bf291997562f2854929894b",
+  "originalAssetPullRequest": "https://github.com/pixel-agents-hq/pixel-agents/pull/117",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2026 Pablo De Lucca",
+  "directories": ["furniture", "floors", "walls"],
+  "fileCount": 73,
+  "sha256": "edb508aa2902d4aafe751afa8c4d3866698194f872233f2f4ada76c2091edee2",
+  "hashFormat": "Sorted relative POSIX filename, NUL, then raw bytes for every file under the three directories",
+  "verification": "All 48 PNG blobs match the original asset commit. Only COFFEE and LARGE_PLANT manifests differ at the pin; their later changes are category/background metadata, not artwork. Root MIT license, CONTRIBUTING MIT contribution terms, and PR117's explicit original/open-source furniture/floor/wall description were inspected together. Pets and other asset directories were not imported."
+}

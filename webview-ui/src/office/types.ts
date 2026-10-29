@@ -112,6 +112,8 @@ export interface PlacedFurniture {
   rotation: number;
   color?: FloorColor;
   state?: string;
+  assetFootprint?: { width: number; height: number };
+  assetRole?: 'desk' | 'seat';
 }
 
 export interface OfficeLayout {

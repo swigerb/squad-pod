@@ -3,3 +3,8 @@
 .squad/agents/*/history.md merge=union
 .squad/log/** merge=union
 .squad/orchestration-log/** merge=union
+
+# Preserve source-pinned asset bytes and checksums across Windows/Linux checkouts.
+webview-ui/public/assets/furniture/**/manifest.json text eol=lf
+webview-ui/public/assets/pixel-agents-source.json text eol=lf
+webview-ui/public/assets/**/*.png binary
