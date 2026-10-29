@@ -19,6 +19,7 @@ import { useEditorActions } from './hooks/useEditorActions.js';
 import { useEditorKeyboard } from './hooks/useEditorKeyboard.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
 import { vscode } from './vscodeApi.js';
+import { LayoutConflict } from './components/LayoutConflict.js';
 
 const officeStateRef = { current: null as OfficeState | null };
 const editorState = new EditorState();
@@ -30,11 +31,11 @@ function getOfficeState(): OfficeState {
 
 export default function App() {
   const editor = useEditorActions(getOfficeState, editorState);
-  const isEditDirty = useCallback(() => editor.isEditMode && editor.isDirty, [editor.isEditMode, editor.isDirty]);
   const { assetStatus, settings, sourceStatus, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
-    editor.setLastSavedLayout,
-    isEditDirty
+    editor.receiveLayout,
+    editor.acknowledgeSave,
+    editor.layoutError,
   );
   const isDebugMode = settings.debugEnabled;
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
@@ -103,6 +104,7 @@ export default function App() {
         }}
       >
         Loading office...
+        <LayoutConflict protection={editor.protection} onResolve={editor.resolveLayout} />
       </div>
     );
   }
@@ -198,6 +200,7 @@ export default function App() {
       <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef} onAgentClick={handleDeskClick} />
 
       <MissingSquad status={sourceStatus} />
+      <LayoutConflict protection={editor.protection} onResolve={editor.resolveLayout} />
       <AssetWarnings status={assetStatus} furniture={getOfficeState().layout.furniture} />
 
       <BottomToolbar

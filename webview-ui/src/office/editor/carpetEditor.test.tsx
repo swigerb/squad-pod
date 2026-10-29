@@ -58,7 +58,7 @@ describe('carpets through real canvas/editor transactions', () => {
     root = createRoot(host);
     act(() => root.render(<Harness />));
     act(() => {
-      actions.setLastSavedLayout(office.layout);
+      actions.receiveLayout(office.layout, 'external', 'initial', 'C:\\carpet-fixture');
       actions.handleToggleEditMode();
       actions.handleToolChange(EditTool.CARPET_PAINT);
       actions.handleCarpetColorChange(color);

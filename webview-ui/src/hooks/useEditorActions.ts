@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useLayoutEffect } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
@@ -9,6 +9,7 @@ import { CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR } from '../constants.
 import { UndoHistory } from '../office/editor/undoHistory.js';
 import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, MAX_COLS, MAX_ROWS } from '../constants.js';
 import { vscode } from '../vscodeApi.js';
+import { LayoutDraft } from '../office/editor/layoutDraft.js';
 
 export function useEditorActions(getOfficeState: () => OfficeState, editorState: EditorState) {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -16,7 +17,27 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   const [zoom, setZoom] = useState(Math.floor(ZOOM_DEFAULT_DPR_FACTOR * (window.devicePixelRatio || 1)));
   const panRef = useRef({ x: 0, y: 0 });
   const historyRef = useRef(new UndoHistory());
-  const lastSavedLayoutRef = useRef<OfficeLayout | null>(null);
+  const initializedRef = useRef(false);
+  const [protection] = useState(() => new LayoutDraft(vscode.getState()));
+  const persist = useCallback(() => {
+    // Do not replace malformed recovery data with a success-shaped empty state.
+    if (!protection.state.draft) return;
+    try {
+      vscode.setState(protection.state);
+    } catch (error) {
+      const message = `Recovery persistence failed: ${String(error)}. Export both versions before closing this panel.`;
+      if (protection.error !== message) {
+        protection.error = message;
+        setEditorTick((t) => t + 1);
+      }
+    }
+  }, [protection]);
+
+  useLayoutEffect(() => {
+    if (!initializedRef.current) return;
+    protection.capture(getOfficeState().getLayout());
+    persist();
+  }, [editorTick, getOfficeState, protection, persist]);
 
   // Inside a gesture the starting layout is already captured, so edits don't add entries.
   const pushUndo = useCallback(() => {
@@ -35,10 +56,10 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   }, [getOfficeState]);
 
   const isDirty = useCallback(() => {
-    if (!lastSavedLayoutRef.current) return false;
-    const current = getOfficeState().getLayout();
-    return JSON.stringify(current) !== JSON.stringify(lastSavedLayoutRef.current);
-  }, [getOfficeState]);
+    if (!initializedRef.current) return false;
+    protection.capture(getOfficeState().getLayout());
+    return protection.dirty;
+  }, [getOfficeState, protection]);
 
   const handleToggleEditMode = useCallback(() => {
     historyRef.current.endGesture(getOfficeState().getLayout());
@@ -239,18 +260,32 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
 
   const handleSave = useCallback(() => {
     const layout = getOfficeState().getLayout();
-    vscode.postMessage({ type: 'saveLayout', layout });
-    lastSavedLayoutRef.current = JSON.parse(JSON.stringify(layout));
+    protection.capture(layout);
+    if (protection.workspaceMismatch || protection.invalidRecovery) {
+      protection.error = 'Recovery/workspace is blocked. Export recovery copies and reopen the original workspace.';
+    } else if (protection.state.pending.length || protection.saving) {
+      protection.error = 'Resolve every pending layout snapshot before saving.';
+    } else {
+      protection.beginSave();
+      vscode.postMessage({ type: 'saveLayout', layout, expectedRevision: protection.state.revision, workspaceRoot: protection.state.workspaceRoot });
+    }
+    persist();
     setEditorTick((t) => t + 1);
-  }, [getOfficeState]);
+  }, [getOfficeState, protection, persist]);
 
   const handleReset = useCallback(() => {
-    if (!lastSavedLayoutRef.current) return;
+    const saved = protection.state.baseline;
+    if (!saved || !initializedRef.current) return;
+    if (protection.state.pending.length) {
+      protection.error = 'Resolve pending snapshots before resetting. The local draft was kept.';
+      setEditorTick((t) => t + 1);
+      return;
+    }
     const officeState = getOfficeState();
-    officeState.rebuildFromLayout(JSON.parse(JSON.stringify(lastSavedLayoutRef.current)));
+    officeState.rebuildFromLayout(JSON.parse(JSON.stringify(saved)));
     historyRef.current.clear();
     setEditorTick((t) => t + 1);
-  }, [getOfficeState]);
+  }, [getOfficeState, protection]);
 
   const handleDragMove = useCallback(
     (uid: string, newCol: number, newRow: number, duplicate = false) => {
@@ -359,9 +394,46 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     [editorState, getOfficeState, pushUndo]
   );
 
-  const setLastSavedLayout = useCallback((layout: OfficeLayout) => {
-    lastSavedLayoutRef.current = JSON.parse(JSON.stringify(layout));
-  }, []);
+  const receiveLayout = useCallback((layout: OfficeLayout, source: 'external' | 'import', revision: string | null, workspaceRoot?: string) => {
+    if (protection.state.draft && initializedRef.current) protection.capture(getOfficeState().getLayout());
+    const recovering = !initializedRef.current && protection.state.draft;
+    const applied = protection.receive(layout, source, revision, workspaceRoot);
+    if (applied || recovering) {
+      getOfficeState().rebuildFromLayout(JSON.parse(JSON.stringify(protection.state.draft)), true);
+      historyRef.current.clear();
+      editorState.setSelectedFurnitureUid(null);
+    }
+    initializedRef.current = protection.state.baseline !== null;
+    persist();
+    setEditorTick((t) => t + 1);
+  }, [getOfficeState, protection, persist, editorState]);
+
+  const acknowledgeSave = useCallback((layout: OfficeLayout, revision: string | null) => {
+    protection.capture(getOfficeState().getLayout());
+    protection.acknowledge(layout, revision);
+    initializedRef.current = protection.state.baseline !== null;
+    persist();
+    setEditorTick((t) => t + 1);
+  }, [getOfficeState, protection, persist]);
+
+  const layoutError = useCallback((error: string) => {
+    protection.error = error;
+    protection.saving = false;
+    setEditorTick((t) => t + 1);
+  }, [protection]);
+
+  const resolveLayout = useCallback((id: number, choice: 'local' | 'incoming') => {
+    protection.capture(getOfficeState().getLayout());
+    if (protection.resolve(id, choice)) {
+      getOfficeState().rebuildFromLayout(JSON.parse(JSON.stringify(protection.state.draft)), true);
+      historyRef.current.clear();
+      editorState.setSelectedFurnitureUid(null);
+    }
+    initializedRef.current = protection.state.baseline !== null;
+    if (!protection.workspaceMismatch) protection.error = null;
+    persist();
+    setEditorTick((t) => t + 1);
+  }, [getOfficeState, protection, persist, editorState]);
 
   return {
     isEditMode,
@@ -396,6 +468,10 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     handleExpandGrid,
     handleZoomChange,
     handleSelectedFurnitureColorChange,
-    setLastSavedLayout,
+    receiveLayout,
+    acknowledgeSave,
+    layoutError,
+    resolveLayout,
+    protection,
   };
 }

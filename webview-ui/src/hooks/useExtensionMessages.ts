@@ -58,8 +58,9 @@ export interface ExtensionMessageState {
 
 export function useExtensionMessages(
   getOfficeState: () => OfficeState,
-  onLayoutLoaded?: (layout: OfficeLayout) => void,
-  _isEditDirty?: () => boolean
+  onLayoutLoaded?: (layout: OfficeLayout, source: 'external' | 'import', revision: string | null, workspaceRoot?: string) => void,
+  onLayoutSaved?: (layout: OfficeLayout, revision: string | null) => void,
+  onLayoutError?: (error: string) => void,
 ): ExtensionMessageState {
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false });
@@ -281,8 +282,8 @@ export function useExtensionMessages(
           // React's setState is async — the ref normally updates on re-render.
           layoutReadyRef.current = true;
           const officeState = getOfficeState();
-          officeState.rebuildFromLayout(layout, true);
-          onLayoutLoaded?.(layout);
+          if (onLayoutLoaded) onLayoutLoaded(layout, message.source ?? 'external', message.revision ?? null, message.workspaceRoot);
+          else officeState.rebuildFromLayout(layout, true);
 
           if (bufferedAgentsRef.current) {
             const buffered = bufferedAgentsRef.current;
@@ -291,6 +292,12 @@ export function useExtensionMessages(
           }
           break;
         }
+        case 'layoutSaved':
+          onLayoutSaved?.(message.layout, message.revision);
+          break;
+        case 'layoutError':
+          onLayoutError?.(message.error);
+          break;
 
         case 'characterSpritesLoaded': {
           const { sprites } = message;
@@ -412,7 +419,7 @@ export function useExtensionMessages(
 
     return () => window.removeEventListener('message', handleMessage);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getOfficeState, onLayoutLoaded]);
+  }, [getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError]);
 
   return {
     assetStatus,

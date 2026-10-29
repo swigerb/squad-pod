@@ -10,8 +10,10 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { randomUUID } from 'crypto';
 import type { LayoutData } from './types.js';
-import { isValidCarpetLayer } from './carpetValidation.js';
+import { isValidLayout } from './layoutValidation.js';
+export { isValidLayout } from './layoutValidation.js';
 import {
   LAYOUT_FILE_DIR,
   LAYOUT_FILE_NAME,
@@ -35,44 +37,6 @@ function ensureDir(dir: string): void {
 }
 
 // ─── Validation ─────────────────────────────────────────────────────
-
-const MAX_LAYOUT_DIMENSION = 256;
-
-function isGridSize(value: unknown): value is number {
-  return Number.isInteger(value) && (value as number) > 0 && (value as number) <= MAX_LAYOUT_DIMENSION;
-}
-
-/**
- * Structural check for a layout: positive bounded grid, one numeric tile per
- * cell, and well-formed furniture entries. Anything else is rejected so a bad
- * file never replaces a good saved layout.
- */
-export function isValidLayout(data: unknown): data is LayoutData {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {return false;}
-  const layout = data as Partial<LayoutData>;
-  if (!isGridSize(layout.cols) || !isGridSize(layout.rows)) {return false;}
-  if (!Array.isArray(layout.tiles) || layout.tiles.length !== layout.cols * layout.rows) {return false;}
-  if (!layout.tiles.every((t) => Number.isInteger(t))) {return false;}
-  if (!isValidCarpetLayer(layout.carpetTiles, layout.cols * layout.rows)) { return false; }
-  if (layout.furniture !== undefined) {
-    if (!Array.isArray(layout.furniture)) {return false;}
-    const ok = layout.furniture.every((f) =>
-      !!f && typeof f === 'object'
-      && typeof f.uid === 'string' && typeof f.type === 'string'
-      && Number.isInteger(f.col) && Number.isInteger(f.row)
-      && (f.assetRole === undefined || f.assetRole === 'desk' || f.assetRole === 'seat')
-      && (f.assetFootprint === undefined || (
-        !!f.assetFootprint && typeof f.assetFootprint === 'object'
-        && isGridSize(f.assetFootprint.width) && f.assetFootprint.width <= 16
-        && isGridSize(f.assetFootprint.height) && f.assetFootprint.height <= 16
-      )));
-    if (!ok) {return false;}
-  }
-  if (layout.tileColors !== undefined && (typeof layout.tileColors !== 'object' || layout.tileColors === null)) {
-    return false;
-  }
-  return true;
-}
 
 /** Parse layout JSON text; returns null when it is not a valid layout. */
 export function parseLayoutJson(content: string): LayoutData | null {
@@ -118,6 +82,53 @@ export function writePersistedLayout(workspaceRoot: string, layout: LayoutData):
   fs.renameSync(tmpPath, filePath);
 }
 
+/** Raw disk content is the revision, including formatting and unknown metadata. */
+export function readLayoutRevision(workspaceRoot: string): string | null {
+  try {
+    return fs.readFileSync(layoutFilePath(workspaceRoot), 'utf-8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {return null;}
+    throw error;
+  }
+}
+
+export function saveLayoutIfUnchanged(
+  workspaceRoot: string, layout: LayoutData, expectedRevision: string | null,
+): { saved: boolean; revision: string | null; layout: LayoutData | null } {
+  if (!isValidLayout(layout)) {throw new Error('Invalid layout; saved office was not changed.');}
+  ensureDir(layoutDir(workspaceRoot));
+  const lock = `${layoutFilePath(workspaceRoot)}.lock`;
+  // Cooperating Squad Pod windows serialize revision checks and writes.
+  const fd = fs.openSync(lock, 'wx');
+  try {
+    const revision = readLayoutRevision(workspaceRoot);
+    if (revision !== expectedRevision) {
+      return { saved: false, revision, layout: revision === null ? null : parseLayoutJson(revision) };
+    }
+    if (revision !== null && !parseLayoutJson(revision)) {
+      throw new Error('The saved layout is malformed. Recover the file before saving; it was not overwritten.');
+    }
+    if (revision !== null) {
+      const recoveryDir = path.join(layoutDir(workspaceRoot), 'recovery');
+      ensureDir(recoveryDir);
+      fs.writeFileSync(path.join(recoveryDir, `${randomUUID()}.json`), revision, 'utf-8');
+    }
+    const beforeWrite = readLayoutRevision(workspaceRoot);
+    if (beforeWrite !== revision) {
+      return { saved: false, revision: beforeWrite, layout: beforeWrite === null ? null : parseLayoutJson(beforeWrite) };
+    }
+    writePersistedLayout(workspaceRoot, layout);
+    const written = readLayoutRevision(workspaceRoot);
+    if (written !== JSON.stringify(layout, null, 2)) {
+      return { saved: false, revision: written, layout: written === null ? null : parseLayoutJson(written) };
+    }
+    return { saved: true, revision: written, layout };
+  } finally {
+    fs.closeSync(fd);
+    fs.unlinkSync(lock);
+  }
+}
+
 /**
  * Delete the persisted layout (used when resetting to defaults).
  */
@@ -138,18 +149,13 @@ const _CURRENT_LAYOUT_VERSION = 2;
 
 /**
  * Migrate older layout formats to the current version.
- * v1 → v2: Clear tileColors so ensureTileColors regenerates with warm
- *           colors (v1 used blue-gray floor colors invisible against
- *           the dark blue body background).
+ * v1 → v2: Retain user colors and metadata; never reset saved content.
  */
 function migrateLayout(data: LayoutData): LayoutData {
   if (!data.version) {
     data.version = 1;
   }
   if (data.version < 2) {
-    // Force tileColor regeneration — the extension's ensureTileColors()
-    // will fill in warm tan/brown colors instead of the old blue-gray.
-    delete data.tileColors;
     data.version = 2;
   }
   return data;
@@ -167,11 +173,13 @@ interface LayoutWatcher {
  */
 export function watchLayoutFile(
   workspaceRoot: string,
-  onChange: (layout: LayoutData) => void,
+  onChange: (layout: LayoutData, revision: string) => void,
+  onInvalid: (error: string) => void = console.error,
 ): LayoutWatcher {
   const filePath = layoutFilePath(workspaceRoot);
   let lastMtimeMs = 0;
   let lastSize = 0;
+  let lastError = '';
   let disposed = false;
 
   // Seed initial state
@@ -215,12 +223,24 @@ export function watchLayoutFile(
         lastSize = stat.size;
 
         const content = fs.readFileSync(filePath, 'utf-8');
-        const layout = migrateLayout(JSON.parse(content) as LayoutData);
-        onChange(layout);
+        const layout = parseLayoutJson(content);
+        if (layout) {
+          lastError = '';
+          onChange(layout, content);
+        } else {
+          reportInvalid('Squad Pod: external layout is malformed; current draft and saved cache were not changed.');
+        }
       }
-    } catch {
-      // File may have been deleted — ignore
+    } catch (error) {
+      lastMtimeMs = 0;
+      reportInvalid(`Squad Pod: could not reload external layout; current draft was kept. ${String(error)}`);
     }
+  }
+
+  function reportInvalid(error: string): void {
+    if (error === lastError) {return;}
+    lastError = error;
+    onInvalid(error);
   }
 
   return {

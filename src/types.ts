@@ -191,7 +191,8 @@ export type WebviewMessage =
   | { type: 'webviewReady' | 'getSettings' | 'exportLayout' | 'importLayout' | 'openSquadInfo' }
   | { type: 'setSoundEnabled' | 'setDebugEnabled'; enabled: boolean }
   | { type: 'saveAgentSeats'; seats: Record<string, string> }
-  | { type: 'saveLayout'; layout: LayoutData }
+  | { type: 'saveLayout'; layout: LayoutData; expectedRevision?: string | null; workspaceRoot?: string | null }
+  | { type: 'exportLayoutSnapshot'; layout: LayoutData }
   | { type: 'focusAgent' | 'openSquadAgent' | 'requestAgentDetail'; agentId: string }
   | { type: 'diagnosticReport'; characterSheetsSize?: number; characterSheetKeys?: string[]; bootstrapRan?: boolean; errors?: string[] };
 
@@ -280,7 +281,9 @@ export type OutboundMessage =
   | ({ type: 'settingsLoaded' } & PodSettings)
   | { type: 'sourceStatus'; status: SourceStatus }
   | { type: 'agentToolPermission'; agentId: string; tool: string }
-  | { type: 'layoutLoaded'; layout: LayoutData }
+  | { type: 'layoutLoaded'; layout: LayoutData; source?: 'external' | 'import'; revision?: string | null; workspaceRoot?: string }
+  | { type: 'layoutSaved'; layout: LayoutData; revision: string | null }
+  | { type: 'layoutError'; error: string }
   | { type: 'manifestAssetsLoaded'; snapshot: import('./manifestAssets.js').AssetSnapshot }
   | { type: 'characterSpritesLoaded'; sprites: CharacterSpriteSet[] }
   | { type: 'floorTilesLoaded'; tiles: SpriteData[] }
