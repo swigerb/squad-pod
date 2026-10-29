@@ -2,6 +2,7 @@
 .github/**
 .copilot/**
 .squad/**
+.squad-pod/**
 .mcp.json
 .nvmrc
 .gitignore
