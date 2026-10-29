@@ -65,6 +65,64 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     vi.restoreAllMocks();
   });
 
+  it('clears only a watcher error after a valid external load, not an import or malformed message', () => {
+    const error = 'External layout could not be read; current draft was kept.';
+    send({ type: 'layoutError', error, source: 'watcher' });
+    expect(host.querySelector('[aria-label="Layout recovery"]')).not.toBeNull();
+    snapshot(imported, 'ignored-import', 'import');
+    expect(host.textContent).toContain(error);
+    send({ type: 'layoutLoaded', layout: { ...imported, tiles: [] }, revision: 'bad' });
+    expect(host.textContent).toContain('Incoming layout is malformed');
+    // A watcher error cannot mask a protection error.
+    send({ type: 'layoutError', error, source: 'watcher' });
+    snapshot(imported, 'disk-original');
+    expect(host.textContent).toContain('Incoming layout is malformed');
+    remount();
+    snapshot(imported, 'disk-original');
+    send({ type: 'layoutError', error, source: 'watcher' });
+    snapshot(imported, 'disk-original');
+    expect(host.querySelector('[aria-label="Layout recovery"]')).toBeNull();
+  });
+
+  it('clears a stale watcher alert while keeping dirty-draft conflicts and exports', () => {
+    click('Edit Layout');
+    click('→');
+    const local = structuredClone(persisted!.draft);
+    send({ type: 'layoutError', error: 'Transient watcher failure', source: 'watcher' });
+    snapshot(external, 'disk-external');
+    expect(host.textContent).not.toContain('Transient watcher failure');
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(external);
+    expect(host.querySelector('[aria-label="Layout recovery"]')).not.toBeNull();
+    click('● Save Layout');
+    expect(saves()).toEqual([]);
+    click('Export local draft');
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: local });
+  });
+
+  it.each(['workspace mismatch', 'malformed recovery', 'malformed acknowledgement', 'unclassified host error'])(
+    'does not clear %s on a valid external load', (failure) => {
+      let expected: string;
+      if (failure === 'workspace mismatch') {
+        send({ type: 'layoutLoaded', layout: external, workspaceRoot: 'workspace-B', revision: 'other-disk' });
+        expected = 'Workspace changed';
+      } else if (failure === 'malformed recovery') {
+        vi.mocked(vscode.getState).mockReturnValue({ malformedRecovery: 'preserve me' });
+        remount();
+        expected = 'Layout recovery state is malformed';
+      } else if (failure === 'malformed acknowledgement') {
+        send({ type: 'layoutSaved', layout: { ...imported, tiles: [] }, revision: 'bad' });
+        expected = 'Malformed save acknowledgement';
+      } else {
+        send({ type: 'layoutError', error: 'Disk locked; retry Save.' });
+        expected = 'Disk locked; retry Save.';
+      }
+      send({ type: 'layoutError', error: 'Transient watcher failure', source: 'watcher' });
+      snapshot(imported, 'disk-original');
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain(expected);
+    },
+  );
+
   it('keeps colorless layouts clean on open and preserves baseline, raw revision and Save contents', () => {
     const layout: OfficeLayout = {
       version: 2, cols: 20, rows: 15,

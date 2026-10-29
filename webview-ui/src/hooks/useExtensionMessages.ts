@@ -60,7 +60,7 @@ export function useExtensionMessages(
   getOfficeState: () => OfficeState,
   onLayoutLoaded?: (layout: OfficeLayout, source: 'external' | 'import', revision: string | null, workspaceRoot?: string) => void,
   onLayoutSaved?: (layout: OfficeLayout, revision: string | null) => void,
-  onLayoutError?: (error: string) => void,
+  onLayoutError?: (error: string, source?: 'watcher') => void,
 ): ExtensionMessageState {
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false });
@@ -296,7 +296,7 @@ export function useExtensionMessages(
           onLayoutSaved?.(message.layout, message.revision);
           break;
         case 'layoutError':
-          onLayoutError?.(message.error);
+          onLayoutError?.(message.error, message.source);
           break;
 
         case 'characterSpritesLoaded': {

@@ -32,6 +32,7 @@ export class LayoutDraft {
     version: 1, baseline: null, draft: null, revision: null, pending: [], retained: [], nextId: 1, workspaceRoot: null,
   };
   error: string | null = null;
+  watcherError: string | null = null;
   saving = false;
   workspaceMismatch = false;
   invalidRecovery = false;
@@ -84,6 +85,7 @@ export class LayoutDraft {
       return false;
     }
     if (source === 'external') {
+      this.watcherError = null;
       if (revision !== this.state.revision || !sameLayout(layout, this.state.baseline)) this.externalVersion++;
       this.state.revision = revision;
     }
@@ -148,5 +150,6 @@ export class LayoutDraft {
     }
     this.saving = false;
     this.error = null;
+    this.watcherError = null;
   }
 }
