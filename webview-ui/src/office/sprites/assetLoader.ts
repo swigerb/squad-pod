@@ -473,21 +473,6 @@ export function loadAssets(): Promise<void> {
 
   loadingPromise = (async () => {
     try {
-      // Load tileset image + JSON in parallel
-      const [tilesetImg, tilesetJson] = await Promise.all([
-        loadImage(resolveUrl('assets/tileset_office.png')),
-        fetch(resolveUrl('assets/tileset.json')).then(r => {
-          if (!r.ok) throw new Error(`tileset.json: ${r.status}`);
-          return r.json();
-        }),
-      ]);
-
-      tilesetData = {
-        image: tilesetImg,
-        objects: tilesetJson.objects ?? {},
-        tileSize: tilesetJson.tile_size ?? TILE_SIZE,
-      };
-
       // Load all character sprite sheets in parallel
       const charKeys = ['A', 'B'];
       const charImages = await Promise.all(

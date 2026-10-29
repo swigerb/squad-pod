@@ -16,6 +16,10 @@ docs/**
 !dist/**/*.js
 *.map
 *.vsix
+Screenshot.jpg
+**/tileset_office.png
+**/tileset.json
+**/tileset-metadata.json
 tsconfig.json
 eslint.config.mjs
 esbuild.js

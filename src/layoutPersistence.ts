@@ -57,7 +57,13 @@ export function isValidLayout(data: unknown): data is LayoutData {
     const ok = layout.furniture.every((f) =>
       !!f && typeof f === 'object'
       && typeof f.uid === 'string' && typeof f.type === 'string'
-      && Number.isInteger(f.col) && Number.isInteger(f.row));
+      && Number.isInteger(f.col) && Number.isInteger(f.row)
+      && (f.assetRole === undefined || f.assetRole === 'desk' || f.assetRole === 'seat')
+      && (f.assetFootprint === undefined || (
+        !!f.assetFootprint && typeof f.assetFootprint === 'object'
+        && isGridSize(f.assetFootprint.width) && f.assetFootprint.width <= 16
+        && isGridSize(f.assetFootprint.height) && f.assetFootprint.height <= 16
+      )));
     if (!ok) {return false;}
   }
   if (layout.tileColors !== undefined && (typeof layout.tileColors !== 'object' || layout.tileColors === null)) {

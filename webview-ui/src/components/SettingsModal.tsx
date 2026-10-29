@@ -1,8 +1,10 @@
 import { vscode } from '../vscodeApi.js';
 import type { PodSettings, SourceStatus } from '../../../src/types.js';
 import { SourceStatusView } from './SourceStatusView.js';
+import { AssetDirectories, type AssetStatusData } from './AssetStatus.js';
 
 interface SettingsModalProps {
+  assetStatus?: AssetStatusData;
   onClose: () => void;
   isDebugMode?: boolean;
   onToggleDebugMode?: () => void;
@@ -11,7 +13,7 @@ interface SettingsModalProps {
   sourceStatus: SourceStatus | null;
 }
 
-export function SettingsModal({ onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, sourceStatus }: SettingsModalProps) {
+export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, sourceStatus }: SettingsModalProps) {
   const handleExport = () => {
     vscode.postMessage({ type: 'exportLayout' });
   };
@@ -90,6 +92,7 @@ export function SettingsModal({ onClose, isDebugMode = false, onToggleDebugMode,
           )}
 
           <SourceStatusView status={sourceStatus} />
+          <AssetDirectories status={assetStatus} />
           <p style={{ fontSize: '12px', margin: 0 }}>
             Automatic launch on startup/refocus: Off (unavailable). Squad Pod never runs commands.
             Launch, authoritative tool events and context usage are unavailable without a supported Squad producer.

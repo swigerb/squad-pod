@@ -10,7 +10,7 @@ Each visible agent on your Squad roster gets their own character that walks arou
 
 > Built in one session by a Simpsons-themed Squad team, because of course it was.
 
-![Squad Pod in action — pixel art office with Squad agents at their desks](Screenshot.jpg)
+The historical office screenshot is omitted: it predates the verified redistributable asset bundle.
 
 ## Features
 
@@ -20,6 +20,7 @@ Each visible agent on your Squad roster gets their own character that walks arou
 - **Stable look and seats** — each member keeps the same appearance and desk across reloads; reopening the panel restores the whole office without duplicating anyone
 - **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
 - **Office layout editor** — design your office with floors, walls, and furniture using the built-in editor
+- **Manifest furniture and live imports** — verified original Pixel Agents furniture/floors/walls; Settings can load local furniture manifests and pick up edits without restarting VS Code.
 - **Speech bubbles** — visual indicators when an agent needs your attention
 - **Sound notifications** — optional chime when a file-observed active member returns to idle (not proof of task completion; turn it off in Settings if you're in a meeting)
 - **Persistent layouts** — your office design is saved and shared across VS Code windows
@@ -109,7 +110,84 @@ The built-in editor lets you design your office:
 - **Group rotation** — select a desk and press **R** (or Rotate) to turn the desk and its PCs/lamps together. Each move, copy, or rotation is one undo step; redo restores all members with the same IDs. Groups are inferred from overlapping catalog surfaces, not new saved group fields; existing layout files need no migration.
 - **Export/Import** — share layouts as JSON files via the Settings modal. Imports are validated first; an invalid file shows an error and leaves your saved layout untouched.
 
-The grid is expandable up to 64×64 tiles. The default layout is a 20×11 office with 6 desk/chair pairs — enough for a solid Squad team.
+The grid is expandable up to 64×64 tiles. A new host-created office is 20×15 with four verified desk/chair pairs. Existing offices are never reset to this default.
+
+## Office assets and local manifests
+
+Bundled originals are pinned to Pixel Agents `b1bafd02896d90d83457266575a1e8e5011ce997`.
+Their provenance is the explicit original/open-source asset replacement in
+[pixel-agents-hq/pixel-agents#117](https://github.com/pixel-agents-hq/pixel-agents/pull/117),
+merged as `3ebb247a8138b2608bf291997562f2854929894b`.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for verification and MIT attribution.
+The old unprovenanced office PNG and metadata are removed; they are not a fallback.
+
+**Settings → Add Asset Directory** opens a native folder picker. Select a local directory
+containing item subfolders, each with a `manifest.json` and sibling PNGs:
+
+```text
+my-furniture/
+  SAMPLE/
+    manifest.json
+    SAMPLE.png
+```
+
+```json
+{
+  "id": "SAMPLE",
+  "name": "My licensed local furniture",
+  "category": "decor",
+  "type": "asset",
+  "file": "SAMPLE.png",
+  "width": 16,
+  "height": 16,
+  "footprintW": 1,
+  "footprintH": 1,
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 0
+}
+```
+
+Supply your own legally obtained PNG; the example is schema only, not bundled artwork.
+`file` defaults to `<id>.png`. Upstream recursive `rotation`, `state`, and `animation`
+groups with `members` are accepted; this adapter exposes their leaves as **static,
+independently selectable variants**. It does not yet animate frames or auto-mirror
+orientations. Use the existing editor rotation for geometric rotation.
+
+Directories are stored in VS Code global storage, not in layouts or the repository.
+Up to eight roots are polled every second; content changes, additions, deletion,
+invalid edits and recovery update the current panel without a restart. **Unload**
+only removes the directory registration, never files or placed items. Local PNGs
+are decoded in the host and sent as sprite data; no external resource roots,
+network URLs, script execution or CSP relaxation are needed.
+
+Validation rejects absolute/relative traversal, URLs, nested file paths,
+symlinks/junctions, non-PNG content, interlacing, repeated PNG headers, wrong
+dimensions and CRC/decode failures. Export non-interlaced PNGs.
+Limits: 128 entries per root/item directory, 64 KiB JSON, 1 MiB per PNG, 256×256 pixels per sprite,
+16×16 tiles per footprint, 128 nodes/eight levels per manifest, and 512 assets/
+1,048,576 decoded furniture pixels per snapshot (including bundled furniture).
+Dimensions must exactly match the footprint at 16 pixels per tile. A failing
+manifest is skipped atomically; other items remain available. Duplicated IDs are
+rejected, not allowed to override earlier/bundled assets. Diagnostics appear in
+the office warning panel, Settings and the **Squad Pod** output channel.
+
+**This asset update never migrates or rewrites saved furniture.** The existing
+v1-to-v2 tile-color compatibility handling is unchanged. New bundle IDs use `pa_`; local
+IDs use `local_<manifest-id>_<leaf-id>`. Old `desk` remains 2×1; new
+`pa_DESK_FRONT` is 3×2 and `pa_DESK_SIDE` is 1×4. New placements store their
+footprints (and desk/seat roles so unloading art does not erase seats).
+Later dimension changes keep the placed footprint and show a grey
+missing-art marker instead of expanding into neighbors. Removed and unknown IDs
+are retained on export/save, with explicit warnings; unknown dimensions block
+new placements/transforms conservatively. Export a backup and manually replace
+old pieces in free space to adopt the new art. There is no automatic ID remap,
+layout-revision reset or silent movement.
+
+Nine floor PNGs are included; the existing seven floor slots use the first seven
+without changing tile IDs (legacy tile 8 remains VOID). The single bundled wall
+set is active. External floor/wall/character packs and pets are not supported in
+this slice; pets remain excluded pending specific provenance verification.
 
 ## Telemetry Feed
 
@@ -186,7 +264,7 @@ squad-pod/
 
 - **Activity detection is heuristic** — Squad doesn't emit real-time status or tool events, so activity is inferred from file changes. Squad Pod can tell *who* is working but not *which tool* they are using, and session files carry no agent name. Characters may briefly show the wrong status, and "waiting for input" is rarely detectable.
 - **Platform coverage** — CI runs unit tests and builds on Ubuntu and Windows. Manual testing has been done on Windows 11.
-- **No premium tileset** — the built-in office uses basic sprites. For the full furniture catalog from Pixel Agents, you'd need the [Office Interior Tileset](https://retropi-art.itch.io/office) by Donarg and the import pipeline. Its license forbids redistribution (even edited) and requires credit, so imported tiles must stay local and must never be committed or packaged.
+- **No premium tileset** — only the verified original furniture/floor/wall bundle ships. Premium art must never be committed or packaged; local imports are the user's responsibility.
 
 ## Pixel Agents parity
 
@@ -201,7 +279,8 @@ Squad Pod tracks [Pixel Agents v1.5.0](https://github.com/pixel-agents-hq/pixel-
 | Editor: drag painting, one undo per gesture, safe import, atomic save | ✅ |
 | Alt-drag copy, atomic catalog desk + PC/lamp moves and rotations | ✅ |
 | Carpets, Areas and remaining editor parity | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
-| Directory launch drawer, pets, external asset directories | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
+| Original furniture/floors/walls; validated local furniture manifests and live reload | ✅ (static variants; real VS Code-host verification pending) |
+| Directory launch drawer, pets, other external pack kinds, furniture animation | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
 | Standalone browser server, embedded terminal, mobile layout | ⏳ [#8](https://github.com/swigerb/squad-pod/issues/8) |
 | Per-tool overlays and context gauges | ❌ Needs a Squad event API |
 

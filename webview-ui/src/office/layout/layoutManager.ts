@@ -11,6 +11,7 @@ import {
 import { DEFAULT_COLS, DEFAULT_ROWS, DEFAULT_FLOOR_COLOR } from '../../constants.js';
 import { getCatalogEntry, createPlaceholderSprite } from './furnitureCatalog.js';
 import { getItemById } from '../sprites/assetLoader.js';
+import { defaultFurniture } from '../../../../src/defaultFurniture.js';
 
 export function createDefaultLayout(): OfficeLayout {
   const tiles: number[] = [];
@@ -24,16 +25,7 @@ export function createDefaultLayout(): OfficeLayout {
     }
   }
 
-  const furniture: PlacedFurniture[] = [
-    { uid: 'desk-1', type: 'desk', col: 4, row: 3, rotation: 0 },
-    { uid: 'chair-1', type: 'chair', col: 4, row: 4, rotation: 0 },
-    { uid: 'desk-2', type: 'desk', col: 10, row: 3, rotation: 0 },
-    { uid: 'chair-2', type: 'chair', col: 10, row: 4, rotation: 0 },
-    { uid: 'desk-3', type: 'desk', col: 4, row: 7, rotation: 0 },
-    { uid: 'chair-3', type: 'chair', col: 4, row: 8, rotation: 0 },
-    { uid: 'desk-4', type: 'desk', col: 10, row: 7, rotation: 0 },
-    { uid: 'chair-4', type: 'chair', col: 10, row: 8, rotation: 0 }
-  ];
+  const furniture = defaultFurniture();
 
   const tileColors = new Map<string, typeof DEFAULT_FLOOR_COLOR>();
   for (let row = 0; row < DEFAULT_ROWS; row++) {
@@ -65,8 +57,15 @@ export function layoutToTileMap(layout: OfficeLayout): number[][] {
 }
 
 export function getFurnitureFootprint(furniture: PlacedFurniture): { width: number; height: number } | undefined {
+  if (furniture.assetFootprint) {
+    const { width, height } = furniture.assetFootprint;
+    if (![width, height].every((n) => Number.isInteger(n) && n > 0 && n <= 16)) return undefined;
+    return furniture.rotation === 90 || furniture.rotation === 270
+      ? { width: height, height: width } : { width, height };
+  }
   const entry = getCatalogEntry(furniture.type);
   if (entry) {
+    if (/^(pa_|local_)/.test(furniture.type)) return undefined;
     return furniture.rotation === 90 || furniture.rotation === 270
       ? { width: entry.height, height: entry.width }
       : { width: entry.width, height: entry.height };
@@ -84,8 +83,11 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
   for (const furn of furniture) {
     const entry = getCatalogEntry(furn.type);
     if (entry) {
-      let sprite = entry.sprite;
-      const { width, height } = getFurnitureFootprint(furn)!;
+      const saved = getFurnitureFootprint(furn) ? furn.assetFootprint : undefined;
+      let sprite = saved && (saved.width !== entry.width || saved.height !== entry.height)
+        ? createPlaceholderSprite(saved.width * TILE_SIZE, saved.height * TILE_SIZE) : entry.sprite;
+      const { width, height } = getFurnitureFootprint(furn) ?? { width: 1, height: 1 };
+      if (!getFurnitureFootprint(furn)) sprite = createPlaceholderSprite(TILE_SIZE, TILE_SIZE);
 
       if (furn.rotation === 90 || furn.rotation === 270) {
         sprite = rotateSprite(sprite, furn.rotation);
@@ -121,6 +123,12 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
           height,
           sprite,
           rotation: furn.rotation
+        });
+      } else {
+        const { width, height } = getFurnitureFootprint(furn) ?? { width: 1, height: 1 };
+        instances.push({
+          ...furn, width, height,
+          sprite: createPlaceholderSprite(width * TILE_SIZE, height * TILE_SIZE),
         });
       }
     }
@@ -172,9 +180,10 @@ export function layoutToSeats(furniture: PlacedFurniture[]): Seat[] {
   const deskMap = new Map<string, PlacedFurniture>();
 
   for (const furn of furniture) {
-    if (furn.type === 'chair') {
+    if (furn.type === 'chair' || furn.assetRole === 'seat' || (getCatalogEntry(furn.type)?.category === 'chairs'
+      && getFurnitureFootprint(furn)?.width === 1 && getFurnitureFootprint(furn)?.height === 1)) {
       chairMap.set(`${furn.col},${furn.row}`, furn);
-    } else if (furn.type === 'desk') {
+    } else if (furn.assetRole === 'desk' || getCatalogEntry(furn.type)?.isDesk) {
       deskMap.set(`${furn.col},${furn.row}`, furn);
     }
   }
@@ -191,7 +200,11 @@ export function layoutToSeats(furniture: PlacedFurniture[]): Seat[] {
       const deskCol = chair.col + d.dc;
       const deskRow = chair.row + d.dr;
       const key = `${deskCol},${deskRow}`;
-      if (deskMap.has(key)) {
+      if (deskMap.has(key) || [...deskMap.values()].some((desk) => {
+        const size = getFurnitureFootprint(desk);
+        return size && deskCol >= desk.col && deskCol < desk.col + size.width
+          && deskRow >= desk.row && deskRow < desk.row + size.height;
+      })) {
         seats.push({
           id: chair.uid,
           col: chair.col,

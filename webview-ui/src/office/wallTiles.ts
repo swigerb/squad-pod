@@ -1,11 +1,12 @@
 import type { FloorColor, SpriteData, FurnitureInstance } from './types.js';
 import { TileType, TILE_SIZE } from './types.js';
-import { getColorizedSprite } from './colorize.js';
+import { getColorizedSprite, clearColorizeCache } from './colorize.js';
 
 let wallSprites: SpriteData[] = [];
 
 export function setWallSprites(sprites: SpriteData[]): void {
   wallSprites = sprites;
+  clearColorizeCache();
 }
 
 export function hasWallSprites(): boolean {
@@ -13,7 +14,7 @@ export function hasWallSprites(): boolean {
 }
 
 export function getWallSprite(
-  tiles: TileType[],
+  tiles: number[],
   cols: number,
   rows: number,
   col: number,
@@ -42,7 +43,7 @@ export function getWallSprite(
 }
 
 export function getColorizedWallSprite(
-  tiles: TileType[],
+  tiles: number[],
   cols: number,
   rows: number,
   col: number,
@@ -67,7 +68,7 @@ export function getColorizedWallSprite(
 }
 
 export function getWallInstances(
-  tiles: TileType[],
+  tiles: number[],
   cols: number,
   rows: number,
   color: FloorColor

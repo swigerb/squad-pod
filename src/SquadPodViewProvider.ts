@@ -13,7 +13,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, TilesetData, TilesetMetadata, CharacterAssetEntry, SourceStatus, PodSettings } from './types.js';
+import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, CharacterAssetEntry, SourceStatus, PodSettings } from './types.js';
 import {
   CUSTOM_CHAR_SPRITE_PREFIX,
   WORKSPACE_KEY_LAYOUT,
@@ -31,9 +31,6 @@ import {
 import { startSquadWatching, type ActivitySource } from './squadWatcher.js';
 import { pickSquadWorkspace, resolveSquadDir } from './squadPaths.js';
 import {
-  loadFurnitureAssets,
-  loadFloorTiles,
-  loadWallTiles,
   loadCharacterSprites,
   loadDefaultLayout,
 } from './assetLoader.js';
@@ -51,12 +48,15 @@ import {
   parseAllMembers,
 } from './teamParser.js';
 import { readSettings, saveSetting } from './settings.js';
+import { assetSourceFingerprint, loadAssetSnapshot, watchAssetSnapshots } from './manifestAssets.js';
+import { defaultFurniture } from './defaultFurniture.js';
 
 export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private context: vscode.ExtensionContext;
   private disposeSquadWatcher: (() => void) | undefined;
   private disposeLayoutWatcher: { dispose: () => void } | undefined;
+  private assetWatcher: { dispose: () => void } | undefined;
   private disposables: vscode.Disposable[] = [];
   private telemetryCounter = 0;
   private watchedRoot: string | undefined;
@@ -113,6 +113,14 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     switch (message.type) {
       case 'webviewReady':
         this.onWebviewReady();
+        break;
+
+      case 'addAssetDirectory':
+        void this.addAssetDirectory().catch((error: unknown) => this.assetDirectoryError(error));
+        break;
+
+      case 'removeAssetDirectory':
+        void this.removeAssetDirectory(message.directory).catch((error: unknown) => this.assetDirectoryError(error));
         break;
 
       case 'saveAgentSeats':
@@ -288,23 +296,54 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       this.postMessage({ type: 'characterSpritesLoaded', sprites });
     }
 
-    // Floor tiles
-    const floorTiles = loadFloorTiles(extPath);
-    if (floorTiles.length > 0) {
-      this.postMessage({ type: 'floorTilesLoaded', tiles: floorTiles });
-    }
+    this.startAssetWatching();
+  }
 
-    // Wall tiles
-    const wallTiles = loadWallTiles(extPath);
-    if (wallTiles.length > 0) {
-      this.postMessage({ type: 'wallTilesLoaded', tiles: wallTiles });
-    }
+  private assetDirectories(): string[] {
+    return this.context.globalState.get<string[]>('squad-pod.assetDirectories', []);
+  }
 
-    // Furniture
-    const furniture = loadFurnitureAssets(extPath);
-    if (furniture.length > 0) {
-      this.postMessage({ type: 'furnitureLoaded', furniture });
+  private assetDirectoryError(error: unknown): void {
+    const message = `Squad Pod asset directory: ${error instanceof Error ? error.message : String(error)}`;
+    this.log(message);
+    void vscode.window.showErrorMessage(message);
+  }
+
+  private startAssetWatching(): void {
+    this.assetWatcher?.dispose();
+    const root = path.join(this.context.extensionPath, 'dist', 'assets');
+    this.assetWatcher = watchAssetSnapshots(
+      () => loadAssetSnapshot(root, this.assetDirectories()),
+      (snapshot) => {
+        this.postMessage({ type: 'manifestAssetsLoaded', snapshot });
+        for (const diagnostic of snapshot.diagnostics) { this.log(`Asset: ${diagnostic}`); }
+      },
+      1000,
+      () => assetSourceFingerprint(root, this.assetDirectories()),
+    );
+  }
+
+  private async addAssetDirectory(): Promise<void> {
+    const directories = this.assetDirectories();
+    if (directories.length >= 8) {
+      void vscode.window.showWarningMessage('Squad Pod: At most eight asset directories are supported.');
+      return;
     }
+    const selection = await vscode.window.showOpenDialog({
+      canSelectFiles: false, canSelectFolders: true, canSelectMany: false,
+      openLabel: 'Add local furniture directory',
+    });
+    if (!selection?.[0]) { return; }
+    const directory = selection[0].fsPath;
+    if (!directories.includes(directory)) {
+      await this.context.globalState.update('squad-pod.assetDirectories', [...directories, directory]);
+    }
+    this.startAssetWatching();
+  }
+
+  private async removeAssetDirectory(directory: string): Promise<void> {
+    await this.context.globalState.update('squad-pod.assetDirectories', this.assetDirectories().filter((d) => d !== directory));
+    this.startAssetWatching();
   }
 
   // ─── Custom Asset URIs ──────────────────────────────────────────
@@ -346,46 +385,6 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     const assetsDir = path.join(this.context.extensionPath, 'dist', 'assets');
     console.log('[SquadPod] loadAndSendCustomAssetUris — assetsDir:', assetsDir);
 
-    // ── Tileset metadata (rich format) with legacy fallback ──────────
-    const tilesetPngPath = path.join(assetsDir, 'tileset_office.png');
-    const metadataJsonPath = path.join(assetsDir, 'tileset-metadata.json');
-    const legacyJsonPath = path.join(assetsDir, 'tileset.json');
-
-    if (fs.existsSync(tilesetPngPath)) {
-      let tilesetPngUri = '';
-      try {
-        tilesetPngUri = this.pngToDataUri(tilesetPngPath);
-        console.log('[SquadPod] tileset_office.png → data URI (' + Math.round(tilesetPngUri.length / 1024) + ' KB)');
-      } catch (e) {
-        console.error('[SquadPod] ❌ Failed to convert tileset_office.png to data URI:', e);
-      }
-
-      if (tilesetPngUri) {
-        // Send rich metadata when available (for metadata-based rendering)
-        if (fs.existsSync(metadataJsonPath)) {
-          try {
-            const metadata: TilesetMetadata = JSON.parse(
-              fs.readFileSync(metadataJsonPath, 'utf-8'),
-            );
-            console.log('[SquadPod] Sending tilesetMetadataLoaded with', metadata.items?.length, 'items');
-            this.postMessage({ type: 'tilesetMetadataLoaded', tilesetPngUri, metadata });
-          } catch (e) {
-            console.error('[SquadPod] tileset-metadata.json parse error:', e);
-          }
-        } else {
-          console.warn('[SquadPod] tileset-metadata.json not found at:', metadataJsonPath);
-        }
-
-        // Always send legacy tileset data (drawTilesetFurniture relies on
-        // the tileset.json object names which differ from metadata item IDs)
-        this.sendLegacyTilesetData(legacyJsonPath, tilesetPngUri);
-      } else {
-        console.error('[SquadPod] Skipping tileset asset messages because tileset_office.png could not be converted');
-      }
-    } else {
-      console.error('[SquadPod] ❌ tileset_office.png NOT FOUND at:', tilesetPngPath);
-    }
-
     // ── Custom character sprite sheets (char_employeeA–E.png) ────────
     const charsDir = path.join(assetsDir, 'characters');
     if (fs.existsSync(charsDir)) {
@@ -420,20 +419,6 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       }
     } else {
       console.warn('[SquadPod] characters/ dir not found at:', charsDir);
-    }
-  }
-
-  /** Send legacy tilesetAssetsLoaded message from tileset.json (backward compat). */
-  private sendLegacyTilesetData(jsonPath: string, tilesetPngUri: string): void {
-    if (!fs.existsSync(jsonPath)) { return; }
-    try {
-      const tilesetData: TilesetData = JSON.parse(
-        fs.readFileSync(jsonPath, 'utf-8'),
-      );
-      console.log('[SquadPod] Sending tilesetAssetsLoaded with', Object.keys(tilesetData.objects ?? {}).length, 'objects');
-      this.postMessage({ type: 'tilesetAssetsLoaded', tilesetPngUri, tilesetData });
-    } catch (e) {
-      console.error('[SquadPod] ❌ Failed to parse tileset.json:', e);
     }
   }
 
@@ -722,6 +707,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   // ─── Teardown ─────────────────────────────────────────────────
 
   private teardown(): void {
+    this.assetWatcher?.dispose();
+    this.assetWatcher = undefined;
     this.stopWatching();
 
     const agents = getAgents();
@@ -827,16 +814,7 @@ function createMinimalLayout(): LayoutData {
     }
   }
 
-  const furniture = [
-    { uid: 'desk-1', type: 'desk', col: 4, row: 3, rotation: 0 },
-    { uid: 'chair-1', type: 'chair', col: 4, row: 4, rotation: 0 },
-    { uid: 'desk-2', type: 'desk', col: 10, row: 3, rotation: 0 },
-    { uid: 'chair-2', type: 'chair', col: 10, row: 4, rotation: 0 },
-    { uid: 'desk-3', type: 'desk', col: 4, row: 7, rotation: 0 },
-    { uid: 'chair-3', type: 'chair', col: 4, row: 8, rotation: 0 },
-    { uid: 'desk-4', type: 'desk', col: 10, row: 7, rotation: 0 },
-    { uid: 'chair-4', type: 'chair', col: 10, row: 8, rotation: 0 },
-  ];
+  const furniture = defaultFurniture();
 
   // Populate tileColors so the renderer draws every tile.
   // Use warm tan/beige for floors (clearly distinct from the dark blue

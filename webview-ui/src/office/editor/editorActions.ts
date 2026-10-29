@@ -51,7 +51,7 @@ function groupPlacementError(layout: OfficeLayout, items: PlacedFurniture[], dup
     for (let r = item.row; r < item.row + height; r++) {
       for (let c = item.col; c < item.col + width; c++) {
         const tile = layout.tiles[r * layout.cols + c];
-        if (tile === TileType.WALL || tile === TileType.VOID || tile === undefined) {
+        if ((tile === TileType.WALL && !getCatalogEntry(item.type)?.canPlaceOnWalls) || tile === TileType.VOID || tile === undefined) {
           return 'Furniture group must stay on floor tiles.';
         }
       }
@@ -179,6 +179,13 @@ export function applyFurniturePlace(
     row,
     rotation
   };
+  const entry = getCatalogEntry(type);
+  if (entry && /^(pa_|local_)/.test(type)) {
+    furniture.assetFootprint = { width: entry.width, height: entry.height };
+    if (entry.isDesk) furniture.assetRole = 'desk';
+    else if (entry.category === 'chairs' && entry.width === 1 && entry.height === 1) furniture.assetRole = 'seat';
+  }
+  if (groupPlacementError(layout, [furniture], true)) return layout;
   
   newLayout.furniture.push(furniture);
   return newLayout;

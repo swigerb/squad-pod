@@ -2,13 +2,13 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, EditTool as EditToolType } from '../office/types.js';
-import { FURNITURE_CATALOG } from '../office/layout/furnitureCatalog.js';
+import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
+import { getFloorSprite } from '../office/floorTiles.js';
 import type { SpriteData } from '../office/types.js';
 import {
   getItemsByType,
   getItemById,
   getTilesetMetadataImage,
-  areAssetsReady,
 } from '../office/sprites/assetLoader.js';
 import type { ItemType } from '../office/sprites/assetLoader.js';
 
@@ -479,14 +479,9 @@ export function EditorToolbar({
   // Force re-render when tileset assets become available
   const [_assetTick, setAssetTick] = useState(0);
   useEffect(() => {
-    if (areAssetsReady()) return;
-    const interval = setInterval(() => {
-      if (areAssetsReady()) {
-        setAssetTick(t => t + 1);
-        clearInterval(interval);
-      }
-    }, 500);
-    return () => clearInterval(interval);
+    const refresh = () => setAssetTick(t => t + 1);
+    window.addEventListener('officeAssetsChanged', refresh);
+    return () => window.removeEventListener('officeAssetsChanged', refresh);
   }, []);
 
   if (!isEditMode) return null;
@@ -536,11 +531,7 @@ export function EditorToolbar({
                   onClick={() => onTileTypeChange(type)}
                   title={`Floor ${label}${itemId ? ` (${formatItemLabel(itemId)})` : ''}`}
                 >
-                  {itemId ? (
-                    <TilesetItemPreview itemId={itemId} size={22} />
-                  ) : (
-                    label
-                  )}
+                  <SpritePreview sprite={getFloorSprite(type - 1)} size={22} />
                 </button>
               );
             })}
@@ -599,7 +590,7 @@ export function EditorToolbar({
         <div style={styles.section}>
           <div style={styles.sectionLabel}>Furniture</div>
           <div style={styles.furnitureGrid}>
-            {FURNITURE_CATALOG.map((entry) => (
+            {buildDynamicCatalog().map((entry) => (
               <button
                 key={entry.type}
                 style={styles.furnitureBtn(editorState.furnitureType === entry.type)}

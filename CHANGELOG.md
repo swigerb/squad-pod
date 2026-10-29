@@ -5,11 +5,13 @@ All notable changes to Squad Pod are documented here.
 ## [Unreleased]
 
 ### Changed
+- Replaced the unresolved office tileset and inline furniture art with the source-pinned original Pixel Agents furniture/floor/wall bundle (MIT, Pablo De Lucca). The historical screenshot is excluded from the VSIX. Legacy layout IDs/geometry remain intact as explicit missing-art markers; no automatic reset or remap occurs.
 - Toolchain modernized: Node 22.13+, VS Code 1.107+, React 19, Vite 8, Vitest 4, ESLint 10, esbuild 0.28; CI on Ubuntu and Windows.
 - Activity detection rewritten for current Squad: orchestration log, decision inbox and per-agent folders identify the working member; startup no longer replays old files.
 - Diagnostics moved to the **Squad Pod** output channel (no more workspace debug logs or popups).
 
 ### Added
+- Settings → Add Asset Directory / Unload for validated local furniture manifests, independent failure diagnostics and one-second live reload. New placements persist their dimensions; changed/removed assets cannot silently expand saved furniture. Static group variants are supported; animation, other external pack kinds and pets remain deferred under partial issue #7.
 - Persisted sound/Debug View preferences, host-reported team file and native/polling observer status, and missing-team setup guidance. Launch remains off/unavailable; EventBus / WebSocket has no connected producer, and file observations do not supply authoritative tool/context events. Issue #7 remains partial.
 - Alt-drag furniture copies with fresh IDs and preserved colors; atomic desk + PC/lamp moves and rotations, group previews, and single-step undo/redo.
 - Reconnect-safe office snapshot: reopening the panel restores characters, statuses and seats without duplicates.

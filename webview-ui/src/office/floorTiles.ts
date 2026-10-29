@@ -1,5 +1,5 @@
 import type { FloorColor, SpriteData } from './types.js';
-import { getColorizedSprite } from './colorize.js';
+import { getColorizedSprite, clearColorizeCache } from './colorize.js';
 
 const DEFAULT_FLOOR_SPRITE: SpriteData = Array(16).fill(
   Array(16).fill('#808080')
@@ -9,6 +9,7 @@ let floorSprites: SpriteData[] = [];
 
 export function setFloorSprites(sprites: SpriteData[]): void {
   floorSprites = sprites;
+  clearColorizeCache();
 }
 
 export function getFloorSprite(patternIndex: number): SpriteData {

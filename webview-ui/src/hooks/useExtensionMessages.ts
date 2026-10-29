@@ -13,6 +13,7 @@ import {
 } from '../office/engine/agentSync.js';
 import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
 import type { PodSettings, SourceStatus } from '../../../src/types.js';
+import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
@@ -35,6 +36,7 @@ import {
 const MAX_TELEMETRY_EVENTS = 200;
 
 export interface ExtensionMessageState {
+  assetStatus: Pick<AssetSnapshot, 'directories' | 'diagnostics'>;
   settings: PodSettings;
   sourceStatus: SourceStatus | null;
   updateSetting: (setting: keyof PodSettings, enabled: boolean) => void;
@@ -58,6 +60,7 @@ export function useExtensionMessages(
   onLayoutLoaded?: (layout: OfficeLayout) => void,
   _isEditDirty?: () => boolean
 ): ExtensionMessageState {
+  const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false });
   const [sourceStatus, setSourceStatus] = useState<SourceStatus | null>(null);
   const [agents, setAgents] = useState<string[]>([]);
@@ -118,6 +121,15 @@ export function useExtensionMessages(
       };
 
       switch (message.type) {
+        case 'manifestAssetsLoaded': {
+          const snapshot = message.snapshot as AssetSnapshot;
+          buildDynamicCatalog(snapshot.furniture);
+          setFloorSprites(snapshot.floors);
+          setWallSprites(snapshot.walls);
+          getOfficeState().refreshAssets();
+          setAssetStatus({ directories: snapshot.directories, diagnostics: snapshot.diagnostics });
+          break;
+        }
         case 'squadRosterLoaded': {
           setRosterMembers(message.members || []);
           break;
@@ -399,6 +411,7 @@ export function useExtensionMessages(
   }, [getOfficeState, onLayoutLoaded]);
 
   return {
+    assetStatus,
     settings,
     sourceStatus,
     updateSetting,
