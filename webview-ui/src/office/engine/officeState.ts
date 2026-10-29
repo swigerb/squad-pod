@@ -77,7 +77,7 @@ export class OfficeState {
     if (this.characters.has(id)) return;
 
     let palette = preferredPalette;
-    let hueShift = preferredHueShift;
+    let hueShift = preferredHueShift ?? (preferredPalette !== undefined ? 0 : undefined);
     if (palette === undefined || hueShift === undefined) {
       const usedPalettes = new Map<number, number>();
       for (const char of this.characters.values()) {
@@ -149,6 +149,10 @@ export class OfficeState {
   setAgentActive(id: string, active: boolean) {
     const char = this.characters.get(id);
     if (!char) return;
+    if (active && char.bubbleState.type === 'waiting') {
+      char.bubbleState = { type: 'none' };
+    }
+    if (char.active === active) return;
     char.active = active;
     char.state = active ? CharacterState.TYPE : CharacterState.IDLE;
     this.rebuildFurnitureInstances();
@@ -189,30 +193,47 @@ export class OfficeState {
     return null;
   }
 
-  reassignSeat(agentId: string, seatId: string) {
+  /** Move an agent to a seat; a displaced occupant swaps into the vacated seat. */
+  reassignSeat(agentId: string, seatId: string): boolean {
     const char = this.characters.get(agentId);
-    if (!char) return;
-
-    if (char.seatId) {
-      const oldSeat = this.seats.find(s => s.id === char.seatId);
-      if (oldSeat && oldSeat.occupant === agentId) {
-        oldSeat.occupant = null;
-      }
-    }
+    if (!char) return false;
 
     const newSeat = this.seats.find(s => s.id === seatId);
-    if (!newSeat) return;
+    if (!newSeat) return false;
+    if (char.seatId === seatId) return false;
+
+    const oldSeat = char.seatId ? this.seats.find(s => s.id === char.seatId) ?? null : null;
+    if (oldSeat && oldSeat.occupant === agentId) {
+      oldSeat.occupant = null;
+    }
 
     if (newSeat.occupant && newSeat.occupant !== agentId) {
-      const otherChar = this.characters.get(newSeat.occupant);
+      const otherId = newSeat.occupant;
+      const otherChar = this.characters.get(otherId);
       if (otherChar) {
-        otherChar.seatId = null;
+        if (oldSeat) {
+          oldSeat.occupant = otherId;
+          otherChar.seatId = oldSeat.id;
+          this.sendToSeat(otherId);
+        } else {
+          otherChar.seatId = null;
+        }
       }
     }
 
     newSeat.occupant = agentId;
     char.seatId = seatId;
     this.sendToSeat(agentId);
+    return true;
+  }
+
+  /** Current seat assignment for every agent that has one. */
+  getSeatAssignments(): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const [id, char] of this.characters) {
+      if (char.seatId) result[id] = char.seatId;
+    }
+    return result;
   }
 
   sendToSeat(agentId: string) {

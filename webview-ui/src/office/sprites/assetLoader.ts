@@ -160,15 +160,8 @@ export function getTilesetData(): TilesetData | null {
   return tilesetData;
 }
 
-let _loggedCharacterSheetAccess = false;
-
 export function getCharacterSheet(key: string): CharacterSheetData | null {
-  const sheet = characterSheets.get(key) ?? null;
-  if (!_loggedCharacterSheetAccess) {
-    _loggedCharacterSheetAccess = true;
-    console.error(`[SPRITE-DEBUG] getCharacterSheet("${key}") first access: found=${!!sheet}, map.size=${characterSheets.size}, keys=[${[...characterSheets.keys()]}]`);
-  }
-  return sheet;
+  return characterSheets.get(key) ?? null;
 }
 
 /** Set the base URL for assets (e.g. from extension webview URI). */
@@ -385,13 +378,11 @@ function resolveUrl(relativePath: string): string {
 export function loadCharacterSheetsFromUris(
   characters: Array<{ id: string; uri: string }>
 ): void {
-  console.error('[SPRITE-DEBUG] loadCharacterSheetsFromUris called with', characters.length, 'sheets, current characterSheets.size:', characterSheets.size, 'keys:', [...characterSheets.keys()]);
 
   // If embedded characters already loaded successfully, skip the
   // postMessage reload — new Image() is unreliable in VS Code webviews
   // and clearing the map would wipe working sprites.
   if (characterSheets.size > 0) {
-    console.error('[SPRITE-DEBUG] ✅ Skipping postMessage reload — embedded characters already loaded:', [...characterSheets.keys()]);
     return;
   }
 
@@ -400,7 +391,7 @@ export function loadCharacterSheetsFromUris(
   failedCharacterSheetKeys.clear();
 
   if (!Array.isArray(characters) || characters.length === 0) {
-    console.error('[SPRITE-DEBUG] ❌ No character sheet URIs received');
+    console.warn('[assetLoader] No character sheet URIs received');
     return;
   }
 
@@ -408,22 +399,20 @@ export function loadCharacterSheetsFromUris(
     // Extract sheet key: "char_employeeA" → "A"
     const key = id.replace(/^char_employee/, '');
     if (!key) {
-      console.error('[SPRITE-DEBUG] ❌ Could not extract sheet key from id:', id);
+      console.warn('[assetLoader] Could not extract sheet key from id:', id);
       continue;
     }
     expectedCharacterSheetKeys.add(key);
 
     if (!uri.startsWith('data:image/png;base64,')) {
       failedCharacterSheetKeys.add(key);
-      console.error(`[SPRITE-DEBUG] ❌ Sheet "${key}" URI is NOT a PNG data URI, starts with:`, uri.slice(0, 40));
+      console.warn(`[assetLoader] Sheet "${key}" URI is NOT a PNG data URI, starts with:`, uri.slice(0, 40));
       continue;
     }
 
-    console.error(`[SPRITE-DEBUG] Sheet "${key}" URI is valid data URI, length:`, uri.length);
 
     const processImage = (img: HTMLImageElement) => {
       try {
-        console.error(`[SPRITE-DEBUG] processImage called for "${key}": ${img.width}×${img.height}, complete=${img.complete}`);
         // Draw to canvas WITHOUT removeBackground — our PNGs already
         // have transparent backgrounds from Python PIL processing.
         // removeBackground was destroying 15-29% of visible pixels
@@ -435,44 +424,39 @@ export function loadCharacterSheetsFromUris(
         const ctx2 = canvas.getContext('2d');
         if (!ctx2) throw new Error('Failed to get 2d context');
         ctx2.drawImage(img, 0, 0);
-        console.error(`[SPRITE-DEBUG] Canvas drawn for "${key}": ${canvas.width}×${canvas.height}`);
 
         storeCharacterSheet(key, img.width, img.height, canvas);
 
         failedCharacterSheetKeys.delete(key);
       } catch (e) {
         failedCharacterSheetKeys.add(key);
-        console.error(`[SPRITE-DEBUG] ❌ processImage THREW for "${key}":`, e);
+        console.warn(`[assetLoader] processImage THREW for "${key}":`, e);
       }
     };
 
     const img = new Image();
     trackImage(img);
     img.onload = () => {
-      console.error(`[SPRITE-DEBUG] img.onload fired for "${key}": ${img.width}×${img.height}`);
       processImage(img);
     };
     img.onerror = (e) => {
       failedCharacterSheetKeys.add(key);
-      console.error(`[SPRITE-DEBUG] ❌ img.onerror fired for "${key}":`, uri.slice(0, 80), e);
+      console.warn(`[assetLoader] img.onerror fired for "${key}":`, uri.slice(0, 80), e);
     };
-    console.error(`[SPRITE-DEBUG] Setting img.src for "${key}" (${uri.length} chars)`);
     img.src = uri;
 
     // For data URIs, browsers may decode synchronously. If already
     // complete, process immediately — onload may have already fired
     // or may never fire in some Electron versions.
     if (img.complete && img.naturalWidth > 0 && !characterSheets.has(key)) {
-      console.error(`[SPRITE-DEBUG] img.complete=true for "${key}" (synchronous decode), processing immediately`);
       processImage(img);
     }
   }
 
   // Health check: verify sheets actually load after async Image decode
   setTimeout(() => {
-    console.error(`[SPRITE-DEBUG] ⏱️ Health check (2s): characterSheets.size=${characterSheets.size}, keys=[${[...characterSheets.keys()]}], expected=[${[...expectedCharacterSheetKeys]}], failed=[${[...failedCharacterSheetKeys]}]`);
     if (characterSheets.size === 0 && expectedCharacterSheetKeys.size > 0) {
-      console.error('[SPRITE-DEBUG] ❌❌❌ CRITICAL: No character sheets loaded after 2s! Images may be silently failing.');
+      console.error('[assetLoader] No character sheets loaded after 2s; falling back to inline sprites.');
     }
   }, 2000);
 }
@@ -573,7 +557,6 @@ function storeCharacterSheet(key: string, width: number, height: number, source:
   });
   expectedCharacterSheetKeys.add(key);
   loadedCharacterSheetKeys.add(key);
-  console.error(`[SPRITE-DEBUG] ✅ Sheet "${key}" stored: ${width}×${height}, ${framesPerRow}×${rows} frames, scale=${scale}, base=${baseWidth}×${baseHeight}`);
 }
 
 // ── Diagnostic tracking for extension host logging ───────────────
@@ -583,7 +566,6 @@ const _bootstrapErrors: string[] = [];
 // Guarded with typeof checks so it doesn't crash in JSDOM test environments.
 const _bootstrapRan = typeof document !== 'undefined' && typeof atob === 'function' && EMBEDDED_CHARACTERS.length > 0;
 if (_bootstrapRan) {
-  console.error('[SPRITE-DEBUG] Sync embedded load: starting for', EMBEDDED_CHARACTERS.length, 'sheets');
   
   for (const { id, width, height, rgbaBase64 } of EMBEDDED_CHARACTERS) {
     const key = id.replace(/^char_employee/, '');
@@ -607,7 +589,7 @@ if (_bootstrapRan) {
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         _bootstrapErrors.push(`${key}: failed to get 2d context`);
-        console.error(`[SPRITE-DEBUG] ❌ Failed to get 2d context for "${key}"`);
+        console.warn(`[assetLoader] Failed to get 2d context for "${key}"`);
         continue;
       }
       ctx.putImageData(imageData, 0, 0);
@@ -616,21 +598,10 @@ if (_bootstrapRan) {
       storeCharacterSheet(key, width, height, canvas);
     } catch (e) {
       _bootstrapErrors.push(`${key}: ${e}`);
-      console.error(`[SPRITE-DEBUG] ❌ Sync embedded load failed for "${key}":`, e);
+      console.warn(`[assetLoader] Sync embedded load failed for "${key}":`, e);
     }
   }
   
-  console.error('[SPRITE-DEBUG] Sync embedded load complete. characterSheets.size:', characterSheets.size, 'keys:', [...characterSheets.keys()]);
-}
-
-// Update DOM diagnostic banner if present
-if (typeof document !== 'undefined') {
-  const diagEl = document.getElementById('squad-diag');
-  if (diagEl) {
-    const status = characterSheets.size > 0 ? '✅' : '❌';
-    diagEl.textContent = `${status} JS:v2025-diag | sheets:${characterSheets.size} [${[...characterSheets.keys()]}] | embedded:${EMBEDDED_CHARACTERS.length} | bootstrap:${_bootstrapRan} | errs:${_bootstrapErrors.length}`;
-    diagEl.style.background = characterSheets.size > 0 ? '#070' : '#c00';
-  }
 }
 
 export function getFullDiagnosticReport(): {

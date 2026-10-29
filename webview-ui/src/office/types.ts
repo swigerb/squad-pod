@@ -150,7 +150,7 @@ export interface Character {
   seatTimer: number;
 }
 
-export type TelemetryCategory = 'status' | 'session' | 'log' | 'orchestration';
+export type TelemetryCategory = 'status' | 'session' | 'log' | 'orchestration' | 'agent' | 'decision';
 
 export interface TelemetryEvent {
   id: string;

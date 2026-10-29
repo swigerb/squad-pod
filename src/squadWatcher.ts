@@ -9,24 +9,21 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  SQUAD_TEAM_FILE,
-  SQUAD_SESSIONS_DIR,
-  SQUAD_LOG_DIR,
-  SQUAD_ORCHESTRATION_LOG_DIR,
-  FILE_WATCHER_POLL_INTERVAL_MS,
-} from './constants.js';
+import { FILE_WATCHER_POLL_INTERVAL_MS } from './constants.js';
+import { resolveSquadDir } from './squadPaths.js';
 import type { SquadSession } from './types.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
 export type AgentActivityStatus = 'active' | 'idle' | 'waiting';
 
+export type ActivitySource = 'session' | 'log' | 'orchestration-log' | 'agent-files' | 'decision';
+
 export interface AgentActivityEvent {
   agentId: string;          // agent slug
   status: AgentActivityStatus;
   task: string | null;      // brief description of current work
-  source: 'session' | 'log' | 'orchestration-log';
+  source: ActivitySource;
 }
 
 export interface SquadWatcherCallbacks {
@@ -34,12 +31,6 @@ export interface SquadWatcherCallbacks {
   onRosterChanged: () => void;
   /** Called when agent activity is detected from any watched source. */
   onAgentActivity: (event: AgentActivityEvent) => void;
-}
-
-interface WatchedFile {
-  path: string;
-  lastMtimeMs: number;
-  lastSize: number;
 }
 
 // ─── Parsing Helpers ────────────────────────────────────────────────
@@ -148,261 +139,55 @@ export function parseLogEntry(
 }
 
 /**
- * Try to identify the agent slug from a session file's messages.
- * Heuristic: look for agent names mentioned in system/assistant messages,
- * or derive from the filename pattern `{timestamp}_{id}.json`.
+ * Agent slug from a log/orchestration-log filename such as
+ * `2026-03-05T21-46-29Z-lisa-simpson.md`. Plain session logs
+ * (`2026-03-05T21-46-29Z.md`) carry no agent.
  */
-function detectAgentFromSession(session: SquadSession, _filename: string): string | null {
-  if (session.agent) {
-    return session.agent;
-  }
-
-  // Check messages for agent mentions — look for known patterns like
-  // "Lisa Simpson" or "homer-simpson" in message content.
-  // This is a heuristic; the extension doesn't have the full roster at
-  // this layer, so we return null and let the agentManager resolve it.
-  return null;
+export function detectAgentFromFilename(filename: string): string | null {
+  const match = /^\d{4}-\d{2}-\d{2}T[\d-]+Z-(.+)\.md$/i.exec(filename);
+  return match?.[1] ?? null;
 }
 
-/**
- * Try to identify the agent slug from a log/orch-log filename.
- * Orchestration logs: `2026-03-05T21-46-29Z-lisa-simpson.md`
- * Regular logs: `2026-03-05T21-46-29Z.md` (no agent info)
- */
-function detectAgentFromFilename(filename: string): string | null {
-  // Orchestration log filenames: {timestamp}-{agent-slug}.md
-  // The timestamp is like 2026-03-05T21-46-29Z, so everything after that is the slug.
-  const match = /^\d{4}-\d{2}-\d{2}T[\d-]+Z-(.+)\.md$/i.exec(filename);
-  if (match?.[1]) {
-    return match[1];
+/** Agent candidate from a decisions-inbox file such as `lisa-simpson-auth-choice.md`. */
+export function detectAgentFromInboxFile(filename: string): string | null {
+  const stem = filename.replace(/\.md$/i, '');
+  return stem && stem !== filename ? stem : null;
+}
+
+/** Most recent heading or bullet in an agent history file, used as the task label. */
+export function summarizeHistory(content: string): string | null {
+  const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    const cleaned = line.replace(/^#+\s*/, '').replace(/^[-*]\s+/, '').replace(/\*\*/g, '').trim();
+    if (cleaned.length > 3 && !/^[-=|:]+$/.test(cleaned)) {
+      return cleaned.length > 80 ? cleaned.slice(0, 77) + '...' : cleaned;
+    }
   }
   return null;
 }
 
 // ─── File Tracking ──────────────────────────────────────────────────
 
-function statFile(filePath: string): { mtimeMs: number; size: number } | null {
+interface FileStamp {
+  mtimeMs: number;
+  size: number;
+}
+
+function statFile(filePath: string): FileStamp | null {
   try {
     const stat = fs.statSync(filePath);
-    return { mtimeMs: stat.mtimeMs, size: stat.size };
+    return stat.isFile() ? { mtimeMs: stat.mtimeMs, size: stat.size } : null;
   } catch {
     return null;
   }
 }
 
-function listFiles(dirPath: string): string[] {
+function listEntries(dirPath: string): fs.Dirent[] {
   try {
-    return fs.readdirSync(dirPath).filter(f => !f.startsWith('.'));
+    return fs.readdirSync(dirPath, { withFileTypes: true }).filter(e => !e.name.startsWith('.'));
   } catch {
     return [];
-  }
-}
-
-// ─── Squad Watcher ──────────────────────────────────────────────────
-
-interface ActiveWatcher {
-  fsWatcher: fs.FSWatcher | null;
-  pollTimer: ReturnType<typeof setInterval>;
-}
-
-let activeWatchers: ActiveWatcher[] = [];
-let disposed = false;
-
-/**
- * Start watching the `.squad/` directory for changes.
- * Sets up watchers on:
- *   - `.squad/team.md` — roster changes
- *   - `.squad/sessions/` — new/updated session files
- *   - `.squad/log/` — session logs
- *   - `.squad/orchestration-log/` — orchestration activity
- *
- * Returns a dispose function to tear down all watchers.
- */
-export function startSquadWatching(
-  workspaceRoot: string,
-  callbacks: SquadWatcherCallbacks,
-): () => void {
-  disposed = false;
-  activeWatchers = [];
-
-  // ── team.md watcher ────────────────────────────────────────────
-  const teamFilePath = path.join(workspaceRoot, SQUAD_TEAM_FILE);
-  let teamFileState = statFile(teamFilePath);
-
-  const teamWatcher = watchPath(teamFilePath, () => {
-    const newState = statFile(teamFilePath);
-    if (
-      newState &&
-      (newState.mtimeMs !== teamFileState?.mtimeMs || newState.size !== teamFileState?.size)
-    ) {
-      teamFileState = newState;
-      callbacks.onRosterChanged();
-    }
-  });
-  activeWatchers.push(teamWatcher);
-
-  // ── Session directory watcher ──────────────────────────────────
-  const sessionsDir = path.join(workspaceRoot, SQUAD_SESSIONS_DIR);
-  const knownSessionFiles = new Map<string, WatchedFile>();
-
-  const sessionWatcher = watchDirectory(sessionsDir, () => {
-    scanDirectory(sessionsDir, knownSessionFiles, (filePath, filename) => {
-      const content = safeReadFile(filePath);
-      if (!content) {return;}
-
-      const session = parseSessionFile(content);
-      if (!session) {return;}
-
-      const agentId = detectAgentFromSession(session, filename) ?? detectAgentFromFilename(filename);
-      if (agentId) {
-        callbacks.onAgentActivity({
-          agentId,
-          status: 'active',
-          task: extractSessionTask(session),
-          source: 'session',
-        });
-      }
-    });
-  });
-  activeWatchers.push(sessionWatcher);
-
-  // ── Log directory watcher ──────────────────────────────────────
-  const logDir = path.join(workspaceRoot, SQUAD_LOG_DIR);
-  const knownLogFiles = new Map<string, WatchedFile>();
-
-  const logWatcher = watchDirectory(logDir, () => {
-    scanDirectory(logDir, knownLogFiles, (filePath, _filename) => {
-      const content = safeReadFile(filePath);
-      if (!content) {return;}
-
-      const entry = parseLogEntry(content);
-      if (entry?.agent) {
-        callbacks.onAgentActivity({
-          agentId: entry.agent,
-          status: 'active',
-          task: entry.summary || null,
-          source: 'log',
-        });
-      }
-    });
-  });
-  activeWatchers.push(logWatcher);
-
-  // ── Orchestration log directory watcher ────────────────────────
-  const orchDir = path.join(workspaceRoot, SQUAD_ORCHESTRATION_LOG_DIR);
-  const knownOrchFiles = new Map<string, WatchedFile>();
-
-  const orchWatcher = watchDirectory(orchDir, () => {
-    scanDirectory(orchDir, knownOrchFiles, (filePath, filename) => {
-      // Try filename first (faster)
-      let agentId = detectAgentFromFilename(filename);
-      let task: string | null = null;
-
-      if (!agentId) {
-        const content = safeReadFile(filePath);
-        if (content) {
-          const entry = parseLogEntry(content);
-          if (entry) {
-            agentId = entry.agent;
-            task = entry.summary || null;
-          }
-        }
-      } else {
-        // Still try to get a task summary from the content
-        const content = safeReadFile(filePath);
-        if (content) {
-          const taskMatch = /\*\*Task:\*\*\s*(.+)/i.exec(content);
-          task = taskMatch?.[1]?.trim() ?? null;
-        }
-      }
-
-      if (agentId) {
-        callbacks.onAgentActivity({
-          agentId,
-          status: 'active',
-          task,
-          source: 'orchestration-log',
-        });
-      }
-    });
-  });
-  activeWatchers.push(orchWatcher);
-
-  // Return a dispose function
-  return () => {
-    disposed = true;
-    for (const w of activeWatchers) {
-      w.fsWatcher?.close();
-      clearInterval(w.pollTimer);
-    }
-    activeWatchers = [];
-  };
-}
-
-// ─── Internal Helpers ───────────────────────────────────────────────
-
-function watchPath(
-  filePath: string,
-  onChange: () => void,
-): ActiveWatcher {
-  let fsWatcher: fs.FSWatcher | null = null;
-  try {
-    fsWatcher = fs.watch(filePath, { persistent: false }, () => {
-      if (!disposed) {onChange();}
-    });
-    fsWatcher.on('error', () => {
-      // Silently ignore — polling will still work
-    });
-  } catch {
-    // fs.watch not available or file doesn't exist yet — rely on polling
-  }
-
-  const pollTimer = setInterval(() => {
-    if (!disposed) {onChange();}
-  }, FILE_WATCHER_POLL_INTERVAL_MS);
-
-  return { fsWatcher, pollTimer };
-}
-
-function watchDirectory(
-  dirPath: string,
-  onChange: () => void,
-): ActiveWatcher {
-  let fsWatcher: fs.FSWatcher | null = null;
-  try {
-    if (fs.existsSync(dirPath)) {
-      fsWatcher = fs.watch(dirPath, { persistent: false }, () => {
-        if (!disposed) {onChange();}
-      });
-      fsWatcher.on('error', () => {});
-    }
-  } catch {
-    // Rely on polling
-  }
-
-  const pollTimer = setInterval(() => {
-    if (!disposed) {onChange();}
-  }, FILE_WATCHER_POLL_INTERVAL_MS);
-
-  return { fsWatcher, pollTimer };
-}
-
-function scanDirectory(
-  dirPath: string,
-  known: Map<string, WatchedFile>,
-  onChanged: (filePath: string, filename: string) => void,
-): void {
-  const files = listFiles(dirPath);
-  for (const filename of files) {
-    const filePath = path.join(dirPath, filename);
-    const stat = statFile(filePath);
-    if (!stat) {continue;}
-
-    const prev = known.get(filename);
-    if (!prev || prev.lastMtimeMs !== stat.mtimeMs || prev.lastSize !== stat.size) {
-      known.set(filename, { path: filePath, lastMtimeMs: stat.mtimeMs, lastSize: stat.size });
-      onChanged(filePath, filename);
-    }
   }
 }
 
@@ -415,13 +200,223 @@ function safeReadFile(filePath: string): string | null {
 }
 
 function extractSessionTask(session: SquadSession): string | null {
-  // Use the last message as a rough indicator of the current task
-  if (session.messages.length === 0) {
+  const last = session.messages[session.messages.length - 1];
+  if (!last) {
     return null;
   }
-  const last = session.messages[session.messages.length - 1];
-  if (!last) {return null;}
-  // Truncate for display
   const cleaned = last.content.replace(/\n/g, ' ').trim();
   return cleaned.length > 80 ? cleaned.slice(0, 77) + '...' : cleaned;
+}
+
+// ─── Squad Watcher ──────────────────────────────────────────────────
+
+export interface SquadWatcherOptions {
+  pollIntervalMs?: number;
+  /** Disable native fs.watch (tests use explicit `scan()` calls). */
+  useFsWatch?: boolean;
+}
+
+/**
+ * Watches one workspace's Squad state directory.
+ *
+ * The first scan records a baseline without emitting events, so opening the
+ * office does not replay every historical log as live activity. Afterwards,
+ * any new or changed file in a watched source emits one activity event.
+ */
+export class SquadWatcher {
+  private readonly known = new Map<string, FileStamp>();
+  private teamStamp: FileStamp | null = null;
+  private baselined = false;
+  private disposed = false;
+  private fsWatcher: fs.FSWatcher | null = null;
+  private watchedDir: string | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private scanQueued: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(
+    private readonly workspaceRoot: string,
+    private readonly callbacks: SquadWatcherCallbacks,
+    private readonly options: SquadWatcherOptions = {},
+  ) {}
+
+  start(): void {
+    this.scan();
+    this.pollTimer = setInterval(() => this.scan(), this.options.pollIntervalMs ?? FILE_WATCHER_POLL_INTERVAL_MS);
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+    }
+    if (this.scanQueued) {
+      clearTimeout(this.scanQueued);
+    }
+    this.fsWatcher?.close();
+    this.fsWatcher = null;
+  }
+
+  /** Compare the Squad directory with the last scan and emit changes. */
+  scan(): void {
+    if (this.disposed) {
+      return;
+    }
+    const squadDir = resolveSquadDir(this.workspaceRoot);
+    this.ensureFsWatch(squadDir);
+
+    const emit = this.baselined;
+    this.baselined = true;
+
+    const teamStamp = statFile(path.join(squadDir, 'team.md'));
+    if (!sameStamp(teamStamp, this.teamStamp)) {
+      const hadTeam = this.teamStamp !== null || emit;
+      this.teamStamp = teamStamp;
+      if (hadTeam) {
+        this.callbacks.onRosterChanged();
+      }
+    }
+
+    this.scanFlat(path.join(squadDir, 'sessions'), emit, (file, name) => this.onSessionFile(file, name));
+    this.scanFlat(path.join(squadDir, 'log'), emit, file => this.onLogFile(file));
+    this.scanFlat(path.join(squadDir, 'orchestration-log'), emit, (file, name) => this.onOrchestrationFile(file, name));
+    this.scanFlat(path.join(squadDir, 'decisions', 'inbox'), emit, (file, name) => this.onInboxFile(file, name));
+
+    const agentsDir = path.join(squadDir, 'agents');
+    for (const entry of listEntries(agentsDir)) {
+      if (!entry.isDirectory() || entry.name.startsWith('_')) {
+        continue;
+      }
+      const slug = entry.name;
+      this.scanFlat(path.join(agentsDir, slug), emit, (file, name) => this.onAgentFile(slug, file, name));
+    }
+  }
+
+  private ensureFsWatch(squadDir: string): void {
+    if (this.options.useFsWatch === false || this.watchedDir === squadDir) {
+      return;
+    }
+    this.fsWatcher?.close();
+    this.fsWatcher = null;
+    this.watchedDir = null;
+    try {
+      if (!fs.existsSync(squadDir)) {
+        return;
+      }
+      this.fsWatcher = fs.watch(squadDir, { persistent: false, recursive: true }, () => this.queueScan());
+      this.fsWatcher.on('error', () => {
+        this.fsWatcher?.close();
+        this.fsWatcher = null;
+      });
+      this.watchedDir = squadDir;
+    } catch {
+      // Polling still covers platforms without recursive fs.watch.
+    }
+  }
+
+  private queueScan(): void {
+    if (this.disposed || this.scanQueued) {
+      return;
+    }
+    this.scanQueued = setTimeout(() => {
+      this.scanQueued = null;
+      this.scan();
+    }, 150);
+  }
+
+  private scanFlat(dir: string, emit: boolean, onChanged: (filePath: string, filename: string) => void): void {
+    for (const entry of listEntries(dir)) {
+      if (!entry.isFile()) {
+        continue;
+      }
+      const filePath = path.join(dir, entry.name);
+      const stamp = statFile(filePath);
+      if (!stamp) {
+        continue;
+      }
+      const prev = this.known.get(filePath);
+      if (sameStamp(prev ?? null, stamp)) {
+        continue;
+      }
+      this.known.set(filePath, stamp);
+      if (emit) {
+        onChanged(filePath, entry.name);
+      }
+    }
+  }
+
+  private emitActivity(agentId: string, task: string | null, source: ActivitySource): void {
+    this.callbacks.onAgentActivity({ agentId, status: 'active', task, source });
+  }
+
+  private onSessionFile(filePath: string, filename: string): void {
+    const content = safeReadFile(filePath);
+    const session = content ? parseSessionFile(content) : null;
+    if (!session) {
+      return;
+    }
+    const agentId = session.agent ?? detectAgentFromFilename(filename);
+    if (agentId) {
+      this.emitActivity(agentId, extractSessionTask(session), 'session');
+    }
+  }
+
+  private onLogFile(filePath: string): void {
+    const content = safeReadFile(filePath);
+    const entry = content ? parseLogEntry(content) : null;
+    if (entry?.agent) {
+      this.emitActivity(entry.agent, entry.summary || null, 'log');
+    }
+  }
+
+  private onOrchestrationFile(filePath: string, filename: string): void {
+    const content = safeReadFile(filePath) ?? '';
+    let agentId = detectAgentFromFilename(filename);
+    let task: string | null = /\*\*Task:\*\*\s*(.+)/i.exec(content)?.[1]?.trim() ?? null;
+    if (!agentId || !task) {
+      const entry = parseLogEntry(content);
+      agentId = agentId ?? entry?.agent ?? null;
+      task = task ?? (entry?.summary || null);
+    }
+    if (agentId) {
+      this.emitActivity(agentId, task, 'orchestration-log');
+    }
+  }
+
+  private onInboxFile(filePath: string, filename: string): void {
+    const agentId = detectAgentFromInboxFile(filename);
+    if (!agentId) {
+      return;
+    }
+    const content = safeReadFile(filePath) ?? '';
+    const title = /^#\s+(.+)/m.exec(content)?.[1]?.trim();
+    this.emitActivity(agentId, title ? `Decision: ${title}` : 'Recording a decision', 'decision');
+  }
+
+  private onAgentFile(slug: string, filePath: string, filename: string): void {
+    let task: string | null = null;
+    if (/^history\.md$/i.test(filename)) {
+      task = summarizeHistory(safeReadFile(filePath) ?? '');
+    }
+    this.emitActivity(slug, task ?? `Updated ${filename}`, 'agent-files');
+  }
+}
+
+function sameStamp(a: FileStamp | null, b: FileStamp | null): boolean {
+  if (!a || !b) {
+    return a === b;
+  }
+  return a.mtimeMs === b.mtimeMs && a.size === b.size;
+}
+
+/**
+ * Start watching a workspace's Squad directory. Returns a dispose function.
+ */
+export function startSquadWatching(
+  workspaceRoot: string,
+  callbacks: SquadWatcherCallbacks,
+  options?: SquadWatcherOptions,
+): () => void {
+  const watcher = new SquadWatcher(workspaceRoot, callbacks, options);
+  watcher.start();
+  return () => watcher.dispose();
 }

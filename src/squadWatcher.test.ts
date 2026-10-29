@@ -1,5 +1,15 @@
 /// <reference types="vitest/globals" />
-import { parseSessionFile, parseLogEntry } from './squadWatcher.js';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import {
+  parseSessionFile,
+  parseLogEntry,
+  SquadWatcher,
+  detectAgentFromFilename,
+  summarizeHistory,
+  type AgentActivityEvent,
+} from './squadWatcher.js';
 
 describe('parseSessionFile', () => {
   it('parses valid session JSON with messages', () => {
@@ -119,5 +129,111 @@ This is a meaningful summary of what happened during the session.
     expect(result).not.toBeNull();
     expect(result!.agent).toBeNull();
     expect(result!.summary).toContain('meaningful summary');
+  });
+});
+
+describe('detectAgentFromFilename', () => {
+  it('extracts the agent slug from orchestration-log names', () => {
+    expect(detectAgentFromFilename('2026-03-05T21-46-29Z-lisa-simpson.md')).toBe('lisa-simpson');
+    expect(detectAgentFromFilename('2026-03-05T21-46-29Z.md')).toBeNull();
+  });
+});
+
+describe('summarizeHistory', () => {
+  it('returns the latest meaningful line', () => {
+    expect(summarizeHistory('# History\n\n## Learnings\n- Added **retry** logic\n')).toBe('Added retry logic');
+  });
+});
+
+describe('SquadWatcher', () => {
+  let root: string;
+  let events: AgentActivityEvent[];
+  let rosterChanges: number;
+  let watcher: SquadWatcher;
+
+  function write(rel: string, content: string, squadDir = '.squad') {
+    const file = path.join(root, squadDir, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, content);
+    const future = new Date(Date.now() + Math.random() * 1000 + 1000);
+    fs.utimesSync(file, future, future);
+  }
+
+  function start() {
+    watcher = new SquadWatcher(
+      root,
+      {
+        onRosterChanged: () => { rosterChanges++; },
+        onAgentActivity: e => { events.push(e); },
+      },
+      { useFsWatch: false },
+    );
+    watcher.scan();
+  }
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'squad pod watcher '));
+    events = [];
+    rosterChanges = 0;
+  });
+
+  afterEach(() => {
+    watcher?.dispose();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('does not replay existing history as live activity on startup', () => {
+    write('team.md', '# Team');
+    write('agents/homer/history.md', '- old work');
+    write('orchestration-log/2026-01-01T00-00-00Z-homer.md', '**Task:** old');
+    start();
+    expect(events).toEqual([]);
+    expect(rosterChanges).toBe(0);
+  });
+
+  it('emits activity for agent file edits, inbox decisions and orchestration logs', () => {
+    write('team.md', '# Team');
+    start();
+
+    write('agents/homer/history.md', '# History\n- Implemented login flow');
+    write('decisions/inbox/lisa-cache-strategy.md', '# Use Redis cache\nDetails');
+    write('orchestration-log/2026-01-02T10-00-00Z-bart.md', '**Task:** Write E2E tests');
+    watcher.scan();
+
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ agentId: 'homer', task: 'Implemented login flow', source: 'agent-files' }),
+        expect.objectContaining({ agentId: 'lisa-cache-strategy', task: 'Decision: Use Redis cache', source: 'decision' }),
+        expect.objectContaining({ agentId: 'bart', task: 'Write E2E tests', source: 'orchestration-log' }),
+      ]),
+    );
+    expect(events).toHaveLength(3);
+
+    events = [];
+    watcher.scan();
+    expect(events).toEqual([]);
+  });
+
+  it('reports roster changes when team.md changes', () => {
+    write('team.md', '# Team');
+    start();
+    write('team.md', '# Team\n| Homer | Lead |');
+    watcher.scan();
+    expect(rosterChanges).toBe(1);
+  });
+
+  it('supports the legacy .ai-team directory', () => {
+    write('team.md', '# Team', '.ai-team');
+    start();
+    write('agents/marge/history.md', '- Reviewed PR', '.ai-team');
+    watcher.scan();
+    expect(events).toEqual([expect.objectContaining({ agentId: 'marge', source: 'agent-files' })]);
+  });
+
+  it('notices a squad directory created after startup', () => {
+    start();
+    write('team.md', '# Team');
+    watcher.scan();
+    expect(rosterChanges).toBe(1);
   });
 });

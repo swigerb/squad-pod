@@ -163,7 +163,7 @@ export interface TilesetMetadata {
 
 // ─── Telemetry ──────────────────────────────────────────────────────
 
-export type TelemetryCategory = 'status' | 'session' | 'log' | 'orchestration';
+export type TelemetryCategory = 'status' | 'session' | 'log' | 'orchestration' | 'agent' | 'decision';
 
 export interface TelemetryEvent {
   id: string;
@@ -187,6 +187,7 @@ export interface AgentCreatedMessage {
     name: string;
     role: string;
     paletteIndex: number;
+    seatId?: string | null;
   };
 }
 
@@ -200,11 +201,13 @@ export interface AgentToolStartMessage {
   type: 'agentToolStart';
   agentId: string;
   tool: string;
+  status?: string;
 }
 
 export interface AgentToolDoneMessage {
   type: 'agentToolDone';
   agentId: string;
+  tool?: string;
 }
 
 export interface ExistingAgentsMessage {
@@ -244,6 +247,8 @@ export type OutboundMessage =
   | ExistingAgentsMessage
   | { type: 'agentClosed'; agentId: string }
   | { type: 'agentToolsClear'; agentId: string }
+  | { type: 'agentToolPermissionClear'; agentId: string }
+  | { type: 'settingsLoaded'; soundEnabled: boolean }
   | { type: 'agentToolPermission'; agentId: string; tool: string }
   | { type: 'layoutLoaded'; layout: LayoutData }
   | { type: 'characterSpritesLoaded'; sprites: CharacterSpriteSet[] }

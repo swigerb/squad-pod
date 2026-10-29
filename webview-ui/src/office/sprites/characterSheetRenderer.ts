@@ -38,6 +38,22 @@ function getSheetKeyForPalette(palette: number): string {
   return PALETTE_TO_SHEET[palette % PALETTE_TO_SHEET.length];
 }
 
+/** Hue offset that separates palettes sharing the same PNG sheet. */
+const SHEET_PALETTE_HUE_STEP = 120;
+
+/**
+ * Resolve which PNG sheet and hue rotation render a palette/hue pair, so the
+ * six logical palettes stay visually distinct with only two shipped sheets.
+ */
+export function sheetAppearance(palette: number, hueShift = 0): { sheetKey: string; hueDegrees: number } {
+  const p = Math.max(0, Math.floor(palette) || 0);
+  const variant = Math.floor(p / PALETTE_TO_SHEET.length);
+  return {
+    sheetKey: getSheetKeyForPalette(p),
+    hueDegrees: (((variant * SHEET_PALETTE_HUE_STEP + hueShift) % 360) + 360) % 360,
+  };
+}
+
 export function hasCharacterSheetForPalette(palette: number): boolean {
   const key = getSheetKeyForPalette(palette);
   const sheet = getCharacterSheet(key);
@@ -58,17 +74,17 @@ export function drawCharacterFromSheet(
   destX: number,
   destY: number,
   zoom: number,
+  hueShift = 0,
 ): boolean {
-  const sheetKey = getSheetKeyForPalette(palette);
+  const { sheetKey, hueDegrees } = sheetAppearance(palette, hueShift);
   const sheet = getCharacterSheet(sheetKey);
   if (!sheet) {
     logCharacterSheetIssueOnce(
       `missing-sheet:${sheetKey}`,
-      '[SPRITE-DEBUG] drawCharacterFromSheet: NO sheet for palette',
+      '[characterSheetRenderer] No sheet for palette',
       palette,
       '→ key',
       sheetKey,
-      '(getCharacterSheet returned null)',
     );
     return false;
   }
@@ -86,11 +102,18 @@ export function drawCharacterFromSheet(
   const destH = sheet.baseHeight * zoom;
 
   ctx.imageSmoothingEnabled = false;
+  if (hueDegrees !== 0) {
+    ctx.save();
+    ctx.filter = `hue-rotate(${hueDegrees}deg)`;
+  }
   ctx.drawImage(
     sheet.image,
     srcX, srcY, sheet.frameWidth, sheet.frameHeight,
     destX, destY, destW, destH,
   );
+  if (hueDegrees !== 0) {
+    ctx.restore();
+  }
 
   return true;
 }
