@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createCharacter, updateCharacter } from './characters.js';
+import { WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC } from '../../constants.js';
 import { CharacterState, Direction, TileType } from '../types.js';
 import type { Seat } from '../types.js';
 
@@ -88,12 +89,7 @@ describe('characters', () => {
       character.wanderTimer = 0.01; // Very short timer
 
       const tileMap = Array(10).fill(0).map(() => Array(10).fill(TileType.FLOOR_1));
-      const walkableTiles = new Set<string>();
-      for (let r = 0; r < 10; r++) {
-        for (let c = 0; c < 10; c++) {
-          walkableTiles.add(`${c},${r}`);
-        }
-      }
+      const walkableTiles = new Set(['2,1']);
       const seats: Seat[] = [];
       const blockedTiles = new Set<string>();
 
@@ -101,6 +97,28 @@ describe('characters', () => {
 
       expect(character.state).toBe(CharacterState.WALK);
       expect(character.path.length).toBeGreaterThan(0);
+      expect(character.path).toEqual([{ col: 2, row: 1 }]);
+    });
+
+    it.each([
+      { scenario: 'the current cell is selected', candidates: ['1,1'] },
+      { scenario: 'there are no candidates', candidates: [] }
+    ])('idle character resets wander timer when $scenario', ({ candidates }) => {
+      const character = createCharacter('id', 'Name', 'Role', 0, null, null, 0);
+      character.wanderTimer = 0.01;
+
+      const tileMap = Array(10).fill(0).map(() => Array(10).fill(TileType.FLOOR_1));
+      const walkableTiles = new Set(candidates);
+      const seats: Seat[] = [];
+      const blockedTiles = new Set<string>();
+
+      updateCharacter(character, 0.02, walkableTiles, seats, tileMap, blockedTiles);
+
+      expect(character.state).toBe(CharacterState.IDLE);
+      expect(character.path).toEqual([]);
+      expect(character.wanderTimer).toBeGreaterThan(0);
+      expect(character.wanderTimer).toBeGreaterThanOrEqual(WANDER_PAUSE_MIN_SEC);
+      expect(character.wanderTimer).toBeLessThan(WANDER_PAUSE_MAX_SEC);
     });
 
     it('walking character completes path and returns to idle', () => {
