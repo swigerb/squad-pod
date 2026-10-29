@@ -2,6 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import type { OfficeState } from '../engine/officeState.js';
 import type { EditorState } from '../editor/editorState.js';
 import { EditTool, TileType } from '../types.js';
+import { planFurnitureMove } from '../editor/editorActions.js';
+import type { FurnitureTransformPlan } from '../editor/editorActions.js';
+import { getFurnitureFootprint } from '../layout/layoutManager.js';
+import { getCatalogEntry } from '../layout/furnitureCatalog.js';
 import { startGameLoop } from '../engine/gameLoop.js';
 import { renderFrame } from '../engine/renderer.js';
 import { updateCharacter } from '../engine/characters.js';
@@ -18,7 +22,7 @@ interface OfficeCanvasProps {
   onEditorSelectionChange?: (uid: string | null) => void;
   onDeleteSelected?: () => void;
   onRotateSelected?: () => void;
-  onDragMove?: (uid: string, newCol: number, newRow: number) => void;
+  onDragMove?: (uid: string, newCol: number, newRow: number, duplicate: boolean) => void;
   onExpandGrid?: (direction: 'left' | 'right' | 'up' | 'down') => void;
   onGestureStart?: () => void;
   onGestureEnd?: () => void;
@@ -53,6 +57,7 @@ export function OfficeCanvas({
   const panOriginRef = useRef<{ x: number; y: number } | null>(null);
   const spaceKeyRef = useRef(false);
   const draggedFurnitureRef = useRef<{ uid: string; offsetCol: number; offsetRow: number } | null>(null);
+  const dragPreviewRef = useRef<FurnitureTransformPlan | null>(null);
   // Tile last touched by an in-progress paint/erase stroke.
   const strokeRef = useRef<{ col: number; row: number } | null>(null);
   const gestureOpenRef = useRef(false);
@@ -170,6 +175,24 @@ export function OfficeCanvas({
           officeState.hoveredTile,
           officeState.seats
         );
+        const preview = dragPreviewRef.current;
+        if (isEditMode && preview) {
+          ctx.save();
+          ctx.strokeStyle = preview.error ? '#ff6060' : '#60dd90';
+          ctx.fillStyle = preview.error ? '#ff606033' : '#60dd9033';
+          ctx.lineWidth = 2;
+          for (const item of preview.items) {
+            const size = getFurnitureFootprint(item);
+            if (!size) continue;
+            const x = item.col * TILE_SIZE * zoom + panRef.current!.x;
+            const y = item.row * TILE_SIZE * zoom + panRef.current!.y;
+            const w = size.width * TILE_SIZE * zoom;
+            const h = size.height * TILE_SIZE * zoom;
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeRect(x, y, w, h);
+          }
+          ctx.restore();
+        }
       },
     });
 
@@ -206,7 +229,10 @@ export function OfficeCanvas({
 
         if (editorState.tool === 'select') {
           let selectedUid: string | null = null;
-          for (const furn of officeState.furniture) {
+          // Surface objects are drawn above desks and must win hit testing too.
+          const hitOrder = [...officeState.furniture].reverse().sort((a, b) =>
+            Number(!!getCatalogEntry(b.type)?.canPlaceOnSurfaces) - Number(!!getCatalogEntry(a.type)?.canPlaceOnSurfaces));
+          for (const furn of hitOrder) {
             const furnWidth = furn.width;
             const furnHeight = furn.height;
             if (col >= furn.col && col < furn.col + furnWidth && row >= furn.row && row < furn.row + furnHeight) {
@@ -330,7 +356,7 @@ export function OfficeCanvas({
         const { col, row } = screenToWorld(screenX, screenY);
         const newCol = col - draggedFurnitureRef.current.offsetCol;
         const newRow = row - draggedFurnitureRef.current.offsetRow;
-        onDragMove?.(draggedFurnitureRef.current.uid, newCol, newRow);
+        dragPreviewRef.current = planFurnitureMove(officeState.layout, draggedFurnitureRef.current.uid, newCol, newRow, e.altKey);
         return;
       }
 
@@ -367,20 +393,42 @@ export function OfficeCanvas({
       }
       officeState.hoveredAgentId = hoveredId;
     },
-    [isPanning, isEditMode, editorState.tool, screenToWorld, officeState, zoom, panRef, clampPan, onDragMove, onEditorEraseAction, onEditorTileAction]
+    [isPanning, isEditMode, editorState.tool, screenToWorld, officeState, zoom, panRef, clampPan, onEditorEraseAction, onEditorTileAction]
   );
 
-  const handleMouseUp = useCallback(() => {
+  const finishGesture = useCallback(() => {
     setIsPanning(false);
     panStartRef.current = null;
     panOriginRef.current = null;
     draggedFurnitureRef.current = null;
+    dragPreviewRef.current = null;
     strokeRef.current = null;
     if (gestureOpenRef.current) {
       gestureOpenRef.current = false;
       onGestureEnd?.();
     }
   }, [onGestureEnd]);
+
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    const drag = draggedFurnitureRef.current;
+    if (drag && isEditMode && editorState.tool === EditTool.SELECT) {
+      const rect = canvasRef.current!.getBoundingClientRect();
+      const { col, row } = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+      // Commit only the final destination; passing through valid tiles must not
+      // leave a partial move behind when the drop itself is invalid.
+      onDragMove?.(drag.uid, col - drag.offsetCol, row - drag.offsetRow, e.altKey);
+    }
+    finishGesture();
+  }, [isEditMode, editorState, screenToWorld, onDragMove, finishGesture]);
+
+  useEffect(() => {
+    window.addEventListener('blur', finishGesture);
+    return () => window.removeEventListener('blur', finishGesture);
+  }, [finishGesture]);
+
+  useEffect(() => {
+    if (!isEditMode) finishGesture();
+  }, [isEditMode, finishGesture]);
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -403,13 +451,22 @@ export function OfficeCanvas({
   );
 
   useEffect(() => {
+    const updateCopyPreview = (duplicate: boolean) => {
+      const drag = draggedFurnitureRef.current;
+      const target = dragPreviewRef.current?.items[0];
+      if (drag && target) {
+        dragPreviewRef.current = planFurnitureMove(officeState.layout, drag.uid, target.col, target.row, duplicate);
+      }
+    };
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') updateCopyPreview(true);
       if (e.code === 'Space') {
         e.preventDefault();
         spaceKeyRef.current = true;
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') updateCopyPreview(false);
       if (e.code === 'Space') {
         spaceKeyRef.current = false;
       }
@@ -420,7 +477,7 @@ export function OfficeCanvas({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [officeState]);
 
   return (
     <div
@@ -432,10 +489,20 @@ export function OfficeCanvas({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={finishGesture}
         onWheel={handleWheel}
         style={{ display: 'block' }}
       />
+      {isEditMode && editorState.tool === EditTool.SELECT && (
+        <div style={{ position: 'absolute', right: 12, bottom: 60, color: '#ccc', background: '#252526', padding: 6, pointerEvents: 'none' }}>
+          Drag to move. Hold Alt on release to copy. Desks carry PCs and lamps.
+        </div>
+      )}
+      {isEditMode && editorState.transformError && (
+        <div role="alert" style={{ position: 'absolute', right: 12, bottom: 100, color: '#ff9090', background: '#252526', padding: 8, pointerEvents: 'none' }}>
+          {editorState.transformError}
+        </div>
+      )}
     </div>
   );
 }

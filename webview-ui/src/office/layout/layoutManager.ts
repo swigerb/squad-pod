@@ -64,17 +64,30 @@ export function layoutToTileMap(layout: OfficeLayout): number[][] {
   return tileMap;
 }
 
+export function getFurnitureFootprint(furniture: PlacedFurniture): { width: number; height: number } | undefined {
+  const entry = getCatalogEntry(furniture.type);
+  if (entry) {
+    return furniture.rotation === 90 || furniture.rotation === 270
+      ? { width: entry.height, height: entry.width }
+      : { width: entry.width, height: entry.height };
+  }
+  const item = getItemById(furniture.type);
+  if (!item) return undefined;
+  return {
+    width: Math.ceil(item.bounds.width / TILE_SIZE),
+    height: Math.ceil(item.bounds.height / TILE_SIZE),
+  };
+}
+
 export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): FurnitureInstance[] {
   const instances: FurnitureInstance[] = [];
   for (const furn of furniture) {
     const entry = getCatalogEntry(furn.type);
     if (entry) {
       let sprite = entry.sprite;
-      let width = entry.width;
-      let height = entry.height;
+      const { width, height } = getFurnitureFootprint(furn)!;
 
       if (furn.rotation === 90 || furn.rotation === 270) {
-        [width, height] = [height, width];
         sprite = rotateSprite(sprite, furn.rotation);
       } else if (furn.rotation === 180) {
         sprite = rotateSprite(sprite, furn.rotation);
@@ -96,8 +109,7 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
       if (metaItem) {
         const pixelW = metaItem.bounds.width;
         const pixelH = metaItem.bounds.height;
-        const width = Math.ceil(pixelW / TILE_SIZE);
-        const height = Math.ceil(pixelH / TILE_SIZE);
+        const { width, height } = getFurnitureFootprint(furn)!;
         const sprite = createPlaceholderSprite(pixelW, pixelH);
 
         instances.push({

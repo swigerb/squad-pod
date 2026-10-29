@@ -3,7 +3,7 @@ import type { OfficeState } from '../office/engine/officeState.js';
 import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, OfficeLayout } from '../office/types.js';
-import { applyTilePaint, applyErase, applyFurniturePlace } from '../office/editor/editorActions.js';
+import { applyTilePaint, applyErase, applyFurniturePlace, planFurnitureMove, planFurnitureRotate, commitFurniturePlan } from '../office/editor/editorActions.js';
 import { UndoHistory } from '../office/editor/undoHistory.js';
 import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, MAX_COLS, MAX_ROWS } from '../constants.js';
 import { vscode } from '../vscodeApi.js';
@@ -124,6 +124,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
 
   const handleEditorSelectionChange = useCallback((uid: string | null) => {
     editorState.setSelectedFurnitureUid(uid);
+    editorState.transformError = null;
     setEditorTick((t) => t + 1);
   }, [editorState]);
 
@@ -140,15 +141,16 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
 
   const handleRotateSelected = useCallback(() => {
     if (!editorState.selectedFurnitureUid) return;
-    pushUndo();
     const officeState = getOfficeState();
     const layout = officeState.getLayout();
-    const furniture = layout.furniture.find((f) => f.uid === editorState.selectedFurnitureUid);
-    if (furniture) {
-      furniture.rotation = ((furniture.rotation || 0) + 90) % 360;
-      officeState.rebuildFromLayout(layout);
-      setEditorTick((t) => t + 1);
+    const plan = planFurnitureRotate(layout, editorState.selectedFurnitureUid);
+    editorState.transformError = plan.error;
+    const result = commitFurniturePlan(layout, plan);
+    if (result) {
+      pushUndo();
+      officeState.rebuildFromLayout(result.layout);
     }
+    setEditorTick((t) => t + 1);
   }, [editorState, getOfficeState, pushUndo]);
 
   const handleToggleState = useCallback(() => {
@@ -196,25 +198,22 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   }, [getOfficeState]);
 
   const handleDragMove = useCallback(
-    (uid: string, newCol: number, newRow: number) => {
+    (uid: string, newCol: number, newRow: number, duplicate = false) => {
       const officeState = getOfficeState();
       const layout = officeState.getLayout();
       const furniture = layout.furniture.find((f) => f.uid === uid);
       if (!furniture || (furniture.col === newCol && furniture.row === newRow)) return;
-      const placed = officeState.furniture.find((f) => f.uid === uid);
-      const width = placed?.width ?? 1;
-      const height = placed?.height ?? 1;
-      // Reject moves that would push any part of the item off the grid.
-      if (newCol < 0 || newRow < 0 || newCol + width > layout.cols || newRow + height > layout.rows) return;
-      pushUndo();
-      const next = JSON.parse(JSON.stringify(layout)) as OfficeLayout;
-      const moved = next.furniture.find((f) => f.uid === uid)!;
-      moved.col = newCol;
-      moved.row = newRow;
-      officeState.rebuildFromLayout(next);
+      const plan = planFurnitureMove(layout, uid, newCol, newRow, duplicate);
+      editorState.transformError = plan.error;
+      const result = commitFurniturePlan(layout, plan, duplicate);
+      if (result) {
+        pushUndo();
+        officeState.rebuildFromLayout(result.layout);
+        editorState.setSelectedFurnitureUid(result.selectedUid);
+      }
       setEditorTick((t) => t + 1);
     },
-    [getOfficeState, pushUndo]
+    [getOfficeState, editorState, pushUndo]
   );
 
   const handleExpandGrid = useCallback(

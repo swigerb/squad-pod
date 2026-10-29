@@ -230,7 +230,8 @@ export const FURNITURE_CATALOG: FurnitureCatalogEntry[] = [
     sprite: PC_SPRITE,
     width: 1,
     height: 1,
-    isDesk: false
+    isDesk: false,
+    canPlaceOnSurfaces: true
   },
   {
     type: FurnitureType.LAMP,
@@ -239,7 +240,8 @@ export const FURNITURE_CATALOG: FurnitureCatalogEntry[] = [
     sprite: LAMP_SPRITE,
     width: 1,
     height: 1,
-    isDesk: false
+    isDesk: false,
+    canPlaceOnSurfaces: true
   }
 ];
 
