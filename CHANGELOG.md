@@ -25,6 +25,7 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Bound per-frame carpet rendering to the visible region, cache masked junctions/palettes until inputs or artwork change, and precompose opaque sheets within a 4.13 MiB per-context cap. Retain direct draws for translucent art, fractional device scales or fractional device offsets (preserving GPU sprite-edge antialiasing) and unchanged saved data, editing and protected drafts (#28).
 - Fresh workspaces and deleted layout files no longer show false layout-recovery warnings. Successful external reads clear only watcher errors, preserving unrelated recovery errors and local/incoming draft protection.
 - Layouts with missing, empty or partial `tileColors` now draw floors and walls on initial load, import, external reload and incoming-conflict acceptance. Renderer-only defaults preserve existing colors, draft baselines, revisions and saved layout data.
 - Refreshed compatible development-tool transitive dependencies: `@humanfs/node` 0.16.8, `brace-expansion` 1.1.21 and `shell-quote` 1.12.0. The 2026-10-29 root audit decreased from five affected package entries to two high Azure Identity/MSAL entries; those remain unresolved pending a compatible stable parent release (#21). The separate webview audit reported zero findings; neither result establishes application exploitability or exploit freedom.
