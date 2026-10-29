@@ -21,6 +21,7 @@ copyright notices retained here. No font files are shipped in this package.
 |---|---|---|
 | `webview-ui/public/assets/characters/char_employee*.png` | Based on [JIK-A-4 MetroCity free top-down character pack](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack) | Free to use; credit appreciated and retained. |
 | `webview-ui/public/assets/{furniture,floors,walls}/` | Pixel Agents `b1bafd02896d90d83457266575a1e8e5011ce997` | MIT, Copyright (c) 2026 Pablo De Lucca; full notice retained in [LICENSE](LICENSE). 25 item manifests / 38 furniture PNGs, nine floor PNGs and one wall PNG. |
+| `webview-ui/public/assets/carpets/carpet_{0,1,2}.png` | Same pin, separate PR316 contribution | MIT, Copyright (c) 2026 Pablo De Lucca; carpet/zoning work credited to Pablo De Lucca and NNTin, introducing commit also credits Florin Timbuc. Full notice retained in [LICENSE](LICENSE). |
 
 ### Original bundle verification
 
@@ -41,8 +42,33 @@ Lucca copyright were inspected and retained. No separate asset-license file
 was found in the pinned tree. This is **not** an assumption that every asset in
 that repository is covered solely because the root license is MIT.
 
-`assets/pixel-agents-source.json` records the source pins and a content hash
-for all 73 imported files. The VSIX carries identical copies under
+### Carpet bundle verification
+
+The three carpet sheets first appear in commit
+`7a1643fb5e7bab59e1e789fac06c0f9a2fd78d7c`,
+[pixel-agents-hq/pixel-agents#316](https://github.com/pixel-agents-hq/pixel-agents/pull/316)
+(superseding [pixel-agents-hq/pixel-agents#259](https://github.com/pixel-agents-hq/pixel-agents/pull/259)).
+That contribution explicitly credits the carpet/zoning work to Pablo De Lucca
+and NNTin; the introducing commit retains NNTin and Florin Timbuc coauthor credits.
+The [pinned README](https://github.com/pixel-agents-hq/pixel-agents/blob/b1bafd02896d90d83457266575a1e8e5011ce997/README.md)
+explicitly lists bundled carpets and MIT licensing, and the pinned CONTRIBUTING
+states that contributions are MIT. The root MIT copyright, permission grant and
+disclaimer are retained in LICENSE. These sheets are **not** from PR117.
+
+The original and pinned Git blob IDs are identical:
+
+| File | Bytes | Git blob |
+|---|---:|---|
+| `carpet_0.png` | 394 | `67fe2cd77038247a84c1a66fb9592ba3ee41a780` |
+| `carpet_1.png` | 380 | `25c9c0105fc0373cfcf89176101035bf64a5010c` |
+| `carpet_2.png` | 363 | `28907dc0181b713bf9da57cfac6148a7f7ca6122` |
+
+No premium art, generated substitute or other asset directory was imported.
+The marching-squares renderer and dual-color behavior are adapted from the
+same pinned MIT implementation.
+
+`assets/pixel-agents-source.json` records both contribution trails, exact carpet
+blobs and a content hash for all 76 imported files. The VSIX carries identical copies under
 `dist/assets/` and `dist/webview/assets/`, plus this notice and LICENSE.
 The unresolved `tileset_office.png` and its metadata are removed, not retained
 as a fallback. Historical `Screenshot.jpg` is excluded from the VSIX.

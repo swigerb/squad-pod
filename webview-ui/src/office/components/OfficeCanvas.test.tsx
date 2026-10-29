@@ -82,7 +82,8 @@ it('passes live Debug View changes into every rendered frame', () => {
     for (const enabled of [false, true, false]) {
       act(() => root.render(<OfficeCanvas officeState={office} editorState={editor} isEditMode={false}
         isDebugMode={enabled} editorTick={0} zoom={1} panRef={pan} />));
-      expect(frame.mock.lastCall?.at(-1)).toBe(enabled);
+      expect(frame.mock.lastCall?.at(-2)).toBe(enabled);
+      expect(frame.mock.lastCall?.at(-1)).toBe(office.layout.carpetTiles);
     }
   } finally {
     act(() => root.unmount());

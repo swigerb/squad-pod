@@ -1,5 +1,5 @@
 import { EditTool, TileType, FurnitureType, FloorColor, OfficeLayout } from '../types.js';
-import { DEFAULT_FLOOR_COLOR, DEFAULT_WALL_COLOR } from '../../constants.js';
+import { DEFAULT_FLOOR_COLOR, DEFAULT_WALL_COLOR, CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR } from '../../constants.js';
 
 export interface UndoEntry {
   layout: OfficeLayout;
@@ -14,6 +14,9 @@ export class EditorState {
   transformError: string | null = null;
   floorColor: FloorColor = { ...DEFAULT_FLOOR_COLOR };
   wallColor: FloorColor = { ...DEFAULT_WALL_COLOR };
+  carpetVariant = 0;
+  carpetColor: FloorColor = { ...CARPET_DEFAULT_COLOR };
+  carpetAccentColor: FloorColor = { ...CARPET_DEFAULT_ACCENT_COLOR };
   undoStack: UndoEntry[] = [];
   redoStack: UndoEntry[] = [];
 
@@ -34,6 +37,9 @@ export class EditorState {
     this.transformError = null;
     this.floorColor = { ...DEFAULT_FLOOR_COLOR };
     this.wallColor = { ...DEFAULT_WALL_COLOR };
+    this.carpetVariant = 0;
+    this.carpetColor = { ...CARPET_DEFAULT_COLOR };
+    this.carpetAccentColor = { ...CARPET_DEFAULT_ACCENT_COLOR };
     this.undoStack = [];
     this.redoStack = [];
   }

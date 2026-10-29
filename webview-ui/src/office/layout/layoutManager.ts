@@ -12,6 +12,7 @@ import { DEFAULT_COLS, DEFAULT_ROWS, DEFAULT_FLOOR_COLOR } from '../../constants
 import { getCatalogEntry, createPlaceholderSprite } from './furnitureCatalog.js';
 import { getItemById } from '../sprites/assetLoader.js';
 import { defaultFurniture } from '../../../../src/defaultFurniture.js';
+import { isValidCarpetLayer } from '../../../../src/carpetValidation.js';
 
 export function createDefaultLayout(): OfficeLayout {
   const tiles: number[] = [];
@@ -256,6 +257,9 @@ export function deserializeLayout(json: string): OfficeLayout {
   
   if (layout.tiles.length !== layout.cols * layout.rows) {
     throw new Error('Tile array length does not match dimensions');
+  }
+  if (!isValidCarpetLayer(layout.carpetTiles, layout.cols * layout.rows)) {
+    throw new Error('Invalid carpet layer');
   }
   
   return layout;

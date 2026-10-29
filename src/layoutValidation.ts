@@ -1,4 +1,5 @@
 import type { LayoutData } from './types.js';
+import { isValidCarpetLayer } from './carpetValidation.js';
 
 function isGridSize(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) > 0 && (value as number) <= 256;
@@ -12,6 +13,7 @@ export function isValidLayout(data: unknown): data is LayoutData {
   if (!isGridSize(layout.cols) || !isGridSize(layout.rows)) {return false;}
   if (!Array.isArray(layout.tiles) || layout.tiles.length !== layout.cols * layout.rows) {return false;}
   if (!layout.tiles.every((t) => Number.isInteger(t))) {return false;}
+  if (!isValidCarpetLayer(layout.carpetTiles, layout.cols * layout.rows)) {return false;}
   if (layout.furniture !== undefined) {
     if (!Array.isArray(layout.furniture)) {return false;}
     if (!layout.furniture.every((f) =>

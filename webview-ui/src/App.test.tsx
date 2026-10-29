@@ -69,6 +69,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     const layout: OfficeLayout = {
       version: 2, cols: 20, rows: 15,
       tiles: Array.from({ length: 300 }, (_, i) => i < 20 ? 0 : 1), furniture: [],
+      carpetTiles: Array.from({ length: 300 }, (_, i) => i === 41 ? { variant: 0 } : null),
     };
     const revision = '\uFEFF' + JSON.stringify(layout, null, 4) + '\r\n';
     snapshot(layout, revision);
@@ -108,6 +109,89 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(persisted!.revision).toBe('colorless-incoming');
     expect(host.textContent).not.toContain('● Save Layout');
     expect(persisted!.draft).not.toHaveProperty('tileColors');
+  });
+
+  it.each(['local', 'incoming'] as const)('retains real carpet edits and different external carpets through %s resolution, exports, acknowledgement, recovery and staged imports', (choice) => {
+    const base: OfficeLayout = { ...imported, carpetTiles: Array(300).fill(null) };
+    base.carpetTiles![41] = {
+      variant: 1, color: { h: 90, s: 70, b: -20, c: 0 },
+      accentColor: { h: 40, s: 60, b: 10, c: 0 }, order: 5,
+    };
+    snapshot(base, 'carpet-base');
+    send({ type: 'manifestAssetsLoaded', snapshot: {
+      furniture: [], floors: [], walls: [], directories: [], diagnostics: [],
+      carpets: [0, 1, 2].map(() => Array.from({ length: 16 }, () => [['#111111', '#eeeeee']])),
+    } });
+    click('Edit Layout');
+    click('▦Carpet');
+    const canvas = host.querySelector('canvas')!;
+    const mouse = (type: string, col: number) => act(() => canvas.dispatchEvent(new MouseEvent(type, {
+      bubbles: true, button: 0, buttons: type === 'mouseup' ? 0 : 1,
+      clientX: col * 32 + 16, clientY: 2 * 32 + 16,
+    })));
+    mouse('mousedown', 2); mouse('mousemove', 3); mouse('mouseup', 3);
+    const local = structuredClone(persisted!.draft!);
+    expect(local.carpetTiles?.[41]).toEqual(base.carpetTiles![41]);
+    expect(local.carpetTiles?.[42]).toEqual({
+      variant: 0, color: { h: 0, s: 71, b: -32, c: 0, colorize: true },
+      accentColor: { h: 34, s: 64, b: 21, c: 0, colorize: true }, order: 6,
+    });
+    expect(local.carpetTiles?.[43]?.order).toBe(7);
+    const incoming: OfficeLayout = { ...external, carpetTiles: Array(300).fill(null) };
+    incoming.carpetTiles![61] = {
+      variant: 2, color: { h: 210, s: 80, b: -30, c: 0 },
+      accentColor: { h: 30, s: 100, b: 20, c: 0 }, order: 10,
+    };
+    snapshot(incoming, 'carpet-external');
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(incoming);
+    click('● Save Layout');
+    expect(saves()).toEqual([]);
+    const id = persisted!.pending[0].id;
+    click('Export local draft');
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: local });
+    click(`Export snapshot #${id}`);
+    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: incoming });
+    remount();
+    snapshot(incoming, 'carpet-external');
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(incoming);
+    if (choice === 'local') click(`Keep local draft #${id}`);
+    else {
+      click(`Use incoming #${id}...`);
+      expect(persisted!.draft).toEqual(local);
+      click(`Confirm incoming #${id}`);
+    }
+    const selected = choice === 'local' ? local : incoming;
+    expect(persisted!.draft).toEqual(selected);
+    expect(persisted!.retained.map((s) => s.layout)).toContainEqual(local);
+    click('Edit Layout');
+    click(choice === 'local' ? '● Save Layout' : 'Save Layout');
+    expect(saves().at(-1)).toEqual({
+      type: 'saveLayout', layout: selected, expectedRevision: 'carpet-external', workspaceRoot: 'workspace-A',
+    });
+    // Saving is not a successful acknowledgement, and edits remain protected.
+    send({ type: 'layoutSaved', layout: selected, revision: 'carpet-saved' });
+    expect(persisted!.baseline?.carpetTiles).toEqual(selected.carpetTiles);
+    remount();
+    snapshot(selected, 'carpet-saved');
+    expect(persisted!.draft?.carpetTiles).toEqual(selected.carpetTiles);
+    const importedCarpets = { ...incoming, carpetTiles: structuredClone(incoming.carpetTiles!) };
+    importedCarpets.carpetTiles[61]!.accentColor!.h = 270;
+    const saveCount = saves().length;
+    snapshot(importedCarpets, 'ignored-import-revision', 'import');
+    expect(saves()).toHaveLength(saveCount);
+    expect(persisted!.draft).toEqual(importedCarpets);
+    expect(persisted!.baseline).toEqual(selected);
+    expect(persisted!.revision).toBe('carpet-saved');
+    click('Edit Layout');
+    click('→');
+    expect(persisted!.draft?.carpetTiles).toHaveLength(315);
+    expect(persisted!.draft?.carpetTiles?.[64]).toEqual(importedCarpets.carpetTiles[61]);
+    click('Undo');
+    expect(persisted!.draft).toEqual(importedCarpets);
+    click('Redo');
+    expect(persisted!.draft?.carpetTiles?.[64]).toEqual(importedCarpets.carpetTiles[61]);
   });
 
   it.each(['local', 'incoming'] as const)('protects width21 and four legacy items through explicit %s resolution, export, save and reload', (choice) => {
@@ -390,7 +474,7 @@ describe('settings and source UI with simulated host messages', () => {
     click('→');
     expect(host.textContent).toContain('● Save Layout');
     send({ type: 'manifestAssetsLoaded', snapshot: {
-      furniture: [], floors: [], walls: [], directories: [], diagnostics: ['Root read budget exceeded'],
+      furniture: [], floors: [], walls: [], carpets: [], directories: [], diagnostics: ['Root read budget exceeded'],
     } });
     expect(host.textContent).toContain('Root read budget exceeded');
     expect(host.textContent).toContain('● Save Layout');
@@ -419,7 +503,7 @@ describe('settings and source UI with simulated host messages', () => {
         type: 'local_TEST_TEST', label: 'Test fixture asset', width: 1, height: 1,
         sprite: [['#abcdef']], isDesk: false, category: 'decor', canPlaceOnSurfaces: false, canPlaceOnWalls: false,
       }],
-      floors: [], walls: [], directories: ['C:\\fixture-assets'], diagnostics: ['Bad fixture manifest rejected'],
+      floors: [], walls: [], carpets: [], directories: ['C:\\fixture-assets'], diagnostics: ['Bad fixture manifest rejected'],
     };
     send({ type: 'manifestAssetsLoaded', snapshot });
     send({ type: 'layoutLoaded', layout });

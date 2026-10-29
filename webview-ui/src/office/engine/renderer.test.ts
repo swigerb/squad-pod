@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderFrame } from './renderer.js';
-import { TileType, type FloorColor, type SpriteData } from '../types.js';
+import { TileType, type CarpetTile, type FloorColor, type SpriteData } from '../types.js';
 import * as assetLoader from '../sprites/assetLoader.js';
 import * as spriteCache from '../sprites/spriteCache.js';
 import * as tilesetRenderer from '../sprites/tilesetRenderer.js';
 import { setFloorSprites } from '../floorTiles.js';
 import { setWallSprites } from '../wallTiles.js';
+import { setCarpetSprites } from '../sprites/carpetTiles.js';
 
 describe('tile colors are optional rendering overrides', () => {
   const wall: FloorColor = { h: 240, s: 100, b: 0, c: 0 };
@@ -45,6 +46,7 @@ describe('tile colors are optional rendering overrides', () => {
   afterEach(() => {
     setFloorSprites([]);
     setWallSprites([]);
+    setCarpetSprites([]);
     vi.restoreAllMocks();
   });
 
@@ -78,6 +80,27 @@ describe('tile colors are optional rendering overrides', () => {
     renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0);
     expect(pixels).toHaveLength(2);
     expect(spriteCache.getCachedSprite).toHaveBeenCalledTimes(2);
+  });
+
+  it('draws carpet above a colorless floor without changing layout or carpet data', () => {
+    setCarpetSprites([Array.from({ length: 16 }, () =>
+      Array.from({ length: 16 }, () => Array(16).fill('#111111')))]);
+    const carpetTiles: Array<CarpetTile | null> = [null, { variant: 0 }, null];
+    const layout = { cols: 3, rows: 1, tiles: map.flat(), furniture: [], carpetTiles };
+    const before = JSON.stringify(layout);
+    const draw = vi.fn();
+    ctx.drawImage = draw;
+    renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0, null, undefined, undefined,
+      3, 1, null, null, null, [], false, carpetTiles);
+    // First the floor, then the four junctions around its carpet cell.
+    expect(draw.mock.calls.map((call) => call.slice(1))).toEqual([
+      [16, 0], [8, -8], [24, -8], [8, 8], [24, 8],
+    ]);
+    for (const [canvas] of draw.mock.calls.slice(1)) {
+      expect(sprites.get(canvas)?.flat()).toContain('#941919');
+    }
+    expect(JSON.stringify(layout)).toBe(before);
+    expect(layout).not.toHaveProperty('tileColors');
   });
 });
 

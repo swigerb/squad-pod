@@ -79,6 +79,11 @@ function adjustSprite(sprite: SpriteData, color: FloorColor): SpriteData {
   );
 }
 
+export function flatColorizeSprite(sprite: SpriteData, color: FloorColor): SpriteData {
+  const hex = hslToHex(color.h % 360, color.s / 100, Math.max(0, Math.min(1, 0.5 + color.b / 200)));
+  return sprite.map((row) => row.map((pixel) => pixel ? hex + (pixel.length === 9 ? pixel.slice(7, 9) : '') : ''));
+}
+
 function hslToHex(h: number, s: number, l: number): string {
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));

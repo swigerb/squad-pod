@@ -86,3 +86,5 @@ export const CHARACTER_HIT_HALF_WIDTH = 8;
 export const CHARACTER_HIT_HEIGHT = 16;
 export const TOOL_OVERLAY_VERTICAL_OFFSET = 32;
 export const PULSE_ANIMATION_DURATION_SEC = 1.5;
+export const CARPET_DEFAULT_COLOR = { h: 0, s: 71, b: -32, c: 0, colorize: true };
+export const CARPET_DEFAULT_ACCENT_COLOR = { h: 34, s: 64, b: 21, c: 0, colorize: true };
