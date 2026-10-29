@@ -293,8 +293,12 @@ export class OfficeState {
     this.pets = (this.layout.pets ?? []).flatMap((placed) => {
       const existing = previousPets.get(placed.id);
       if (existing && existing.petType === placed.petType) {
-        existing.name = getPetName(placed.petType);
-        return [existing];
+        const currentTile = `${existing.tileCol},${existing.tileRow}`;
+        const pathIsWalkable = existing.path.every((tile) => this.walkableTiles.has(`${tile.col},${tile.row}`));
+        if (this.walkableTiles.has(currentTile) && pathIsWalkable) {
+          existing.name = getPetName(placed.petType);
+          return [existing];
+        }
       }
       if (!this.walkableTileList.length) return [];
       const tile = this.walkableTileList[Math.floor(Math.random() * this.walkableTileList.length)];

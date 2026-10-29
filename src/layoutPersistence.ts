@@ -152,9 +152,6 @@ const _CURRENT_LAYOUT_VERSION = 2;
  * v1 → v2: Retain user colors and metadata; never reset saved content.
  */
 function migrateLayout(data: LayoutData): LayoutData {
-  if (!data.pets) {
-    data.pets = [];
-  }
   if (!data.version) {
     data.version = 1;
   }

@@ -30,9 +30,9 @@
       "https://github.com/pixel-agents-hq/pixel-agents/pull/315",
       "https://github.com/pixel-agents-hq/pixel-agents/pull/219"
     ],
-    "verification": "Claudio and Gitcat sheets were checked against their exact Git blobs at the v1.5.0 pin. PR315 introduces the animated pet work; PR219 credits itsManeka for Gitcat. The pinned CONTRIBUTING states contributions are MIT-licensed and the repository root MIT notice is retained in LICENSE. The two local manifest.json files are Squad Pod metadata, not upstream assets.",
-    "sha256": "f00e6126a33fd0d189eacbe70fb2f94bec9629a37665c84fee9ea7ac4954cbb2",
-    "hashFormat": "Sorted relative POSIX filename, NUL, then raw bytes for every file under pets (including Squad Pod metadata manifests)",
+    "verification": "Claudio and Gitcat sheets were checked against their exact Git blobs at the v1.5.0 pin. PR219 credits itsManeka's pet sprites, including Claudio and Gitcat; PR315 adds the animated-pet implementation. The pinned CONTRIBUTING states contributions are MIT-licensed and the repository root MIT notice is retained in LICENSE. The two local manifest.json files are Squad Pod metadata, not upstream assets.",
+    "sha256": "e4f6c3f99351750510d5f667af40bf47b225d7568fa26197a26d1b81597002aa",
+    "hashFormat": "Sorted relative POSIX filename, NUL, then LF-normalized UTF-8 bytes for local JSON manifests and raw bytes for other files under pets",
     "files": [
       { "path": "pets/claudio/pet.png", "gitBlob": "9433b28259850d8142e3d8e991b0548d20570f2e", "bytes": 3267 },
       { "path": "pets/gitcat/pet.png", "gitBlob": "d2b7f9b5f39ca3d9106908ff206b7176f377627a", "bytes": 2892 }

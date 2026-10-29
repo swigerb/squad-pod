@@ -3,6 +3,7 @@ import type { SpriteData } from '../types.js';
 export interface PetSpriteAsset {
   id: string;
   name: string;
+  petType: number;
   sprite: SpriteData;
 }
 
@@ -63,31 +64,35 @@ export function splitPetSpriteSheet(sheet: SpriteData): PetSpriteFrames | null {
   };
 }
 
-let petAssets: PetSpriteAsset[] = [];
-let petFrames: Array<PetSpriteFrames | null> = [];
+let petAssets = new Map<number, PetSpriteAsset>();
+let petFrames = new Map<number, PetSpriteFrames | null>();
 
 export function setPetTemplates(assets: PetSpriteAsset[]): void {
-  petAssets = assets.map((asset) => ({ id: asset.id, name: asset.name, sprite: asset.sprite }));
-  petFrames = assets.map((asset) => splitPetSpriteSheet(asset.sprite));
+  petAssets = new Map(assets.map((asset) => [asset.petType, asset]));
+  petFrames = new Map(assets.map((asset) => [asset.petType, splitPetSpriteSheet(asset.sprite)]));
 }
 
 export function getPetSprites(petType: number): PetSpriteFrames | null {
-  return petFrames[petType] ?? null;
+  return petFrames.get(petType) ?? null;
 }
 
 export function getPetCount(): number {
-  return petAssets.length;
+  return petAssets.size;
+}
+
+export function getPetTypes(): number[] {
+  return [...petAssets.keys()].sort((a, b) => a - b);
 }
 
 export function getPetName(petType: number): string {
-  return petAssets[petType]?.name ?? `Pet ${petType + 1}`;
+  return petAssets.get(petType)?.name ?? `Pet ${petType + 1}`;
 }
 
 export function getPetAssetId(petType: number): string | null {
-  return petAssets[petType]?.id ?? null;
+  return petAssets.get(petType)?.id ?? null;
 }
 
 export function resetPetTemplates(): void {
-  petAssets = [];
-  petFrames = [];
+  petAssets.clear();
+  petFrames.clear();
 }

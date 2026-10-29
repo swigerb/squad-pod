@@ -113,7 +113,7 @@ describe('tile colors are optional rendering overrides', () => {
   it('renders animated pet sprites and heart bubbles over a layout without tile colors', () => {
     const sheet = Array.from({ length: 96 }, (_, y) =>
       Array.from({ length: 96 }, (_, x) => `#${(y * 96 + x).toString(16).padStart(6, '0')}`));
-    setPetTemplates([{ id: 'claudio', name: 'Claudio', sprite: sheet }]);
+    setPetTemplates([{ id: 'claudio', name: 'Claudio', petType: 0, sprite: sheet }]);
     const frames = getPetSprites(0)!;
     const pet = createPet('pet-1', 0, 'Claudio', 1, 1);
     togglePetHeart(pet);

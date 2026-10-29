@@ -49,7 +49,8 @@ describe('validated manifest assets', () => {
   function petPack(folder: string, name = folder): string {
     const dir = path.join(root, 'pets', folder);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ id: folder, name }));
+    const petType = ({ 'valid-cat': 2, 'bad-cat': 3, 'large-cat': 4 } as Record<string, number>)[folder] ?? 5;
+    fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ id: folder, name, petType }));
     const png = new PNG({ width: PET_SHEET_SIZE, height: PET_SHEET_SIZE });
     png.data.fill(255);
     fs.writeFileSync(path.join(dir, 'pet.png'), PNG.sync.write(png));
@@ -127,7 +128,10 @@ describe('validated manifest assets', () => {
       const petHash = createHash('sha256');
       for (const relative of petFiles.sort()) {
         petHash.update(`${relative}\0`);
-        petHash.update(fs.readFileSync(path.join(bundled, relative)));
+        const bytes = fs.readFileSync(path.join(bundled, relative));
+        petHash.update(relative.endsWith('.json')
+          ? Buffer.from(bytes.toString('utf8').replace(/\r\n?/g, '\n'))
+          : bytes);
       }
       expect(petFiles).toHaveLength(4);
       expect(petHash.digest('hex')).toBe(pets.sha256);
@@ -167,7 +171,7 @@ describe('validated manifest assets', () => {
     fs.writeFileSync(path.join(oversizedDir, 'pet.png'), Buffer.alloc(MAX_PET_PNG_BYTES + 1));
     const before = assetSourceFingerprint(bundled, [root]);
     const failed = loadAssetSnapshot(bundled, [root]);
-    expect(failed.pets.map((pet) => pet.id)).toEqual(['claudio', 'gitcat', 'valid-cat']);
+    expect(failed.pets.map((pet) => [pet.id, pet.petType])).toEqual([['claudio', 0], ['gitcat', 1], ['valid-cat', 2]]);
     expect(failed.furniture).toHaveLength(38);
     expect(failed.diagnostics).toHaveLength(2);
     expect(failed.diagnostics.join('\n')).toContain('pets / bad-cat');
@@ -179,21 +183,46 @@ describe('validated manifest assets', () => {
     fs.rmSync(oversizedDir, { recursive: true });
     expect(assetSourceFingerprint(bundled, [root])).not.toBe(before);
     const recovered = loadAssetSnapshot(bundled, [root]);
-    expect(recovered.pets.map((pet) => pet.id)).toEqual(['claudio', 'gitcat', 'valid-cat']);
+    expect(recovered.pets.map((pet) => [pet.id, pet.petType])).toEqual([['claudio', 0], ['gitcat', 1], ['valid-cat', 2]]);
     expect(recovered.diagnostics).toEqual([
       expect.stringContaining('PNG dimensions/signature must match 96x96'),
     ]);
     const validPng = fs.readFileSync(path.join(validDir, 'pet.png'));
     fs.writeFileSync(path.join(malformedDir, 'pet.png'), Buffer.concat([validPng, Buffer.from([0, 1])]));
     const badTrailer = loadAssetSnapshot(bundled, [root]);
-    expect(badTrailer.pets.map((pet) => pet.id)).toEqual(['claudio', 'gitcat', 'valid-cat']);
+    expect(badTrailer.pets.map((pet) => [pet.id, pet.petType])).toEqual([['claudio', 0], ['gitcat', 1], ['valid-cat', 2]]);
     expect(badTrailer.diagnostics).toEqual([expect.stringContaining('Invalid PNG end')]);
     fs.writeFileSync(path.join(malformedDir, 'pet.png'), validPng);
     const restored = loadAssetSnapshot(bundled, [root]);
-    expect(restored.pets.map((pet) => pet.id)).toEqual(['claudio', 'gitcat', 'bad-cat', 'valid-cat']);
+    expect(restored.pets.map((pet) => [pet.id, pet.petType])).toEqual([
+      ['claudio', 0], ['gitcat', 1], ['bad-cat', 3], ['valid-cat', 2],
+    ]);
     expect(restored.furniture).toHaveLength(38);
     expect(restored.diagnostics).toEqual([]);
   }, 20_000);
+
+  it('keeps surviving species types stable when an earlier pet fails and recovers', () => {
+    const copy = path.join(root, 'bundle');
+    fs.cpSync(bundled, copy, { recursive: true });
+    const claudioPath = path.join(copy, 'pets', 'claudio', 'pet.png');
+    const claudio = fs.readFileSync(claudioPath);
+    fs.writeFileSync(claudioPath, 'corrupt Claudio sheet');
+    const broken = loadAssetSnapshot(copy);
+    expect(broken.pets.map(({ id, petType }) => [id, petType])).toEqual([['gitcat', 1]]);
+    expect(broken.diagnostics).toEqual([expect.stringContaining('pets / claudio')]);
+    fs.writeFileSync(claudioPath, claudio);
+    const recovered = loadAssetSnapshot(copy);
+    expect(recovered.pets.map(({ id, petType }) => [id, petType])).toEqual([['claudio', 0], ['gitcat', 1]]);
+  }, 20_000);
+
+  it.each([undefined, -1, 512, 1.5, '1'])('rejects invalid stable pet type %j without shifting other types', (petType) => {
+    const dir = petPack('bad-type', 'Bad Type');
+    fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ id: 'bad-type', name: 'Bad Type', petType }));
+    const snapshot = loadAssetSnapshot(bundled, [root]);
+    expect(snapshot.pets.filter((pet) => pet.id === 'bad-type')).toEqual([]);
+    expect(snapshot.pets.find((pet) => pet.id === 'gitcat')?.petType).toBe(1);
+    expect(snapshot.diagnostics.join('\n')).toContain('pet type must be an integer from 0 to 511');
+  });
 
   it.each(['../escape.png', '..\\escape.png', '/tmp/escape.png', 'C:\\escape.png', 'https://host/x.png', 'x.svg', 'x.png:stream'])(
     'rejects untrusted file reference %s', (file) => {

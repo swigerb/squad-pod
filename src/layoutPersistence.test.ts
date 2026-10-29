@@ -86,7 +86,7 @@ describe('layoutPersistence', () => {
     expect(result).not.toBeNull();
     expect(result!.version).toBe(2);
     expect(result!.tileColors).toEqual(layoutNoVersion.tileColors);
-    expect(result!.pets).toEqual([]);
+    expect(result).not.toHaveProperty('pets');
   });
 
   it('imports a real file without writing it, then saves exact selected contents and backs up the previous disk version', () => {
@@ -355,9 +355,20 @@ describe('layoutPersistence', () => {
       expect(parseLayoutJson('\uFEFF' + JSON.stringify(sampleLayout))).not.toBeNull();
     });
 
-    it('migrates a legacy layout without pets to an explicit empty pet list', () => {
+    it('keeps a legacy layout without pets byte-shape compatible while runtime treats it as empty', () => {
       const { pets: _pets, ...legacy } = sampleLayout;
-      expect(parseLayoutJson(JSON.stringify(legacy))).toEqual({ ...legacy, pets: [] });
+      expect(parseLayoutJson(JSON.stringify(legacy))).toEqual(legacy);
+    });
+
+    it('does not add a pets field when saving a legacy layout that has no pet edits', () => {
+      const { pets: _pets, ...legacy } = sampleLayout;
+      const content = JSON.stringify(legacy, null, 2);
+      fs.mkdirSync(path.join(tmpDir, '.squad-pod'), { recursive: true });
+      fs.writeFileSync(path.join(tmpDir, '.squad-pod', 'layout.json'), content);
+      const parsed = readPersistedLayout(tmpDir)!;
+      const result = saveLayoutIfUnchanged(tmpDir, parsed, content);
+      expect(result.saved).toBe(true);
+      expect(JSON.parse(readLayoutRevision(tmpDir)!)).not.toHaveProperty('pets');
     });
 
     it.each([

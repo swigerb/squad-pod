@@ -39,7 +39,7 @@ describe('OfficeState', () => {
   });
 
   it('restores persisted pet identities and keeps runtime state when the layout is rebuilt', () => {
-    setPetTemplates([{ id: 'claudio', name: 'Claudio', sprite: Array.from({ length: 96 }, () => Array(96).fill('#fff')) }]);
+    setPetTemplates([{ id: 'claudio', name: 'Claudio', petType: 0, sprite: Array.from({ length: 96 }, () => Array(96).fill('#fff')) }]);
     const layout: OfficeLayout = {
       version: 2, cols: 5, rows: 5, tiles: Array(25).fill(TileType.FLOOR_1), furniture: [],
       pets: [{ id: 'companion-1', petType: 0 }],
@@ -61,6 +61,70 @@ describe('OfficeState', () => {
     const reloaded = new OfficeState(JSON.parse(JSON.stringify(state.getLayout())) as OfficeLayout);
     expect(reloaded.getLayout().pets).toEqual([{ id: 'companion-1', petType: 0 }]);
     expect(reloaded.pets[0].id).toBe('companion-1');
+  });
+
+  it('keeps stable pet species types across asset failure and recovery', () => {
+    const sheet = Array.from({ length: 96 }, () => Array(96).fill('#fff'));
+    const claudio = { id: 'claudio', name: 'Claudio', petType: 0, sprite: sheet };
+    const gitcat = { id: 'gitcat', name: 'Gitcat', petType: 1, sprite: sheet };
+    setPetTemplates([gitcat]);
+    const layout: OfficeLayout = {
+      version: 2, cols: 5, rows: 5, tiles: Array(25).fill(TileType.FLOOR_1), furniture: [],
+      pets: [{ id: 'claudio-instance', petType: 0 }, { id: 'gitcat-instance', petType: 1 }],
+    };
+    const state = new OfficeState(layout);
+    expect(state.pets.map(({ id, petType, name }) => [id, petType, name])).toEqual([
+      ['claudio-instance', 0, 'Pet 1'], ['gitcat-instance', 1, 'Gitcat'],
+    ]);
+    const restoredFromSavedLayout = new OfficeState(JSON.parse(JSON.stringify(state.getLayout())) as OfficeLayout);
+    expect(restoredFromSavedLayout.pets.map(({ id, petType, name }) => [id, petType, name])).toEqual([
+      ['claudio-instance', 0, 'Pet 1'], ['gitcat-instance', 1, 'Gitcat'],
+    ]);
+    setPetTemplates([gitcat, claudio]);
+    restoredFromSavedLayout.refreshAssets();
+    expect(restoredFromSavedLayout.pets.map(({ id, petType, name }) => [id, petType, name])).toEqual([
+      ['claudio-instance', 0, 'Claudio'], ['gitcat-instance', 1, 'Gitcat'],
+    ]);
+  });
+
+  it('re-homes a persisted pet if a layout rebuild blocks its tile or remaining path', () => {
+    setPetTemplates([{
+      id: 'claudio', name: 'Claudio', petType: 0,
+      sprite: Array.from({ length: 96 }, () => Array(96).fill('#fff')),
+    }]);
+    const layout: OfficeLayout = {
+      version: 2, cols: 5, rows: 5, tiles: Array(25).fill(TileType.FLOOR_1), furniture: [],
+      pets: [{ id: 'companion-1', petType: 0 }],
+    };
+    const state = new OfficeState(layout);
+    const pet = state.pets[0];
+    pet.tileCol = 2; pet.tileRow = 2; pet.x = 40; pet.y = 40;
+    pet.path = [{ col: 2, row: 3 }];
+    const changed = [...layout.tiles];
+    changed[2 * layout.cols + 2] = TileType.WALL;
+    changed[3 * layout.cols + 2] = TileType.VOID;
+    state.rebuildFromLayout({ ...layout, tiles: changed });
+    expect(state.pets).toHaveLength(1);
+    expect(state.pets[0]).toMatchObject({ id: 'companion-1', petType: 0 });
+    expect(state.walkableTiles.has(`${state.pets[0].tileCol},${state.pets[0].tileRow}`)).toBe(true);
+    expect(state.pets[0].path.every((tile) => state.walkableTiles.has(`${tile.col},${tile.row}`))).toBe(true);
+  });
+
+  it('keeps a pet placement persisted while no walkable tiles exist and restores it when they return', () => {
+    const layout: OfficeLayout = {
+      version: 2, cols: 4, rows: 4, tiles: Array(16).fill(TileType.FLOOR_1), furniture: [],
+      pets: [{ id: 'companion-1', petType: 0 }],
+    };
+    const state = new OfficeState(layout);
+    const noFloor: OfficeLayout = {
+      ...layout, cols: 1, rows: 1, tiles: [TileType.WALL],
+    };
+    state.rebuildFromLayout(noFloor);
+    expect(state.pets).toEqual([]);
+    expect(state.getLayout().pets).toEqual([{ id: 'companion-1', petType: 0 }]);
+    state.rebuildFromLayout({ ...noFloor, tiles: [TileType.FLOOR_1] });
+    expect(state.pets).toHaveLength(1);
+    expect(state.pets[0]).toMatchObject({ id: 'companion-1', petType: 0, tileCol: 0, tileRow: 0 });
   });
 
   afterEach(() => resetPetTemplates());

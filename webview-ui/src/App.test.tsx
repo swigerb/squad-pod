@@ -176,7 +176,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     const sheet = Array.from({ length: 96 }, () => Array(96).fill('#abcdef'));
     send({ type: 'manifestAssetsLoaded', snapshot: {
       furniture: [], floors: [], walls: [], carpets: [],
-      pets: [{ id: 'claudio', name: 'Claudio', sprite: sheet }],
+      pets: [{ id: 'claudio', name: 'Claudio', petType: 0, sprite: sheet }],
       directories: [], diagnostics: [],
     } });
     const layout: OfficeLayout = { ...imported, pets: [] };

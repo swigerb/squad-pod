@@ -21,7 +21,7 @@ export interface AssetSnapshot {
   floors: string[][][];
   walls: string[][][];
   carpets: string[][][][];
-  pets: Array<{ id: string; name: string; sprite: string[][] }>;
+  pets: Array<{ id: string; name: string; petType: number; sprite: string[][] }>;
   directories: string[];
   diagnostics: string[];
 }
@@ -279,35 +279,46 @@ function getPetRoot(root: string): string | null {
   return resolved;
 }
 
-function readPet(
+function readPetManifest(
   root: string, folder: string, budget: RootBudget,
   observe: (name: string, bytes: Buffer) => void = () => {},
-): { id: string; name: string; buffer: Buffer } {
+): { id: string; name: string; petType: number } {
   const manifest = readBounded(safePath(root, [folder, 'manifest.json']), MAX_MANIFEST_BYTES, budget);
   observe(`${folder}/manifest.json`, manifest);
   const meta = record(JSON.parse(manifest.toString('utf8')));
   const id = text(meta.id, 'pet id', ID);
   if (id !== folder) { throw new Error('Pet folder must match manifest id'); }
   const name = text(meta.name, 'pet name');
+  const petType = integer(meta.petType, 'pet type', 511, 0);
+  return { id, name, petType };
+}
+
+function readPetImage(
+  root: string, folder: string, budget: RootBudget,
+  observe: (name: string, bytes: Buffer) => void = () => {},
+): Buffer {
   budget.sheet(PET_SHEET_SIZE, PET_SHEET_SIZE);
   const buffer = readBounded(safePath(root, [folder, 'pet.png']), MAX_PET_PNG_BYTES, budget);
   observe(`${folder}/pet.png`, buffer);
-  return { id, name, buffer };
+  return buffer;
 }
 
 function loadPetSprites(
-  root: string, budget: RootBudget, ids: Set<string>, snapshot: AssetSnapshot,
+  root: string, budget: RootBudget, ids: Set<string>, petTypes: Set<number>, snapshot: AssetSnapshot,
 ): void {
   if (!path.isAbsolute(root)) { throw new Error('Asset directory must be absolute'); }
   const petRoot = getPetRoot(root);
   if (!petRoot) { return; }
   for (const folder of directories(petRoot, budget)) {
     try {
-      const { id, name, buffer } = readPet(petRoot, folder, budget);
+      const { id, name, petType } = readPetManifest(petRoot, folder, budget);
       if (ids.has(id)) { throw new Error(`Duplicate pet id: ${id}`); }
-      const sprite = decode(buffer, PET_SHEET_SIZE, PET_SHEET_SIZE, true);
+      if (petTypes.has(petType)) { throw new Error(`Duplicate pet type: ${petType}`); }
       ids.add(id);
-      snapshot.pets.push({ id, name, sprite });
+      petTypes.add(petType);
+      const buffer = readPetImage(petRoot, folder, budget);
+      const sprite = decode(buffer, PET_SHEET_SIZE, PET_SHEET_SIZE, true);
+      snapshot.pets.push({ id, name, petType, sprite });
     } catch (error) {
       snapshot.diagnostics.push(`${root} / pets / ${folder}: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -338,6 +349,7 @@ export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] =
   const snapshot: AssetSnapshot = { furniture: [], floors: [], walls: [], carpets: [], pets: [], directories: externalRoots, diagnostics: [] };
   const ids = new Set<string>();
   const petIds = new Set<string>();
+  const petTypes = new Set<number>();
   const bundledBudget = new RootBudget(true);
   const attempt = (label: string, work: () => void): void => {
     try { work(); } catch (error) {
@@ -370,7 +382,7 @@ export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] =
         });
       }
     });
-    attempt(`${root} / pets`, () => loadPetSprites(root, budget, petIds, snapshot));
+    attempt(`${root} / pets`, () => loadPetSprites(root, budget, petIds, petTypes, snapshot));
   }
   if (externalRoots.length > 8) { snapshot.diagnostics.push('Only eight external directories can be loaded'); }
   for (let i = 0; i < 9; i++) {
@@ -442,7 +454,8 @@ export function assetSourceFingerprint(bundledRoot: string, externalRoots: strin
       for (const folder of directories(petRoot, budget)) {
         hash.update(`pets/${folder}`);
         attempt(`pets/${folder}`, () => {
-          readPet(petRoot, folder, budget, (_name, bytes) => { hash.update(bytes); });
+          readPetManifest(petRoot, folder, budget, (_name, bytes) => { hash.update(bytes); });
+          readPetImage(petRoot, folder, budget, (_name, bytes) => { hash.update(bytes); });
         });
       }
     });

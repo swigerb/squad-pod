@@ -17,7 +17,7 @@ describe('animated pet behavior', () => {
   });
 
   it('uses the pinned sheet frame sequences and directional sprites', () => {
-    setPetTemplates([{ id: 'claudio', name: 'Claudio', sprite: makeSheet() }]);
+    setPetTemplates([{ id: 'claudio', name: 'Claudio', petType: 0, sprite: makeSheet() }]);
     const sprites = getPetSprites(0)!;
     const pet = createPet('pet-id', 0, 'Claudio', 1, 1);
     expect(getPetSpriteData(pet, sprites)).toBe(sprites.idleDown[PET_IDLE_SEQUENCE[0]]);
@@ -50,7 +50,7 @@ describe('animated pet behavior', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     const pet = createPet('follow-test', 0, 'Claudio', 1, 1);
     pet.wanderTimer = 0;
-    const agent = createCharacter('homer', 'Homer', 'Lead', 0, null, null, 0);
+    const agent = createCharacter('test-agent', 'Test Agent', 'QA', 0, null, null, 0);
     agent.col = 2;
     agent.row = 1;
     const originalState = agent.state;
@@ -60,7 +60,7 @@ describe('animated pet behavior', () => {
       Array.from({ length: 4 }, (_, col) => ({ col, row }))).flat();
     updatePet(pet, 0.01, walkable, characters, floor, new Set());
     expect(pet.state).toBe(PetState.FOLLOW);
-    expect(pet.followTargetId).toBe('homer');
+    expect(pet.followTargetId).toBe('test-agent');
     updatePet(pet, 0.01, walkable, characters, floor, new Set());
     expect(pet.state).toBe(PetState.IDLE);
     expect(agent.state).toBe(originalState);

@@ -85,7 +85,11 @@ the repository root MIT notice is retained in [LICENSE](LICENSE). Squad Pod's
 `assets/pixel-agents-source.json` records this separate pet provenance trail,
 the exact art blobs, local manifest paths and pet-folder checksum. The asset
 loader rejects pet sheets over 512 KiB or with dimensions other than 96×96,
-and reports failures per pet without discarding other asset categories.
+and reports failures per pet without discarding other asset categories. The
+Squad Pod manifests assign stable pet types (Claudio `0`, Gitcat `1`) so one
+failed sheet never shifts another saved pet to a different species. PR219
+credits itsManeka's pet sprites, including Claudio and Gitcat; PR315 adds the
+animated-pet implementation.
 
 `assets/pixel-agents-source.json` records both contribution trails, exact carpet
 blobs and a content hash for all 76 imported files. The VSIX carries identical copies under

@@ -95,7 +95,7 @@ it('passes live Debug View changes into every rendered frame', () => {
 
 it('lets a canvas click toggle the persisted pet heart interaction', () => {
   setPetTemplates([{
-    id: 'claudio', name: 'Claudio',
+    id: 'claudio', name: 'Claudio', petType: 0,
     sprite: Array.from({ length: 96 }, () => Array(96).fill('#fff')),
   }]);
   const office = new OfficeState({

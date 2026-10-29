@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const Module = require('node:module');
@@ -8,6 +9,7 @@ const extensionPath = path.resolve(__dirname, '..');
 const extensionBundle = path.join(extensionPath, 'dist', 'extension.js');
 const webviewScript = path.join(extensionPath, 'dist', 'webview', 'assets', 'index.js');
 const messages = [];
+const serveBrowser = process.argv.includes('--serve');
 let provider;
 let receiveMessage;
 let deactivate;
@@ -65,10 +67,10 @@ try {
   assert.ok(provider, 'compiled extension must register the webview provider');
 
   const webview = {
-    cspSource: 'vscode-webview-resource:',
+    cspSource: 'http://127.0.0.1:4173',
     options: undefined,
     html: '',
-    asWebviewUri: (resource) => `https://webview.test/${path.relative(extensionPath, resource.fsPath).replaceAll(path.sep, '/')}`,
+    asWebviewUri: (resource) => `http://127.0.0.1:4173/${path.relative(extensionPath, resource.fsPath).replaceAll(path.sep, '/')}`,
     onDidReceiveMessage: (listener) => { receiveMessage = listener; return disposable; },
     postMessage: (message) => { messages.push(message); return Promise.resolve(true); },
   };
@@ -89,7 +91,64 @@ try {
   const layoutMessage = messages.find((message) => message.type === 'layoutLoaded');
   assert.ok(layoutMessage, 'compiled provider must deliver a layout through the host boundary');
 
-  console.log('PASS production webview + compiled provider smoke acceptance (mocked VS Code boundary; not a native VS Code host).');
+  if (serveBrowser) {
+    const port = 4173;
+    const hostMessages = messages.filter((message) =>
+      ['settingsLoaded', 'sourceStatus', 'characterSpritesLoaded', 'manifestAssetsLoaded', 'layoutLoaded', 'existingAgents', 'squadRosterLoaded'].includes(message.type),
+    );
+    const fixtures = JSON.stringify(hostMessages).replace(/</g, '\\u003c');
+    let html = webview.html;
+    const nonce = html.match(/<script nonce="([^"]+)"/)?.[1];
+    assert.ok(nonce, 'provider HTML must nonce-gate its scripts');
+    const bridge = `
+      window.__petAcceptance = { outbound: [], fixtures: ${fixtures}, replayed: false };
+      window.__sendHost = (data) => window.dispatchEvent(new MessageEvent('message', { data }));
+      window.acquireVsCodeApi = () => ({
+        postMessage(message) {
+          window.__petAcceptance.outbound.push(message);
+          if (message.type === 'webviewReady' && !window.__petAcceptance.replayed) {
+            window.__petAcceptance.replayed = true;
+            setTimeout(() => window.__petAcceptance.fixtures.forEach(window.__sendHost), 100);
+          }
+          if (message.type === 'saveLayout') {
+            setTimeout(() => window.__sendHost({
+              type: 'layoutSaved', layout: message.layout,
+              revision: 'browser-ack-' + Date.now(),
+            }), 25);
+          }
+        },
+        getState: () => undefined,
+        setState: (value) => value,
+      });
+      Math.random = () => 0;
+    `;
+    html = html.replace('</head>', `<script nonce="${nonce}">${bridge}</script></head>`);
+    const webRoot = path.join(extensionPath, 'dist', 'webview');
+    const server = http.createServer((request, response) => {
+      const requestPath = new URL(request.url, `http://${request.headers.host}`).pathname;
+      if (requestPath === '/') {
+        response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+        response.end(html);
+        return;
+      }
+      const relative = decodeURIComponent(requestPath).replace(/^\/dist\/webview\//, '');
+      const file = path.resolve(webRoot, relative);
+      if (!file.startsWith(`${webRoot}${path.sep}`) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+        response.writeHead(404);
+        response.end();
+        return;
+      }
+      const type = file.endsWith('.js') ? 'text/javascript'
+        : file.endsWith('.css') ? 'text/css' : 'application/octet-stream';
+      response.writeHead(200, { 'content-type': type });
+      fs.createReadStream(file).pipe(response);
+    });
+    server.listen(port, '127.0.0.1', () => {
+      console.log(`Production pet browser fixture at http://127.0.0.1:${port}/ (mocked VS Code boundary; Ctrl+C to stop).`);
+    });
+  } else {
+    console.log('PASS compiled-provider artifact smoke (mocked VS Code boundary; does not execute webview UI or a native VS Code host).');
+  }
 } finally {
   deactivate?.();
   Module._load = originalLoad;

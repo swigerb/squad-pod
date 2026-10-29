@@ -240,14 +240,14 @@ describe('layoutManager', () => {
     });
 
     describe('pet layout compatibility', () => {
-      it('round-trips persisted pet identities and defaults legacy imports to an empty list', () => {
+      it('round-trips persisted pet identities and leaves petless legacy imports unchanged', () => {
         const withPets: OfficeLayout = {
           version: 2, cols: 2, rows: 2, tiles: Array(4).fill(TileType.FLOOR_1), furniture: [],
           pets: [{ id: 'companion-1', petType: 1 }],
         };
         expect(deserializeLayout(serializeLayout(withPets))).toEqual(withPets);
         const legacy = { version: 2, cols: 2, rows: 2, tiles: Array(4).fill(TileType.FLOOR_1), furniture: [] };
-        expect(deserializeLayout(JSON.stringify(legacy))).toEqual({ ...legacy, pets: [] });
+        expect(deserializeLayout(JSON.stringify(legacy))).toEqual(legacy);
       });
 
       it('rejects invalid pet records before an import can replace the current layout', () => {

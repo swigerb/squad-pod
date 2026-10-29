@@ -267,5 +267,5 @@ export function deserializeLayout(json: string): OfficeLayout {
   if (!isValidCarpetLayer(layout.carpetTiles, layout.cols * layout.rows)) {
     throw new Error('Invalid carpet layer');
   }
-  return { ...layout, pets: layout.pets ?? [] };
+  return layout;
 }

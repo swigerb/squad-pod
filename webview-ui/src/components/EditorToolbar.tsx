@@ -12,7 +12,7 @@ import {
   getTilesetMetadataImage,
 } from '../office/sprites/assetLoader.js';
 import type { ItemType } from '../office/sprites/assetLoader.js';
-import { getPetCount, getPetName, getPetSprites } from '../office/sprites/petSpriteData.js';
+import { getPetCount, getPetName, getPetSprites, getPetTypes } from '../office/sprites/petSpriteData.js';
 
 // ─── Props ─────────────────────────────────────────────────────
 export interface EditorToolbarProps {
@@ -563,7 +563,7 @@ export function EditorToolbar({
         <div style={styles.section}>
           <div style={styles.sectionLabel}>Pets</div>
           <div className="pets-carousel" data-testid="pets-carousel" style={styles.furnitureGrid}>
-            {Array.from({ length: getPetCount() }, (_, petType) => {
+            {getPetTypes().map((petType) => {
               const sprites = getPetSprites(petType);
               const name = getPetName(petType);
               const active = activePetTypes.includes(petType);
