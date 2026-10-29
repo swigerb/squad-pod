@@ -14,6 +14,7 @@ import { TILE_SIZE, CHARACTER_HIT_HALF_WIDTH, CHARACTER_HIT_HEIGHT, PAN_MARGIN_F
 
 interface OfficeCanvasProps {
   officeState: OfficeState;
+  isDebugMode?: boolean;
   onClick?: (col: number, row: number) => void;
   isEditMode: boolean;
   editorState: EditorState;
@@ -35,6 +36,7 @@ interface OfficeCanvasProps {
 
 export function OfficeCanvas({
   officeState,
+  isDebugMode = false,
   onClick,
   isEditMode,
   editorState,
@@ -173,7 +175,8 @@ export function OfficeCanvas({
           officeState.selectedAgentId,
           officeState.hoveredAgentId,
           officeState.hoveredTile,
-          officeState.seats
+          officeState.seats,
+          isDebugMode
         );
         const preview = dragPreviewRef.current;
         if (isEditMode && preview) {
@@ -197,7 +200,7 @@ export function OfficeCanvas({
     });
 
     return () => { cleanup(); };
-  }, [officeState, isEditMode, editorState, zoom, panRef, clampPan]);
+  }, [officeState, isEditMode, isDebugMode, editorState, zoom, panRef, clampPan]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {

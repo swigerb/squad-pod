@@ -560,7 +560,8 @@ export function renderFrame(
   selectedAgentId?: string | null,
   hoveredAgentId?: string | null,
   hoveredTile?: { col: number; row: number } | null,
-  seats?: Seat[]
+  seats?: Seat[],
+  isDebugMode = false
 ): void {
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -601,8 +602,10 @@ export function renderFrame(
 
   renderBubbles(ctx, characters, offsetX, offsetY, zoom);
 
-  // Visible asset diagnostic — renders on canvas so Brian can see without DevTools
-  // Reset transform to identity to draw in raw pixel space (independent of DPR/zoom)
+  if (isDebugMode) drawAssetDiagnosticOverlay(ctx);
+}
+
+function drawAssetDiagnosticOverlay(ctx: CanvasRenderingContext2D): void {
   const snapshot = getAssetLoadSnapshot();
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);

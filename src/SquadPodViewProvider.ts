@@ -13,10 +13,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, TilesetData, TilesetMetadata, CharacterAssetEntry } from './types.js';
+import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, TilesetData, TilesetMetadata, CharacterAssetEntry, SourceStatus, PodSettings } from './types.js';
 import {
   CUSTOM_CHAR_SPRITE_PREFIX,
-  GLOBAL_KEY_SOUND_ENABLED,
   WORKSPACE_KEY_LAYOUT,
 } from './constants.js';
 import {
@@ -51,6 +50,7 @@ import {
   parseProjectContext,
   parseAllMembers,
 } from './teamParser.js';
+import { readSettings, saveSetting } from './settings.js';
 
 export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
@@ -61,6 +61,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private telemetryCounter = 0;
   private watchedRoot: string | undefined;
   private output: vscode.OutputChannel | undefined;
+  private sourceStatus: SourceStatus = {
+    workspaceRoot: null, squadDir: null, teamFound: false,
+    observer: 'stopped', nativeWatch: false, error: null,
+  };
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -114,33 +118,34 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       case 'saveAgentSeats':
         if (message.seats && typeof message.seats === 'object') {
           saveAgentSeats(
-            message.seats as Record<string, string>,
+            message.seats,
             this.context,
           );
         }
         break;
 
       case 'saveLayout':
-        this.onSaveLayout(message.layout as LayoutData | undefined);
+        this.onSaveLayout(message.layout);
         break;
 
       case 'setSoundEnabled':
-        void this.context.globalState.update(
-          GLOBAL_KEY_SOUND_ENABLED,
-          message.enabled ?? false,
-        );
+        void this.onSaveSetting('soundEnabled', message.enabled);
+        break;
+
+      case 'setDebugEnabled':
+        void this.onSaveSetting('debugEnabled', message.enabled);
         break;
 
       case 'getSettings':
-        this.postMessage({ type: 'settingsLoaded', soundEnabled: this.isSoundEnabled() });
+        this.postMessage({ type: 'settingsLoaded', ...readSettings(this.context.globalState) });
         break;
 
       case 'focusAgent':
-        this.onFocusAgent(message.agentId as string | undefined);
+        this.onFocusAgent(message.agentId);
         break;
 
       case 'openSquadAgent':
-        this.onOpenSquadAgent(message.agentId as string | undefined);
+        this.onOpenSquadAgent(message.agentId);
         break;
 
       case 'exportLayout':
@@ -152,7 +157,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'requestAgentDetail':
-        this.onRequestAgentDetail(message.agentId as string | undefined);
+        this.onRequestAgentDetail(message.agentId);
         break;
 
       case 'openSquadInfo':
@@ -176,8 +181,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     if (!webview) {return;}
 
     const workspaceRoot = this.getWorkspaceRoot();
+    this.postMessage({ type: 'settingsLoaded', ...readSettings(this.context.globalState) });
     this.log(`webviewReady; workspaceRoot=${workspaceRoot ?? '<none>'}`);
     if (!workspaceRoot) {
+      this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
       this.postMessage({ type: 'noWorkspace' });
       return;
     }
@@ -197,12 +204,17 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.loadAndSendCustomAssetUris();
     this.loadAndSendLayout(workspaceRoot);
     sendExistingAgents(agents, this.context, webview);
-    this.postMessage({ type: 'soundEnabled', enabled: this.isSoundEnabled() });
+    this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
   }
 
   private startWatching(workspaceRoot: string, webview: vscode.Webview): void {
     this.watchedRoot = workspaceRoot;
     this.disposeSquadWatcher = startSquadWatching(workspaceRoot, {
+      onStatusChanged: (status) => {
+        this.sourceStatus = status;
+        this.postMessage({ type: 'sourceStatus', status });
+        if (status.error) { this.log(status.error); }
+      },
       onRosterChanged: () => {
         const updated = refreshAgents(workspaceRoot, this.context, webview);
         sendExistingAgents(updated, this.context, webview);
@@ -235,10 +247,20 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.disposeLayoutWatcher?.dispose();
     this.disposeLayoutWatcher = undefined;
     this.watchedRoot = undefined;
+    this.sourceStatus = {
+      workspaceRoot: null, squadDir: null, teamFound: false,
+      observer: 'stopped', nativeWatch: false, error: null,
+    };
   }
 
-  private isSoundEnabled(): boolean {
-    return this.context.globalState.get<boolean>(GLOBAL_KEY_SOUND_ENABLED, true);
+  private async onSaveSetting(setting: keyof PodSettings, enabled: unknown): Promise<void> {
+    try {
+      await saveSetting(this.context.globalState, setting, enabled);
+    } catch (error) {
+      this.log(`Failed to save ${setting}: ${String(error)}`);
+      void vscode.window.showErrorMessage(`Squad Pod could not save ${setting}: ${String(error)}`);
+    }
+    this.postMessage({ type: 'settingsLoaded', ...readSettings(this.context.globalState) });
   }
 
   // ─── Diagnostics ─────────────────────────────────────────────────
@@ -248,13 +270,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.output.appendLine(`[${new Date().toISOString()}] ${line}`);
   }
 
-  private onDiagnosticReport(message: WebviewMessage): void {
-    const report = message as WebviewMessage & {
-      characterSheetsSize?: number;
-      characterSheetKeys?: string[];
-      bootstrapRan?: boolean;
-      errors?: string[];
-    };
+  private onDiagnosticReport(report: Extract<WebviewMessage, { type: 'diagnosticReport' }>): void {
     this.log(
       `webview assets: sheets=${report.characterSheetsSize ?? '?'} [${(report.characterSheetKeys ?? []).join(', ')}]` +
       ` bootstrap=${report.bootstrapRan ?? '?'} errors=${(report.errors ?? []).join('; ') || 'none'}`,

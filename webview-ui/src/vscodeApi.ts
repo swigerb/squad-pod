@@ -1,4 +1,5 @@
 import type { WebviewApi } from "vscode-webview";
+import type { WebviewMessage } from '../../src/types.js';
 
 class VSCodeAPIWrapper {
   private readonly vsCodeApi: WebviewApi<unknown> | undefined;
@@ -9,7 +10,7 @@ class VSCodeAPIWrapper {
     }
   }
 
-  public postMessage(message: unknown): void {
+  public postMessage(message: WebviewMessage): void {
     if (this.vsCodeApi) {
       this.vsCodeApi.postMessage(message);
     } else {
