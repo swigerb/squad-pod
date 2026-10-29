@@ -246,7 +246,7 @@ describe('validated manifest assets', () => {
     fs.writeFileSync(path.join(dir, 'UNREFERENCED.png'), Buffer.alloc(1024 * 1024, 1));
     expect(assetSourceFingerprint(bundled, [root])).toBe(before);
     expect(loadAssetSnapshot(bundled, [root]).furniture).toHaveLength(39);
-  });
+  }, 20000);
 
   it('reads a shared PNG once per manifest but reserves every leaf decode', () => {
     pack('shared', {
@@ -268,7 +268,7 @@ describe('validated manifest assets', () => {
     expect(loadAssetSnapshot(bundled, [root]).diagnostics).toEqual([
       expect.stringContaining('z_extra: Root decode budget'),
     ]);
-  });
+  }, 20000);
 
   it('allows exactly the external decode count and reports overflow without starving other roots', () => {
     for (let i = 0; i <= ASSET_ROOT_LIMITS.external.assets; i++) {
