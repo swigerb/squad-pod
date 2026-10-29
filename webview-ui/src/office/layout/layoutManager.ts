@@ -13,6 +13,7 @@ import { getCatalogEntry, createPlaceholderSprite } from './furnitureCatalog.js'
 import { getItemById } from '../sprites/assetLoader.js';
 import { defaultFurniture } from '../../../../src/defaultFurniture.js';
 import { isValidCarpetLayer } from '../../../../src/carpetValidation.js';
+import { isValidLayout } from '../../../../src/layoutValidation.js';
 
 export function createDefaultLayout(): OfficeLayout {
   const tiles: number[] = [];
@@ -40,6 +41,7 @@ export function createDefaultLayout(): OfficeLayout {
     rows: DEFAULT_ROWS,
     tiles,
     furniture,
+    pets: [],
     tileColors: Object.fromEntries(tileColors)
   };
 }
@@ -249,7 +251,11 @@ export function serializeLayout(layout: OfficeLayout): string {
 }
 
 export function deserializeLayout(json: string): OfficeLayout {
-  const layout = JSON.parse(json) as OfficeLayout;
+  const parsed: unknown = JSON.parse(json);
+  if (!isValidLayout(parsed)) {
+    throw new Error('Invalid layout format');
+  }
+  const layout = parsed as OfficeLayout;
   
   if (!layout.cols || !layout.rows || !layout.tiles || !Array.isArray(layout.furniture)) {
     throw new Error('Invalid layout format');
@@ -261,6 +267,5 @@ export function deserializeLayout(json: string): OfficeLayout {
   if (!isValidCarpetLayer(layout.carpetTiles, layout.cols * layout.rows)) {
     throw new Error('Invalid carpet layer');
   }
-  
   return layout;
 }

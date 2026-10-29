@@ -199,6 +199,8 @@ export default function App() {
         onFloorColorChange={editor.handleFloorColorChange}
         onWallColorChange={editor.handleWallColorChange}
         onFurnitureTypeChange={editor.handleFurnitureTypeChange}
+        activePetTypes={getOfficeState().getActivePetTypes()}
+        onPetToggle={editor.handlePetToggle}
         onCarpetVariantChange={editor.handleCarpetVariantChange}
         onCarpetColorChange={editor.handleCarpetColorChange}
         onSave={editor.handleSave}

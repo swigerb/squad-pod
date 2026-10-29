@@ -21,6 +21,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
 - **Office layout editor** — design your office with floors, walls, and furniture using the built-in editor
 - **Decorative carpets** — three auto-tiling styles with independent main/accent colors, painted over floors without changing floor IDs or agent walkability.
+- **Animated pets** — add or remove Claudio and Gitcat in the Layout editor; pets wander, follow nearby agents, and show a timed heart when clicked. Pet IDs/types survive save, reload, import and export; asset type numbers stay stable when another pet sheet fails to load.
 - **Manifest furniture and live imports** — verified original Pixel Agents furniture/floors/walls; Settings can load local furniture manifests and pick up edits without restarting VS Code.
 - **Explicit directory launches** — manage named directories and open `copilot --agent squad` in a new terminal at the selected working directory; no automatic launch.
 - **Speech bubbles** — visual indicators when an agent needs your attention
@@ -80,7 +81,9 @@ Then press **F5** in VS Code to launch the Extension Development Host.
 | `npm run test:all` | Run extension host and webview unit tests |
 | `npm run build` | Production build of the webview (Vite) and extension (esbuild) |
 | `npm run verify` | Lint, type-check, test, and build: the same checks CI runs |
-| `npm run package` | Build `squad-pod-<version>.vsix` with `@vscode/vsce` |
+| `npm run package` | Build `squad-pod-<version>.vsix` and verify shipped pet manifests against their committed Git blobs |
+| `npm run test:smoke:pets-provider` | Verify the compiled provider and production bundle markers through a mocked VS Code boundary (does not execute the webview UI) |
+| `npm run serve:acceptance:pets` | Serve the production webview with asset/layout snapshots from the compiled provider through a mocked boundary for browser interaction (not a native VS Code host) |
 
 ### Development dependency advisories
 
@@ -146,6 +149,7 @@ The built-in editor lets you design your office:
 - **Floor** — Full HSB color control
 - **Walls** — Auto-tiling walls with color customization
 - **Carpets** — choose one of three pinned styles and adjust Main/Accent hue, saturation and brightness. Left-drag paints on existing floors (including beneath furniture); right-drag removes only carpet. Eyedrop copies the style and both colors. The generic Erase tool removes carpet first when present, preserving the underlying floor and furniture.
+- **Pets** — use the Pets tool to add/remove the pinned Claudio and Gitcat companions. They wander across walkable tiles, sometimes follow nearby agents, and respond to a click with a heart. Each placement's `id` and stable manifest `petType` are saved; older layouts behave as having no pets without rewriting the legacy JSON shape.
 - **Tools** — Select, paint, erase, place, eyedropper. Floor, wall, and erase tools paint continuously while you drag.
 - **Undo/Redo** — 50 levels with Ctrl+Z / Ctrl+Y. Each drag (a paint stroke or a furniture move) is a single undo step.
 - **Furniture moves and copies** — Select, then drag to move; hold **Alt when releasing** to copy. Desks carry their overlapping PCs and lamps; grabbing a PC or lamp moves just that object. Copies have fresh IDs and preserve the source's color (including no color), independently of the palette's Colorize setting.
@@ -168,8 +172,8 @@ direction, saving, reloading and JSON export/import retain these fields.
 Existing layouts without carpets are not filled with empty carpet data or
 reset. Walls/void cannot be carpet-painted; changing a floor to wall/void removes
 its carpet within the same undo transaction. Carpet artwork reloads do not save
-or reset the office. Areas, directory launch, pets and full upstream parity
-remain separate work under #7/#4.
+or reset the office. Areas and full upstream parity remain
+separate work under #7/#4.
 
 Carpet rendering caches masked junctions and palettes until the tile map,
 carpet array, dimensions or artwork generation changes. Frames draw only the
@@ -324,6 +328,42 @@ Incoming host layouts now use the draft-conflict protection described above;
 missing-art warnings follow the selected canvas rather than an unresolved
 incoming snapshot. Asset-only refreshes do not replace the layout or editor history.
 
+### Custom pet sheets
+
+Put pet assets under `pets/<id>/` inside an already registered asset directory.
+Each pet folder needs a `manifest.json` and sibling `pet.png`:
+
+```text
+my-assets/
+  pets/
+    my-dog/
+      manifest.json
+      pet.png
+```
+
+```json
+{
+  "id": "my-dog",
+  "name": "My Dog",
+  "petType": 2
+}
+```
+
+`id` must match the folder name. `petType` is a stable integer from 0 to 511, unique across all pet manifests:
+bundled Claudio and Gitcat reserve 0 and 1, so custom sheets should use an
+unused value from 2 through 511. A valid type stays reserved even if its image
+fails to load, preventing a repaired or later-added sheet from changing a
+saved pet's species. Duplicate IDs or types and invalid types are rejected
+with asset diagnostics. A pet sheet
+must be exactly 96×96 pixels and no larger than 512 KiB. Upstream Pixel Agents
+pet manifests contain `id` and `name`; Squad Pod additionally requires
+`petType`, so add this field before loading an upstream pet pack.
+
+Saved pet placements keep their identity and numeric type if a sheet becomes
+unavailable. The Pets editor labels those placements unavailable and still
+lets you remove them; it does not substitute another species or add a new
+placement without a valid sheet.
+
 **Aggregate reload work is bounded, including failed attempts.** Each root has
 its own non-transferable allowance per fingerprint/load pass: **2 MiB of file
 content, 128 file reads and 2,048 directory enumeration calls** (including
@@ -369,8 +409,8 @@ layout-revision reset or silent movement.
 
 Nine floor PNGs are included; the existing seven floor slots use the first seven
 without changing tile IDs (legacy tile 8 remains VOID). The single bundled wall
-set is active. External floor/wall/character packs and pets are not supported in
-this slice; pets remain excluded pending specific provenance verification.
+set is active. External floor/wall/character packs are not supported.
+Bundled and custom pets use the separately documented manifest and provenance checks above.
 
 ## Telemetry Feed
 
@@ -466,7 +506,8 @@ Squad Pod tracks [Pixel Agents v1.5.0](https://github.com/pixel-agents-hq/pixel-
 | Original furniture/floors/walls; validated local furniture manifests and live reload | ✅ (static variants; real VS Code-host verification pending) |
 | Named directory management and explicit `copilot --agent squad` launch requests | ✅ Browser/unit fixtures; VS Code host verification pending |
 | Squad-history directory suggestions | ❌ No supported launch-history producer |
-| Pets, other external pack kinds, furniture animation | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
+| Animated pets, stable saved pet types, validated local pet manifests | ✅ Browser/provider fixtures; VS Code host verification pending |
+| Other external pack kinds and furniture animation | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
 | Standalone browser server, embedded terminal, mobile layout | ⏳ [#8](https://github.com/swigerb/squad-pod/issues/8) |
 | Per-tool overlays and context gauges | ❌ Needs a Squad event API |
 

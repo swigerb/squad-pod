@@ -25,6 +25,7 @@ import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
 import { setFloorSprites } from '../office/floorTiles.js';
 import { setWallSprites } from '../office/wallTiles.js';
 import { setCarpetSprites } from '../office/sprites/carpetTiles.js';
+import { setPetTemplates } from '../office/sprites/petSpriteData.js';
 import {
   setAssetBaseUrl,
   loadAssets,
@@ -137,6 +138,7 @@ export function useExtensionMessages(
           setFloorSprites(snapshot.floors);
           setWallSprites(snapshot.walls);
           setCarpetSprites(snapshot.carpets);
+          setPetTemplates(snapshot.pets ?? []);
           getOfficeState().refreshAssets();
           setAssetStatus({ directories: snapshot.directories, diagnostics: snapshot.diagnostics });
           break;

@@ -22,6 +22,7 @@ copyright notices retained here. No font files are shipped in this package.
 | `webview-ui/public/assets/characters/char_employee*.png` | Based on [JIK-A-4 MetroCity free top-down character pack](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack) | Free to use; credit appreciated and retained. |
 | `webview-ui/public/assets/{furniture,floors,walls}/` | Pixel Agents `b1bafd02896d90d83457266575a1e8e5011ce997` | MIT, Copyright (c) 2026 Pablo De Lucca; full notice retained in [LICENSE](LICENSE). 25 item manifests / 38 furniture PNGs, nine floor PNGs and one wall PNG. |
 | `webview-ui/public/assets/carpets/carpet_{0,1,2}.png` | Same pin, separate PR316 contribution | MIT, Copyright (c) 2026 Pablo De Lucca; carpet/zoning work credited to Pablo De Lucca and NNTin, introducing commit also credits Florin Timbuc. Full notice retained in [LICENSE](LICENSE). |
+| `webview-ui/public/assets/pets/{claudio,gitcat}/pet.png` | Pixel Agents `b1bafd02896d90d83457266575a1e8e5011ce997` | MIT, Copyright (c) 2026 Pablo De Lucca; animated-pet contribution PR315, Gitcat PR219 credits itsManeka. Full notice retained in [LICENSE](LICENSE). |
 
 ### Original bundle verification
 
@@ -66,6 +67,29 @@ The original and pinned Git blob IDs are identical:
 No premium art, generated substitute or other asset directory was imported.
 The marching-squares renderer and dual-color behavior are adapted from the
 same pinned MIT implementation.
+
+### Pet bundle verification
+
+The Claudio and Gitcat sheets are separate from the furniture and carpet trails.
+PR315 introduces the upstream animated-pet work; PR219 credits itsManeka for
+Gitcat. Both PNGs were compared with their Git blobs at the explicit Pixel Agents
+v1.5.0 pin. The pinned CONTRIBUTING file states contributions are MIT-licensed;
+the repository root MIT notice is retained in [LICENSE](LICENSE). Squad Pod's
+`manifest.json` files are local metadata, not files claimed to come from upstream.
+
+| File | Dimensions | Bytes | Pinned Git blob |
+|---|---:|---:|---|
+| `pets/claudio/pet.png` | 96×96 | 3,267 | `9433b28259850d8142e3d8e991b0548d20570f2e` |
+| `pets/gitcat/pet.png` | 96×96 | 2,892 | `d2b7f9b5f39ca3d9106908ff206b7176f377627a` |
+
+`assets/pixel-agents-source.json` records this separate pet provenance trail,
+the exact art blobs, local manifest paths and pet-folder checksum. The asset
+loader rejects pet sheets over 512 KiB or with dimensions other than 96×96,
+and reports failures per pet without discarding other asset categories. The
+Squad Pod manifests assign stable pet types (Claudio `0`, Gitcat `1`) so one
+failed sheet never shifts another saved pet to a different species. PR219
+credits itsManeka's pet sprites, including Claudio and Gitcat; PR315 adds the
+animated-pet implementation.
 
 `assets/pixel-agents-source.json` records both contribution trails, exact carpet
 blobs and a content hash for all 76 imported files. The VSIX carries identical copies under

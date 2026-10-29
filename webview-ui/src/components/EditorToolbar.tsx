@@ -12,6 +12,7 @@ import {
   getTilesetMetadataImage,
 } from '../office/sprites/assetLoader.js';
 import type { ItemType } from '../office/sprites/assetLoader.js';
+import { getPetCount, getPetName, getPetSprites, getPetTypes } from '../office/sprites/petSpriteData.js';
 
 // ─── Props ─────────────────────────────────────────────────────
 export interface EditorToolbarProps {
@@ -22,6 +23,8 @@ export interface EditorToolbarProps {
   onFloorColorChange: (color: FloorColor) => void;
   onWallColorChange: (color: FloorColor) => void;
   onFurnitureTypeChange: (type: string) => void;
+  activePetTypes: number[];
+  onPetToggle: (petType: number) => void;
   onCarpetVariantChange: (variant: number) => void;
   onCarpetColorChange: (color: FloorColor, accent?: boolean) => void;
   onSave: () => void;
@@ -53,6 +56,7 @@ const TOOL_DEFS: { tool: EditToolType; icon: string; label: string }[] = [
   { tool: EditTool.WALL_PAINT, icon: '▥', label: 'Wall' },
   { tool: EditTool.CARPET_PAINT, icon: '▦', label: 'Carpet' },
   { tool: EditTool.FURNITURE_PLACE, icon: '♜', label: 'Furniture' },
+  { tool: EditTool.PETS, icon: '♥', label: 'Pets' },
   { tool: EditTool.ERASE, icon: '✕', label: 'Erase' },
   { tool: EditTool.EYEDROPPER, icon: '⊙', label: 'Eyedrop' },
 ];
@@ -473,6 +477,8 @@ export function EditorToolbar({
   onFloorColorChange,
   onWallColorChange,
   onFurnitureTypeChange,
+  activePetTypes,
+  onPetToggle,
   onCarpetVariantChange,
   onCarpetColorChange,
   onSave,
@@ -502,6 +508,7 @@ export function EditorToolbar({
   const showWallOptions = activeTool === EditTool.WALL_PAINT;
   const showFurnitureOptions = activeTool === EditTool.FURNITURE_PLACE;
   const showCarpetOptions = activeTool === EditTool.CARPET_PAINT;
+  const showPetOptions = activeTool === EditTool.PETS;
 
   // Gather tileset metadata items for each placeable category
   const metadataCategories = PLACEABLE_CATEGORIES.map(cat => ({
@@ -549,6 +556,42 @@ export function EditorToolbar({
           {!hasCarpetVariant(editorState.carpetVariant) && <p role="alert">Carpet style unavailable. Check asset diagnostics.</p>}
           <ColorSliders label="Carpet Main" color={editorState.carpetColor} onChange={(color) => onCarpetColorChange(color)} flat />
           <ColorSliders label="Carpet Accent" color={editorState.carpetAccentColor} onChange={(color) => onCarpetColorChange(color, true)} flat />
+        </div>
+      )}
+
+      {showPetOptions && (
+        <div style={styles.section}>
+          <div style={styles.sectionLabel}>Pets</div>
+          <div className="pets-carousel" data-testid="pets-carousel" style={styles.furnitureGrid}>
+            {[...new Set([...getPetTypes(), ...activePetTypes])].sort((a, b) => a - b).map((petType) => {
+              const sprites = getPetSprites(petType);
+              const name = getPetName(petType);
+              const active = activePetTypes.includes(petType);
+              return (
+                <button
+                  key={petType}
+                  type="button"
+                  data-pet-type={petType}
+                  title={sprites ? name : `${name} unavailable`}
+                  aria-label={sprites ? name : `${name} unavailable; click to remove saved pet`}
+                  aria-pressed={active}
+                  disabled={!sprites && !active}
+                  style={styles.furnitureBtn(active)}
+                  onClick={() => onPetToggle(petType)}
+                >
+                  {sprites && <SpritePreview sprite={sprites.idleDown[0]} size={48} />}
+                  <span style={{ fontSize: '9px' }}>{name}</span>
+                  {!sprites && <span style={{ fontSize: '8px', color: TEXT_DIM }}>Unavailable</span>}
+                </button>
+              );
+            })}
+            {getPetCount() === 0 && (
+              <div style={{ fontSize: '10px', color: TEXT_DIM, padding: '4px' }}>
+                No valid pet sheets are loaded. Saved unavailable pets can still be removed; check asset diagnostics.
+              </div>
+            )}
+          </div>
+          <p style={{ fontSize: '10px', color: TEXT_DIM }}>Click a pet to add or remove it. Pets wander and follow nearby agents; click one to show a heart.</p>
         </div>
       )}
 
