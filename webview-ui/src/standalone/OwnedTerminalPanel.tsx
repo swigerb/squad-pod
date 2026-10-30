@@ -53,6 +53,8 @@ export function OwnedTerminalPanel({
   const container = useRef<HTMLDivElement>(null);
   const client = useRef<OwnedTerminalClient | undefined>(undefined);
   const selectedRef = useRef<RunId | undefined>(undefined);
+  const inputGeneration = useRef(0);
+  const pasteAction = useRef(0);
   const authRequest = useRef<AbortController | undefined>(undefined);
   const fitTerminal = useRef<(() => void) | undefined>(undefined);
   const terminalInstance = useRef<Terminal | null>(null);
@@ -63,11 +65,19 @@ export function OwnedTerminalPanel({
   });
   const keyboardViewport = useKeyboardViewport(mobile, onKeyboardViewport);
   function publishAccess(patch: Partial<MobileTerminalAccess>) {
-    accessRef.current = { ...accessRef.current, ...patch };
+    const previous = accessRef.current;
+    const next = { ...previous, ...patch };
+    const selectedState = (access: MobileTerminalAccess) =>
+      access.runs.find(run => run.runId === selectedRef.current)?.state;
+    if (previous.authenticated !== next.authenticated || previous.connected !== next.connected ||
+        previous.available !== next.available || previous.ready !== next.ready || previous.resync !== next.resync ||
+        selectedState(previous) !== selectedState(next)) inputGeneration.current++;
+    accessRef.current = next;
     onAccessChange?.(accessRef.current);
   }
   function selectRun(runId: RunId | undefined) {
     if (runId === selectedRef.current) return;
+    inputGeneration.current++;
     selectedRef.current = runId;
     setSelected(runId);
     setConfirmClose(false);
@@ -75,7 +85,10 @@ export function OwnedTerminalPanel({
     client.current?.select(runId);
   }
 
-  useEffect(() => () => authRequest.current?.abort(), []);
+  useEffect(() => () => {
+    pasteAction.current++;
+    authRequest.current?.abort();
+  }, []);
   useEffect(() => {
     if (!authenticated || !container.current) return;
     let active = true;
@@ -187,6 +200,7 @@ export function OwnedTerminalPanel({
         const missing = selectedRef.current !== undefined && !entries.some(run => run.runId === selectedRef.current);
         const next = !selectedRef.current || missing ? entries[0]?.runId : undefined;
         if (next || missing) {
+          inputGeneration.current++;
           selectedRef.current = next;
           setSelected(next);
           setConfirmClose(false);
@@ -230,6 +244,7 @@ export function OwnedTerminalPanel({
       screen.removeEventListener('touchend', onTouchEnd, { capture: true });
       screen.removeEventListener('touchcancel', onTouchCancel, { capture: true });
       observer.disconnect();
+      inputGeneration.current++;
       data.dispose(); resize.dispose(); current.dispose(); terminal.dispose();
       onLaunchHandler?.(null);
       client.current = undefined; fitTerminal.current = undefined; terminalInstance.current = null;
@@ -313,6 +328,8 @@ export function OwnedTerminalPanel({
     setClipboardNotice(clipboardFailure('copy').message);
   }
   async function pasteClipboard() {
+    const action = ++pasteAction.current;
+    const generation = inputGeneration.current;
     const targetClient = client.current;
     const targetRunId = selectedRef.current;
     if (!targetClient || !targetRunId || !isCurrentInputTarget(targetClient, targetRunId)) {
@@ -327,21 +344,28 @@ export function OwnedTerminalPanel({
     }
     try {
       const result = manualPasteResult(await navigator.clipboard.readText());
+      if (action !== pasteAction.current) return;
       if (result.type === 'paste') {
         if (utf8Bytes(result.text) > MAX_MANUAL_PASTE_BYTES) {
           setShowManualPaste(true);
           setClipboardNotice('Clipboard text exceeds 256 KiB. Paste a smaller chunk or enter a shorter command.');
           return;
         }
+        if (generation !== inputGeneration.current) {
+          retainPaste(result.text, 'Terminal changed or disconnected. Clipboard text was kept for review; nothing was sent.');
+          return;
+        }
         sendPaste(targetClient, targetRunId, result.text, 'Clipboard');
       } else setClipboardNotice(result.type === 'empty' ? 'Clipboard is empty.' : 'Paste cancelled.');
     } catch {
+      if (action !== pasteAction.current) return;
       setManualPaste('');
       setShowManualPaste(true);
       setClipboardNotice(clipboardFailure('paste').message);
     }
   }
   function sendManualPaste() {
+    pasteAction.current++;
     const result = manualPasteResult(manualPaste);
     if (result.type !== 'paste') {
       setClipboardNotice(result.type === 'empty' ? 'Enter text to paste.' : 'Paste cancelled.');
@@ -430,8 +454,12 @@ export function OwnedTerminalPanel({
         <div className="terminal-manual-paste-wrap">
           <label htmlFor="manual-terminal-paste">Paste text manually</label>
           <textarea id="manual-terminal-paste" className="terminal-manual-paste" value={manualPaste}
-            onChange={event => setManualPaste(event.target.value)}
+            onChange={event => {
+              pasteAction.current++;
+              setManualPaste(event.target.value);
+            }}
             onPaste={event => {
+              pasteAction.current++;
               if (utf8Bytes(event.clipboardData.getData('text')) > MAX_MANUAL_PASTE_BYTES) {
                 event.preventDefault();
                 setClipboardNotice('Paste text exceeds 256 KiB. Send it in smaller chunks.');

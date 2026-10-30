@@ -211,6 +211,79 @@ describe('owned terminal separate authority UI', () => {
       expect(host.textContent).toContain('kept for review; nothing was sent');
   });
 
+  it.each(['reconnect', 'run-round-trip', 'readiness-round-trip'] as const)(
+    'invalidates a pending clipboard read even after a %s restores the original target', async change => {
+      let finishRead!: (text: string) => void;
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+        readText: vi.fn(() => new Promise<string>(resolve => { finishRead = resolve; })),
+      } });
+      Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+      await act(async () => root.render(<OwnedTerminalPanel mobile />));
+      await authenticate();
+      const callbacks = mocks.connect.mock.calls[0][1];
+      await act(async () => {
+        callbacks.connected?.(true);
+        callbacks.runs([
+          { runId: fixtureRunId, pid: 7, state: 'running', exitCode: null },
+          { runId: runId('other-owned-run'), pid: 8, state: 'running', exitCode: null },
+        ], true, null);
+        callbacks.ready(true);
+      });
+      await act(async () => button('Paste').click());
+      if (change === 'run-round-trip') {
+        const onAccessChange = vi.fn();
+        await act(async () => root.render(<OwnedTerminalPanel mobile onAccessChange={onAccessChange}
+          selectedRunId={runId('other-owned-run')} />));
+        await act(async () => root.render(<OwnedTerminalPanel mobile onAccessChange={onAccessChange}
+          selectedRunId={fixtureRunId} />));
+        expect(mocks.client.select).toHaveBeenLastCalledWith(fixtureRunId);
+      } else {
+        await act(async () => {
+          if (change === 'reconnect') callbacks.connected?.(false);
+          callbacks.ready(false);
+          if (change === 'reconnect') callbacks.connected?.(true);
+          callbacks.ready(true);
+        });
+      }
+      expect(button('Paste').disabled).toBe(false);
+      await act(async () => finishRead('stale input after healed state'));
+      expect(mocks.client.input).not.toHaveBeenCalled();
+      expect(host.querySelector<HTMLTextAreaElement>('#manual-terminal-paste')?.value)
+        .toBe('stale input after healed state');
+      expect(host.textContent).toContain('kept for review; nothing was sent');
+    },
+  );
+
+  it.each(['older-first', 'newer-first'] as const)(
+    'lets a newer explicit paste supersede an older pending clipboard read (%s)', async order => {
+    const finishReads: Array<(text: string) => void> = [];
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      readText: vi.fn(() => new Promise<string>(resolve => { finishReads.push(resolve); })),
+    } });
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    await act(async () => root.render(<OwnedTerminalPanel mobile />));
+    await authenticate();
+    const callbacks = mocks.connect.mock.calls[0][1];
+    await act(async () => {
+      callbacks.connected?.(true);
+      callbacks.runs([{ runId: fixtureRunId, pid: 7, state: 'running', exitCode: null }], true, null);
+      callbacks.ready(true);
+    });
+    await act(async () => button('Paste').click());
+    await act(async () => button('Paste').click());
+    if (order === 'older-first') {
+      await act(async () => finishReads[0]('superseded paste'));
+      expect(mocks.client.input).not.toHaveBeenCalled();
+    }
+    mocks.client.input.mockReturnValueOnce({ status: 'not-sent' });
+    await act(async () => finishReads[1]('newest deliberate paste'));
+    expect(mocks.client.input).toHaveBeenCalledExactlyOnceWith('newest deliberate paste');
+    if (order === 'newer-first') await act(async () => finishReads[0]('superseded paste'));
+    expect(mocks.client.input).toHaveBeenCalledTimes(1);
+    expect(host.querySelector<HTMLTextAreaElement>('#manual-terminal-paste')?.value).toBe('newest deliberate paste');
+    expect(host.textContent).toContain('input was not sent');
+  });
+
   it('reports blocked and partial paste truthfully and preserves only the unsent remainder', async () => {
     const readText = vi.fn(async () => 'clipboard command');
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
