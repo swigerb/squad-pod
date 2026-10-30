@@ -457,6 +457,7 @@ describe('read-only Copilot live activity with synthetic homes', () => {
       expect.objectContaining({ event: expect.objectContaining({ summary: 'Live member finished', agentId: 'ada' }) }),
     ]);
     fs.appendFileSync(file, done('resumed'));
+    fs.utimesSync(file, stamp, stamp);
     reader.poll();
     expect(messages.filter(m => m.type === 'agentContextUsage').at(-1)).toMatchObject({ contextTokens: 800, maxContextTokens: 1000 });
     const activations = lifecycle.mock.calls.filter(call => call[1]).length;

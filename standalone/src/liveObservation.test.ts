@@ -29,7 +29,7 @@ const done = (id = 'read') => line('tool.execution_complete', { toolCallId: id, 
   toolTelemetry: { metrics: { context_current_tokens: 800, context_token_limit: 1000 } } });
 
 function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'squad live observer '));
+  const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'squad live observer ')));
   roots.push(root);
   const project = path.join(root, 'selected project');
   const home = path.join(root, 'synthetic home');
