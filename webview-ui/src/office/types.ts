@@ -15,6 +15,7 @@ export const TileType = {
   FLOOR_7: 7,
   VOID: 8,
   FLOOR_9: 9,
+  FLOOR_10: 10,
 } as const;
 export type TileType = (typeof TileType)[keyof typeof TileType];
 

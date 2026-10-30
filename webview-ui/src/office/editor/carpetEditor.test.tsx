@@ -107,6 +107,34 @@ describe('carpets through real canvas/editor transactions', () => {
     mouse('mouseup', 4, 1, button);
   }
 
+  it('selects Floor 10 through the palette, paints, eyedrops, undoes/redoes and stages a save', () => {
+    act(() => actions.handleToolChange(EditTool.TILE_PAINT));
+    const buttons = [...host.querySelectorAll<HTMLButtonElement>('button[title^="Floor "]')];
+    expect(buttons.map((button) => button.title.match(/^Floor (\d+)/)?.[1]))
+      .toEqual(['1', '2', '3', '4', '5', '6', '7', '9', '10']);
+    act(() => buttons.find((button) => button.title === 'Floor 10')!.click());
+    expect(state.tileType).toBe(TileType.FLOOR_10);
+    stroke();
+    const painted = structuredClone(office.layout);
+    expect(painted.tiles.slice(8, 11)).toEqual([10, 10, 10]);
+    expect(painted.tiles[1]).toBe(TileType.VOID);
+    expect(painted.furniture).toEqual(before.furniture);
+    act(() => actions.handleTileTypeChange(TileType.FLOOR_1));
+    act(() => actions.handleToolChange(EditTool.EYEDROPPER));
+    mouse('mousedown', 4, 1);
+    mouse('mouseup', 4, 1);
+    expect(state.tileType).toBe(TileType.FLOOR_10);
+    expect(state.tool).toBe(EditTool.TILE_PAINT);
+    expect(state.floorColor).toEqual(painted.tileColors?.['4,1']);
+    act(() => actions.handleUndo());
+    expect(office.layout).toEqual(before);
+    act(() => actions.handleRedo());
+    expect(office.layout).toEqual(painted);
+    expect(deserializeLayout(serializeLayout(painted))).toEqual(painted);
+    act(() => actions.handleSave());
+    expect(client.send).toHaveBeenCalledWith(expect.objectContaining({ type: 'saveLayout', layout: painted }));
+  });
+
   it.each([0, 1, 2])('paints style %i as one undo/redo step without changing floors, furniture or pathfinding', (variant) => {
     const walkable = structuredClone(office.walkableTiles);
     act(() => actions.handleCarpetVariantChange(variant));
