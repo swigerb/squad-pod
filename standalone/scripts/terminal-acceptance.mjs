@@ -24,9 +24,11 @@ const report = { platform: `${process.platform}-${process.arch}`, node: process.
   mode: 'installed synthetic native PTY (never Copilot/Squad)', checks: [], screenshots: [], failures: [] };
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 function check(name) { report.checks.push(name); console.log(`PASS ${name}`); }
-function npm(args, cwd = packageRoot) {
+function npm(args, cwd = packageRoot, env = {}) {
   const npmPath = process.env.npm_execpath ?? path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
-  const result = spawnSync(process.execPath, [npmPath, ...args], { cwd, encoding: 'utf8', windowsHide: true });
+  const result = spawnSync(process.execPath, [npmPath, ...args], {
+    cwd, env: { ...process.env, ...env }, encoding: 'utf8', windowsHide: true,
+  });
   if (result.status !== 0) throw new Error(`npm ${args[0]} failed: ${result.stderr || result.stdout}`);
   return result.stdout;
 }
@@ -64,11 +66,24 @@ try {
   const installed = path.join(install, 'node_modules', 'squad-pod-observer');
   const require = createRequire(path.join(installed, 'package.json'));
   const nativeRoot = path.dirname(require.resolve('node-pty/package.json'));
+  let sourceBuilt = false;
   if (process.platform === 'linux') {
     assert.throws(() => require('node-pty'), /native module|pty\.node/i);
     report.platformLimitations = ['Official node-pty1.1.0 has no Linux prebuild: --ignore-scripts requires a subsequent native source build.'];
     check('Linux ignore-scripts limitation is explicit, not mistaken for native support');
     npm(['rebuild', 'node-pty', '--prefix', install, '--no-audit', '--no-fund'], install);
+    sourceBuilt = true;
+  } else if (process.platform === 'darwin') {
+    const helper = path.join(nativeRoot, 'prebuilds', `darwin-${process.arch}`, 'spawn-helper');
+    const mode = (await fs.stat(helper)).mode & 0o777;
+    report.ignoreScriptsHelperMode = mode.toString(8);
+    assert.equal(mode & 0o111, 0, 'Revisit the documented upstream helper permission limitation if packaging changes');
+    await assert.rejects(fs.access(helper, constants.X_OK), { code: 'EACCES' });
+    report.platformLimitations = ['Official node-pty1.1.0 macOS prebuild spawn-helper is mode0644 and cannot execute, including after --ignore-scripts. A native source rebuild is required.'];
+    check('macOS ignore-scripts helper permission failure is explicit before native source rebuild');
+    npm(['rebuild', 'node-pty', '--prefix', install, '--no-audit', '--no-fund'], install,
+      { npm_config_build_from_source: 'true' });
+    sourceBuilt = true;
   }
   const native = require('node-pty');
   assert.equal(typeof native.spawn, 'function');
@@ -76,7 +91,7 @@ try {
     licenseSha256: hash(await fs.readFile(path.join(nativeRoot, 'LICENSE'))) };
   assert.deepEqual(await fs.readFile(path.join(nativeRoot, 'LICENSE')),
     await fs.readFile(path.join(packageRoot, 'node_modules', 'node-pty', 'LICENSE')));
-  const nativeFolder = path.join(nativeRoot, process.platform === 'linux'
+  const nativeFolder = path.join(nativeRoot, sourceBuilt
     ? 'build/Release' : `prebuilds/${process.platform}-${process.arch}`);
   const nativeFiles = await fs.readdir(nativeFolder, { recursive: true, withFileTypes: true });
   for (const entry of nativeFiles.filter(entry => entry.isFile() && entry.name === 'spawn-helper')) {
@@ -224,7 +239,12 @@ try {
       await tab.setViewportSize({ width: 390, height: 844 });
       await until(() => received.slice(narrowStart).some(frame => frame.type === 'output' && frame.data.includes('"resized":true')),
         'narrow browser resize reaches native PTY');
-      await tab.screenshot({ path: path.join(artifacts, 'terminal-narrow.png'), fullPage: true });
+      await tab.locator('.xterm-helper-textarea').focus();
+      await tab.keyboard.type('NARROW');
+      await until(() => inputs().includes('NARROW'), 'narrow browser input applied');
+      const terminalPanel = tab.locator('.owned-terminal');
+      assert.ok((await terminalPanel.boundingBox()).width <= 390);
+      await terminalPanel.screenshot({ path: path.join(artifacts, 'terminal-narrow.png') });
       report.screenshots.push('terminal-narrow.png');
     }
     await tab.reload();

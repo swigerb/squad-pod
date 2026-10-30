@@ -120,14 +120,20 @@ fixture through the same host/transport/PTY paths; it is an explicit synthetic
 acceptance mode, never a way for browser clients to provide executable arguments.
 
 The native dependency is official `node-pty@1.1.0`, pinned separately from the VSIX.
-Its actual tarball contains Windows x64/arm64 and macOS x64/arm64 native prebuilds,
-including the Windows ConPTY DLL/OpenConsole helper; Linux needs its source build
-and a working C++/Python/node-gyp toolchain; Linux `--ignore-scripts` installations
-have no usable PTY until the native source build is run. Windows/macOS prebuilds
-are exercised after `--ignore-scripts` installation, including executable helper
-permissions on POSIX. Windows x64 installed native acceptance
-is exercised locally. The CI matrix exercises Ubuntu, Windows and macOS native
-tests/installed fixtures; an unrun or failing platform is not an acceptance claim.
+Its actual tarball contains Windows x64/arm64 prebuilds, including the ConPTY
+DLL/OpenConsole helper, and macOS x64/arm64 prebuilds. However, **both macOS
+spawn-helper files have mode0644 in the official tarball and cannot execute**.
+macOS therefore requires an explicit source rebuild, not a runtime chmod:
+`npm_config_build_from_source=true npm rebuild node-pty` from the standalone
+installation. This requires Xcode command-line tools and Python/node-gyp.
+Linux has no prebuild and needs its source build with a working C++/Python/node-gyp
+toolchain. Neither platform has a usable PTY immediately after `--ignore-scripts`.
+Installed acceptance records these actual failures before rebuilding, then checks
+the source-built helper executable permissions and exercises real native PTYs.
+Windows x64 installed prebuild acceptance is exercised locally with scripts disabled.
+CI retains full Ubuntu/Windows product gates and a dedicated macOS standalone
+types/native/installed-fixture job, not full macOS extension acceptance.
+An unrun or failing platform is not an acceptance claim.
 See [standalone-only terminal notices](TERMINAL_NOTICES.md). No native/server payload
 or terminal license directory is included in the VSIX.
 

@@ -63,7 +63,10 @@ process.on('message', (message: { type: string; file?: string; args?: string[]; 
       send({ type: 'ack', id: message.id });
     } else throw new Error('Invalid native broker state.');
   } catch (error) {
-    send({ type: 'error', id: message.id, message: String(error) });
+    const reason = process.platform === 'darwin' && String(error).includes('posix_spawnp failed')
+      ? `${String(error)} Official node-pty1.1.0 macOS prebuild helpers lack execute permission. Rebuild node-pty from source with npm_config_build_from_source=true; see standalone/README.md.`
+      : String(error);
+    send({ type: 'error', id: message.id, message: reason });
   }
 });
 process.once('disconnect', () => {

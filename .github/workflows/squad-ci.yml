@@ -88,6 +88,11 @@ jobs:
       - name: Install dependencies
         run: npm run install:all && npm ci --prefix standalone
 
+      - name: Rebuild native dependency with executable macOS helper
+        run: npm rebuild node-pty --prefix standalone
+        env:
+          npm_config_build_from_source: 'true'
+
       - name: Standalone types and native boundary tests
         run: npm run check --prefix standalone && npm test --prefix standalone
 

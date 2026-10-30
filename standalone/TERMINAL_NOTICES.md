@@ -15,8 +15,10 @@ webview lockfiles. The native package tarball was inspected, not inferred from
 version metadata: SHA-512
 `20JqtutY6JPXTUnL0ij1uad7Qe1baT46lyolh2sSENDd4sTzKZ4nmAFkeAARDKwmlLjPx6XKRlwRUxwjOy+lUg==`.
 It includes Windows x64/arm64 `conpty.node`, console-list helper, ConPTY DLL and
-OpenConsole.exe, and macOS x64/arm64 `pty.node`/spawn-helper. It includes Linux
-native sources rather than Linux prebuilds. The installed acceptance report
+OpenConsole.exe, and macOS x64/arm64 `pty.node`/spawn-helper. Both macOS helpers
+are mode0644 in that canonical tarball, so they cannot execute without a source
+rebuild; this distribution does not silently chmod dependency files.
+It includes Linux native sources rather than Linux prebuilds. The installed acceptance report
 records the loaded native version/license hash and actual packaged bytes.
 
 The smaller `@lydell/node-pty@1.2.0-beta.15` distribution and its Windows x64
