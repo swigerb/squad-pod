@@ -9,7 +9,7 @@ export interface MobileShellState {
   view: MobileView;
   focused: MobileCard | null;
   selectedRunId: RunId | undefined;
-  pendingLaunch: readonly RunId[] | null;
+  pendingLaunch: { requestId: string; acknowledgedRunId: RunId | null } | null;
 }
 export interface MobileTerminalAccess {
   authenticated: boolean;
@@ -23,13 +23,15 @@ export type MobileShellEvent =
   | { type: 'card'; card: MobileCard }
   | { type: 'toggle' }
   | { type: 'showTerminal' }
-  | { type: 'launch' }
+  | { type: 'launch'; requestId: string }
+  // The adapter must supply a result from this viewer's correlated command,
+  // not synthesize success from the globally broadcast run inventory.
+  | { type: 'launchResult'; requestId: string; result: { ok: true; runId: RunId } | { ok: false } }
   | { type: 'runsChanged' }
-  | { type: 'launchFailed' }
   | { type: 'disconnect' };
 export interface MobileShellStep {
   state: MobileShellState;
-  effects: ({ type: 'launch' } | { type: 'select'; runId: RunId | undefined })[];
+  effects: ({ type: 'launch'; requestId: string } | { type: 'select'; runId: RunId | undefined })[];
 }
 export const initialMobileShellState: MobileShellState = {
   view: 'office', focused: null, selectedRunId: undefined, pendingLaunch: null,
@@ -59,27 +61,35 @@ export function reduceMobileShell(
   };
   const known = (card: MobileCard | null) =>
     card?.kind === 'owned' && access.runs.some(run => run.runId === card.runId) ? card.runId : undefined;
+  const acknowledge = (pending: MobileShellState['pendingLaunch']): MobileShellStep => {
+    if (!canLaunch) return { state: { ...state, pendingLaunch: null }, effects };
+    const runId = pending?.acknowledgedRunId;
+    if (!runId || !access.runs.some(run => run.runId === runId)) {
+      return { state: { ...state, pendingLaunch: pending }, effects };
+    }
+    return {
+      state: { view: 'terminal', focused: { kind: 'owned', runId },
+        selectedRunId: select(runId), pendingLaunch: null },
+      effects,
+    };
+  };
   switch (event.type) {
     case 'launch':
       if (!canLaunch || state.pendingLaunch) return { state, effects };
       return {
-        state: { ...state, pendingLaunch: access.runs.map(run => run.runId) },
-        effects: [{ type: 'launch' }],
+        state: { ...state, pendingLaunch: { requestId: event.requestId, acknowledgedRunId: null } },
+        effects: [{ type: 'launch', requestId: event.requestId }],
       };
+    case 'launchResult':
+      if (event.requestId !== state.pendingLaunch?.requestId) return { state, effects };
+      return acknowledge(event.result.ok
+        ? { requestId: event.requestId, acknowledgedRunId: event.result.runId } : null);
     case 'runsChanged': {
-      const launched = state.pendingLaunch && access.runs.find(run => !state.pendingLaunch?.includes(run.runId));
+      if (state.pendingLaunch?.acknowledgedRunId) return acknowledge(state.pendingLaunch);
       const selected = access.runs.some(run => run.runId === state.selectedRunId) ? state.selectedRunId : undefined;
-      if (launched && canLaunch) {
-        return {
-          state: { view: 'terminal', focused: { kind: 'owned', runId: launched.runId },
-            selectedRunId: select(launched.runId), pendingLaunch: null },
-          effects,
-        };
-      }
       return { state: { ...state, selectedRunId: select(selected),
         pendingLaunch: canLaunch ? state.pendingLaunch : null }, effects };
     }
-    case 'launchFailed':
     case 'disconnect':
       return { state: { ...state, pendingLaunch: null }, effects };
     case 'card': {

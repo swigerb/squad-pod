@@ -12,20 +12,24 @@ const access: MobileTerminalAccess = {
   runs: [{ runId: first, pid: 1, state: 'running', exitCode: null }],
 };
 const card = { kind: 'owned', runId: first } as const;
+const launch = { type: 'launch', requestId: 'viewer-a-request-1' } as const;
+const launchedAccess: MobileTerminalAccess = {
+  ...access, runs: [...access.runs, { runId: second, pid: 2, state: 'running', exitCode: null }],
+};
 describe('mobile navigation without process lifecycle side effects', () => {
-  it('starts on office even with live runs, and opens only a new run after deliberate launch', () => {
+  it('starts on office with live runs and opens only an explicitly acknowledged launch', () => {
     const initial = reduceMobileShell(initialMobileShellState, { type: 'runsChanged' }, access);
     expect(initial.state).toEqual(initialMobileShellState);
     expect(initial.effects).toEqual([]);
-    const requested = reduceMobileShell(initial.state, { type: 'launch' }, access);
-    expect(requested.effects).toEqual([{ type: 'launch' }]);
+    const requested = reduceMobileShell(initial.state, launch, access);
+    expect(requested.effects).toEqual([launch]);
     expect(requested.state.view).toBe('office');
-    expect(reduceMobileShell(requested.state, { type: 'launch' }, access).effects).toEqual([]);
+    expect(reduceMobileShell(requested.state, launch, access).effects).toEqual([]);
     const unchanged = reduceMobileShell(requested.state, { type: 'runsChanged' }, access);
-    expect(unchanged.state.pendingLaunch).toEqual([first]);
-    const opened = reduceMobileShell(unchanged.state, { type: 'runsChanged' }, {
-      ...access, runs: [...access.runs, { runId: second, pid: 2, state: 'running', exitCode: null }],
-    });
+    expect(unchanged.state.pendingLaunch).toEqual({ requestId: launch.requestId, acknowledgedRunId: null });
+    const opened = reduceMobileShell(unchanged.state, {
+      type: 'launchResult', requestId: launch.requestId, result: { ok: true, runId: second },
+    }, launchedAccess);
     expect(opened.state).toEqual({
       view: 'terminal', focused: { kind: 'owned', runId: second }, selectedRunId: second, pendingLaunch: null,
     });
@@ -57,18 +61,21 @@ describe('mobile navigation without process lifecycle side effects', () => {
     const selected = { ...initialMobileShellState, selectedRunId: first };
     const missing = reduceMobileShell(selected, { type: 'runsChanged' }, { ...access, runs: [] });
     expect(missing.effects).toEqual([{ type: 'select', runId: undefined }]);
-    const pending = reduceMobileShell(initialMobileShellState, { type: 'launch' }, access).state;
-    for (const type of ['disconnect', 'launchFailed'] as const) {
-      const cancelled = reduceMobileShell(pending, { type }, access);
+    const pending = reduceMobileShell(initialMobileShellState, launch, access).state;
+    for (const event of [
+      { type: 'disconnect' } as const,
+      { type: 'launchResult', requestId: launch.requestId, result: { ok: false } } as const,
+    ]) {
+      const cancelled = reduceMobileShell(pending, event, access);
       expect(cancelled.state.pendingLaunch).toBeNull();
       expect(cancelled.effects).toEqual([]);
     }
   });
   it.each(['authenticated', 'connected', 'available'] as const)('blocks launch without %s', key => {
-    expect(reduceMobileShell(initialMobileShellState, { type: 'launch' }, { ...access, [key]: false }).effects).toEqual([]);
+    expect(reduceMobileShell(initialMobileShellState, launch, { ...access, [key]: false }).effects).toEqual([]);
   });
   it('blocks launch and input during resync; disconnect/revocation retain process identity', () => {
-    expect(reduceMobileShell(initialMobileShellState, { type: 'launch' }, { ...access, resync: true }).effects).toEqual([]);
+    expect(reduceMobileShell(initialMobileShellState, launch, { ...access, resync: true }).effects).toEqual([]);
     const state = { ...initialMobileShellState, selectedRunId: first, view: 'terminal' as const };
     expect(terminalInputBlockReason(access, first)).toBeNull();
     expect(terminalInputBlockReason({ ...access, connected: false }, first)).toContain('disconnected');
@@ -91,12 +98,65 @@ describe('mobile navigation without process lifecycle side effects', () => {
     });
   });
   it('cancels a launch intent when authority disappears before the new run announcement', () => {
-    const pending = reduceMobileShell(initialMobileShellState, { type: 'launch' }, access).state;
+    const pending = reduceMobileShell(initialMobileShellState, launch, access).state;
     const revoked = reduceMobileShell(pending, { type: 'runsChanged' }, {
       ...access, authenticated: false, runs: [...access.runs, { runId: second, pid: 2, state: 'running', exitCode: null }],
     });
     expect(revoked.state.view).toBe('office');
     expect(revoked.state.pendingLaunch).toBeNull();
     expect(revoked.effects).toEqual([]);
+  });
+  it('ignores viewer B inventory and acknowledgement before viewer A receives its own launch result', () => {
+    const pendingA = reduceMobileShell(initialMobileShellState, launch, access).state;
+    const requestB = { type: 'launch', requestId: 'viewer-b-request-1' } as const;
+    const pendingB = reduceMobileShell(initialMobileShellState, requestB, access).state;
+    const broadcastA = reduceMobileShell(pendingA, { type: 'runsChanged' }, launchedAccess);
+    expect(broadcastA).toEqual({ state: pendingA, effects: [] });
+    const bResult = { type: 'launchResult', requestId: requestB.requestId, result: { ok: true, runId: second } } as const;
+    expect(reduceMobileShell(broadcastA.state, bResult, launchedAccess)).toEqual({ state: pendingA, effects: [] });
+    expect(reduceMobileShell(pendingB, bResult, launchedAccess).state.selectedRunId).toBe(second);
+    const third = runId('owned-test-3');
+    const allRuns: MobileTerminalAccess = {
+      ...launchedAccess, runs: [...launchedAccess.runs, { runId: third, pid: 3, state: 'running', exitCode: null }],
+    };
+    const nextBroadcast = reduceMobileShell(broadcastA.state, { type: 'runsChanged' }, allRuns);
+    expect(nextBroadcast).toEqual({ state: pendingA, effects: [] });
+    const ownResult = reduceMobileShell(nextBroadcast.state, {
+      type: 'launchResult', requestId: launch.requestId, result: { ok: true, runId: third },
+    }, allRuns);
+    expect(ownResult.state.selectedRunId).toBe(third);
+    expect(ownResult.state.view).toBe('terminal');
+    expect(ownResult.effects).toEqual([{ type: 'select', runId: third }]);
+  });
+  it('waits for the exact acknowledged run if success precedes its inventory entry', () => {
+    const pending = reduceMobileShell(initialMobileShellState, launch, access).state;
+    const acknowledged = reduceMobileShell(pending, {
+      type: 'launchResult', requestId: launch.requestId, result: { ok: true, runId: second },
+    }, access);
+    expect(acknowledged.state.view).toBe('office');
+    expect(acknowledged.state.pendingLaunch?.acknowledgedRunId).toBe(second);
+    expect(acknowledged.effects).toEqual([]);
+    const opened = reduceMobileShell(acknowledged.state, { type: 'runsChanged' }, launchedAccess);
+    expect(opened.state.selectedRunId).toBe(second);
+    expect(opened.state.view).toBe('terminal');
+    expect(opened.effects).toEqual([{ type: 'select', runId: second }]);
+  });
+  it('failed launch cannot select an unrelated run, and stale results cannot complete a later intent', () => {
+    const pending = reduceMobileShell(initialMobileShellState, launch, access).state;
+    const failed = reduceMobileShell(pending, {
+      type: 'launchResult', requestId: launch.requestId, result: { ok: false },
+    }, launchedAccess);
+    expect(failed).toEqual({ state: initialMobileShellState, effects: [] });
+    expect(reduceMobileShell(failed.state, { type: 'runsChanged' }, launchedAccess)).toEqual(failed);
+    const retry = reduceMobileShell(failed.state, { type: 'launch', requestId: 'viewer-a-request-2' }, launchedAccess);
+    for (const result of [{ ok: true, runId: second }, { ok: false }] as const) {
+      expect(reduceMobileShell(retry.state, {
+        type: 'launchResult', requestId: launch.requestId, result,
+      }, launchedAccess)).toEqual({ state: retry.state, effects: [] });
+    }
+    const disconnected = reduceMobileShell(pending, { type: 'disconnect' }, access);
+    expect(reduceMobileShell(disconnected.state, {
+      type: 'launchResult', requestId: launch.requestId, result: { ok: true, runId: second },
+    }, launchedAccess)).toEqual(disconnected);
   });
 });
