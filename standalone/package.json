@@ -1,0 +1,28 @@
+{
+  "name": "squad-pod-observer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local read-only Squad Pod office (not published)",
+  "bin": { "squad-pod-observer": "dist/cli.mjs" },
+  "files": ["dist", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "engines": { "node": ">=22.13.0" },
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "acceptance": "node scripts/acceptance.mjs"
+  },
+  "dependencies": {
+    "pngjs": "^7.0.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@types/pngjs": "^6.0.5",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  }
+}

@@ -94,6 +94,7 @@ export function useExtensionMessages(
   onLayoutLoaded?: (layout: OfficeLayout, source: 'external' | 'import', revision: string | null, workspaceRoot?: string) => void,
   onLayoutSaved?: (layout: OfficeLayout, revision: string | null) => void,
   onLayoutError?: (error: string, source?: 'watcher') => void,
+  readOnly = false,
 ): ExtensionMessageState {
   const client = useHostClient();
   const [observedTasks, setObservedTasks] = useState<ObservedTaskSnapshot | null>(null);
@@ -171,7 +172,7 @@ export function useExtensionMessages(
           }
         }
         const seats = officeState.getSeatAssignments();
-        if (snapshot.some((a) => (a.seatId ?? undefined) !== seats[a.id])) {
+        if (!readOnly && snapshot.some((a) => (a.seatId ?? undefined) !== seats[a.id])) {
           client.send({ type: 'saveAgentSeats', seats });
         }
         const ids = snapshot.map((a) => a.id);
@@ -578,11 +579,11 @@ export function useExtensionMessages(
     };
 
     const unsubscribe = connectOffice(client, handleMessage);
-    client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
+    if (!readOnly) client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
 
     return unsubscribe;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError]);
+  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly]);
 
   return {
     observedTasks,

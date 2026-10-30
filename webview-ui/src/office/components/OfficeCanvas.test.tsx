@@ -7,7 +7,7 @@ import { OfficeState } from '../engine/officeState.js';
 import { EditorState } from '../editor/editorState.js';
 import { useEditorActions } from '../../hooks/useEditorActions.js';
 import { useEditorKeyboard } from '../../hooks/useEditorKeyboard.js';
-import { TileType } from '../types.js';
+import { Direction, TileType } from '../types.js';
 import { HostClientProvider } from '../../HostClientContext.js';
 import { createHostClientFixture } from '../../__tests__/hostClientFixture.js';
 import type { ReactNode } from 'react';
@@ -25,6 +25,35 @@ const client = createHostClientFixture();
 function withClient(children: ReactNode) {
   return <HostClientProvider client={client}>{children}</HostClientProvider>;
 }
+
+it.each([false, true])('enforces readOnly=%s before a selected-agent seat gesture mutates office state', readOnly => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  vi.mocked(client.send).mockClear();
+  const office = new OfficeState({ version: 2, cols: 12, rows: 10, tiles: Array(120).fill(1), furniture: [] });
+  office.seats.push(
+    { id: 'seat-1', col: 1, row: 1, direction: Direction.DOWN },
+    { id: 'seat-2', col: 8, row: 7, direction: Direction.DOWN },
+  );
+  office.addAgent('test-agent-1', 'TestBot', 'Developer', 0, 0, 'seat-1');
+  office.selectedAgentId = 'test-agent-1';
+  const before = office.getSeatAssignments();
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  try {
+    act(() => root.render(withClient(<OfficeCanvas readOnly={readOnly} officeState={office} editorState={new EditorState()}
+      isEditMode={false} editorTick={0} zoom={1} panRef={{ current: { x: 0, y: 0 } }} />)));
+    act(() => host.querySelector('canvas')!.dispatchEvent(new MouseEvent('mousedown', {
+      bubbles: true, button: 0, clientX: 8.5 * TILE_SIZE, clientY: 7.5 * TILE_SIZE,
+    })));
+    if (readOnly) {
+      expect(office.getSeatAssignments()).toEqual(before);
+      expect(client.send).not.toHaveBeenCalled();
+    } else {
+      expect(office.getSeatAssignments()['test-agent-1']).toBe('seat-2');
+      expect(client.send).toHaveBeenCalledWith({ type: 'saveAgentSeats', seats: office.getSeatAssignments() });
+    }
+  } finally { act(() => root.unmount()); vi.restoreAllMocks(); }
+});
 
 it.each([
   ['missing', undefined],

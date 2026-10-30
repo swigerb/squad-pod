@@ -35,9 +35,11 @@ function getOfficeState(): OfficeState {
 export default function App({
   client = defaultHostClient,
   hostError = defaultHostError,
+  readOnly = false,
 }: {
   client?: HostClient | null;
   hostError?: string | null;
+  readOnly?: boolean;
 } = {}) {
   if (!client) {
     return (
@@ -51,12 +53,12 @@ export default function App({
   }
   return (
     <HostClientProvider client={client}>
-      <ConnectedApp />
+      <ConnectedApp readOnly={readOnly} />
     </HostClientProvider>
   );
 }
 
-function ConnectedApp() {
+function ConnectedApp({ readOnly }: { readOnly: boolean }) {
   const client = useHostClient();
   const [recovery] = useState(() => {
     try {
@@ -73,17 +75,18 @@ function ConnectedApp() {
       </div>
     );
   }
-  return <ConnectedOffice recoveryState={recovery.value} />;
+  return <ConnectedOffice recoveryState={recovery.value} readOnly={readOnly} />;
 }
 
-function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
+function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; readOnly: boolean }) {
   const client = useHostClient();
-  const editor = useEditorActions(getOfficeState, editorState, recoveryState);
+  const editor = useEditorActions(getOfficeState, editorState, recoveryState, readOnly);
   const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
     editor.layoutError,
+    readOnly,
   );
   const isDebugMode = settings.debugEnabled;
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
@@ -107,7 +110,7 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
     editor.handleUndo,
     editor.handleRedo,
     () => editor.handleEditorSelectionChange(null),
-    editor.handleToggleEditMode
+    readOnly ? () => {} : editor.handleToggleEditMode
   );
 
   const handleDeskClick = useCallback((agentId: string, screenX: number, screenY: number) => {
@@ -228,6 +231,7 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
       <style>{`@keyframes pixel-agents-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} } .pixel-agents-pulse{animation:pixel-agents-pulse ${PULSE_ANIMATION_DURATION_SEC}s ease-in-out infinite}`}</style>
 
       <OfficeCanvas
+        readOnly={readOnly}
         isDebugMode={isDebugMode}
         officeState={getOfficeState()}
         isEditMode={editor.isEditMode}
@@ -317,10 +321,16 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
       <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef} onAgentClick={handleDeskClick} />
 
       <MissingSquad status={sourceStatus} />
+      {readOnly && sourceStatus?.teamFound && sourceStatus.error && (
+        <p role="alert" style={{ position: 'absolute', top: 0, right: 12, maxWidth: '70%', maxHeight: '30%', overflow: 'auto', zIndex: 45, padding: 12, background: 'var(--vscode-editor-background)', whiteSpace: 'pre-wrap' }}>
+          {sourceStatus.error}
+        </p>
+      )}
       <LayoutConflict protection={editor.protection} onResolve={editor.resolveLayout} />
       <AssetWarnings status={assetStatus} furniture={getOfficeState().layout.furniture} />
 
       <BottomToolbar
+        readOnly={readOnly}
         settings={settings}
         sourceStatus={sourceStatus}
         assetStatus={assetStatus}
@@ -338,6 +348,7 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
       />
 
       <TelemetryDrawer
+        readOnly={readOnly}
         observedTasks={observedTasks}
         liveSource={sourceStatus?.liveActivity}
         recordedUsage={recordedUsage}
@@ -367,7 +378,7 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
         detail={agentDetail && getOfficeState().characters.has(agentDetail.id) ? agentDetail : null}
         position={cardPosition}
         onClose={handleCloseCard}
-        onViewCharter={handleViewCharter}
+        onViewCharter={readOnly ? undefined : handleViewCharter}
       />
 
       <SquadInfoCard

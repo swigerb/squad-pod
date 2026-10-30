@@ -25,7 +25,7 @@ import { getPetSprites } from '../office/sprites/petSpriteData.js';
 import { clearColorizeCache } from '../office/colorize.js';
 import { getCatalogEntry, getToggledType } from '../office/layout/furnitureCatalog.js';
 
-export function useEditorActions(getOfficeState: () => OfficeState, editorState: EditorState, recoveryState: unknown) {
+export function useEditorActions(getOfficeState: () => OfficeState, editorState: EditorState, recoveryState: unknown, readOnly = false) {
   const client = useHostClient();
   const [isEditMode, setIsEditMode] = useState(false);
   const [editorTick, setEditorTick] = useState(0);
@@ -38,7 +38,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   const [protection] = useState(() => new LayoutDraft(recoveryState));
   const persist = useCallback(() => {
     // Do not replace malformed recovery data with a success-shaped empty state.
-    if (!protection.state.draft) return;
+    if (readOnly || !protection.state.draft) return;
     try {
       client.setState(protection.state);
     } catch (error) {
@@ -48,7 +48,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
         setEditorTick((t) => t + 1);
       }
     }
-  }, [client, protection]);
+  }, [client, protection, readOnly]);
 
   useLayoutEffect(() => {
     if (!initializedRef.current) return;
@@ -79,9 +79,10 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   }, [getOfficeState, protection]);
 
   const handleToggleEditMode = useCallback(() => {
+    if (readOnly) return;
     historyRef.current.endGesture(getOfficeState().getLayout());
     setIsEditMode((prev) => !prev);
-  }, [getOfficeState]);
+  }, [getOfficeState, readOnly]);
 
   const handleToolChange = useCallback((tool: EditTool) => {
     editorState.setTool(tool);
@@ -579,6 +580,11 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   }, []);
 
   const receiveLayout = useCallback((layout: OfficeLayout, source: 'external' | 'import', revision: string | null, workspaceRoot?: string) => {
+    if (readOnly) {
+      getOfficeState().rebuildFromLayout(layout, true);
+      setEditorTick((t) => t + 1);
+      return;
+    }
     if (protection.state.draft && initializedRef.current) protection.capture(getOfficeState().getLayout());
     const recovering = !initializedRef.current && protection.state.draft;
     const applied = protection.receive(layout, source, revision, workspaceRoot);
@@ -590,7 +596,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     initializedRef.current = protection.state.baseline !== null;
     persist();
     setEditorTick((t) => t + 1);
-  }, [getOfficeState, protection, persist, editorState]);
+  }, [getOfficeState, protection, persist, editorState, readOnly]);
 
   const acknowledgeSave = useCallback((layout: OfficeLayout, revision: string | null) => {
     protection.capture(getOfficeState().getLayout());

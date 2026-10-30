@@ -7,6 +7,7 @@ import type { ObservedTaskSnapshot } from '../../../src/observedTasks.js';
 import type { LiveSourceStatus } from '../../../src/types.js';
 
 interface TelemetryDrawerProps {
+  readOnly?: boolean;
   events: TelemetryEvent[];
   recordedUsage: RecordedUsageSnapshot | null;
   observedTasks?: ObservedTaskSnapshot | null;
@@ -39,7 +40,7 @@ function formatTimestamp(ts: number): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function TelemetryDrawer({ events, recordedUsage, observedTasks = null, liveSource, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
+export function TelemetryDrawer({ readOnly = false, events, recordedUsage, observedTasks = null, liveSource, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -125,7 +126,7 @@ export function TelemetryDrawer({ events, recordedUsage, observedTasks = null, l
         </div>
       </div>
 
-      {isOpen && <ObservedTasks snapshot={observedTasks} source={liveSource} />}
+      {isOpen && <ObservedTasks readOnly={readOnly} snapshot={observedTasks} source={liveSource} />}
 
       {/* Event list */}
       <div

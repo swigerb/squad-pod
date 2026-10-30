@@ -1,13 +1,16 @@
 import type { LiveSourceStatus } from '../../../src/types.js';
 import type { ObservedTaskSnapshot } from '../../../src/observedTasks.js';
 
-export function ObservedTasks({ snapshot, source }: {
+export function ObservedTasks({ snapshot, source, readOnly = false }: {
   snapshot: ObservedTaskSnapshot | null;
   source?: LiveSourceStatus;
+  readOnly?: boolean;
 }) {
-  const following = source?.state === 'following';
+  const following = !readOnly && source?.state === 'following';
   const tasks = following ? snapshot?.tasks ?? [] : [];
-  const unavailable = source?.state === 'off' || !source
+  const unavailable = readOnly
+    ? 'Live transient tasks are unavailable in the read-only observer. Private home/session logs are not read and cannot be enabled here.'
+    : source?.state === 'off' || !source
     ? 'Live Activity is off. Enable it in Settings and accept the confirmation.'
     : source.state === 'error'
       ? 'Live source unavailable. Task state cleared.'

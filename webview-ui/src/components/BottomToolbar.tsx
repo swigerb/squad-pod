@@ -5,6 +5,7 @@ import type { PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetStatusData } from './AssetStatus.js';
 
 interface BottomToolbarProps {
+  readOnly?: boolean;
   assetStatus?: AssetStatusData;
   isEditMode: boolean;
   onToggleEditMode: () => void;
@@ -21,7 +22,7 @@ interface BottomToolbarProps {
   onShowAreasChange: (enabled: boolean) => void;
 }
 
-export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode, settings, sourceStatus, onSoundChange, onShowAreasChange }: BottomToolbarProps) {
+export function BottomToolbar({ readOnly = false, assetStatus, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode, settings, sourceStatus, onSoundChange, onShowAreasChange }: BottomToolbarProps) {
   const client = useHostClient();
   const [showSettings, setShowSettings] = useState(false);
 
@@ -57,6 +58,8 @@ export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpe
         }}
       >
         <button
+          disabled={readOnly}
+          title={readOnly ? 'Squad information dialog is unavailable in the read-only observer.' : undefined}
           onClick={handleSquadInfo}
           style={{
             padding: '8px 16px',
@@ -108,6 +111,8 @@ export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpe
           )}
         </button>
         <button
+          disabled={readOnly}
+          title={readOnly ? 'Layout and appearance changes are disabled in the read-only observer.' : undefined}
           onClick={onToggleEditMode}
           style={{
             padding: '8px 16px',
@@ -123,6 +128,8 @@ export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpe
           {isEditMode ? 'Exit Layout Editor' : 'Edit Layout'}
         </button>
         <button
+          disabled={readOnly}
+          title={readOnly ? 'Only the explicitly selected project is observed. Directory management is unavailable.' : undefined}
           onClick={onOpenDirectories}
           style={{
             padding: '8px 12px',
@@ -138,6 +145,8 @@ export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpe
           Directories
         </button>
         <button
+          disabled={readOnly}
+          title={readOnly ? 'Settings, live logs and external assets are unavailable in the read-only observer.' : undefined}
           onClick={() => setShowSettings(true)}
           style={{
             padding: '8px 16px',

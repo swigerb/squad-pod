@@ -1,7 +1,9 @@
 # Standalone channel prerequisite
 
 This slice supplies host-neutral office/control and terminal contracts, not a
-standalone runtime. There is no listener, authentication implementation, PTY,
+standalone runtime by itself. The separate [local observer package](../standalone/README.md)
+now supplies an authenticated loopback listener and production browser adapter
+for **read-only office observation only**. There is still no PTY,
 process launcher or terminal UI. The VS Code adapter continues using the same
 typed office messages, API acquisition and recovery-state storage.
 
@@ -12,8 +14,10 @@ re-exports it for compatibility. `connectOffice` subscribes before sending
 `webviewReady`, so synchronous snapshots cannot race subscription. Office
 commands/events remain `WebviewMessage`/`OutboundMessage`; terminal messages are
 not added to that union. This is a trusted typed seam, **not** a JSON validator or
-an authenticated network boundary. A future network adapter must validate office
-payloads and authorize mutations before dispatch.
+an authenticated network boundary. The observer's isolated transport validates
+office commands before dispatch and rejects every mutation server-side; its
+browser adapter separately validates server events. This does not authorize or
+implement any terminal messages described below.
 
 ## Terminal wire contract
 
