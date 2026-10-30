@@ -95,6 +95,27 @@ describe('standalone opted-in live observation', () => {
     expect(() => decodeEvent(JSON.stringify({ version: 1, kind: 'office', message }))).toThrow('Invalid server office frame');
   });
 
+  it('forwards authoritative task identities without promoting transient calls into the roster', async () => {
+    const { project, home, session } = fixture();
+    const selected = JSON.stringify({ type: 'subagent.selected', agentId: 'fixture-instance',
+      data: { agentName: 'TestBot' } }) + '\n';
+    const started = JSON.stringify({ type: 'subagent.started', agentId: 'fixture-instance',
+      data: { toolCallId: 'child' } }) + '\n';
+    session('matching', marker + running()
+      + line('tool.execution_start', { toolCallId: 'child', parentToolCallId: 'run', toolName: 'task',
+        arguments: { name: 'child', agent_type: 'explore', description: 'Fixture child' } })
+      + selected + started);
+    const observer = createObserver(project, assets, 1000, { liveActivity: true, copilotHome: home });
+    try {
+      const messages = await observer.snapshot();
+      validate(messages);
+      expect(messages.find(m => m.type === 'existingAgents')?.agents.map(agent => agent.id)).toEqual(['ada']);
+      expect(messages.filter(m => m.type === 'observedTasks').at(-1)?.snapshot.tasks).toContainEqual(
+        expect.objectContaining({ toolCallId: 'child', parentToolCallId: 'run', agentId: null,
+          state: 'running', instanceId: 'fixture-instance', selectedAgentName: 'TestBot' }));
+    } finally { observer.dispose(); }
+  });
+
   it('does not discover or read home sessions without the explicit host opt-in', async () => {
     const { project, home, session } = fixture();
     session('matching');

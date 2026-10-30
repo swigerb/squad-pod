@@ -50,11 +50,15 @@ async function digest(folder) {
   }
   return hash(JSON.stringify(entries));
 }
-const line = (type, data) => JSON.stringify({ type, data }) + '\n';
+const line = (type, data, agentId) => JSON.stringify({ type, data, ...(agentId ? { agentId } : {}) }) + '\n';
 const marker = line('subagent.selected', { agentName: 'Squad' });
 const running = line('tool.execution_start', { toolCallId: 'fixture-run', toolName: 'task',
   arguments: { name: 'ada', agent_type: 'general-purpose', mode: 'background', description: 'Fixture live task', prompt: secret } })
   + line('subagent.started', { toolCallId: 'fixture-run' });
+const transient = line('tool.execution_start', { toolCallId: 'fixture-child', parentToolCallId: 'fixture-run',
+  toolName: 'task', arguments: { name: 'Fixture child', agent_type: 'explore', description: 'Fixture transient task' } })
+  + line('subagent.selected', { agentName: 'TestBot' }, 'fixture-instance')
+  + line('subagent.started', { toolCallId: 'fixture-child' }, 'fixture-instance');
 const tool = id => line('tool.execution_start', { toolCallId: id, parentToolCallId: 'fixture-run', toolName: 'view',
   arguments: { path: `/private/${secret}/fixture.ts` } });
 const done = id => line('tool.execution_complete', { toolCallId: id, output: secret,
@@ -185,11 +189,16 @@ try {
   for (const label of ['Edit Layout', 'Directories', 'Settings']) {
     assert.equal(await tab.getByRole('button', { name: label, exact: true }).isDisabled(), true);
   }
-  await fs.appendFile(file, running + tool('read-one'));
+  await fs.appendFile(file, running + transient + tool('read-one'));
   await until(() => tab.evaluate(() => document.querySelector('[data-agent-tools="ada"]')?.textContent.includes('Reading fixture.ts')), 'live tool rendered');
   await fs.appendFile(file, done('read-one') + tool('read-two'));
   await until(() => tab.evaluate(() => document.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow') === '80'), 'live context rendered');
   await until(() => tab.evaluate(() => document.querySelector('[data-observed-task="fixture-run"]')?.textContent.includes('running')), 'bounded transient task rendered');
+  await until(() => tab.evaluate(() => document.querySelector('[data-subagent-label]')?.textContent.includes('Fixture child')), 'temporary child character label');
+  assert.ok(browserMessages.some(message => message.type === 'observedTasks' && message.snapshot.tasks.some(task =>
+    task.toolCallId === 'fixture-child' && task.instanceId === 'fixture-instance' && task.selectedAgentName === 'TestBot')));
+  assert.ok(browserMessages.filter(message => message.type === 'existingAgents')
+    .every(message => message.agents.length === 1 && message.agents[0].id === 'ada'));
   assert.match(await tab.locator('[aria-label="Squad source status"]').innerText(), /not an owned-terminal correlation/);
   assert.ok(!JSON.stringify(browserMessages).includes(secret));
   assert.ok(!(await tab.locator('body').innerText()).includes(secret));
@@ -198,7 +207,7 @@ try {
     await tab.screenshot({ path: path.join(artifacts, 'standalone-live-tool-context.png') });
     report.screenshots.push('standalone-live-tool-context.png');
   }
-  check('installed Edge renders whitelisted member tool, 80% context and transient inventory in read-only office');
+  check('installed Edge renders whitelisted member tool, 80% context and authoritative transient inventory/temporary child without roster promotion');
   for (const message of [{ type: 'setLiveActivity', enabled: false }, { type: 'launch' },
     { type: 'saveLayout', layout: {} }]) channel.send(message);
   await until(() => channel.frames.filter(frame => frame.code === 'READ_ONLY').length === 3, 'read-only mutation rejections');
@@ -218,7 +227,8 @@ try {
   assert.ok(browserMessages.some(message => message.type === 'agentToolStart' && message.toolId === 'read-two'));
   assert.ok(!browserMessages.some(message => message.type === 'agentToolStart' && message.toolId === 'read-one'));
   check('reload reconstructs current tool/context without replaying completed tool history or launching a process');
-  await fs.appendFile(file, line('subagent.completed', { toolCallId: 'fixture-run' }));
+  await fs.appendFile(file, line('subagent.completed', { toolCallId: 'fixture-child' }, 'fixture-instance')
+    + line('subagent.completed', { toolCallId: 'fixture-run' }));
   await until(() => tab.evaluate(() => !document.querySelector('[role="progressbar"]')
     && !document.querySelector('[data-agent-tools="ada"]')), 'live completion clears displays');
   const staleFile = await session('stale-session', project, marker + running + tool('stale'), 6 * 60_000);

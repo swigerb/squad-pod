@@ -194,7 +194,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       'webviewReady', 'requestAgentDetail', 'requestAgentDetail',
     ]);
     click('Telemetry');
-    expect(host.textContent).toContain('Live transient tasks are unavailable in the read-only observer.');
+    expect(host.textContent).toContain('Live source status is unavailable. No task state is available.');
     expect(host.textContent).not.toContain('Enable it in Settings');
   });
 
