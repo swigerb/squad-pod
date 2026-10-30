@@ -1,0 +1,45 @@
+{
+  "sessionStartTime": "2026-10-28T15:00:00.000Z",
+  "currentModel": "synthetic-historical-model",
+  "lastCallInputTokens": 80,
+  "lastCallOutputTokens": 20,
+  "totalUserRequests": 2,
+  "totalPremiumRequestCost": 0.5,
+  "totalApiDurationMs": 1200,
+  "totalNanoAiu": 450000,
+  "codeChanges": {
+    "filesModified": ["not-for-display.txt"],
+    "filesModifiedCount": 1,
+    "linesAdded": 2,
+    "linesRemoved": 0
+  },
+  "modelMetrics": {
+    "synthetic-model": {
+      "requests": { "count": 3, "cost": 0.5 },
+      "usage": {
+        "inputTokens": 120,
+        "outputTokens": 30,
+        "cacheReadTokens": 40,
+        "cacheWriteTokens": 10
+      },
+      "totalNanoAiu": 450000
+    }
+  },
+  "agentMetrics": {
+    "main": {
+      "modelMetrics": {},
+      "totalApiDurationMs": 1200,
+      "totalNanoAiu": 450000
+    },
+    "synthetic-child": {
+      "agentName": "unverified-agent",
+      "agentDisplayName": "NOT FOR DISPLAY: synthetic task description",
+      "modelMetrics": {},
+      "totalApiDurationMs": 800,
+      "totalNanoAiu": 100000
+    }
+  },
+  "providerModelMetrics": [
+    { "modelId": null, "provider": null }
+  ]
+}

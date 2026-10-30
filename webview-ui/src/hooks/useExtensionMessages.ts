@@ -16,6 +16,7 @@ import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
 import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
+import type { CliUsageSnapshot } from '../../../src/cliUsage.js';
 import type { ObservedTaskSnapshot } from '../../../src/observedTasks.js';
 import type { CurrentTaskSource, OutboundMessage } from '../../../src/types.js';
 import { pruneCompletedTools, setContextUsage } from '../office/toolUtils.js';
@@ -67,6 +68,7 @@ function isAgentActivityMessage(message: OutboundMessage): message is AgentActiv
 export interface ExtensionMessageState {
   observedTasks: ObservedTaskSnapshot | null;
   recordedUsage: RecordedUsageSnapshot | null;
+  cliUsage: CliUsageSnapshot | null;
   assetStatus: Pick<AssetSnapshot, 'directories' | 'diagnostics'>;
   settings: PodSettings;
   sourceStatus: SourceStatus | null;
@@ -103,6 +105,7 @@ export function useExtensionMessages(
   const client = useHostClient();
   const [observedTasks, setObservedTasks] = useState<ObservedTaskSnapshot | null>(null);
   const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
+  const [cliUsage, setCliUsage] = useState<CliUsageSnapshot | null>(null);
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [legacyAssetDiagnostics, setLegacyAssetDiagnostics] = useState<Record<string, string>>({});
   const [settings, setSettings] = useState<PodSettings>({ soundEnabled: false, debugEnabled: false, showAreas: false });
@@ -240,6 +243,9 @@ export function useExtensionMessages(
       };
 
       switch (message.type) {
+        case 'cliUsage':
+          setCliUsage(message.snapshot);
+          break;
         case 'observedTasks':
           setObservedTasks(message.snapshot);
           break;
@@ -668,6 +674,7 @@ export function useExtensionMessages(
   return {
     observedTasks,
     recordedUsage,
+    cliUsage,
     assetStatus: { ...assetStatus, diagnostics: [...assetStatus.diagnostics, ...Object.values(legacyAssetDiagnostics)] },
     settings,
     sourceStatus,

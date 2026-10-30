@@ -99,6 +99,44 @@ Open **Telemetry** in the toolbar to browse observed status changes, session act
 
 **Activity events** counts only observed events; **Clear activity** leaves recorded usage and observed tasks unchanged. Existing files are not replayed. Missing usage is not zero consumption, and enabling live CLI observation does not create a usage ledger. Source diagnostics distinguish file watching from opt-in live CLI observation; **Observation settings and consent** opens the existing Settings flow without enabling anything. Settings and live-log consent are unavailable in the read-only observer.
 
+**Telemetry → Copilot CLI usage export** is a separate, opt-in historical source for
+`copilot --agent squad --usage-output-file <file.json>`. Pod never launches this command,
+creates an export or discovers private home/session files. After an existing export is
+available, use **Select CLI usage JSON...** and confirm reading that exact workspace-local
+file. **Refresh selected export** rereads it manually; **Forget export**, workspace changes
+and extension restart discard the in-memory selection. Nothing is written to the source.
+Links/junctions, hardlinks, workspace escapes and replaced file identities are rejected;
+copy a reviewed, sanitized export into a canonical workspace directory when necessary.
+
+The importer projects the **Copilot CLI 1.0.105 shipped `UsageGetMetricsResult`** declaration
+and raw JSON writer inspected in [#102](https://github.com/swigerb/squad-pod/issues/102/artifacts/1).
+Tests use [`cli-usage-1.0.105.synthetic.json`](src/__fixtures__/cli-usage-1.0.105.synthetic.json),
+authored from those declarations, **not an observed real export**. Real-export compatibility
+and native VS Code acceptance remain pending; actual producer version, session identity,
+workspace/agent attribution, completion, resumed history and all-agent coverage are unknown.
+File location and start timestamp do not prove identity or completeness.
+
+Session quantities retain premium-request cost (multiplier applied), API milliseconds and
+optional nano-AI units: **never USD or an inferred credit conversion**. Model input/output,
+cache and optional reasoning quantities are shown independently, with at most 40 of 128
+model entries. Missing optional fields say **not reported** rather than zero. No model-token
+rollup, parent/agent/provider summation, cross-source total or multi-file accumulation is
+performed. Repeated refresh replaces one snapshot; unchanged files are not counted twice.
+The Squad ledger retains its existing sum-every-row/no-dedup behavior.
+
+The exact interpreted JSON pointers are `/sessionStartTime`, `/totalUserRequests`,
+`/totalPremiumRequestCost`, `/totalApiDurationMs`, optional `/totalNanoAiu`, and
+`/modelMetrics/*/{requests/{count,cost},usage/{inputTokens,outputTokens,cacheReadTokens,cacheWriteTokens,reasoningTokens?},totalNanoAiu?}`.
+Required last-call token and code-change shapes are validated but never retained/displayed.
+`currentModel`, agent task descriptions, code-change paths, provider/agent breakdowns,
+token details and unknown fields are not displayed or used for live state. Explicit null
+is rejected for interpreted quantities; optional means omitted, not null. Versioned
+envelopes, duplicate JSON keys, invalid UTF-8/JSON, unsafe/fractional counters and negative
+quantities fail visibly with no stale report. Limits: one regular JSON document, 2 MiB,
+depth 8, 1,000 entries per object/array and 10,000 total fields/entries. Changing files
+withhold quantities until manually retried; identity changes require fresh selection.
+Standalone import is intentionally unavailable, including with office-control authority.
+
 ## Activity detection
 
 Squad Pod watches the selected project's `.squad/` files, including the roster, sessions, logs, orchestration logs, decision inbox, and agent files. It uses filesystem notifications with polling as a fallback and treats the initial scan as a baseline rather than replaying old files.

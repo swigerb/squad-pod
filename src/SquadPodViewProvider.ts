@@ -76,6 +76,7 @@ import {
 } from './directories.js';
 import { launchSquadInTerminal } from './directoryLaunch.js';
 import { readRecordedUsage } from './recordedUsage.js';
+import { CliUsageImport } from './cliUsage.js';
 import { CopilotSessionActivity } from './copilotSessionActivity.js';
 
 export class SquadPodViewProvider implements vscode.WebviewViewProvider {
@@ -83,6 +84,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private context: vscode.ExtensionContext;
   private disposeSquadWatcher: (() => void) | undefined;
   private usageTimer: ReturnType<typeof setInterval> | undefined;
+  private cliUsage = new CliUsageImport();
+  private cliUsageRequest = 0;
   private usageRoster: ReturnType<typeof parseAllMembers> = [];
   private disposeLayoutWatcher: { dispose: () => void } | undefined;
   private assetWatcher: { dispose: () => void } | undefined;
@@ -161,6 +164,16 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
   private handleWebviewMessage(message: WebviewMessage): void {
     switch (message.type) {
+      case 'selectCliUsage':
+        void this.selectCliUsage();
+        break;
+      case 'refreshCliUsage':
+        this.postMessage({ type: 'cliUsage', snapshot: this.cliUsage.refresh(this.getWorkspaceRoot()) });
+        break;
+      case 'clearCliUsage':
+        ++this.cliUsageRequest;
+        this.postMessage({ type: 'cliUsage', snapshot: this.cliUsage.clear() });
+        break;
       case 'setLiveActivity':
         if (typeof message.enabled === 'boolean') {void this.configureLiveActivity(message.enabled, true);}
         break;
@@ -289,6 +302,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.sendDirectoryCatalog();
     this.log(`webviewReady; workspaceRoot=${workspaceRoot ?? '<none>'}`);
     if (!workspaceRoot) {
+      this.postMessage({ type: 'cliUsage', snapshot: this.cliUsage.clear() });
       this.sendRecordedUsage();
       this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
       this.postMessage({ type: 'noWorkspace' });
@@ -312,6 +326,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
     this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
     this.sendRecordedUsage(workspaceRoot);
+    this.postMessage({ type: 'cliUsage', snapshot: this.cliUsage.snapshot });
     this.liveActivity?.replay();
     void this.configureLiveActivity(vscode.workspace.getConfiguration('squad-pod').get('liveActivity', false));
   }
@@ -381,6 +396,40 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     this.postMessage({ type: 'recordedUsage', snapshot: readRecordedUsage(workspaceRoot, this.usageRoster) });
   }
 
+  private async selectCliUsage(): Promise<void> {
+    const root = this.getWorkspaceRoot();
+    const request = ++this.cliUsageRequest;
+    if (!root) {
+      this.postMessage({ type: 'cliUsage', snapshot: {
+        ...this.cliUsage.clear(), state: 'error', diagnostic: 'Select a workspace before importing CLI usage.',
+      } });
+      return;
+    }
+    try {
+      const selection = await vscode.window.showOpenDialog({
+        title: 'Consent to read one Copilot CLI usage JSON file inside this workspace (historical metrics only)',
+        openLabel: 'Select usage JSON', canSelectMany: false, canSelectFiles: true, canSelectFolders: false,
+        defaultUri: vscode.Uri.file(root), filters: { 'CLI usage JSON': ['json'] },
+      });
+      if (!selection?.[0] || request !== this.cliUsageRequest || root !== this.getWorkspaceRoot()) {return;}
+      const consent = await vscode.window.showWarningMessage(
+        'Read this selected CLI usage export? Only this workspace-local file is read, on selection and manual refresh. '
+        + 'No prompts, task descriptions or code-change paths are displayed. Session/workspace attribution and completeness remain unknown. '
+        + 'Selection is forgotten on workspace change or extension restart.',
+        { modal: true, detail: `File: ${selection[0].fsPath}\nWorkspace: ${root}` }, 'Read selected export',
+      );
+      if (consent !== 'Read selected export' || request !== this.cliUsageRequest || root !== this.getWorkspaceRoot()) {return;}
+      this.postMessage({ type: 'cliUsage', snapshot: this.cliUsage.select(root, selection[0].fsPath) });
+    } catch (error) {
+      if (request !== this.cliUsageRequest || root !== this.getWorkspaceRoot()) {return;}
+      this.cliUsage.clear();
+      this.postMessage({ type: 'cliUsage', snapshot: {
+        ...this.cliUsage.snapshot, state: 'error', diagnostic: `Could not select CLI usage: ${String(error)}`,
+      } });
+      this.log(`CLI usage selection failed: ${String(error)}`);
+    }
+  }
+
   private startWatching(workspaceRoot: string, webview: vscode.Webview): void {
     this.watchedRoot = workspaceRoot;
     this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
@@ -428,6 +477,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   }
 
   private stopWatching(): void {
+    ++this.cliUsageRequest;
+    this.postMessage({ type: 'cliUsage', snapshot: this.cliUsage.clear() });
     ++this.liveRequest;
     this.livePending = false;
     this.liveConsent = false;
