@@ -41,7 +41,7 @@ export function setLiveAgentStatus(agentId: string, active: boolean, task: strin
     agent.currentTask = task;
     agent.lastActiveAt = Date.now();
     postToWebview(webview, { type: 'agentToolsClear', agentId });
-    postToWebview(webview, { type: 'agentStatus', agentId, status: 'active' });
+    postToWebview(webview, { type: 'agentStatus', agentId, status: 'active', currentTask: task });
   } else {
     liveRuns.delete(agentId);
     agent.currentTask = null;
@@ -221,8 +221,8 @@ export function updateAgentStatus(
   const statusChanged = prevStatus !== status;
   const taskChanged = prevTask !== agent.currentTask;
 
-  if (statusChanged) {
-    postToWebview(webview, { type: 'agentStatus', agentId, status });
+  if (statusChanged || taskChanged) {
+    postToWebview(webview, { type: 'agentStatus', agentId, status, currentTask: status === 'idle' ? null : agent.currentTask });
   }
 
   if (statusChanged || taskChanged) {
