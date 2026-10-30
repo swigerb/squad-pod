@@ -19,6 +19,14 @@ export function isWalkable(
   return true;
 }
 
+function isFloorTile(col: number, row: number, tileMap: number[][]): boolean {
+  if (row < 0 || row >= tileMap.length || col < 0 || col >= tileMap[row].length) {
+    return false;
+  }
+  const tile = tileMap[row][col];
+  return tile !== TileType.WALL && tile !== TileType.VOID;
+}
+
 export function getWalkableTiles(tileMap: number[][], blockedTiles: Set<string>): Set<string> {
   const walkable = new Set<string>();
   for (let row = 0; row < tileMap.length; row++) {
@@ -31,18 +39,20 @@ export function getWalkableTiles(tileMap: number[][], blockedTiles: Set<string>)
   return walkable;
 }
 
-export function findPath(
+function findPathInternal(
   startCol: number,
   startRow: number,
   endCol: number,
   endRow: number,
   tileMap: number[][],
-  blockedTiles: Set<string>
+  blockedTiles: Set<string>,
+  allowBlockedGoal: boolean
 ): Array<{ col: number; row: number }> {
   if (startCol === endCol && startRow === endRow) {
     return [];
   }
-  if (!isWalkable(endCol, endRow, tileMap, blockedTiles)) {
+  if (!isWalkable(endCol, endRow, tileMap, blockedTiles)
+    && !(allowBlockedGoal && isFloorTile(endCol, endRow, tileMap))) {
     return [];
   }
 
@@ -68,11 +78,13 @@ export function findPath(
       const key = `${nextCol},${nextRow}`;
 
       if (visited.has(key)) continue;
-      if (!isWalkable(nextCol, nextRow, tileMap, blockedTiles)) continue;
+      const isGoal = nextCol === endCol && nextRow === endRow;
+      if (!isWalkable(nextCol, nextRow, tileMap, blockedTiles)
+        && !(allowBlockedGoal && isGoal && isFloorTile(nextCol, nextRow, tileMap))) continue;
 
       const newPath = [...current.path, { col: nextCol, row: nextRow }];
 
-      if (nextCol === endCol && nextRow === endRow) {
+      if (isGoal) {
         return newPath;
       }
 
@@ -82,4 +94,27 @@ export function findPath(
   }
 
   return [];
+}
+
+export function findPath(
+  startCol: number,
+  startRow: number,
+  endCol: number,
+  endRow: number,
+  tileMap: number[][],
+  blockedTiles: Set<string>
+): Array<{ col: number; row: number }> {
+  return findPathInternal(startCol, startRow, endCol, endRow, tileMap, blockedTiles, false);
+}
+
+/** Allows a route to end on its assigned chair tile without relaxing other collision checks. */
+export function findPathToSeat(
+  startCol: number,
+  startRow: number,
+  seatCol: number,
+  seatRow: number,
+  tileMap: number[][],
+  blockedTiles: Set<string>
+): Array<{ col: number; row: number }> {
+  return findPathInternal(startCol, startRow, seatCol, seatRow, tileMap, blockedTiles, true);
 }

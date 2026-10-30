@@ -378,6 +378,9 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     const assignments = vi.spyOn(OfficeState.prototype, 'getSeatAssignments');
     root = createRoot(host);
     act(() => root.render(<App client={client} standalone readOnly={readOnly} />));
+    // App's OfficeState outlives remounts; drop roster members leaked by earlier tests so
+    // test-agent-1 is seated fresh instead of reusing a stale randomly placed character.
+    send({ type: 'existingAgents', agents: [] });
     const chairCols = [2, 5, 8, 11];
     snapshot({ ...imported, furniture: chairCols.flatMap((col, index) => [
       { uid: `desk-${index}`, type: 'desk', col, row: 1, rotation: 0 },
@@ -392,6 +395,8 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     const office = assignments.mock.contexts.at(-1)!;
     if (!(office instanceof OfficeState)) throw new Error('Expected the actual App OfficeState');
     const first = office.characters.get('test-agent-1')!;
+    expect([...office.characters.values()].map(({ id, col, row }) => [id, col, row]))
+      .toEqual([['test-agent-1', 5, 2], ['test-agent-2', 11, 2]]);
     expect(office.getSeatAssignments()).toEqual({ 'test-agent-1': 'chair-1', 'test-agent-2': 'chair-3' });
     send({ type: 'existingAgents', agents: [{ ...agents[0], seatId: 'chair-0', paletteIndex: 13 }, agents[1]] });
     expect(office.characters.get('test-agent-1')).toBe(first);

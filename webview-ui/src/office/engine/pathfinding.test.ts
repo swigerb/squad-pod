@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findPath, getWalkableTiles } from './pathfinding.js';
+import { findPath, findPathToSeat, getWalkableTiles } from './pathfinding.js';
 import { TileType } from '../types.js';
 
 describe('pathfinding', () => {
@@ -98,6 +98,17 @@ describe('pathfinding', () => {
       expect(path).toEqual([]);
     });
 
+    it('can enter a blocked floor goal without walking through other blocked furniture', () => {
+      const tileMap = Array.from({ length: 5 }, () => Array(5).fill(TileType.FLOOR_1));
+      const blockedTiles = new Set<string>(['3,3', '2,2']);
+
+      const path = findPathToSeat(0, 0, 3, 3, tileMap, blockedTiles);
+
+      expect(path.at(-1)).toEqual({ col: 3, row: 3 });
+      expect(path.slice(0, -1).some((step) => blockedTiles.has(`${step.col},${step.row}`))).toBe(false);
+      expect(findPath(0, 0, 3, 3, tileMap, blockedTiles)).toEqual([]);
+    });
+
     it('returns empty array when destination is wall', () => {
       const tileMap = [
         [TileType.FLOOR_1, TileType.FLOOR_1],
@@ -108,6 +119,17 @@ describe('pathfinding', () => {
       const path = findPath(0, 0, 1, 1, tileMap, blockedTiles);
 
       expect(path).toEqual([]);
+    });
+
+    it('does not allow a blocked wall or void as a goal', () => {
+      const tileMap = [
+        [TileType.FLOOR_1, TileType.WALL, TileType.VOID],
+        [TileType.FLOOR_1, TileType.FLOOR_1, TileType.FLOOR_1],
+      ];
+      const blockedTiles = new Set<string>(['1,0', '2,0']);
+
+      expect(findPathToSeat(0, 0, 1, 0, tileMap, blockedTiles)).toEqual([]);
+      expect(findPathToSeat(0, 0, 2, 0, tileMap, blockedTiles)).toEqual([]);
     });
   });
 

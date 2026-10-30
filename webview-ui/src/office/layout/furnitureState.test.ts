@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ManifestFurniture } from '../../../../src/manifestAssets.js';
+import { Direction } from '../types.js';
 import type { OfficeLayout, PlacedFurniture } from '../types.js';
 import { OfficeState } from '../engine/officeState.js';
 import { getColorizedSprite } from '../colorize.js';
-import { layoutToFurnitureInstances } from './layoutManager.js';
+import { createDefaultLayout, layoutToFurnitureInstances } from './layoutManager.js';
 import {
   buildDynamicCatalog,
   getAnimationFrames,
@@ -169,6 +170,39 @@ describe('state and animation catalog', () => {
 describe('seat-facing auto-on and animation', () => {
   beforeEach(() => buildDynamicCatalog(pcAssets));
 
+  it('routes to all blocked seats in the native default office fixture', () => {
+    const office = new OfficeState(createDefaultLayout());
+    const starts = new Map([
+      ['chair-left-1', { col: 2, row: 9 }],
+      ['chair-left-2', { col: 2, row: 7 }],
+      ['chair-right-1', { col: 8, row: 7 }],
+      ['chair-right-2', { col: 8, row: 9 }],
+      ['bench-1', { col: 3, row: 6 }],
+      ['bench-2', { col: 7, row: 6 }],
+    ]);
+
+    expect(office.seats).toHaveLength(starts.size);
+    for (const seat of office.seats) {
+      const start = starts.get(seat.id);
+      expect(start, `native seat ${seat.id} has a reachable-floor fixture`).toBeDefined();
+      office.addAgent(seat.id, seat.id, 'Test', undefined, undefined, seat.id);
+      const character = office.characters.get(seat.id)!;
+      character.col = start!.col;
+      character.row = start!.row;
+      character.x = start!.col * 16 + 8;
+      character.y = start!.row * 16 + 8;
+
+      office.setAgentActive(seat.id, true);
+
+      expect(office.blockedTiles.has(`${seat.col},${seat.row}`)).toBe(true);
+      expect(office.walkableTiles.has(`${seat.col},${seat.row}`)).toBe(false);
+      expect(character.state).toBe('walk');
+      expect(character.path.at(-1)).toEqual({ col: seat.col, row: seat.row });
+      expect(character.path.slice(0, -1).some((step) => office.blockedTiles.has(`${step.col},${step.row}`)))
+        .toBe(false);
+    }
+  });
+
   it.each([
     ['up', 0, -1],
     ['down', 0, 1],
@@ -241,7 +275,7 @@ describe('seat-facing auto-on and animation', () => {
     expect(layout).toEqual(original);
   });
 
-  it('reassigns occupied seats, updates only on the next active seat, and keeps layout snapshots untouched', () => {
+  it('swaps occupied seats and routes both agents to their assigned chair tiles', () => {
     const layout: OfficeLayout = {
       version: 2, cols: 10, rows: 8, tiles: Array(80).fill(1),
       furniture: [
@@ -257,14 +291,71 @@ describe('seat-facing auto-on and animation', () => {
     const office = new OfficeState(layout);
     office.addAgent('fixture-agent', 'Fixture Agent', 'Test', undefined, undefined, 'seat-a');
     office.setAgentActive('fixture-agent', true);
+    office.addAgent('second-agent', 'Second Agent', 'Test', undefined, undefined, 'seat-b');
     expect(office.furniture.find((item) => item.uid === 'pc-a')?.type).toBe('pa_pc_front_on_0');
     expect(office.furniture.find((item) => item.uid === 'pc-b')?.type).toBe('pa_pc_front_off');
 
     office.reassignSeat('fixture-agent', 'seat-b');
     expect(office.furniture.find((item) => item.uid === 'pc-a')?.type).toBe('pa_pc_front_off');
     expect(office.furniture.find((item) => item.uid === 'pc-b')?.type).toBe('pa_pc_front_on_0');
+    expect(office.characters.get('fixture-agent')?.seatId).toBe('seat-b');
+    expect(office.characters.get('second-agent')?.seatId).toBe('seat-a');
+    expect(office.seats.find((seat) => seat.id === 'seat-a')?.occupant).toBe('second-agent');
+    expect(office.seats.find((seat) => seat.id === 'seat-b')?.occupant).toBe('fixture-agent');
+    expect(office.characters.get('fixture-agent')?.path.at(-1)).toEqual({ col: 7, row: 3 });
+    expect(office.characters.get('second-agent')?.path.at(-1)).toEqual({ col: 2, row: 3 });
     expect(office.getLayout()).toBe(layout);
     expect(layout).toEqual(original);
+  });
+
+  it('routes rotated role-based desks and seats while keeping their furniture footprints blocked', () => {
+    const layout: OfficeLayout = {
+      version: 2,
+      cols: 8,
+      rows: 8,
+      tiles: Array(64).fill(1),
+      furniture: [
+        {
+          uid: 'role-desk',
+          type: 'custom-desk',
+          col: 2,
+          row: 3,
+          rotation: 90,
+          assetRole: 'desk',
+          assetFootprint: { width: 1, height: 2 },
+        },
+        {
+          uid: 'role-seat',
+          type: 'custom-seat',
+          col: 3,
+          row: 4,
+          rotation: 90,
+          assetRole: 'seat',
+          assetFootprint: { width: 2, height: 1 },
+        },
+      ],
+    };
+    const office = new OfficeState(layout);
+    office.addAgent('role-agent', 'Role Agent', 'Test');
+    const character = office.characters.get('role-agent')!;
+    character.col = 2;
+    character.row = 4;
+    character.x = 40;
+    character.y = 72;
+
+    expect(office.seats).toMatchObject([{ id: 'role-seat', col: 3, row: 4 }]);
+    expect(office.seats[0].direction).toBe(Direction.UP);
+    expect(office.blockedTiles.has('3,3')).toBe(true);
+    expect(office.blockedTiles.has('3,4')).toBe(true);
+    expect(office.blockedTiles.has('3,5')).toBe(true);
+    expect(office.walkableTiles.has('3,4')).toBe(false);
+
+    office.setAgentActive('role-agent', true);
+
+    expect(character.state).toBe('walk');
+    expect(character.path).toEqual([{ col: 3, row: 4 }]);
+    expect(office.blockedTiles.has('3,4')).toBe(true);
+    expect(office.blockedTiles.has('3,5')).toBe(true);
   });
 
   it('updates independent workstations for multiple active agents', () => {

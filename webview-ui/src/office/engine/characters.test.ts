@@ -204,6 +204,109 @@ describe('characters', () => {
       expect(character.path[character.path.length - 1]).toEqual({ col: 5, row: 5 });
     });
 
+    it('does not start seated work until it reaches its blocked chair tile', () => {
+      const seat: Seat = { id: 'chair-1', col: 5, row: 5, direction: Direction.LEFT };
+      const character = createCharacter('id', 'Name', 'Role', 0, 'chair-1', seat, 0);
+      character.col = 1;
+      character.row = 1;
+      character.x = 24;
+      character.y = 24;
+      character.active = true;
+      const tileMap = Array.from({ length: 8 }, () => Array(8).fill(TileType.FLOOR_1));
+      const blockedTiles = new Set(['5,5', '2,2']);
+
+      updateCharacter(character, 0, new Set(), [seat], tileMap, blockedTiles);
+
+      expect(character.state).toBe(CharacterState.WALK);
+      expect(character.path.at(-1)).toEqual({ col: seat.col, row: seat.row });
+      expect(character.path.slice(0, -1).some((step) => blockedTiles.has(`${step.col},${step.row}`))).toBe(false);
+
+      for (let frame = 0; frame < 100 && character.state === CharacterState.WALK; frame++) {
+        updateCharacter(character, 0.1, new Set(), [seat], tileMap, blockedTiles);
+        if (character.state === CharacterState.WALK) {
+          expect(character.path.at(-1)).toEqual({ col: seat.col, row: seat.row });
+        }
+      }
+
+      expect(character.state).toBe(CharacterState.TYPE);
+      expect(character.col).toBe(seat.col);
+      expect(character.row).toBe(seat.row);
+      expect(character.direction).toBe(Direction.LEFT);
+    });
+
+    it('retargets an in-flight wander step to the assigned seat on activation', () => {
+      const seat: Seat = { id: 'chair-1', col: 5, row: 5, direction: Direction.UP };
+      const character = createCharacter('id', 'Name', 'Role', 0, 'chair-1', seat, 0);
+      character.state = CharacterState.WALK;
+      character.path = [{ col: 2, row: 1 }, { col: 3, row: 1 }];
+      character.moveProgress = 0.5;
+      character.active = true;
+      const tileMap = Array.from({ length: 8 }, () => Array(8).fill(TileType.FLOOR_1));
+      const blockedTiles = new Set(['5,5']);
+
+      updateCharacter(character, 0, new Set(), [seat], tileMap, blockedTiles);
+
+      expect(character.state).toBe(CharacterState.WALK);
+      expect(character.path[0]).toEqual({ col: 2, row: 1 });
+      expect(character.path.at(-1)).toEqual({ col: 5, row: 5 });
+      expect(character.moveProgress).toBe(0.5);
+
+      for (let frame = 0; frame < 100 && character.state === CharacterState.WALK; frame++) {
+        updateCharacter(character, 0.1, new Set(), [seat], tileMap, blockedTiles);
+      }
+
+      expect(character.state).toBe(CharacterState.TYPE);
+      expect(character.col).toBe(seat.col);
+      expect(character.row).toBe(seat.row);
+    });
+
+    it('returns an idle agent to its blocked seat when its wander limit is reached', () => {
+      const seat: Seat = { id: 'chair-1', col: 5, row: 5, direction: Direction.DOWN };
+      const character = createCharacter('id', 'Name', 'Role', 0, 'chair-1', seat, 0);
+      character.state = CharacterState.WALK;
+      character.path = [{ col: 2, row: 1 }];
+      character.col = 1;
+      character.row = 1;
+      character.wanderCount = 1;
+      character.wanderLimit = 1;
+      const tileMap = Array.from({ length: 8 }, () => Array(8).fill(TileType.FLOOR_1));
+      const blockedTiles = new Set(['5,5']);
+
+      updateCharacter(character, 1, new Set(), [seat], tileMap, blockedTiles);
+
+      expect(character.state).toBe(CharacterState.WALK);
+      expect(character.path.at(-1)).toEqual({ col: 5, row: 5 });
+
+      for (let frame = 0; frame < 100 && character.state === CharacterState.WALK; frame++) {
+        updateCharacter(character, 0.1, new Set(), [seat], tileMap, blockedTiles);
+      }
+
+      expect(character.state).toBe(CharacterState.TYPE);
+      expect(character.col).toBe(seat.col);
+      expect(character.row).toBe(seat.row);
+    });
+
+    it('does not work at an unreachable or missing assigned seat', () => {
+      const seat: Seat = { id: 'chair-1', col: 4, row: 4, direction: Direction.UP };
+      const character = createCharacter('id', 'Name', 'Role', 0, 'chair-1', seat, 0);
+      character.col = 1;
+      character.row = 1;
+      character.active = true;
+      character.state = CharacterState.IDLE;
+      const tileMap = Array.from({ length: 6 }, () => Array(6).fill(TileType.FLOOR_1));
+      tileMap[3] = Array(6).fill(TileType.WALL);
+      const blockedTiles = new Set(['4,4']);
+
+      updateCharacter(character, 0.1, new Set(), [seat], tileMap, blockedTiles);
+      expect(character.state).toBe(CharacterState.IDLE);
+      expect(character.path).toEqual([]);
+
+      character.seatId = 'missing-seat';
+      updateCharacter(character, 0.1, new Set(), [], tileMap, blockedTiles);
+      expect(character.state).toBe(CharacterState.IDLE);
+      expect(character.path).toEqual([]);
+    });
+
     it('TYPE state advances frame animation', () => {
       const character = createCharacter('id', 'Name', 'Role', 0, null, null, 0);
       character.state = CharacterState.TYPE;
