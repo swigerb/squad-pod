@@ -18,7 +18,7 @@ Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradyga
 - Animate activity inferred from changes to Squad files.
 - Show six built-in character identities with authored walk, typing, and reading poses.
 - Opt in to live member tool labels and context gauges from local Copilot CLI sessions.
-- View an agent's status, current task, recent activity, and charter.
+- View visible members' charter summaries, declared scope, observed status/task, and recent activity in Squad Info.
 - Design the office with floors, walls, furniture, colors, carpets, named Areas, and pets.
 - Manage directories and explicitly launch Squad in a new VS Code terminal.
 - Browse activity and available recorded usage in the Telemetry drawer.
@@ -56,7 +56,7 @@ Open the project in VS Code and press **F5** to launch the Extension Development
 
 ### Open the office
 
-Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character, its name (**Enter** or **Space** also works), or its occupied desk or chair to open the details card; select a character, then click another seat to move it. **View Charter** opens `charter.md`. These clicks never open a terminal.
+Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character, its name (**Enter** or **Space** also works), or its occupied desk or chair to open the details card; select a character, then click another seat to move it. Choose **Squad Info** to expand a visible member's details by keyboard or mouse. **Open charter** opens that member's `charter.md`. In the read-only local observer, observed details remain available while charter contents and editor opening are unavailable. These actions never open a terminal.
 
 ### Edit the office
 

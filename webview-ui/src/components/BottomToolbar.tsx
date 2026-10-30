@@ -47,8 +47,6 @@ export function BottomToolbar({ readOnly = false, isEditMode, onToggleEditMode, 
         }}
       >
         <button
-          disabled={readOnly}
-          title={readOnly ? 'Squad information dialog is unavailable in the read-only observer.' : undefined}
           onClick={handleSquadInfo}
           style={{
             padding: '8px 16px',

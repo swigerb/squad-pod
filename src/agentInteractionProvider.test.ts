@@ -44,11 +44,14 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
 
   it.each(agents)('returns exactly $name detail and opens that charter, never a terminal/session', (agent) => {
     const before = details().length;
-    fixture.send({ type: 'requestAgentDetail', agentId: agent.id });
+    const requestId = `${agent.id}-detail-1`;
+    fixture.send({ type: 'requestAgentDetail', agentId: agent.id, requestId });
     expect(details().slice(before)).toEqual([{
-      type: 'agentDetailLoaded', detail: {
-        id: agent.id, name: agent.name, role: agent.role, status: 'idle',
-        charterSummary: agent.summary, recentActivity: [agent.activity],
+      type: 'agentDetailLoaded', requestId, detail: {
+        id: agent.id, name: agent.name, role: agent.role, workspaceRoot: fixture.workspaceRoot, status: 'idle',
+        charterSummary: agent.summary, charterContent: expect.stringContaining(agent.summary),
+        charterStatus: 'available', expertise: `${agent.name} expertise`, responsibilities: `- ${agent.name} responsibilities`,
+        boundaries: expect.stringContaining(`${agent.name} boundaries`), recentActivity: [agent.activity],
         currentTask: null, lastActiveAt: expect.any(Number),
       },
     }]);
@@ -56,6 +59,27 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     expect(fixture.calls.documents).toEqual([path.join(fixture.workspaceRoot, '.squad', 'agents', agent.id, 'charter.md')]);
     expect(fixture.calls.commands).toEqual([]);
     expect(fixture.calls.information).toEqual([]);
+  });
+
+  it('marks missing and unreadable charters explicitly without inventing fields', () => {
+    const directory = path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada');
+    const charter = path.join(directory, 'charter.md');
+    fs.unlinkSync(charter);
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    const missing = details().at(-1);
+    expect(missing).toMatchObject({ type: 'agentDetailLoaded', detail: {
+      id: 'ada', charterStatus: 'missing', charterContent: null, charterSummary: null,
+      expertise: null, responsibilities: null, boundaries: null,
+    } });
+
+    fs.writeFileSync(charter, `# Oversized\n\n${'x'.repeat(65537)}`);
+    const read = vi.spyOn(require('node:fs'), 'readSync');
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(details().at(-1)).toMatchObject({ type: 'agentDetailLoaded', detail: {
+      id: 'ada', charterStatus: 'unreadable', charterContent: null, charterSummary: null,
+    } });
+    expect(read).not.toHaveBeenCalled();
+    read.mockRestore();
   });
 
   it.each(agents)('uses history, folder reveal, then information only for $name', (agent) => {
@@ -87,5 +111,21 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     expect(fixture.calls.documents).toEqual([]);
     expect(fixture.calls.commands).toEqual([]);
     expect(fixture.calls.information).toEqual([]);
+  });
+
+  it('sends visible Squad Info roster entries keyed by parsed charter IDs', () => {
+    fixture.send({ type: 'openSquadInfo' });
+    const info = fixture.messages.filter(message => message.type === 'squadInfoLoaded').at(-1);
+    expect(info).toMatchObject({
+      type: 'squadInfoLoaded',
+      info: {
+        workspaceRoot: fixture.workspaceRoot,
+        members: [
+          { id: 'ada', name: 'Ada' },
+          { id: 'grace', name: 'Grace' },
+        ],
+        hiddenMembers: [{ name: 'Scribe', role: 'Scribe' }],
+      },
+    });
   });
 });

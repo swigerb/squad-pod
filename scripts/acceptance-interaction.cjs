@@ -33,12 +33,14 @@ function createProviderFixture({ artifactRoot = root, extensionCode, baseUrl = '
   const squad = path.join(workspaceRoot, '.squad');
   fs.mkdirSync(path.join(squad, 'log'), { recursive: true });
   const team = '## Members\n| Name | Role | Charter |\n| --- | --- | --- |\n'
-    + agents.map((a) => `| ${a.name} | ${a.role} | .squad/agents/${a.id}/charter.md |\n`).join('');
+    + agents.map((a) => `| ${a.name} | ${a.role} | .squad/agents/${a.id}/charter.md |\n`).join('')
+    + '| Scribe | Scribe | .squad/agents/scribe/charter.md |\n';
   fs.writeFileSync(path.join(squad, 'team.md'), team);
   for (const agent of agents) {
     const directory = path.join(squad, 'agents', agent.id);
     fs.mkdirSync(directory, { recursive: true });
-    fs.writeFileSync(path.join(directory, 'charter.md'), `# ${agent.name}\n\n${agent.summary}\n`);
+    fs.writeFileSync(path.join(directory, 'charter.md'),
+      `# ${agent.name}\n\n${agent.summary}\n\n## Identity\n\n- **Expertise:** ${agent.name} expertise\n\n## Responsibilities\n\n- ${agent.name} responsibilities\n\n## Boundaries\n\n- ${agent.name} boundaries\n${agent.id === 'ada' ? '<img src=x onerror="window.__charterExecuted=true">' : ''}\n`);
     fs.writeFileSync(path.join(directory, 'history.md'), `# ${agent.name} history\n`);
     fs.writeFileSync(path.join(squad, 'log', `2026-10-29-${agent.id}.md`), `# Activity\n${agent.activity}\n`);
   }
@@ -171,20 +173,20 @@ function disposableSource(ref) {
 
 const mutants = [
   { name: 'wrong-agent', file: 'webview-ui/src/App.tsx',
-    pattern: /^    client\.send\(\{ type: 'requestAgentDetail', agentId \}\);\r?$/gm,
-    replacement: "    client.send({ type: 'requestAgentDetail', agentId: agentId === 'ada' ? 'grace' : 'ada' });" },
+    pattern: /^    requestAgentDetail\(agentId\);\r?$/gm,
+    replacement: "    requestAgentDetail(agentId === 'ada' ? 'grace' : 'ada');" },
   { name: 'duplicate-request', file: 'webview-ui/src/App.tsx',
-    pattern: /^    client\.send\(\{ type: 'requestAgentDetail', agentId \}\);\r?$/gm,
-    replacement: "    client.send({ type: 'requestAgentDetail', agentId });\n    client.send({ type: 'requestAgentDetail', agentId });" },
+    pattern: /^    requestAgentDetail\(agentId\);\r?$/gm,
+    replacement: "    requestAgentDetail(agentId);\n    requestAgentDetail(agentId);" },
   { name: 'wrong-charter', file: 'src/SquadPodViewProvider.ts',
     pattern: /^    this\.openAgentFile\(agentId, \['charter\.md', 'history\.md'\]\);\r?$/gm,
     replacement: "    this.openAgentFile(agentId, ['history.md', 'charter.md']);" },
   { name: 'stray-focus', file: 'webview-ui/src/App.tsx',
-    pattern: /^    client\.send\(\{ type: 'requestAgentDetail', agentId \}\);\r?$/gm,
-    replacement: "    client.send({ type: 'requestAgentDetail', agentId });\n    client.send({ type: 'focusAgent', agentId });" },
+    pattern: /^    requestAgentDetail\(agentId\);\r?$/gm,
+    replacement: "    requestAgentDetail(agentId);\n    client.send({ type: 'focusAgent', agentId });" },
   { name: 'terminal-call', file: 'src/SquadPodViewProvider.ts',
-    pattern: /^  private onRequestAgentDetail\(agentId: string \| undefined\): void \{\r?$/gm,
-    replacement: "  private onRequestAgentDetail(agentId: string | undefined): void {\n    const terminal = vscode.window.createTerminal('forbidden interaction');\n    terminal.show();\n    terminal.sendText('forbidden');" },
+    pattern: /^  private onRequestAgentDetail\(agentId: string \| undefined, requestId\?: string\): void \{\r?$/gm,
+    replacement: "  private onRequestAgentDetail(agentId: string | undefined, requestId?: string): void {\n    const terminal = vscode.window.createTerminal('forbidden interaction');\n    terminal.show();\n    terminal.sendText('forbidden');" },
 ];
 
 function bridge(messages) {
@@ -309,7 +311,11 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
             const before = requests().length;
             await action();
             await poll(page, () => Boolean(document.querySelector('[role="dialog"]')), `${agent.id} detail card`);
-            assert.deepEqual(requests().slice(before), [{ type: 'requestAgentDetail', agentId: agent.id }], 'correct agent exactly once');
+            const requested = requests().slice(before);
+            assert.equal(requested.length, 1, 'detail requested exactly once');
+            assert.deepEqual({ type: requested[0].type, agentId: requested[0].agentId },
+              { type: 'requestAgentDetail', agentId: agent.id }, 'correct agent requested');
+            assert.match(requested[0].requestId, /^\d+$/, 'request is correlated to its response');
             const card = page.getByRole('dialog', { name: `${agent.name} details` });
             const text = await card.innerText();
             for (const expected of [agent.name, agent.role, 'idle', agent.summary, agent.activity]) assert.ok(text.includes(expected), expected);
@@ -324,6 +330,32 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
             await page.screenshot({ path: path.join(outputDir, `card-${agent.id}-${viewport.width}.png`) });
             await card.getByRole('button', { name: 'Close agent details' }).click();
           }
+          await page.getByRole('button', { name: 'Squad Info' }).click();
+          const adaDetails = page.getByRole('button', { name: 'Show details for Ada' });
+          await adaDetails.focus();
+          await page.keyboard.press('Enter');
+          await poll(page, () => document.querySelector('#agent-detail-ada')?.textContent.includes('Ada builds precise interaction contracts.'), 'keyboard-opened Squad Info details');
+          const squadInfo = page.getByRole('dialog');
+          const squadInfoBounds = await squadInfo.boundingBox();
+          assert.ok(squadInfoBounds.x >= 0 && squadInfoBounds.y >= 0
+            && squadInfoBounds.x + squadInfoBounds.width <= viewport.width
+            && squadInfoBounds.y + squadInfoBounds.height <= viewport.height, 'Squad Info dialog fits the viewport');
+          const adaPanel = page.locator('#agent-detail-ada');
+          assert.ok((await adaPanel.innerText()).includes('Ada expertise'), 'declared expertise is shown');
+          assert.ok((await adaPanel.innerText()).includes('Ada responsibilities'), 'declared responsibilities are shown');
+          assert.ok((await adaPanel.innerText()).includes('Ada boundaries'), 'declared boundaries are shown');
+          assert.equal(await adaPanel.locator('img,script').count(), 0, 'charter source is rendered as text, not HTML');
+          assert.ok((await adaPanel.innerText()).includes('<img src=x'), 'literal charter markup remains visible as source text');
+          const beforeInfoCharter = fixture.calls.documents.length;
+          await adaPanel.getByRole('button', { name: 'Open charter' }).click();
+          assert.deepEqual(fixture.calls.documents.slice(beforeInfoCharter),
+            [path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'charter.md')]);
+          fixture.noFocus();
+          await page.screenshot({ path: path.join(outputDir, `squad-info-${viewport.width}.png`) });
+          await page.getByRole('button', { name: 'Show details for Grace' }).click();
+          await poll(page, () => document.querySelector('#agent-detail-grace')?.textContent.includes('Grace reviews the complete user transaction.'), 'distinct roster member detail');
+          assert.ok(!(await page.locator('#agent-detail-grace').innerText()).includes('Ada builds'), 'details stay keyed to agent ID');
+          await squadInfo.getByRole('button', { name: 'Close Squad Info' }).click();
           // The fixture uses a centered 10x12 map and stable seated characters.
           const point = (index, row, offsetY = 0) => ({
             x: (3 + index * 2) * 32 + 16 + (viewport.width - 320) / 2,
