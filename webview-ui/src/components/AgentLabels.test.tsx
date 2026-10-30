@@ -10,6 +10,7 @@ import { CharacterState, TileType } from '../office/types.js';
 import { HostClientProvider } from '../HostClientContext.js';
 import { createHostClientFixture } from '../__tests__/hostClientFixture.js';
 import { setContextUsage } from '../office/toolUtils.js';
+import { getCharacterScreenBounds } from '../office/engine/characterGeometry.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -19,6 +20,7 @@ describe('AgentLabels over canvas characters', () => {
   let office: OfficeState;
   let frames: Map<number, FrameRequestCallback>;
   let nextFrame: number;
+  let time: number;
   const panRef = { current: { x: 30, y: 40 } };
   const onAgentClick = vi.fn();
   const client = createHostClientFixture();
@@ -26,6 +28,7 @@ describe('AgentLabels over canvas characters', () => {
   beforeEach(() => {
     frames = new Map();
     nextFrame = 0;
+    time = 0;
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
       frames.set(++nextFrame, callback);
       return nextFrame;
@@ -56,9 +59,10 @@ describe('AgentLabels over canvas characters', () => {
   });
 
   function frame() {
+    time += 100;
     const callbacks = [...frames.values()];
     frames.clear();
-    act(() => callbacks.forEach((callback) => callback(0)));
+    act(() => callbacks.forEach((callback) => callback(time)));
   }
 
   function render(zoom = 2, withCanvas = false) {
@@ -77,7 +81,7 @@ describe('AgentLabels over canvas characters', () => {
     return button!;
   }
 
-  it.each([1, 2, 4])('renders only transparent name controls, not DOM characters or fake animations, at zoom %s', (zoom) => {
+  it.each([1, 2, 4])('renders readable native name controls, not DOM characters or fake animations, at zoom %s', (zoom) => {
     office.setAgentActive('homer', true);
     office.characters.get('marge')!.state = CharacterState.WALK;
     render(zoom);
@@ -92,13 +96,13 @@ describe('AgentLabels over canvas characters', () => {
     for (const element of elements) {
       expect(element.style.animation).toBe('');
       // Only the small status dot may have both explicit width and height.
-      if (element.style.width || element.style.height) {
+      if ((element.style.width || element.style.height) && element.tagName.toLowerCase() !== 'svg') {
         expect(element.getAttribute('role')).toBe('img');
         expect(element.style.width).toBe('6px');
         expect(element.style.height).toBe('6px');
       }
     }
-    expect(label().style.background).toBe('transparent');
+    expect(label().style.background).toBe('rgba(0, 0, 0, 0.8)');
     expect(label().style.border).toBe('0px');
     expect(label().parentElement!.parentElement!.style.pointerEvents).toBe('none');
   });
@@ -239,5 +243,79 @@ describe('AgentLabels over canvas characters', () => {
     office.setAgentActive('homer', false);
     frame();
     expect(host.querySelector('[data-agent-context="homer"]')).toBeNull();
+  });
+
+  it.each([1.5, 2])('marks off-screen names honestly and offers keyboard Locate at DPR %s', (dpr) => {
+        vi.stubGlobal('devicePixelRatio', dpr);
+        vi.stubGlobal('innerWidth', 788);
+        Object.assign(office.characters.get('homer')!, { x: 400, y: 100 });
+        const locate = vi.fn();
+        act(() => root.render(<AgentLabels officeState={office} zoom={3} panRef={panRef}
+          onAgentClick={onAgentClick} onLocateAgent={locate} />));
+        frame();
+        expect(label().textContent).toContain('Off-screen right - Locate');
+        expect(label().title).toBe('Locate Homer Simpson: off-screen right');
+        label().focus();
+        act(() => label().click());
+        expect(locate).toHaveBeenCalledExactlyOnceWith('homer');
+        expect(onAgentClick).not.toHaveBeenCalled();
+        expect(label().parentElement!.querySelector('svg')).toBeNull();
+        panRef.current.x = -700;
+        frame();
+        expect(label().textContent).not.toContain('Off-screen');
+        expect(label().parentElement!.querySelector('line')).not.toBeNull();
+  });
+
+  it.each([360, 1400].flatMap(width => Array.from({ length: 10 }, (_, i) => [width, i + 1])))
+      ('bounds collision-lane changes over 60s in a %spx panel at zoom %s (CSS pixels, DPR 1.5)', (width, zoom) => {
+        vi.stubGlobal('devicePixelRatio', 1.5);
+        vi.stubGlobal('innerWidth', width);
+        vi.stubGlobal('innerHeight', 900);
+        vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+          return this.dataset.agentLabel ? 90 : this.dataset.agentToolBubble ? 120 : 0;
+        });
+        vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+          return this.dataset.agentLabel ? 28 : this.dataset.agentToolBubble ? 18 : 0;
+        });
+        for (let i = 0; i < 6; i++) {
+          const id = `crowd-${i}`;
+          office.addAgent(id, `Moving member ${i}`, 'Developer');
+          Object.assign(office.characters.get(id)!, { x: 80, y: 100 });
+        }
+        render(zoom);
+        frame(); // Real measured dimensions become available after the first DOM commit.
+        const previous = new Map<string, { top: number; anchor: number }>();
+        let maxLaneStep = 0;
+        for (let tick = 0; tick < 600; tick++) {
+          for (let i = 0; i < 6; i++) {
+            Object.assign(office.characters.get(`crowd-${i}`)!, {
+              // Cross repeatedly with unchanged camera and world y, isolating lane motion.
+              x: (width / 2 + Math.sin(tick / 25 + i) * 100 - panRef.current.x) / zoom,
+              y: (450 - panRef.current.y) / zoom,
+            });
+          }
+          if (tick % 50 === 0) {
+            office.setAgentActive('crowd-0', tick % 100 === 0);
+            office.setAgentTool('crowd-0', 'Reading full tool text');
+            setContextUsage(office, 'crowd-0', { contextTokens: 600, maxContextTokens: 1000 });
+          }
+          frame();
+          for (const element of host.querySelectorAll<HTMLElement>('[data-agent-label]')) {
+            const id = element.dataset.agentLabel!;
+            if (!id.startsWith('crowd-')) continue;
+            const top = parseFloat(element.style.top);
+            const bounds = getCharacterScreenBounds(office.characters.get(id)!, zoom, panRef.current);
+            const anchor = Math.max(4, Math.min(bounds.top - 14, 900 - 28 - 4));
+            const last = previous.get(id);
+            if (last) maxLaneStep = Math.max(maxLaneStep, Math.abs((top - last.top) - (anchor - last.anchor)));
+            previous.set(id, { top, anchor });
+            expect(element.textContent).toContain('Developer');
+            const connector = element.parentElement!.querySelector('line')!;
+            expect(Number(connector.getAttribute('x2'))).toBeCloseTo(
+              office.characters.get(id)!.x * zoom + panRef.current.x);
+          }
+        }
+        expect(maxLaneStep).toBeLessThanOrEqual(12.000001);
+        expect(panRef.current).toEqual({ x: 30, y: 40 });
   });
 });

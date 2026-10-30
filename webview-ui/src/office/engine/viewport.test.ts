@@ -1,8 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { clampPanOffset, panAxisRange, zoomPanAroundAnchor } from './viewport.js';
+import { clampPanOffset, fitOffice, panAxisRange, zoomPanAroundAnchor } from './viewport.js';
 import { PAN_MARGIN_FRACTION, TILE_SIZE, ZOOM_MAX, ZOOM_MIN } from '../../constants.js';
 
 const M = PAN_MARGIN_FRACTION;
+
+describe('explicit office framing', () => {
+  it.each([[788, 600, 2], [360, 640, 1], [1400, 900, 3]])(
+    'fits a 21-column office into %sx%s CSS pixels without consulting DPR', (width, height, expectedZoom) => {
+      const world = { width: 21 * TILE_SIZE, height: 15 * TILE_SIZE };
+      const fit = fitOffice({ width, height }, world, ZOOM_MIN, ZOOM_MAX);
+      expect(fit.zoom).toBe(expectedZoom);
+      expect(fit.pan.x).toBeGreaterThanOrEqual(0);
+      expect(fit.pan.y).toBeGreaterThanOrEqual(0);
+      expect(fit.pan.x + world.width * fit.zoom).toBeLessThanOrEqual(width);
+      expect(fit.pan.y + world.height * fit.zoom).toBeLessThanOrEqual(height);
+    });
+
+  it('centers oversized saved layouts at minimum zoom without mutating them', () => {
+    const world = Object.freeze({ width: 2000, height: 1000 });
+    expect(fitOffice({ width: 360, height: 640 }, world, 1, 10)).toEqual({
+      zoom: 1, pan: { x: -820, y: -180 },
+    });
+  });
+});
 
 /** Visible fraction of the map along one axis for a given pan offset. */
 function visibleFraction(pan: number, mapSize: number, viewSize: number): number {

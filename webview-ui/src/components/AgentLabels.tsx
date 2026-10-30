@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
 import { getContextUsage, contextGauge } from '../office/toolUtils.js';
 import { getCharacterScreenBounds } from '../office/engine/characterGeometry.js';
+import { OverlayLayout, type LabelBox } from '../office/engine/overlayLayout.js';
+export { placeOverlay } from '../office/engine/overlayLayout.js';
 
 interface AgentLabelsProps {
   officeState: OfficeState;
   zoom: number;
   panRef: React.RefObject<{ x: number; y: number }>;
   onAgentClick?: (agentId: string, screenX: number, screenY: number) => void;
+  onLocateAgent?: (agentId: string) => void;
 }
 
 interface LabelPosition {
@@ -22,45 +25,27 @@ interface LabelPosition {
   tool: string | undefined;
   bubbleType: string;
   isSelected: boolean;
+  anchorX: number;
+  anchorY: number;
+  offscreen: string;
   gauge?: ReturnType<typeof contextGauge> & { x: number; y: number };
 }
 
-interface LabelBox {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-
-/** Place measured overlays in stable lanes, without shortening their text. */
-export function placeOverlay(x: number, y: number, width: number, height: number,
-  viewportWidth: number, viewportHeight: number, occupied: LabelBox[]): LabelBox {
-  const left = width > 0 ? Math.max(4, Math.min(x - width / 2, viewportWidth - width - 4)) : x;
-  const top = height > 0 ? Math.max(4, Math.min(y, viewportHeight - height - 4)) : y;
-  const overlaps = (candidate: number) => occupied.some((box) =>
-    left < box.left + box.width + 4 && left + width + 4 > box.left
-    && candidate < box.top + box.height + 4 && candidate + height + 4 > box.top);
-  const candidates = [top, ...occupied.map((box) => box.top - height - 4).sort((a, b) => b - a),
-    ...occupied.map((box) => box.top + box.height + 4).sort((a, b) => a - b)];
-  const placed = candidates.find((candidate) => candidate >= 4
-    && candidate + height <= viewportHeight - 4 && !overlaps(candidate));
-  const box = { left, top: placed ?? top, width, height };
-  occupied.push(box);
-  return box;
-}
-
-export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLabelsProps) {
+export function AgentLabels({ officeState, zoom, panRef, onAgentClick, onLocateAgent }: AgentLabelsProps) {
   const [labelPositions, setLabelPositions] = useState<LabelPosition[]>([]);
   const rafRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const layoutRef = useRef(new OverlayLayout());
 
   useEffect(() => {
-    const updatePositions = () => {
+    const updatePositions = (time: number) => {
       const positions: LabelPosition[] = [];
       const occupied: LabelBox[] = [];
       const container = containerRef.current;
       const width = container?.clientWidth || window.innerWidth;
       const height = container?.clientHeight || window.innerHeight;
+      const layout = layoutRef.current;
+      layout.begin();
       for (const [agentId, char] of [...officeState.characters].sort(([a], [b]) => a.localeCompare(b))) {
         const px = panRef.current!.x;
         const py = panRef.current!.y;
@@ -68,10 +53,14 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
         const labelX = (bounds.left + bounds.right) / 2;
         const characterTop = bounds.top;
         const labelY = characterTop - 14;
+        const offscreen = [
+          bounds.right < 0 ? 'left' : bounds.left > width ? 'right' : '',
+          bounds.bottom < 0 ? 'above' : bounds.top > height ? 'below' : '',
+        ].filter(Boolean).join(' / ');
         const label = [...(container?.querySelectorAll<HTMLElement>('[data-agent-label]') ?? [])]
           .find((element) => element.dataset.agentLabel === agentId);
-        const box = placeOverlay(labelX, labelY, label?.offsetWidth ?? 0, label?.offsetHeight ?? 0,
-          width, height, occupied);
+        const box = layout.place(`name:${agentId}`, labelX, labelY, label?.offsetWidth ?? 0, label?.offsetHeight ?? 0,
+          width, height, occupied, time);
         positions.push({
           agentId,
           name: char.name || agentId,
@@ -84,23 +73,27 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
           tool: char.tool,
           bubbleType: char.bubbleState.type,
           isSelected: officeState.selectedAgentId === agentId,
+          anchorX: labelX,
+          anchorY: characterTop,
+          offscreen,
         });
       }
       for (const pos of positions) {
         if (!pos.isActive || !pos.tool) continue;
         const bubble = [...(container?.querySelectorAll<HTMLElement>('[data-agent-tool-bubble]') ?? [])]
           .find((element) => element.dataset.agentToolBubble === pos.agentId);
-        const box = placeOverlay(pos.toolX, pos.toolY, bubble?.offsetWidth ?? 0, bubble?.offsetHeight ?? 0,
-          width, height, occupied);
+        const box = layout.place(`tool:${pos.agentId}`, pos.toolX, pos.toolY, bubble?.offsetWidth ?? 0, bubble?.offsetHeight ?? 0,
+          width, height, occupied, time);
         pos.toolX = box.left;
         pos.toolY = box.top;
       }
       for (const pos of positions) {
         const usage = getContextUsage(officeState, pos.agentId);
-        if (!usage || !pos.isActive) continue;
-        const box = placeOverlay(pos.labelX, pos.labelY + 32, 40, 4, width, height, occupied);
+        if (!usage || !pos.isActive || !container?.querySelector('[data-agent-label]')) continue;
+        const box = layout.place(`context:${pos.agentId}`, pos.labelX, pos.labelY + 32, 40, 4, width, height, occupied, time);
         pos.gauge = { ...contextGauge(usage), x: box.left, y: box.top };
       }
+      layout.end();
       setLabelPositions(positions);
       rafRef.current = requestAnimationFrame(updatePositions);
     };
@@ -129,7 +122,13 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
         }
 
         return (
-          <div key={pos.agentId}>
+          <div key={pos.agentId} data-agent-offscreen={pos.offscreen || undefined}>
+            {!pos.offscreen && <svg aria-hidden="true" style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'hidden',
+            }}>
+              <line x1={pos.labelX} y1={pos.labelY} x2={pos.anchorX} y2={pos.anchorY}
+                stroke={pos.isSelected ? '#fbbf24' : '#cbd5e1'} strokeWidth={1} strokeOpacity={0.65} />
+            </svg>}
             {pos.gauge && <span data-agent-context={pos.agentId} role="progressbar"
               aria-label={pos.gauge.label} title={pos.gauge.label}
               aria-valuenow={pos.gauge.percent} aria-valuemin={0} aria-valuemax={100}
@@ -161,11 +160,16 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
             <button
               type="button"
               data-agent-label={pos.agentId}
+              title={pos.offscreen ? `Locate ${pos.name}: off-screen ${pos.offscreen}` : undefined}
               onKeyDown={(e) => {
                 if (e.key === ' ' || e.key === 'Enter') e.stopPropagation();
               }}
               onClick={(e) => {
                 e.stopPropagation();
+                if (pos.offscreen && onLocateAgent) {
+                  onLocateAgent(pos.agentId);
+                  return;
+                }
                 if (e.detail === 0) {
                   const rect = e.currentTarget.getBoundingClientRect();
                   onAgentClick?.(pos.agentId, rect.left + rect.width / 2, rect.bottom);
@@ -189,10 +193,11 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
                 gap: '2px',
                 cursor: 'pointer',
                 pointerEvents: 'auto',
-                background: 'transparent',
+                background: 'rgba(0,0,0,0.8)',
                 border: 0,
                 padding: 0,
                 maxWidth: 'calc(100vw - 8px)',
+                overflowWrap: 'anywhere',
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -212,6 +217,9 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
                 <span>{pos.name}</span>
               </span>
               {pos.role && <span style={{ fontSize: '9px', opacity: 0.7 }}>{pos.role}</span>}
+              {pos.offscreen && <span style={{ fontSize: '10px', color: '#fbbf24' }}>
+                Off-screen {pos.offscreen}{onLocateAgent ? ' - Locate' : ''}
+              </span>}
             </button>
           </div>
         );

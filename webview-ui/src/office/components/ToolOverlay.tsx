@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { OfficeState } from '../engine/officeState.js';
-import { placeOverlay } from '../../components/AgentLabels.js';
+import { OverlayLayout } from '../engine/overlayLayout.js';
 import { getCharacterScreenBounds } from '../engine/characterGeometry.js';
 
 interface ToolOverlayProps {
@@ -24,12 +24,17 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
   }>>([]);
   const rafRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const layoutRef = useRef(new OverlayLayout());
 
   useEffect(() => {
-    const updatePositions = () => {
+    const updatePositions = (time: number) => {
       const positions: ToolPosition[] = [];
       const container = containerRef.current;
       const origin = container?.getBoundingClientRect();
+      const layout = layoutRef.current;
+      layout.begin();
+      const width = container?.clientWidth || window.innerWidth;
+      const height = container?.clientHeight || window.innerHeight;
       const occupied = [...(container?.parentElement?.querySelectorAll<HTMLElement>(
         '[data-agent-label], [data-agent-tool-bubble], [data-agent-context]') ?? [])].map((element) => {
         const rect = element.getBoundingClientRect();
@@ -41,25 +46,29 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
         const char = officeState.characters.get(agentId);
         if (!char) continue;
         const bounds = getCharacterScreenBounds(char, zoom, panRef.current!);
+        // Off-screen tools remain available in the agent card, not as detached bubbles.
+        if (bounds.right < 0 || bounds.left > width || bounds.bottom < 0 || bounds.top > height) continue;
         const screenX = (bounds.left + bounds.right) / 2;
         const screenY = bounds.top - 8 * zoom;
         const label = [...(container?.querySelectorAll<HTMLElement>('[data-agent-tools]') ?? [])]
           .find((element) => element.dataset.agentTools === agentId);
-        const box = placeOverlay(screenX, screenY, label?.offsetWidth ?? 0, label?.offsetHeight ?? 0,
-          container?.clientWidth || window.innerWidth, container?.clientHeight || window.innerHeight, occupied);
+        const box = layout.place(`tools:${agentId}`, screenX, screenY, label?.offsetWidth ?? 0, label?.offsetHeight ?? 0,
+          width, height, occupied, time);
         positions.push({ agentId, x: box.left, y: box.top, tools });
       }
       const subPositions = [];
       for (const [id, { character, parentAgentId }] of officeState.subagents) {
         const bounds = getCharacterScreenBounds(character, zoom, panRef.current!);
+        if (bounds.right < 0 || bounds.left > width || bounds.bottom < 0 || bounds.top > height) continue;
         const label = [...(container?.querySelectorAll<HTMLElement>('[data-subagent-label]') ?? [])]
           .find(element => element.dataset.subagentLabel === id);
-        const box = placeOverlay((bounds.left + bounds.right) / 2, bounds.bottom + 4,
+        const box = layout.place(`subagent:${id}`, (bounds.left + bounds.right) / 2, bounds.bottom + 4,
           label?.offsetWidth ?? 0, label?.offsetHeight ?? 0,
-          container?.clientWidth || window.innerWidth, container?.clientHeight || window.innerHeight, occupied);
+          width, height, occupied, time);
         subPositions.push({ id, parentId: parentAgentId, name: character.name,
           parentName: officeState.characters.get(parentAgentId)?.name ?? parentAgentId, x: box.left, y: box.top });
       }
+      layout.end();
       setSubagentPositions(subPositions);
       setToolPositions(positions);
       rafRef.current = requestAnimationFrame(updatePositions);
