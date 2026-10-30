@@ -261,6 +261,11 @@ async function main() {
         await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
         await until(() => page.evaluate(() => window.__characterProof?.frames.length > 0), 'first office draw');
         await delay(200);
+        if (viewport.width === 360) {
+          const zoomOut = page.getByRole('button', { name: 'Zoom out', exact: true });
+          while (await zoomOut.isEnabled()) await zoomOut.click();
+          await page.getByText('1x', { exact: true }).waitFor();
+        }
         const rendered = await page.evaluate(() => window.__characterProof.frames.map((frame) => frame.rgba));
         if (isBaseline) {
           assert.throws(() => assert.ok(rendered.some((rgba) => externalPixels(rgba)),
@@ -277,8 +282,8 @@ async function main() {
             }
             return count;
           });
-          assert.ok(visible > 0, 'fixture pixels must reach the actual visible office canvas');
           await page.screenshot({ path: path.join(output, `characters-${viewport.width}x${viewport.height}.png`) });
+          assert.ok(visible > 0, `fixture pixels must reach the ${viewport.width}x${viewport.height} visible office canvas`);
           results.visibleFixturePixels = visible;
         }
         results[isBaseline ? 'baseline' : 'current'] = await collectLegacy(page);
