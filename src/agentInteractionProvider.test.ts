@@ -56,7 +56,7 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
           expect.objectContaining({ sourcePath: path.join(fixture.workspaceRoot, '.squad', 'config.json'), state: 'missing', values: [] }),
         ]),
         boundaries: expect.stringContaining(`${agent.name} boundaries`), recentActivity: [agent.activity],
-        currentTask: null, currentTaskSource: null, lastActiveAt: null,
+        currentTask: null, currentTaskSource: null, lastActiveAt: null, lastActiveAtStatus: 'unobserved',
       },
     }]);
     fixture.send({ type: 'openSquadAgent', agentId: agent.id });

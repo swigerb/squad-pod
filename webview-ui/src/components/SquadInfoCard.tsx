@@ -283,7 +283,9 @@ export function SquadInfoCard({
                     <div><strong>Observed status:</strong> {m.status === 'unknown' ? 'unavailable' : m.status}</div>
                     <div><strong>{m.currentTaskSource === 'file' ? 'File activity hint'
                       : m.currentTaskSource === 'live' ? 'Live task' : 'Observed activity'}:</strong> {m.currentTask || 'No current task observed.'}</div>
-                    {detail && <div><strong>Last attributable live activity:</strong> {formatRelativeTime(detail.lastActiveAt)}</div>}
+                    {detail && <div><strong>Last attributable live activity:</strong> {
+                      formatRelativeTime(detail.lastActiveAt, detail.lastActiveAtStatus)
+                    }</div>}
                     {!availableAgentIds.includes(m.id) ? (
                       <div role="status">This agent is no longer available in the current workspace.</div>
                     ) : !detail ? (

@@ -65,4 +65,20 @@ describe('SquadInfoCard activity time', () => {
     expect(host.textContent).toContain('Last attributable live activity:');
     expect(host.textContent).toContain('No attributable activity observed');
   });
+
+  it('discloses a clock-skewed source event without showing it as recent activity', () => {
+    const futureAt = Date.now() + 60 * 1000;
+    act(() => root.render(
+      <SquadInfoCard
+        info={info}
+        agentDetails={{ 'test-agent': { ...detail, lastActiveAt: futureAt, lastActiveAtStatus: 'clock-skew' } }}
+        availableAgentIds={['test-agent']}
+        onClose={() => {}}
+      />,
+    ));
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Show details for TestBot"]')!.click());
+
+    expect(host.textContent).toContain('Activity time unavailable (source clock ahead)');
+    expect(host.textContent).not.toContain('just now');
+  });
 });

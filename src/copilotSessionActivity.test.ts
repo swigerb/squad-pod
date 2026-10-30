@@ -122,7 +122,10 @@ describe('read-only Copilot live activity with synthetic homes', () => {
   });
 
   it('restores a live activity timestamp from its source event without advancing it on replay', () => {
-    const timestamp = '2026-10-30T12:34:56.000Z';
+    const timestamp = new Date(now - 60_000).toISOString();
+    const toolStartedAt = new Date(now - 50_000).toISOString();
+    const toolCompletedAt = new Date(now - 45_000).toISOString();
+    const taskCompletedAt = new Date(now - 40_000).toISOString();
     const file = session('dated', marked(
       taskCall('run', 'Ada', 'general-purpose')
       + line('subagent.started', { toolCallId: 'run' }, { agentId: 'internal-run', timestamp }),
@@ -138,27 +141,60 @@ describe('read-only Copilot live activity with synthetic homes', () => {
 
     fs.appendFileSync(file,
       line('tool.execution_start', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view' }, {
-        timestamp: '2026-10-30T12:35:05.000Z',
+        timestamp: toolStartedAt,
       })
       + line('tool.execution_complete', { toolCallId: 'tool', parentToolCallId: 'run' }, {
-        timestamp: '2026-10-30T12:35:10.000Z',
+        timestamp: toolCompletedAt,
       }));
     reader.poll();
     expect(lifecycle.mock.calls.at(-1)).toEqual([
-      'ada', true, 'Inspect fixture', Date.parse('2026-10-30T12:35:10.000Z'),
+      'ada', true, 'Inspect fixture', Date.parse(toolCompletedAt),
     ]);
 
     reader.replay();
     expect(lifecycle.mock.calls.at(-1)).toEqual([
-      'ada', true, 'Inspect fixture', Date.parse('2026-10-30T12:35:10.000Z'),
+      'ada', true, 'Inspect fixture', Date.parse(toolCompletedAt),
     ]);
 
     fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'run' }, {
-      agentId: 'internal-run', timestamp: '2026-10-30T12:35:15.000Z',
+      agentId: 'internal-run', timestamp: taskCompletedAt,
     }));
     reader.poll();
     expect(lifecycle.mock.calls.at(-1)).toEqual([
-      'ada', false, null, Date.parse('2026-10-30T12:35:15.000Z'),
+      'ada', false, null, Date.parse(taskCompletedAt),
+    ]);
+  });
+
+  it('ignores future source timestamps and accepts a later valid observation', () => {
+    const previousTimestamp = new Date(now - 120_000).toISOString();
+    const futureTimestamp = new Date(now + 60_000).toISOString();
+    const validTimestamp = new Date(now - 1000).toISOString();
+    const file = session('clock-skew', marked(
+      taskCall('run', 'Ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run' }, { agentId: 'internal-run', timestamp: previousTimestamp }),
+    ));
+    reader.start();
+    expect(lifecycle.mock.calls).toEqual([['ada', true, 'Inspect fixture', Date.parse(previousTimestamp)]]);
+
+    fs.appendFileSync(file, line('tool.execution_start', {
+      toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view',
+    }, { timestamp: futureTimestamp }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(previousTimestamp), true,
+    ]);
+
+    fs.appendFileSync(file, line('tool.execution_complete', {
+      toolCallId: 'tool', parentToolCallId: 'run',
+    }, { timestamp: validTimestamp }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(validTimestamp),
+    ]);
+
+    reader.replay();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(validTimestamp),
     ]);
   });
 
@@ -513,7 +549,9 @@ describe('read-only Copilot live activity with synthetic homes', () => {
   });
 
   it('does not count identity reassignment as new activity for the former member', () => {
-    const firstObservedAt = '2026-10-30T12:00:00.000Z';
+    const firstObservedAt = new Date(now - 120_000).toISOString();
+    const toolObservedAt = new Date(now - 60_000).toISOString();
+    const reassignedAt = new Date(now - 30_000).toISOString();
     const file = session('reassigned', marked(
       taskCall('run', 'Ada', 'general-purpose')
       + line('subagent.started', { toolCallId: 'run' }, { agentId: 'internal-run', timestamp: firstObservedAt }),
@@ -521,20 +559,20 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     reader.start();
     fs.appendFileSync(file, line('tool.execution_start', {
       toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view',
-    }, { timestamp: '2026-10-30T12:01:00.000Z' }));
+    }, { timestamp: toolObservedAt }));
     reader.poll();
     expect(lifecycle.mock.calls.at(-1)).toEqual([
-      'ada', true, 'Inspect fixture', Date.parse('2026-10-30T12:01:00.000Z'),
+      'ada', true, 'Inspect fixture', Date.parse(toolObservedAt),
     ]);
 
     fs.appendFileSync(file, line('subagent.selected', { agentName: 'Grace' }, {
-      agentId: 'internal-run', timestamp: '2026-10-30T12:02:00.000Z',
+      agentId: 'internal-run', timestamp: reassignedAt,
     }));
     reader.poll();
 
     expect(lifecycle.mock.calls.slice(-2)).toEqual([
       ['ada', false, null],
-      ['grace', true, 'Inspect fixture', Date.parse('2026-10-30T12:02:00.000Z')],
+      ['grace', true, 'Inspect fixture', Date.parse(reassignedAt)],
     ]);
   });
 

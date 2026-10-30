@@ -38,10 +38,10 @@ describe('AgentCard activity time', () => {
     host.remove();
   });
 
-  function render(lastActiveAt: number | null) {
+  function render(lastActiveAt: number | null, lastActiveAtStatus?: AgentDetailInfo['lastActiveAtStatus']) {
     act(() => root.render(
       <AgentCard
-        detail={{ ...detail, lastActiveAt }}
+        detail={{ ...detail, lastActiveAt, lastActiveAtStatus }}
         position={{ x: 10, y: 10 }}
         onClose={() => {}}
       />,
@@ -66,6 +66,19 @@ describe('AgentCard activity time', () => {
     const card = render(Date.now() - 2 * 60 * 1000);
 
     expect(card.textContent).toContain('2 min ago');
+  });
+
+  it('does not render a future source timestamp as fresh activity', () => {
+    const card = render(Date.now() + 60 * 1000);
+
+    expect(card.textContent).toContain('Activity time unavailable (source clock ahead)');
+    expect(card.textContent).not.toContain('just now');
+  });
+
+  it('keeps the previous valid age visible while disclosing an ignored future event', () => {
+    const card = render(Date.now() - 2 * 60 * 1000, 'clock-skew');
+
+    expect(card.textContent).toContain('2 min ago (future source activity ignored due to clock skew)');
   });
 
   it.each([

@@ -371,7 +371,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         workspaceRoot: this.watchedRoot,
         roster: () => [...getAgents().keys()].map(id => ({ id, folder: id })),
         post: message => this.postMessage(message),
-        lifecycle: (id, active, task, activityAt) => setLiveAgentStatus(id, active, task, webview, activityAt),
+        lifecycle: (id, active, task, activityAt, clockSkew) =>
+          setLiveAgentStatus(id, active, task, webview, activityAt, clockSkew),
         status: liveActivity => {
           this.sourceStatus = { ...this.sourceStatus, liveActivity };
           this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
@@ -1363,6 +1364,7 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
     boundaries,
     recentActivity,
     lastActiveAt: agent.lastActiveAt,
+    lastActiveAtStatus: agent.lastActiveAtStatus,
   };
 }
 

@@ -256,10 +256,17 @@ interface ActivityOptions {
   copilotHome?: string;
   roster: () => readonly { id: string; folder?: string }[];
   post: (message: OutboundMessage) => void;
-  lifecycle: (agentId: string, active: boolean, task: string | null, activityAt?: number) => void;
+  lifecycle: (
+    agentId: string, active: boolean, task: string | null, activityAt?: number, clockSkew?: boolean,
+  ) => void;
   status: (status: LiveSourceStatus) => void;
   now?: () => number;
   sessionSelection?: () => LiveSessionSelection;
+}
+
+interface ActivityTimeObservation {
+  activityAt?: number;
+  clockSkew: boolean;
 }
 
 export class CopilotSessionActivity {
@@ -272,7 +279,9 @@ export class CopilotSessionActivity {
   private lastBytesAt = 0;
   private lastSize = -1;
   private stale = false;
-  private tasks = new Map<string, { agentId: string; description: string; instanceId?: string; activityAt?: number }>();
+  private tasks = new Map<string, {
+    agentId: string; description: string; instanceId?: string; activityAt?: number; clockSkew?: boolean;
+  }>();
   private runs = new Map<string, string>();
   private tools = new Map<string, { agentId: string; toolName: string; label: string }>();
   private toolOwners = new Map<string, string | null>();
@@ -319,7 +328,7 @@ export class CopilotSessionActivity {
   private replayCurrent(): void {
     for (const [agentId, taskId] of this.runs) {
       const task = this.tasks.get(taskId);
-      this.lifecycle(agentId, true, task?.description ?? null, task?.activityAt);
+      this.lifecycle(agentId, true, task?.description ?? null, task?.activityAt, task?.clockSkew);
     }
     for (const [toolId, tool] of this.tools) {
       this.options.post({ type: 'agentToolStart', agentId: tool.agentId, toolId, tool: tool.toolName, status: tool.label });
@@ -431,16 +440,43 @@ export class CopilotSessionActivity {
     if (!this.seeding) { this.options.post(message); }
   }
 
-  private lifecycle(agentId: string, active: boolean, task: string | null, activityAt?: number): void {
+  private lifecycle(
+    agentId: string,
+    active: boolean,
+    task: string | null,
+    activityAt?: number,
+    clockSkew = false,
+  ): void {
     if (this.seeding) {return;}
-    if (activityAt === undefined) {
+    if (clockSkew) {
+      this.options.lifecycle(agentId, active, task, activityAt, true);
+    } else if (activityAt === undefined) {
       this.options.lifecycle(agentId, active, task);
     } else {
       this.options.lifecycle(agentId, active, task, activityAt);
     }
   }
 
+  private activityTime(activityAt: number | undefined): ActivityTimeObservation {
+    if (activityAt === undefined) {return { clockSkew: false };}
+    if (activityAt > (this.options.now ?? Date.now)()) {return { clockSkew: true };}
+    return { activityAt, clockSkew: false };
+  }
+
+  private mergeTaskActivity(
+    task: { activityAt?: number; clockSkew?: boolean },
+    observation: ActivityTimeObservation,
+  ): void {
+    if (observation.clockSkew) {
+      task.clockSkew = true;
+    } else if (observation.activityAt !== undefined) {
+      task.activityAt = Math.max(task.activityAt ?? 0, observation.activityAt);
+      task.clockSkew = false;
+    }
+  }
+
   private accept(event: LiveEvent): void {
+    const activityTime = this.activityTime(event.activityAt);
     const duplicateTask = !!event.task && this.observedTasks.has(event.toolCallId);
     const attribution = event.selectedAgentName
       ? exactLiveAgent(event.selectedAgentName, this.options.roster())
@@ -456,10 +492,14 @@ export class CopilotSessionActivity {
           this.tasks.delete(observed.toolCallId);
         }
         if (observed.agentId) {
-          const activityAt = Math.max(event.activityAt ?? 0, previous?.activityAt ?? 0) || undefined;
-          this.tasks.set(observed.toolCallId, { agentId: observed.agentId, description: observed.description,
-            instanceId: observed.instanceId, activityAt });
-          this.startRun(observed.agentId, observed.toolCallId, observed.description, activityAt);
+          const task = {
+            agentId: observed.agentId, description: observed.description, instanceId: observed.instanceId,
+            activityAt: previous?.activityAt, clockSkew: previous?.clockSkew,
+          };
+          this.mergeTaskActivity(task, activityTime);
+          this.tasks.set(observed.toolCallId, task);
+          this.startRun(observed.agentId, observed.toolCallId, observed.description,
+            task.activityAt, !!task.clockSkew);
           this.rememberModelOwner(event.instanceId, observed.agentId);
         } else {
           this.clearInstanceModelOwner(event.instanceId);
@@ -481,31 +521,34 @@ export class CopilotSessionActivity {
         .find(row => row.toolCallId === event.toolCallId);
       if (observed?.agentId && observed.state === 'running') {
         this.tasks.set(event.toolCallId, { agentId: observed.agentId, description: observed.description,
-          instanceId: observed.instanceId, activityAt: event.activityAt });
+          instanceId: observed.instanceId, activityAt: activityTime.activityAt,
+          clockSkew: activityTime.clockSkew });
       }
     }
     const task = this.tasks.get(event.toolCallId);
     if (event.type === 'subagent.started' && task) {
       task.instanceId = this.observedTasks.snapshot(this.session?.id ?? null).tasks
         .find(row => row.toolCallId === event.toolCallId)?.instanceId ?? event.instanceId;
-      task.activityAt = Math.max(event.activityAt ?? 0, task.activityAt ?? 0) || undefined;
-      this.startRun(task.agentId, event.toolCallId, task.description, task.activityAt);
+      this.mergeTaskActivity(task, activityTime);
+      this.startRun(task.agentId, event.toolCallId, task.description, task.activityAt, !!task.clockSkew);
       if (task.instanceId) {this.rememberModelOwner(task.instanceId, task.agentId);}
     } else if (['subagent.completed', 'subagent.failed', 'subagent.aborted'].includes(event.type)) {
       const instanceId = task?.instanceId ?? event.instanceId;
       for (const [id, ended] of this.tasks) {
         if (id !== event.toolCallId && (!instanceId || ended.instanceId !== instanceId)) { continue; }
-        if (this.runs.get(ended.agentId) === id) { this.finish(ended.agentId, event.activityAt); }
+        if (this.runs.get(ended.agentId) === id) {
+          this.finish(ended.agentId, activityTime.activityAt, activityTime.clockSkew);
+        }
         this.tasks.delete(id);
       }
     } else if (event.type === 'tool.execution_start') {
       const parent = this.tasks.get(event.parentToolCallId);
       const scopedOwner = event.agentScoped ? this.modelAgentOwners.get(event.agentInstanceId) : undefined;
       if (parent) {
-        this.observeTaskActivity(event.parentToolCallId, event.activityAt);
+        this.observeTaskActivity(event.parentToolCallId, activityTime);
       } else if (scopedOwner) {
         const runId = this.runs.get(scopedOwner);
-        if (runId) {this.observeTaskActivity(runId, event.activityAt);}
+        if (runId) {this.observeTaskActivity(runId, activityTime);}
       }
       if (parent) {
         this.rememberToolOwner(event.toolCallId, parent.agentId);
@@ -526,10 +569,10 @@ export class CopilotSessionActivity {
       if (!tool) {
         const owner = this.toolOwners.get(event.toolCallId);
         if (parentTask && (owner === undefined || owner === parentTask.agentId)) {
-          this.observeTaskActivity(event.parentToolCallId, event.activityAt);
+          this.observeTaskActivity(event.parentToolCallId, activityTime);
         } else if (owner) {
           const runId = this.runs.get(owner);
-          if (runId) {this.observeTaskActivity(runId, event.activityAt);}
+          if (runId) {this.observeTaskActivity(runId, activityTime);}
         }
         if (owner === null) {
           if (parentTask) {return;}
@@ -543,10 +586,10 @@ export class CopilotSessionActivity {
         return;
       }
       if (parentTask && parentTask.agentId === tool.agentId) {
-        this.observeTaskActivity(event.parentToolCallId, event.activityAt);
+        this.observeTaskActivity(event.parentToolCallId, activityTime);
       } else {
         const runId = this.runs.get(tool.agentId);
-        if (runId) {this.observeTaskActivity(runId, event.activityAt);}
+        if (runId) {this.observeTaskActivity(runId, activityTime);}
       }
       this.post({ type: 'agentToolDone', agentId: tool.agentId, toolId: event.toolCallId, tool: tool.toolName });
       if (event.context) {
@@ -560,36 +603,43 @@ export class CopilotSessionActivity {
     this.acceptModelEvent(event, this.tasks.get(event.toolCallId));
   }
 
-  private startRun(agentId: string, toolCallId: string, description: string, activityAt?: number): void {
+  private startRun(
+    agentId: string,
+    toolCallId: string,
+    description: string,
+    activityAt?: number,
+    clockSkew = false,
+  ): void {
     const task = this.tasks.get(toolCallId);
-    if (task && activityAt !== undefined) {
-      task.activityAt = Math.max(task.activityAt ?? 0, activityAt);
-    }
+    if (task) {this.mergeTaskActivity(task, { activityAt, clockSkew });}
     if (this.runs.get(agentId) === toolCallId) {
-      if (activityAt !== undefined) {this.lifecycle(agentId, true, description, task?.activityAt);}
+      if (activityAt !== undefined || clockSkew) {
+        this.lifecycle(agentId, true, description, task?.activityAt, !!task?.clockSkew);
+      }
       return;
     }
     if (this.runs.has(agentId)) { this.clearDisplays(agentId); }
     this.runs.set(agentId, toolCallId);
-    this.lifecycle(agentId, true, description, task?.activityAt);
+    this.lifecycle(agentId, true, description, task?.activityAt, !!task?.clockSkew);
     this.telemetry(agentId, 'Live member started');
   }
 
-  private observeTaskActivity(toolCallId: string, activityAt: number | undefined): void {
+  private observeTaskActivity(toolCallId: string, observation: ActivityTimeObservation): void {
     const task = this.tasks.get(toolCallId);
-    if (!task || activityAt === undefined) {return;}
-    const latest = Math.max(task.activityAt ?? 0, activityAt);
-    if (latest === task.activityAt) {return;}
-    task.activityAt = latest;
-    if (this.runs.get(task.agentId) === toolCallId) {
-      this.lifecycle(task.agentId, true, task.description, latest);
+    if (!task) {return;}
+    const previousActivityAt = task.activityAt;
+    const previousClockSkew = !!task.clockSkew;
+    this.mergeTaskActivity(task, observation);
+    if (this.runs.get(task.agentId) === toolCallId
+      && (task.activityAt !== previousActivityAt || !!task.clockSkew !== previousClockSkew)) {
+      this.lifecycle(task.agentId, true, task.description, task.activityAt, !!task.clockSkew);
     }
   }
 
-  private finish(agentId: string, activityAt?: number): void {
+  private finish(agentId: string, activityAt?: number, clockSkew = false): void {
     this.runs.delete(agentId);
     this.clearDisplays(agentId);
-    this.lifecycle(agentId, false, null, activityAt);
+    this.lifecycle(agentId, false, null, activityAt, clockSkew);
     this.telemetry(agentId, 'Live member finished');
   }
 

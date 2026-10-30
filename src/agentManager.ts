@@ -36,6 +36,7 @@ export function setLiveAgentStatus(
   task: string | null,
   webview: vscode.Webview,
   activityAt?: number,
+  clockSkew = false,
 ): void {
   if (!active) {liveRuns.delete(agentId);}
   const agent = agents.get(agentId);
@@ -49,7 +50,7 @@ export function setLiveAgentStatus(
     agent.status = 'active';
     agent.currentTask = task;
     agent.currentTaskSource = task ? 'live' : null;
-    recordLiveActivity(agent, activityAt);
+    recordLiveActivity(agent, activityAt, clockSkew);
     if (!alreadyLive || taskChanged) {
       postToWebview(webview, { type: 'agentToolsClear', agentId });
     }
@@ -61,7 +62,7 @@ export function setLiveAgentStatus(
     }
   } else {
     liveRuns.delete(agentId);
-    recordLiveActivity(agent, activityAt);
+    recordLiveActivity(agent, activityAt, clockSkew);
     updateAgentStatus(agentId, 'idle', null, webview);
   }
 }
@@ -383,12 +384,26 @@ function memberToState(
     currentTask: null,
     currentTaskSource: null,
     lastActiveAt: null,
+    lastActiveAtStatus: 'unobserved',
   };
 }
 
-function recordLiveActivity(agent: SquadAgentState, activityAt: number | undefined): void {
+function recordLiveActivity(agent: SquadAgentState, activityAt: number | undefined, clockSkew: boolean): void {
+  const now = Date.now();
+  if (clockSkew) {
+    if (typeof activityAt === 'number' && Number.isFinite(activityAt) && activityAt > 0 && activityAt <= now) {
+      agent.lastActiveAt = Math.max(agent.lastActiveAt ?? 0, activityAt);
+    }
+    agent.lastActiveAtStatus = 'clock-skew';
+    return;
+  }
   if (typeof activityAt !== 'number' || !Number.isFinite(activityAt) || activityAt <= 0) {return;}
+  if (activityAt > now) {
+    agent.lastActiveAtStatus = 'clock-skew';
+    return;
+  }
   agent.lastActiveAt = Math.max(agent.lastActiveAt ?? 0, activityAt);
+  agent.lastActiveAtStatus = 'available';
 }
 
 function loadPersistedMeta(context: vscode.ExtensionContext): PersistedAgentMeta {
