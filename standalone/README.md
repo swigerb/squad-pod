@@ -46,12 +46,17 @@ and recorded-usage parsers are reused. The bundled starter layout and built-in
 furniture/floors/walls/carpets/pets/embedded characters work without external
 asset directories. No project file is served over HTTP.
 
-File changes are polled every second **while viewers are connected**. A changed
+File changes are polled every second **while viewers are connected**. A new or edited
 recognized session/log source marks the named roster agent active for approximately
-30 seconds; an old file is not evidence of a currently running tool. There are no
+30 seconds; unchanged reads do not extend that window. Initial connection and
+resuming after all viewers disconnect baseline existing files without animating
+historical changes. An old file is not evidence of a currently running tool. There are no
 live context counters. Usage is the recorded ledger only, not billing or live
 session telemetry. Missing/malformed/bounded sources are explained; invalid saved
 layouts show the bundled starter, without overwriting the source.
+File aliases use the native roster resolver, including ambiguity rejection.
+Built-in appearances are deterministically scoped to member identity, not roster
+order, so existing and reconnecting viewers agree without writing metadata.
 
 Layout/editor/appearance/seat changes, settings, asset registration, directory
 management, native file dialogs and charter opening are disabled. Pan, zoom,
@@ -83,8 +88,8 @@ is persisted by the standalone adapter. VS Code draft/recovery behavior is uncha
 - At most 8 TCP connections, 4 KiB inbound frames/auth bodies/headers, 8 MiB
   outbound office frames, 16 MiB queued bytes per viewer, 32 commands/second,
   5-second reads and 10-second sends. Ping/pong detects dead viewers.
-  The built-in asset event measures approximately 484 KiB and the initial office
-  snapshot approximately 506 KiB; terminal-sized frame limits are not reused.
+  The built-in asset event measures 483,977 bytes (about 473 KiB) and the initial
+  office snapshot about 506 KB; terminal-sized frame limits are not reused.
 - Project reads reject internal symlinks/junctions, escapes, non-regular files,
   changed file identities and oversized inputs. Roster 256 KiB/128 agents;
   layout/ledger 2 MiB each; activity 128 KiB/file, 256 directory entries/source,
@@ -115,7 +120,9 @@ cache, using local tarballs of the already-restored runtime dependencies (no fee
 metadata lookup). When `PLAYWRIGHT_MODULE` points to an
 already installed Playwright module, it additionally drives the actual browser
 authentication form and renderer, observes live fixture changes, reconnects, and
-writes desktop/narrow screenshots to `OBSERVER_ARTIFACTS`. `EDGE_PATH` optionally
+writes desktop/narrow screenshots to `OBSERVER_ARTIFACTS`. A saved-project Floor10
+probe checks exact installed source-sheet canvas pixels and legacy VOID8 transparency.
+`EDGE_PATH` optionally
 selects an installed Edge executable; it installs no browsers.
 
 These are synthetic observer checks, **not** real Squad/Copilot session acceptance

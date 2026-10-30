@@ -5,6 +5,7 @@ import { parseRecordedUsage, unavailableUsage, MAX_USAGE_BYTES } from '../../src
 import { parseLayoutJson } from '../../src/layoutPersistence.js';
 import { createDefaultOfficeLayout } from '../../src/defaultOfficeLayout.js';
 import { ensureTileColors } from '../../src/core/layoutState.js';
+import { resolveFileAgentId } from '../../src/core/agentIdentity.js';
 import { loadAssetSnapshot } from '../../src/manifestAssets.js';
 import { parseLogEntry, parseSessionFile, detectAgentFromFilename } from '../../src/squadWatcher.js';
 import type { OutboundMessage, WebviewMessage, ExistingAgentsMessage } from '../../src/types.js';
@@ -25,9 +26,9 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
   let disposed = false;
   const fingerprints = new Map<string, string>();
   const listeners = new Set<(messages: OutboundMessage[]) => void>();
-  const activity = new Map<string, { hash: string; changedAt: number }>();
+  const activity = new Map<string, { hash: string; changedAt: number | null }>();
 
-  function readSnapshot(): OutboundMessage[] {
+  function readSnapshot(observeActivity = listeners.size > 0): OutboundMessage[] {
     const errors: string[] = [];
     let remainingBytes = 8 * 1024 * 1024;
     function read(relative: string, limit: number): string | null {
@@ -72,6 +73,7 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
       : parseRecordedUsage(ledger, parseAllMembers(team ?? ''));
     usage.sourcePath = path.join(files.root, squad, 'log', 'usage.jsonl');
     const active = new Map<string, number>();
+    const identities = new Map(roster.map(member => [member.slug, { id: member.slug, name: member.name }]));
     const seen = new Set<string>();
     for (const folder of ['sessions', 'log', 'orchestration-log']) {
       let names: string[] = [];
@@ -85,17 +87,18 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
         seen.add(relative);
         const hash = createHash('sha256').update(content).digest('hex');
         const prior = activity.get(relative);
-        const changedAt = prior ? prior.hash === hash ? prior.changedAt : Date.now() : 0;
+        const changedAt = !observeActivity ? null : prior?.hash === hash ? prior.changedAt : Date.now();
         activity.set(relative, { hash, changedAt });
-        const agent = folder === 'sessions' ? parseSessionFile(content)?.agent
+        const reportedAgent = folder === 'sessions' ? parseSessionFile(content)?.agent
           : detectAgentFromFilename(name) ?? parseLogEntry(content)?.agent;
-        if (agent && changedAt && Date.now() - changedAt < 30_000) active.set(agent, changedAt);
+        const agent = reportedAgent ? resolveFileAgentId(reportedAgent, identities) : null;
+        if (agent && changedAt !== null && Date.now() - changedAt < 30_000) active.set(agent, changedAt);
       }
     }
     for (const key of activity.keys()) if (!seen.has(key)) activity.delete(key);
-    latestAgents = roster.map((member, index) => ({
+    latestAgents = roster.map(member => ({
       id: member.slug, name: member.name, role: member.role,
-      paletteIndex: index % 6, seatId: null,
+      paletteIndex: createHash('sha256').update(member.slug).digest()[0] % 6, seatId: null,
       status: active.has(member.slug) ? 'active' : 'idle',
       currentTask: active.has(member.slug) ? 'Approximate local file activity (not live tool execution)' : null,
     }));
@@ -120,6 +123,8 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
     if (disposed) throw new Error('Observer disposed.');
     listeners.add(listener);
     if (!timer) {
+      // Initial and resumed viewers baseline historical files before observing changes.
+      readSnapshot(false);
       timer = setInterval(() => {
         const messages = readSnapshot();
         const changes = messages.filter(message => {

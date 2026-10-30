@@ -178,12 +178,78 @@ try {
     }
     await fs.writeFile(teamPath, roster('UpdatedTestBot'));
     await fs.writeFile(ledgerPath, usage(321));
-    const changedLayout = { ...initialLayout, tileColors: { '0,0': { h: 120, s: 70, b: -10, c: 0 } } };
+    const floorIndex = initialLayout.tiles.findIndex(tile => tile === 1);
+    const voidIndex = initialLayout.tiles.findIndex(tile => tile === 8);
+    assert.ok(floorIndex >= 0 && voidIndex >= 0);
+    const changedLayout = {
+      ...initialLayout,
+      tiles: initialLayout.tiles.map((tile, index) => index === floorIndex ? 10 : tile),
+      tileColors: { ...initialLayout.tileColors, '0,0': { h: 120, s: 70, b: -10, c: 0 } },
+    };
     await fs.writeFile(path.join(project, '.squad-pod', 'layout.json'), JSON.stringify(changedLayout));
     await tab.getByRole('button', { name: /UpdatedTestBot.*Developer/ }).waitFor();
     await waitFor(() => browserFrames.some(frame => frame.message?.type === 'recordedUsage' && frame.message.snapshot.totals?.inputTokens === 321), 'ledger update through actual browser transport');
     await waitFor(() => browserFrames.some(frame => frame.message?.type === 'layoutLoaded' && frame.message.layout.tileColors?.['0,0']?.h === 120), 'layout update through actual browser transport');
+    await waitFor(() => browserFrames.some(frame => frame.message?.type === 'layoutLoaded'
+      && frame.message.layout.tiles[floorIndex] === 10 && frame.message.layout.tiles[voidIndex] === 8), 'saved-project Floor10 and legacy VOID8 through actual browser transport');
+    assert.deepEqual(JSON.parse(await fs.readFile(path.join(project, '.squad-pod', 'layout.json'), 'utf8')), changedLayout);
+    if (artifacts) {
+      await tab.screenshot({ path: path.join(artifacts, 'observer-saved-floor10.png'), fullPage: true });
+      report.screenshots.push('observer-saved-floor10.png');
+    }
     check('production renderer receives actual filesystem roster/layout/usage changes, no injected renderer/global');
+    check('actual saved-project Floor10 observed in production browser; legacy VOID8 and source file preserved');
+    const floorProbe = {
+      version: 2, cols: 9, rows: 7, tiles: Array(63).fill(1), furniture: [],
+      tileColors: Object.fromEntries([1, 4, 7].map(col => [`${col},1`, { h: 0, s: 0, b: 0, c: 0, colorize: false }])),
+    };
+    for (const col of [1, 4, 7]) floorProbe.tiles[9 + col] = 10;
+    floorProbe.tiles[62] = 8;
+    const layoutPath = path.join(project, '.squad-pod', 'layout.json');
+    await fs.writeFile(layoutPath, JSON.stringify(floorProbe));
+    const floorTab = await context.newPage();
+    floorTab.on('pageerror', error => browserErrors.push(error.message));
+    await floorTab.setViewportSize({ width: 900, height: 700 });
+    await floorTab.goto(origin);
+    await floorTab.getByLabel('Runtime credential from the observer console').fill(token);
+    await floorTab.getByRole('button', { name: 'Connect read-only office' }).click();
+    const floorCanvas = floorTab.locator('.office-panel canvas');
+    await floorCanvas.waitFor();
+    const { PNG } = require('pngjs');
+    const sheet = PNG.sync.read(await fs.readFile(path.join(installed, 'dist', 'assets', 'floors', 'floor_7.png')));
+    assert.equal(sheet.width, 16);
+    assert.equal(sheet.height, 16);
+    const expectedPixels = [];
+    for (let row = 1; row < 15; row++) for (let col = 1; col < 15; col++) {
+      const offset = (row * 16 + col) * 4;
+      expectedPixels.push(...sheet.data.subarray(offset, offset + 4));
+    }
+    const sampleFloor = (col, row) => floorCanvas.evaluate((canvas, { col, row }) => {
+      const zoom = 2;
+      const x = Math.round((canvas.width - 9 * 16 * zoom) / 2 + col * 16 * zoom);
+      const y = Math.round((canvas.height - 7 * 16 * zoom) / 2 + row * 16 * zoom);
+      const image = canvas.getContext('2d').getImageData(x, y, 16 * zoom, 16 * zoom);
+      const pixels = [];
+      for (let r = 1; r < 15; r++) for (let c = 1; c < 15; c++) {
+        const offset = ((r * zoom + 1) * image.width + c * zoom + 1) * 4;
+        pixels.push(...image.data.slice(offset, offset + 4));
+      }
+      return pixels;
+    }, { col, row });
+    // Multiple separated cells avoid an independently wandering character obscuring the source art.
+    await waitFor(async () => {
+      const samples = await Promise.all([1, 4, 7].map(col => sampleFloor(col, 1)));
+      return samples.some(pixels => JSON.stringify(pixels) === JSON.stringify(expectedPixels));
+    }, 'saved Floor10 canvas pixels exactly match installed floor_7.png');
+    assert.equal((await sampleFloor(8, 6)).every(value => value === 0), true, 'legacy VOID8 must remain transparent');
+    assert.deepEqual(JSON.parse(await fs.readFile(layoutPath, 'utf8')), floorProbe);
+    if (artifacts) {
+      await floorTab.screenshot({ path: path.join(artifacts, 'observer-floor10-pixels.png'), fullPage: true });
+      report.screenshots.push('observer-floor10-pixels.png');
+    }
+    await floorTab.close();
+    await fs.writeFile(layoutPath, JSON.stringify(changedLayout));
+    check('saved Floor10 renders exact installed source-sheet pixels and VOID8 stays transparent, without renderer injection');
     // Close only the actual network connection, never inject a renderer/client global.
     await networkSockets[0].close({ code: 1012, reason: 'Synthetic transient network disconnect' });
     await waitFor(async () => /Disconnected|Connection failed/.test(await tab.locator('header [role="status"]').innerText()), 'visible disconnect');

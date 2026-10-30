@@ -22,7 +22,7 @@ const dictionary = (check: Check, max: number): Check => v => !!v && typeof v ==
 const color = object({ h: number, s: number, b: number, c: number, colorize: optional(boolean) });
 const sprite = array(array(v => typeof v === 'string' && /^(?:|#[\da-f]{6}(?:[\da-f]{2})?)$/i.test(v), 512), 512);
 const layout: Check = v => isValidLayout(v) && object({
-  version: optional(integer), cols: integer, rows: integer, tiles: array(v => integer(v) && (v as number) <= 9, 65536),
+  version: optional(integer), cols: integer, rows: integer, tiles: array(v => integer(v) && (v as number) <= 10, 65536),
   furniture: array(object({
     uid: short, type: short, col: integer, row: integer, rotation: optional(number), color: optional(color),
     assetFootprint: optional(object({ width: integer, height: integer })),
