@@ -224,9 +224,9 @@ function bridge(messages) {
   `;
 }
 
-async function poll(page, predicate, description) {
+async function poll(page, predicate, description, argument) {
   for (let attempt = 0; attempt < 100; attempt++) {
-    if (await page.evaluate(predicate)) return;
+    if (await page.evaluate(predicate, argument)) return;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw new Error(`Timed out: ${description}`);
@@ -315,14 +315,15 @@ async function checkSquadInfo(page, fixture, outputDir, viewport) {
   await page.keyboard.down('Space');
   await page.mouse.move(30, 30);
   await page.mouse.down();
+  assert.equal(await canvas.evaluate(element => element.parentElement.style.cursor), 'grabbing', 'canvas Space arms pan');
   await page.mouse.move(60, 50, { steps: 4 });
   await page.mouse.up();
   await page.keyboard.up('Space');
-  await page.waitForFunction(({ x, y }) => {
+  await poll(page, ({ x, y }) => {
     const button = [...document.querySelectorAll('button')].find(element => element.textContent === 'GraceReviewer');
     const box = button?.getBoundingClientRect();
     return box && (Math.abs(box.x - x) > 2 || Math.abs(box.y - y) > 2);
-  }, before);
+  }, 'canvas Space-drag moves the office', before);
   const after = await label.boundingBox();
   fixture.noFocus();
   return {
