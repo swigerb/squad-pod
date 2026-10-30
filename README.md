@@ -62,7 +62,7 @@ Choose **Layout** in the toolbar to edit the office:
 - Select and drag furniture to move it. Hold **Alt** when releasing to copy; press **R** to rotate. Ungrouped furniture rotates geometrically; grouped directional furniture cycles through available views. A desk moves or rotates with overlapping computers and lamps.
 - Use **Undo** and **Redo** for editor changes. A paint stroke is one step.
 - Export a layout or import a JSON layout from Settings. An import is a draft until you save it. If an incoming layout conflicts with an unsaved draft, review the versions and choose which one to keep before saving.
-- To adopt the bundled starter without replacing your saved office, run **Squad Pod: Export Default Layout**, then import the file from Settings and save the draft when ready.
+- To try the bundled starter, run **Squad Pod: Export Default Layout** and import the file from Settings. Your saved office is replaced only when you explicitly save the draft.
 
 ### Settings
 

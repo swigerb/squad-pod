@@ -20,7 +20,7 @@ function place(
   };
 }
 
-/** Source-faithful starter furniture; used for fresh/reset offices, never saved-layout migration. */
+/** Source-faithful starter furniture for fresh offices and explicit export, never saved-layout migration. */
 export function defaultFurniture(): PlacedFurniture[] {
   // Furniture rows are translated by nine to trim the source layout's empty upper margin.
   return [
