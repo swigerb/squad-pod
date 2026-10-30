@@ -245,6 +245,23 @@ export function SquadInfoCard({
                       <>
                         <div><strong>Observed status:</strong> {detail.status}</div>
                         <div><strong>Observed task:</strong> {detail.currentTask || 'No current task observed.'}</div>
+                        <section aria-label="Model metadata" style={{ marginTop: '8px', overflowWrap: 'anywhere' }}>
+                          <div><strong>Current-session model:</strong> unavailable</div>
+                          <div>No authoritative runtime model field is implemented. Historical model reports remain historical.</div>
+                          <strong>Declared model metadata (not effective runtime selection):</strong>
+                          {detail.modelSources ? detail.modelSources.map(source => (
+                            <div key={source.sourcePath} style={{ marginTop: '8px' }}>
+                              <div><strong>{source.sourcePath}</strong> — {source.state}</div>
+                              {source.values.map(field => (
+                                <div key={field.key}>
+                                  <strong>{field.key}:</strong> {field.key !== 'Rationale' && field.value.trim().toLowerCase() === 'auto'
+                                    ? 'Automatic selection (auto; not a concrete model)' : field.value}
+                                </div>
+                              ))}
+                              <div role="status">{source.diagnostic}</div>
+                            </div>
+                          )) : <div role="status">Declared model metadata is unavailable in the read-only observer.</div>}
+                        </section>
                         <div style={{ marginTop: '8px' }}>
                           <strong>Charter summary (from charter.md):</strong>
                           <div>{detail.charterSummary || (detail.charterStatus === 'available'

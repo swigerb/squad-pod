@@ -62,6 +62,8 @@ Open the project in VS Code and press **F5** to launch the Extension Development
 
 Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character, its name (**Enter** or **Space** also works), or its occupied desk or chair to open the details card; select a character, then click another seat to move it. Choose **Squad Info** to expand a visible member's details by keyboard or mouse. **Open charter** opens that member's `charter.md`. In the read-only local observer, observed details remain available while charter contents and editor opening are unavailable. These actions never open a terminal.
 
+Squad Info also separates the charter's **Preferred**, **Rationale**, and **Fallback** declarations from JSON `defaultModel` and exact-name `agentModelOverrides` entries, with source paths, keys, and read states. `auto` means automatic selection, not a concrete model. Reads are local and bounded to 64 KiB per file; executable `squad.config.ts` is detected but never loaded. No precedence or effective model is inferred: **Current-session model** is unavailable, and historical usage reports stay historical. Re-expand a member to refresh; declared metadata is unavailable in the read-only observer.
+
 ### Edit the office
 
 Choose **Layout** in the toolbar to edit the office:
