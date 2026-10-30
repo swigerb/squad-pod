@@ -55,7 +55,11 @@ export function parseLiveEvent(line: string): LiveEvent | null {
       // Only the first token, including quoted executable paths; never flags or script bodies.
       const command = typeof args.command === 'string' ? args.command : '';
       const first = /^\s*(?:"([^"]+)"|'([^']+)'|([^\s;|&]+))/.exec(command);
-      event.command = basename(first?.[1] ?? first?.[2] ?? first?.[3]);
+      const token = first?.[1] ?? first?.[2] ?? first?.[3] ?? '';
+      const name = basename(token);
+      const quotedPowerShellExpression = toolName === 'powershell' && /^\s*["']/.test(command);
+      event.command = /^[a-zA-Z0-9_][a-zA-Z0-9_.-]*$/.test(name)
+        && !/[=$()`{}[\];|&<>]/.test(token) && !quotedPowerShellExpression ? name : '';
     }
   }
   const metrics = object(object(data.toolTelemetry).metrics);
@@ -84,6 +88,24 @@ export function exactLiveAgent(name: string, roster: readonly { id: string; fold
   return key && matches.length === 1 ? matches[0].id : null;
 }
 
+function openEventFile(file: string): { fd: number; stat: fs.Stats } {
+  const metadata = fs.lstatSync(file);
+  if (!metadata.isFile() || metadata.isSymbolicLink()) { throw new Error('Unsupported live event file'); }
+  const fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0) | (fs.constants.O_NOFOLLOW ?? 0));
+  try {
+    const stat = fs.fstatSync(fd);
+    // Windows lstat can report an unknown (zero) volume ID while fstat supplies it.
+    const differentDevice = metadata.dev !== 0 && stat.dev !== 0 && stat.dev !== metadata.dev;
+    if (!stat.isFile() || differentDevice || stat.ino !== metadata.ino) {
+      throw new Error('Live event file changed during open');
+    }
+    return { fd, stat };
+  } catch (error) {
+    fs.closeSync(fd);
+    throw error;
+  }
+}
+
 /** Fixed-size reads and bounded line carry, including when a single line is gigabytes long. */
 export class EventTail {
   private offset = 0;
@@ -92,19 +114,18 @@ export class EventTail {
   private identity = '';
   reset = false;
 
-  read(file: string, emit: (event: LiveEvent) => void): void {
-    const stat = fs.statSync(file);
-    const identity = `${stat.dev}:${stat.ino}:${stat.birthtimeMs}`;
-    this.reset = this.identity !== identity || stat.size < this.offset;
-    if (this.reset) {
-      this.identity = identity;
-      this.offset = Math.max(0, stat.size - SEED_BYTES);
-      this.carry = Buffer.alloc(0);
-      this.skipping = this.offset > 0;
-    }
-    const end = Math.min(stat.size, this.offset + SEED_BYTES);
-    const fd = fs.openSync(file, 'r');
+  read(file: string, emit: (event: LiveEvent) => void): fs.Stats {
+    const { fd, stat } = openEventFile(file);
     try {
+      const identity = `${stat.dev}:${stat.ino}:${stat.birthtimeMs}`;
+      this.reset = this.identity !== identity || stat.size < this.offset;
+      if (this.reset) {
+        this.identity = identity;
+        this.offset = Math.max(0, stat.size - SEED_BYTES);
+        this.carry = Buffer.alloc(0);
+        this.skipping = this.offset > 0;
+      }
+      const end = Math.min(stat.size, this.offset + SEED_BYTES);
       const buffer = Buffer.alloc(MAX_LINE_BYTES);
       while (this.offset < end) {
         const count = fs.readSync(fd, buffer, 0, Math.min(buffer.length, end - this.offset), this.offset);
@@ -118,6 +139,7 @@ export class EventTail {
         }
         this.consume(buffer.subarray(start, count), false, emit);
       }
+      return stat;
     } finally { fs.closeSync(fd); }
   }
 
@@ -141,9 +163,9 @@ export class EventTail {
 }
 
 function isSquadSession(file: string): boolean {
-  const fd = fs.openSync(file, 'r');
+  const { fd, stat } = openEventFile(file);
   try {
-    const size = fs.fstatSync(fd).size;
+    const size = stat.size;
     // Both scans are bounded. The head preserves a marker even after a long session.
     for (const offset of new Set([0, Math.max(0, size - MAX_LINE_BYTES)])) {
       const buffer = Buffer.alloc(Math.min(MAX_LINE_BYTES, size - offset));
@@ -181,6 +203,7 @@ export class CopilotSessionActivity {
   private gauge = new Map<string, NonNullable<LiveEvent['context']>>();
   private source: LiveSourceStatus = { state: 'off', sessionId: null };
   private counter = 0;
+  private seeding = false;
 
   constructor(private options: ActivityOptions) {}
 
@@ -238,20 +261,31 @@ export class CopilotSessionActivity {
       }
       if (!this.session) { this.setSource('searching'); return; }
       const file = path.join(this.session.dir, 'events.jsonl');
-      const stat = fs.statSync(file);
       const events: LiveEvent[] = [];
-      this.tail.read(file, event => events.push(event));
+      const stat = this.tail.read(file, event => events.push(event));
       if (this.tail.reset || stat.size !== this.lastSize) {
         this.lastBytesAt = Math.min(now, stat.mtimeMs);
         this.lastSize = stat.size;
       }
-      if (this.tail.reset) {this.clear();}
       if (now - this.lastBytesAt >= LIVE_STALE_MS) {
         this.clear();
         this.setSource('searching');
         return;
       }
-      for (const event of events) {this.accept(event);}
+      if (this.tail.reset) {
+        const previous = new Set(this.runs.keys());
+        this.seeding = true;
+        try {
+          this.clear();
+          for (const event of events) {this.accept(event);}
+        } finally { this.seeding = false; }
+        for (const id of previous) {
+          if (!this.runs.has(id)) { this.finish(id); }
+        }
+        this.replay();
+      } else {
+        for (const event of events) {this.accept(event);}
+      }
       this.setSource('following');
     } catch (error) {
       this.clear();
@@ -267,10 +301,19 @@ export class CopilotSessionActivity {
   }
 
   private telemetry(agentId: string, summary: string): void {
+    if (this.seeding) {return;}
     this.options.post({ type: 'telemetryEvent', event: {
       id: `live-${++this.counter}`, timestamp: (this.options.now ?? Date.now)(), category: 'status',
       agentId, agentName: null, summary, detail: null,
     } });
+  }
+
+  private post(message: OutboundMessage): void {
+    if (!this.seeding) { this.options.post(message); }
+  }
+
+  private lifecycle(agentId: string, active: boolean, task: string | null): void {
+    if (!this.seeding) { this.options.lifecycle(agentId, active, task); }
   }
 
   private accept(event: LiveEvent): void {
@@ -286,7 +329,7 @@ export class CopilotSessionActivity {
       if (this.runs.get(task.agentId) === event.toolCallId) {return;}
       if (this.runs.has(task.agentId)) {this.clearDisplays(task.agentId);}
       this.runs.set(task.agentId, event.toolCallId);
-      this.options.lifecycle(task.agentId, true, task.description);
+      this.lifecycle(task.agentId, true, task.description);
       this.telemetry(task.agentId, 'Live member started');
     } else if (['subagent.completed', 'subagent.failed', 'subagent.aborted'].includes(event.type)) {
       if (task && this.runs.get(task.agentId) === event.toolCallId) {this.finish(task.agentId);}
@@ -296,15 +339,15 @@ export class CopilotSessionActivity {
       if (!parent || this.runs.get(parent.agentId) !== event.parentToolCallId || this.tools.size >= MAX_TRACKED) {return;}
       const label = liveToolLabel(event);
       this.tools.set(event.toolCallId, { agentId: parent.agentId, toolName: event.toolName, label });
-      this.options.post({ type: 'agentToolStart', agentId: parent.agentId, toolId: event.toolCallId, tool: event.toolName, status: label });
+      this.post({ type: 'agentToolStart', agentId: parent.agentId, toolId: event.toolCallId, tool: event.toolName, status: label });
       this.telemetry(parent.agentId, label);
     } else if (event.type === 'tool.execution_complete') {
       const tool = this.tools.get(event.toolCallId);
       if (!tool) {return;}
-      this.options.post({ type: 'agentToolDone', agentId: tool.agentId, toolId: event.toolCallId, tool: tool.toolName });
+      this.post({ type: 'agentToolDone', agentId: tool.agentId, toolId: event.toolCallId, tool: tool.toolName });
       if (event.context) {
         this.gauge.set(tool.agentId, event.context);
-        this.options.post({ type: 'agentContextUsage', agentId: tool.agentId, ...event.context });
+        this.post({ type: 'agentContextUsage', agentId: tool.agentId, ...event.context });
       }
       this.tools.delete(event.toolCallId);
     }
@@ -313,7 +356,7 @@ export class CopilotSessionActivity {
   private finish(agentId: string): void {
     this.runs.delete(agentId);
     this.clearDisplays(agentId);
-    this.options.lifecycle(agentId, false, null);
+    this.lifecycle(agentId, false, null);
     this.telemetry(agentId, 'Live member finished');
   }
 
@@ -322,8 +365,8 @@ export class CopilotSessionActivity {
     for (const [id, tool] of this.tools) {
       if (tool.agentId === agentId) { this.tools.delete(id); }
     }
-    this.options.post({ type: 'agentToolsClear', agentId });
-    this.options.post({ type: 'agentContextUsage', agentId, contextTokens: null, maxContextTokens: null });
+    this.post({ type: 'agentToolsClear', agentId });
+    this.post({ type: 'agentContextUsage', agentId, contextTokens: null, maxContextTokens: null });
   }
 
   private clear(): void {

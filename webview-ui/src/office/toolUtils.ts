@@ -18,6 +18,11 @@ const STATUS_TO_TOOL: Record<string, string> = {
 };
 
 export interface ContextUsage { contextTokens: number; maxContextTokens: number }
+export function pruneCompletedTools<T extends { done: boolean }>(tools: T[]): T[] {
+  let completed = 0;
+  return tools.slice().reverse().filter(tool => !tool.done || ++completed <= 3).reverse();
+}
+
 const contextByOffice = new WeakMap<object, Map<string, ContextUsage>>();
 
 export function setContextUsage(office: object, agentId: string, usage: ContextUsage | null): void {

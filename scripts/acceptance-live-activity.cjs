@@ -236,10 +236,14 @@ async function browserAcceptance(out) {
       page.on('pageerror', error => errors.push(String(error)));
       await page.goto(baseUrl);
       await page.locator('[data-agent-label="ada"]').waitFor();
+      while (await page.getByRole('button', { name: 'Zoom out', exact: true }).isEnabled()) {
+        await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+      }
+      await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
       await page.getByText('2x', { exact: true }).waitFor();
       assert.equal(fixture.reads.length, 0, 'default-off production provider must not touch the injected home');
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
-      await page.locator('#squad-pod-live-activity').check();
+      await page.locator('#squad-pod-live-activity').click();
       await page.waitForFunction(() => document.querySelector('#squad-pod-live-activity').checked);
       await page.getByRole('button', { name: '×', exact: true }).click();
       fixture.append(spawn() + done('member-run') + tool('read-one', 'view', { path: `C:\\private\\${secret}\\fixture.ts` }));
@@ -257,6 +261,19 @@ async function browserAcceptance(out) {
       await page.locator('[data-agent-tools="ada"]').filter({ hasText: 'Editing fixture.ts' }).waitFor();
       fixture.append(done('edit-one', 950));
       await page.getByRole('progressbar', { name: '95% context used (0.9k of 1.0k tokens)' }).waitFor();
+      fixture.append(Array.from({ length: 120 }, (_, index) =>
+        tool(`many-${index}`, 'edit', { path: `many-${index}.ts` }) + done(`many-${index}`)
+      ).join(''));
+      await page.locator('[data-agent-tools="ada"]').filter({ hasText: 'Editing many-119.ts' }).waitFor();
+      assert.equal(await page.locator('[data-agent-tools="ada"] > div').count(), 3, 'completed rows remain bounded after 120 calls');
+      fixture.append(Array.from({ length: 12 }, (_, index) =>
+        tool(`parallel-${index}`, 'view', { path: `parallel-${index}.ts` })).join(''));
+      await page.locator('[data-agent-tools="ada"]').filter({ hasText: '+10 more tools' }).waitFor();
+      assert.equal(await page.locator('[data-agent-tools="ada"] > div').count(), 6, 'concurrent rows show five plus overflow');
+      await page.waitForTimeout(200);
+      const toolBounds = await page.locator('[data-agent-tools="ada"]').boundingBox();
+      assert.ok(toolBounds.height <= 120 && toolBounds.y >= 0 && toolBounds.y + toolBounds.height <= viewport.height,
+        'long-run tool overlay stays bounded inside the viewport');
       const overlaps = await page.evaluate(() => {
         const elements = [...document.querySelectorAll('[data-agent-label], [data-agent-tool-bubble], [data-agent-tools], [data-agent-context]')];
         const boxes = elements.map(element => ({ id: element.getAttribute('data-agent-context') ? 'context' : element.getAttribute('data-agent-tools') ? 'tools' : element.textContent, rect: element.getBoundingClientRect().toJSON() }));
@@ -275,7 +292,7 @@ async function browserAcceptance(out) {
       fixture.append(spawn() + tool('again', 'view', { path: 'fixture.ts' }) + done('again', 800));
       await page.getByRole('progressbar').waitFor();
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
-      await page.locator('#squad-pod-live-activity').uncheck();
+      await page.locator('#squad-pod-live-activity').click();
       await page.waitForFunction(() => !document.querySelector('#squad-pod-live-activity').checked);
       await page.getByRole('button', { name: '×', exact: true }).click();
       await page.getByRole('progressbar').waitFor({ state: 'detached' });
@@ -285,7 +302,7 @@ async function browserAcceptance(out) {
       assert.ok(!(await page.locator('body').innerText()).includes(secret), 'telemetry drawer must not contain the sentinel');
       assert.ok(!JSON.stringify({ messages: fixture.messages, output: fixture.output }).includes(secret), 'host sinks must not contain the sentinel');
       assert.deepEqual(errors, [], 'zero page errors');
-      fs.writeFileSync(path.join(out, `browser-${viewport.width}.json`), JSON.stringify({ viewport, errors, overlaps, confirmations: fixture.confirmations.length, source: fixture.messages.filter(m => m.type === 'sourceStatus').at(-1) }, null, 2));
+      fs.writeFileSync(path.join(out, `browser-${viewport.width}.json`), JSON.stringify({ viewport, errors, overlaps, toolBounds, sequentialCalls: 120, concurrentCalls: 12, confirmations: fixture.confirmations.length, source: fixture.messages.filter(m => m.type === 'sourceStatus').at(-1) }, null, 2));
       await page.close();
       fixture.dispose();
       fixture = undefined;

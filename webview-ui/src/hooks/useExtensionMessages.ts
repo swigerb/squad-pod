@@ -16,7 +16,7 @@ import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/t
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 import type { OutboundMessage } from '../../../src/types.js';
-import { setContextUsage } from '../office/toolUtils.js';
+import { pruneCompletedTools, setContextUsage } from '../office/toolUtils.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
@@ -296,7 +296,7 @@ export function useExtensionMessages(
               existing.status = status;
               existing.done = false;
               existing.permissionWait = false;
-              return { ...prev, [id]: [...tools] };
+              return { ...prev, [id]: pruneCompletedTools(tools) };
             }
             return { ...prev, [id]: [...tools, { toolId, status, done: false }] };
           });
@@ -316,7 +316,7 @@ export function useExtensionMessages(
             if (tool) {
               tool.done = true;
             }
-            return { ...prev, [id]: [...tools] };
+            return { ...prev, [id]: pruneCompletedTools(tools) };
           });
           break;
         }

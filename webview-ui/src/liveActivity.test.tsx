@@ -47,7 +47,7 @@ describe('live tools and context through the App boundary', () => {
     const tools = host.querySelector('[data-agent-tools="ada"]')!;
     expect(tools.textContent).toContain('Reading one.ts');
     expect(tools.textContent).toContain('Reading two.ts');
-    expect([...tools.children].map(element => element.textContent)).toEqual(['✓Reading one.ts', '●Reading two.ts']);
+    expect([...tools.children].map(element => element.textContent)).toEqual(['●Reading two.ts', '✓Reading one.ts']);
     const gauge = host.querySelector<HTMLElement>('[role="progressbar"]')!;
     expect(gauge.title).toBe('80% context used (0.8k of 1.0k tokens)');
     expect(gauge.getAttribute('aria-label')).toBe(gauge.title);
@@ -62,6 +62,32 @@ describe('live tools and context through the App boundary', () => {
     expect(host.querySelector('[role="progressbar"]')).toBeNull();
     expect(host.querySelector('[data-agent-tools]')).toBeNull();
     expect(host.querySelector('[data-agent-tool-bubble]')).toBeNull();
+  });
+
+  it('retains three completed calls and displays at most five tool rows plus overflow during long runs', async () => {
+    send({ type: 'agentStatus', agentId: 'ada', status: 'active' });
+    for (let index = 0; index < 120; index++) {
+      send({ type: 'agentToolStart', agentId: 'ada', toolId: `call-${index}`, tool: 'view', status: `Reading ${index}.ts` });
+      send({ type: 'agentToolDone', agentId: 'ada', toolId: `call-${index}`, tool: 'view' });
+    }
+    await frame();
+    const tools = () => host.querySelector('[data-agent-tools="ada"]')!;
+    expect([...tools().children].map(row => row.textContent)).toEqual([
+      '✓Reading 117.ts', '✓Reading 118.ts', '✓Reading 119.ts',
+    ]);
+    for (let index = 0; index < 12; index++) {
+      send({ type: 'agentToolStart', agentId: 'ada', toolId: `active-${index}`, tool: 'edit', status: `Editing ${index}.ts` });
+    }
+    await frame();
+    expect(tools().children).toHaveLength(6);
+    expect(tools().textContent).toContain('+10 more tools');
+    send({ type: 'agentToolDone', agentId: 'ada', toolId: 'active-7', tool: 'edit' });
+    await frame();
+    expect(tools().children).toHaveLength(6);
+    expect(tools().textContent).not.toContain('●Editing 7.ts');
+    send({ type: 'agentToolsClear', agentId: 'ada' });
+    await frame();
+    expect(host.querySelector('[data-agent-tools]')).toBeNull();
   });
 
   it('shows only whitelist-derived live rows in the telemetry drawer', async () => {

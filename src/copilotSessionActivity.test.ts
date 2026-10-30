@@ -9,6 +9,8 @@ import {
 import type { LiveEvent } from './copilotSessionActivity.js';
 import type { LiveSourceStatus, OutboundMessage } from './types.js';
 
+vi.mock('node:fs', { spy: true });
+
 const secret = 'SENTINEL_SECRET_NEVER_LEAVE_PARSER';
 const line = (type: string, data: object, envelope = {}) => JSON.stringify({ type, data, ...envelope }) + '\n';
 export const spawnLines = (name = 'ada', task = 'run') =>
@@ -46,6 +48,7 @@ describe('read-only Copilot live activity with synthetic homes', () => {
   }
   const marked = (body: string) => line('subagent.selected', { agentName: 'Squad' }) + body;
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.useFakeTimers();
     now = Date.now();
     home = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-live-test-'));
@@ -62,6 +65,7 @@ describe('read-only Copilot live activity with synthetic homes', () => {
   afterEach(() => {
     reader.stop();
     vi.useRealTimers();
+    vi.restoreAllMocks();
     fs.rmSync(home, { recursive: true, force: true });
   });
 
@@ -104,8 +108,10 @@ describe('read-only Copilot live activity with synthetic homes', () => {
   });
 
   it('pairs same-name tools by ID and never treats the background task tool completion as member completion', () => {
-    const file = session('session', marked(spawnLines()) + done('run') + toolStart('one') + toolStart('two') + done('one'));
+    const file = session('session', marked(''));
     reader.start();
+    fs.appendFileSync(file, spawnLines() + done('run') + toolStart('one') + toolStart('two') + done('one'));
+    reader.poll();
     expect(lifecycle.mock.calls).toEqual([['ada', true, 'Build tests']]);
     expect(messages.filter(m => m.type === 'agentToolDone')).toEqual([
       { type: 'agentToolDone', agentId: 'ada', toolId: 'one', tool: 'view' },
@@ -115,6 +121,80 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(messages.filter(m => m.type === 'agentToolDone')).toHaveLength(2);
     expect(lifecycle.mock.calls).toEqual([['ada', true, 'Build tests'], ['ada', false, null]]);
     expect(messages.at(-2)).toMatchObject({ type: 'agentContextUsage', contextTokens: null, maxContextTokens: null });
+  });
+
+  it('silently seeds only in-flight state, never replaying completed history on enable, reload or rotation', () => {
+    const completed = spawnLines('grace', 'past') + line('subagent.completed', { toolCallId: 'past' });
+    const file = session('session', marked(completed + spawnLines()) + toolStart() + done());
+    reader.start();
+    expect(lifecycle.mock.calls).toEqual([['ada', true, 'Build tests']]);
+    expect(messages.filter(m => m.type === 'telemetryEvent' || m.type === 'agentToolDone')).toEqual([]);
+    expect(messages.filter(m => m.type === 'agentContextUsage')).toEqual([
+      { type: 'agentContextUsage', agentId: 'ada', contextTokens: 800, maxContextTokens: 1000 },
+    ]);
+    reader.replay();
+    fs.renameSync(file, file + '.old');
+    fs.writeFileSync(file, marked(completed + spawnLines()) + toolStart('running'));
+    reader.poll();
+    expect(lifecycle.mock.calls.every(call => call[0] === 'ada' && call[1] === true)).toBe(true);
+    expect(messages.filter(m => m.type === 'telemetryEvent')).toEqual([]);
+    expect(messages.filter(m => m.type === 'agentToolStart').at(-1)).toMatchObject({ toolId: 'running' });
+  });
+
+  it('rejects symlinks, directory junctions and non-regular event paths before opening or reading targets', () => {
+    const file = session('session', marked(spawnLines()));
+    const target = file + '.target';
+    fs.renameSync(file, target);
+    // Junctions need no Windows symlink privilege; the regular-file gate rejects them identically.
+    fs.symlinkSync(path.dirname(target), file, process.platform === 'win32' ? 'junction' : 'dir');
+    const open = vi.mocked(fs.openSync);
+    open.mockClear();
+    reader.start();
+    expect(open.mock.calls.filter(call => call[0] === file)).toEqual([]);
+    expect(lifecycle).not.toHaveBeenCalled();
+    expect(statuses.at(-1)?.state).toBe('error');
+    expect(() => new EventTail().read(file, () => {})).toThrow('Unsupported live event file');
+    fs.unlinkSync(file);
+    fs.mkdirSync(file);
+    open.mockClear();
+    expect(() => new EventTail().read(file, () => {})).toThrow('Unsupported live event file');
+    expect(open).not.toHaveBeenCalled();
+    fs.rmdirSync(file);
+    if (process.platform !== 'win32') {
+      fs.symlinkSync(target, file);
+      expect(() => new EventTail().read(file, () => {})).toThrow('Unsupported live event file');
+      expect(open).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each([
+    ['powershell', `$env:API_KEY='${secret}'`], ['powershell', `Write-Output('${secret}')`],
+    ['powershell', `'${secret}'`], ['powershell', `"${secret}"`],
+    ['bash', `API_KEY='${secret}' npm test`],
+  ])('does not expose assignments or expressions from %s', (toolName, command) => {
+    const file = session('session', marked(spawnLines()));
+    reader.start();
+    fs.appendFileSync(file, line('tool.execution_start', {
+      toolCallId: 'shell', toolName, parentToolCallId: 'run', arguments: { command, prompt: secret },
+    }));
+    reader.poll();
+    reader.replay();
+    expect(messages.filter(m => m.type === 'agentToolStart').at(-1)).toMatchObject({ status: 'Running: shell' });
+    expect(JSON.stringify({ messages, lifecycle: lifecycle.mock.calls })).not.toContain(secret);
+  });
+
+  it('rejects a non-regular descriptor after open without reading any content', () => {
+    const file = session('session', marked(spawnLines()));
+    const invalid: fs.Stats = Object.create(fs.statSync(file));
+    Object.defineProperty(invalid, 'isFile', { value: () => false });
+    vi.mocked(fs.fstatSync).mockReturnValueOnce(invalid);
+    const reads = vi.mocked(fs.readSync);
+    const close = vi.mocked(fs.closeSync);
+    reads.mockClear();
+    close.mockClear();
+    expect(() => new EventTail().read(file, () => {})).toThrow('Live event file changed during open');
+    expect(reads).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledTimes(1);
   });
 
   it('keeps unknown, fuzzy, non-general-purpose and coordinator activity unattributed', () => {

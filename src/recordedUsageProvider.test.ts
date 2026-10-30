@@ -39,8 +39,11 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
   let receive: (message: { type: 'webviewReady' }) => void;
   let retarget: () => void;
   let messages: OutboundMessage[];
-  const workspace: { workspaceFolders: Array<{ uri: { fsPath: string } }>; onDidChangeWorkspaceFolders?: unknown } = {
+  const workspace: { workspaceFolders: Array<{ uri: { fsPath: string } }>; onDidChangeWorkspaceFolders?: unknown;
+    getConfiguration: () => { get: (_key: string, fallback: unknown) => unknown } } = {
     workspaceFolders: [],
+    getConfiguration: () => ({ get: (key, fallback) =>
+      key === 'liveActivity' || key === 'directorySuggestions' ? false : fallback }),
   };
   const snapshots = () => messages.filter((m): m is Extract<OutboundMessage, { type: 'recordedUsage' }> => m.type === 'recordedUsage');
 

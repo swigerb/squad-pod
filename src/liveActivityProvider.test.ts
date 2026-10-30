@@ -53,7 +53,7 @@ describe('consent and privacy through compiled provider (mocked VS Code)', () =>
     vi.advanceTimersByTime(1000);
     expect(fixture.messages).toContainEqual({ type: 'agentToolDone', agentId: 'ada', toolId: 'one', tool: 'view' });
     expect(fixture.messages).toContainEqual({ type: 'agentContextUsage', agentId: 'ada', contextTokens: 800, maxContextTokens: 1000 });
-    vi.advanceTimersByTime(31_000);
+    vi.advanceTimersByTime(1000);
     expect(fixture.messages.filter(m => m.type === 'agentStatus').at(-1)).toMatchObject({ status: 'active' });
     fixture.send({ type: 'webviewReady' });
     await settle();
@@ -67,6 +67,22 @@ describe('consent and privacy through compiled provider (mocked VS Code)', () =>
     expect(fixture.messages.filter(m => m.type === 'agentStatus').at(-1)).toMatchObject({ status: 'idle' });
     expect(fixture.messages.filter(m => m.type === 'agentContextUsage').at(-1))
       .toMatchObject({ contextTokens: null, maxContextTokens: null });
+    expect(JSON.stringify({ messages: fixture.messages, output: fixture.output })).not.toContain(secret);
+  });
+
+  it('never sends shell assignment or expression contents to any host sink', async () => {
+    fixture.setConsent(true);
+    fixture.send({ type: 'setLiveActivity', enabled: true });
+    await settle();
+    fixture.append(spawn()
+      + tool('assignment', 'powershell', { command: `$env:API_KEY='${secret}'` })
+      + tool('expression', 'powershell', { command: `Write-Output('${secret}')` })
+      + tool('single-quote', 'powershell', { command: `'${secret}'` })
+      + tool('double-quote', 'powershell', { command: `"${secret}"` })
+      + tool('bash-assignment', 'bash', { command: `API_KEY='${secret}' npm test` }));
+    vi.advanceTimersByTime(1000);
+    expect(fixture.messages.filter(m => m.type === 'agentToolStart')).toHaveLength(5);
+    expect(fixture.messages.filter(m => m.type === 'agentToolStart').every(m => m.status === 'Running: shell')).toBe(true);
     expect(JSON.stringify({ messages: fixture.messages, output: fixture.output })).not.toContain(secret);
   });
 
