@@ -5,7 +5,7 @@ All notable changes to Squad Pod are documented here.
 ## [Unreleased]
 
 ### Changed
-- External-root folder names `characters` and `pets` are reserved for their dedicated pipelines. A furniture folder literally named `characters` is no longer loaded as furniture or read by the furniture fingerprint, even with a valid furniture manifest (#59).
+- Reserved `characters` and `pets` folders are excluded from furniture imports.
 - Explicit supported reading-tool metadata now selects supplied reading sprites instead of typing sprites. Bundled employee PNG sheets contain no reading art, so reading uses an inline sprite template instead of duplicated walk frames; the generated fallback shares typing art until dedicated reading frames are supplied, and the provider still emits no live tool metadata.
 - Replaced the unresolved office tileset and inline furniture art with the source-pinned original Pixel Agents furniture/floor/wall bundle (MIT, Pablo De Lucca). The historical screenshot is excluded from the VSIX. Legacy layout IDs/geometry remain intact as explicit missing-art markers; no automatic reset or remap occurs.
 - Toolchain modernized: Node 22.13+, VS Code 1.107+, React 19, Vite 8, Vitest 4, ESLint 10, esbuild 0.28; CI on Ubuntu and Windows.
@@ -13,7 +13,7 @@ All notable changes to Squad Pod are documented here.
 - Diagnostics moved to the **Squad Pod** output channel (no more workspace debug logs or popups).
 
 ### Added
-- External native character sheets from asset-directory `characters/char_NAME.png` files, with exact 224x128 validation, bounded reads/decodes, SHA-256 provenance, Settings diagnostics and one-second add/edit/remove reload. Embedded A/B and all legacy appearances remain unchanged. New unpersisted members claim unused stable source-hashed numeric slots before legacy slots; saved appearances never depend on sheet order and missing sheets use the old deterministic mapping. Pixel Agents 112x96 sheets are explicitly diagnosed, not drop-in compatible (#59).
+- Custom character sheets from local asset directories, with validation, live reload, saved appearances and a stable fallback when sheets are removed.
 - VS Code setting `squad-pod.autoShowPanel` (default `false`) optionally focuses the office once on extension activation, skipping an already-visible panel. Roster/history replay and visibility changes never trigger it; no Squad, terminal, process, server or bridge is launched (#52).
 - Reconnect snapshots now refresh existing roster names and roles and restore observed current-task text alongside status without changing saved appearance or seats.
 - A typed webview client seam for outbound requests, inbound subscriptions and protected recovery state, backed by the existing VS Code API. Missing hosts and recovery-read/write failures are surfaced without replacing protected drafts; this is foundation only, not standalone/browser support, and #8 remains open.

@@ -193,60 +193,18 @@ or installed-VSIX acceptance; no terminal/CLI launch is executed.
 ### External character sheets
 
 Use **Settings > Add Asset Directory** with the same local roots used by furniture
-and pets. Put original or appropriately licensed sheets at
-`YOUR_ROOT/characters/char_NAME.png` (NAME: 1-80 letters, digits, underscores or
-hyphens, beginning with a letter or digit). Each PNG must be **224x128**:
-seven 32x32 frames in each of four rows, ordered **up, right, down, left**.
-Transparency is retained, including dark pixels; frames render at 16x16 game
-pixels (scale 2). Pixel Agents v1.5.0's 112x96, three-row sheets are **not
-drop-in compatible** and receive an explicit diagnostic. External floor, wall
-and carpet packs are not supported.
+and pets. Add `characters/char_NAME.png` files: non-interlaced, transparent
+**224x128 PNGs**, with seven 32x32 frames per row ordered **up, right, down, left**.
+Names allow 1-80 letters, digits, underscores or hyphens, starting with a letter
+or digit. Limits are eight directories, eight sheets per directory, 32 total and
+512 KiB per file; each directory allows 256 entries, 16 attempts and 2 MiB read
+per refresh. Duplicate filenames and symlinks are rejected; Settings shows errors.
+Changes appear automatically without restarting the panel.
 
-Limits per poll: eight roots, 256 directory entries and 16 file attempts per
-root, 512 KiB per PNG, 2 MiB read per root, eight accepted sheets per root,
-32 total. Root allowances are independent. Signature, dimensions, non-interlace,
-chunk boundaries, CRC and exact IEND trailer are checked before use. Symlinks,
-junctions, traversal and duplicate filenames (case-insensitive across roots)
-are rejected. Roots and filenames are sorted deterministically; the first valid
-duplicate wins. Bad sheets do not displace bundled characters or valid siblings.
-`characters` and `pets` are reserved external-root folder names. In particular,
-a furniture folder literally named `characters` is no longer loaded as
-furniture, even if it contains an otherwise valid furniture manifest.
-Settings shows character failures alongside other asset diagnostics; the
-**Squad Pod** output channel records source directory, filename and SHA-256.
-One-second bounded content polling detects additions, edits and removals without
-restarting agents or the panel, and stops on disposal.
-
-**Appearance persistence:** ordinary saved integer indices retain the exact
-six-palette A/B and hue mapping, including indices 0-63. The six legacy palettes
-are not stretched to the loaded sheet count. New, unpersisted roster members
-claim an unused external slot in ascending numeric order, one member per sheet,
-then use the first unused legacy index. Each external slot is
-`48 * 16777216 + first32bits(SHA256([canonicalRoot, lowercaseFilename])) * 48`;
-identity is independent of root order and PNG contents. Hash collisions are
-diagnosed rather than sharing a slot. Existing saved indices are never reassigned
-when sheets are added, edited, removed or reordered. Editing artwork deliberately
-updates that sheet's look; moving/renaming the root or file changes its identity.
-A missing sheet falls back to the exact legacy mapping of its saved numeric
-index (the full legacy cycle is 48); restoring that identity restores its art.
-Persistence uses the existing numeric `palette` field, so older versions can
-read it and render that same fallback without a schema migration.
-
-Build first, then run `node scripts/acceptance-characters.cjs` for production
-Edge pixel checks at 1280x900 and 360x640. It starts and closes only its own
-ephemeral localhost fixture, uses installed Edge/Playwright (no download), and
-builds the explicit negative-control commit
-`949972fc94558bbf0efd041174259f4df3dfc29f`.
-`ACCEPTANCE_OUTPUT_DIR` selects evidence output; `ACCEPTANCE_BASELINE_REF`
-overrides that pinned commit if necessary. This is mocked-provider/browser
-evidence, not native VS Code or real Squad acceptance.
-After committing, `node scripts/acceptance-characters.cjs --mutations` archives
-HEAD into disposable copies and applies six exact-once line-anchored substitutions.
-Focused tests kill all six; production acceptance also kills the four rendering/
-validation mutants and the reserved-folder loader mutant. The reserved-folder
-fingerprint mutant is killed directly by the dedicated host fingerprint test.
-It never edits the checked-out source; per-mutant logs and `mutations.json` go
-under the selected evidence directory.
+Existing agents keep their saved appearances. New members use unused custom
+sheets first, then bundled styles; removed sheets fall back to a stable bundled
+style. Keep folder paths and filenames unchanged to retain custom assignments.
+`characters` and `pets` are reserved folders and cannot also be furniture items.
 
 ### Client transport foundation
 
