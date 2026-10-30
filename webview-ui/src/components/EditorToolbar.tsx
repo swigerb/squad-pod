@@ -55,8 +55,11 @@ export interface EditorToolbarProps {
   onRedo: () => void;
   onDeleteSelected: () => void;
   onRotateSelected: () => void;
+  onToggleSelectedState: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  canToggleSelectedState: boolean;
+  isSelectedFurnitureOn: boolean;
   isDirty: boolean;
   hasSelection: boolean;
   onExpandGrid?: (direction: 'left' | 'right' | 'up' | 'down') => void;
@@ -587,8 +590,11 @@ export function EditorToolbar({
   onRedo,
   onDeleteSelected,
   onRotateSelected,
+  onToggleSelectedState,
   canUndo,
   canRedo,
+  canToggleSelectedState,
+  isSelectedFurnitureOn,
   isDirty,
   hasSelection,
   onExpandGrid,
@@ -961,6 +967,16 @@ export function EditorToolbar({
             >
               Rotate
             </button>
+            <button
+              type="button"
+              style={styles.actionBtn(!canToggleSelectedState)}
+              onClick={canToggleSelectedState ? onToggleSelectedState : undefined}
+              disabled={!canToggleSelectedState}
+              aria-label={isSelectedFurnitureOn ? 'Turn off selected furniture' : 'Turn on selected furniture'}
+              title={isSelectedFurnitureOn ? 'Turn off selected furniture' : 'Turn on selected furniture'}
+            >
+              {isSelectedFurnitureOn ? 'Turn Off' : 'Turn On'}
+            </button>
           </div>
         </div>
       )}
@@ -1018,6 +1034,7 @@ export function EditorToolbar({
           <div><kbd style={kbdStyle}>Del</kbd> Delete selected</div>
           <div><kbd style={kbdStyle}>R</kbd> Rotate selected</div>
           <div><kbd style={kbdStyle}>Ctrl+Z</kbd> Undo</div>
+          <div><kbd style={kbdStyle}>Ctrl+Shift+Z</kbd> Redo</div>
           <div><kbd style={kbdStyle}>Ctrl+Y</kbd> Redo</div>
           <div><kbd style={kbdStyle}>Esc</kbd> Deselect / Exit</div>
           <div><kbd style={kbdStyle}>Space+Drag</kbd> Pan</div>

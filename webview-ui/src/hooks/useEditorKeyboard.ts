@@ -26,10 +26,10 @@ export function useEditorKeyboard(
       } else if (e.key === 'r' && editorState.selectedFurnitureUid) {
         e.preventDefault();
         onRotate();
-      } else if (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+      } else if (e.key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
         e.preventDefault();
         onRedo();
-      } else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+      } else if (e.key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         onUndo();
       } else if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {

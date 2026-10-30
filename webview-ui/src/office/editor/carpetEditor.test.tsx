@@ -69,6 +69,7 @@ describe('carpets through real canvas/editor transactions', () => {
           onAreaMappingChange={actions.handleAreaMappingChange} onAreaSelect={actions.handleAreaSelect}
           onSave={actions.handleSave} onReset={actions.handleReset} onUndo={actions.handleUndo} onRedo={actions.handleRedo}
           onDeleteSelected={actions.handleDeleteSelected} onRotateSelected={actions.handleRotateSelected}
+          onToggleSelectedState={actions.handleToggleState}
           hasSelection={false} />
       </>;
     }

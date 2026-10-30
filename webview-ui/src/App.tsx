@@ -292,8 +292,11 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
         onRedo={editor.handleRedo}
         onDeleteSelected={editor.handleDeleteSelected}
         onRotateSelected={editor.handleRotateSelected}
+        onToggleSelectedState={editor.handleToggleState}
         canUndo={editor.canUndo}
         canRedo={editor.canRedo}
+        canToggleSelectedState={editor.canToggleSelectedState}
+        isSelectedFurnitureOn={editor.isSelectedFurnitureOn}
         isDirty={editor.isDirty}
         hasSelection={editorState.selectedFurnitureUid !== null}
         onExpandGrid={editor.handleExpandGrid}

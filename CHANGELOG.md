@@ -6,6 +6,7 @@ All notable changes to Squad Pod are documented here.
 
 - Added consent-gated, opt-in live Squad member tool labels and context gauges from local Copilot CLI sessions, with strict metadata filtering and file-observation fallback.
 - Suggest recent Squad directories from local Copilot CLI working-directory metadata, with an opt-out setting and explicit save/launch actions.
+- Stateful furniture animates at active desks and supports manual on/off toggles.
 - Furniture groups now support directional rotation and mirrored views, with one palette entry per group, preserved tint and seat assignments, and one undo step per turn.
 
 ### Changed
