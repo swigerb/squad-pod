@@ -163,6 +163,17 @@ function createLiveFixture({ extensionCode, baseUrl = 'http://127.0.0.1', consen
       },
       send: message => receive(message),
       append: content => fs.appendFileSync(eventsFile, content),
+      stale() {
+        fs.appendFileSync(eventsFile, '\n');
+        const old = new Date(Date.now() - 6 * 60_000);
+        fs.utimesSync(eventsFile, old, old);
+      },
+      lose() { fs.unlinkSync(eventsFile); },
+      replace(content) { fs.writeFileSync(eventsFile, content); },
+      fail() {
+        fs.renameSync(eventsFile, eventsFile + '.old');
+        fs.mkdirSync(eventsFile);
+      },
       dispose() {
         compiled.exports.deactivate();
         if (previousHome === undefined) delete process.env.COPILOT_HOME;
@@ -411,13 +422,67 @@ async function browserAcceptance(out) {
       await page.waitForFunction(() => window.__liveAssetProof.character && window.__liveAssetProof.bundledFloor);
       await assertAssetDiagnostics();
       await page.screenshot({ path: path.join(out, `live-${viewport.width}x${viewport.height}.png`) });
+      const observedCall = (id, name, agentType, parent, description = 'Inspect fixture safely') => event('tool.execution_start', {
+        toolName: 'task', toolCallId: id, parentToolCallId: parent,
+        arguments: { name, agent_type: agentType, mode: 'background', description, prompt: secret, credentials: secret },
+        arbitrary: secret,
+      }) + event('subagent.started', { toolCallId: id, agentName: agentType, output: secret });
+      fixture.append(observedCall('unknown-one', 'Concurrent review', 'explore', 'member-run')
+        + observedCall('unknown-two', 'Concurrent review', 'research', 'absent-parent', 'd'.repeat(1000))
+        + observedCall('exact-name-other-type', 'ada', 'explore', undefined));
+      await page.getByRole('button', { name: /^Telemetry/ }).click();
+      const inventory = page.getByRole('region', { name: 'Observed transient tasks', exact: true });
+      await inventory.locator('[data-observed-task="unknown-two"]').waitFor();
+      assert.equal(await inventory.locator('[data-observed-task]').count(), 4);
+      assert.equal(await inventory.getByText('Concurrent review', { exact: false }).count(), 2);
+      assert.match(await inventory.locator('[data-observed-task="unknown-one"]').innerText(), /Unattributed.*explore.*Parent: task #1/s);
+      assert.match(await inventory.locator('[data-observed-task="unknown-two"]').innerText(), /Unattributed.*research.*Parent: unknown/s);
+      assert.match(await inventory.locator('[data-observed-task="unknown-two"]').innerText(), /metadata truncated or omitted/);
+      assert.match(await inventory.locator('[data-observed-task="exact-name-other-type"]').innerText(), /Unattributed.*explore/s);
+      assert.equal(await page.locator('[data-agent-label]').count(), 1, 'transient tasks must not create characters');
+      const inventoryBounds = await inventory.boundingBox();
+      assert.ok(inventoryBounds.x >= 0 && inventoryBounds.x + inventoryBounds.width <= viewport.width
+        && inventoryBounds.y >= 0 && inventoryBounds.y + inventoryBounds.height <= viewport.height);
+      assert.ok(await inventory.evaluate(element => element.scrollWidth <= element.clientWidth),
+        'long metadata must wrap without horizontal overflow');
+      await inventory.evaluate(element => { element.scrollTop = 0; });
+      await page.screenshot({ path: path.join(out, `observed-tasks-${viewport.width}.png`) });
+      await inventory.locator('[data-observed-task="unknown-two"]').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(out, `observed-task-detail-${viewport.width}.png`) });
+      fixture.append(event('subagent.failed', { toolCallId: 'unknown-two', result: secret }));
+      await inventory.locator('[data-observed-task="unknown-two"]').filter({ hasText: 'failed' }).waitFor();
+      fixture.stale();
+      await inventory.getByText('Searching for a current session.', { exact: false }).waitFor();
+      assert.equal(await inventory.locator('[data-observed-task]').count(), 0, 'stale state clears inventory');
+      await page.screenshot({ path: path.join(out, `observed-stale-${viewport.width}.png`) });
+      fixture.append('\n');
+      await inventory.locator('[data-observed-task="unknown-one"]').waitFor();
+      assert.equal(await inventory.locator('[data-observed-task="unknown-two"]').count(), 0,
+        'stale reconnect seeds only in-flight tasks');
+      fixture.lose();
+      await inventory.getByText('Searching for a current session.', { exact: false }).waitFor();
+      assert.equal(await inventory.locator('[data-observed-task]').count(), 0, 'lost source clears inventory');
+      await page.screenshot({ path: path.join(out, `observed-lost-${viewport.width}.png`) });
+      fixture.replace(event('subagent.selected', { agentName: 'Squad' }) + spawn());
+      await inventory.locator('[data-observed-task="member-run"]').waitFor();
+      assert.equal(await inventory.locator('[data-observed-task]').count(), 1, 'replacement cannot retain prior tasks');
+      fixture.fail();
+      await inventory.getByText('Live source unavailable. Task state cleared.', { exact: true }).waitFor();
+      assert.equal(await inventory.locator('[data-observed-task]').count(), 0, 'source errors clear inventory');
+      await page.screenshot({ path: path.join(out, `observed-error-${viewport.width}.png`) });
+      fs.rmdirSync(path.join(fixture.home, 'session-state', 'fixture-session', 'events.jsonl'));
+      fixture.replace(event('subagent.selected', { agentName: 'Squad' }) + spawn()
+        + tool('reconnect', 'view', { path: 'fixture.ts' }) + done('reconnect', 800));
+      await inventory.locator('[data-observed-task="member-run"]').waitFor();
+      await page.getByRole('button', { name: /^Telemetry/ }).click();
       fixture.send({ type: 'webviewReady' });
       await page.getByRole('progressbar').waitFor();
       fixture.append(event('subagent.completed', { toolCallId: 'member-run', agentName: 'general-purpose', prompt: secret }));
       await page.locator('[data-agent-label="ada"] [aria-label="Idle"]').waitFor();
       await page.getByRole('progressbar').waitFor({ state: 'detached' });
       assert.equal(await page.locator('[data-agent-tools]').count(), 0, 'member completion clears tools');
-      fixture.append(spawn() + tool('again', 'view', { path: 'fixture.ts' }) + done('again', 800));
+      fixture.append(spawn().replaceAll('member-run', 'member-again')
+        + tool('again', 'view', { path: 'fixture.ts' }).replaceAll('member-run', 'member-again') + done('again', 800));
       await page.getByRole('progressbar').waitFor();
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
       await page.locator('#squad-pod-live-activity').click();
@@ -433,7 +498,13 @@ async function browserAcceptance(out) {
       assert.deepEqual(failedAssets, [], 'zero failed packaged-asset requests');
       await assertAssetDiagnostics();
       const assetProof = await page.evaluate(() => window.__liveAssetProof);
-      fs.writeFileSync(path.join(out, `browser-${viewport.width}.json`), JSON.stringify({ viewport, errors, failedAssets, guardProof, decodedAssets, assetProof, expectedWarnings, overlaps, toolBounds, sequentialCalls: 120, concurrentCalls: 12, confirmations: fixture.confirmations.length, source: fixture.messages.filter(m => m.type === 'sourceStatus').at(-1) }, null, 2));
+      fs.writeFileSync(path.join(out, `browser-${viewport.width}.json`), JSON.stringify({
+        viewport, errors, failedAssets, guardProof, decodedAssets, assetProof, expectedWarnings, overlaps, toolBounds,
+        observedTasks: { inventoryBounds, unattributedConcurrentCalls: 3, explicitParent: true,
+          metadataTruncation: true, stale: true, loss: true, error: true, reconnect: 'in-flight only' },
+        sequentialCalls: 120, concurrentCalls: 12, confirmations: fixture.confirmations.length,
+        source: fixture.messages.filter(m => m.type === 'sourceStatus').at(-1),
+      }, null, 2));
       await page.close();
       fixture.dispose();
       fixture = undefined;
