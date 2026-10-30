@@ -142,16 +142,30 @@ describe('conference-table surface composition', () => {
     expect(getSurfaceRiders(layout, 'desk-2').map(item => item.uid)).toEqual(['computer-1']);
   });
 
-  it('keeps imported dual-role surfaces acyclic and renders each item once', () => {
+  it('keeps imported dual-role surfaces as roots so rendering and atomic transforms agree', () => {
     const layout = fixture();
-    buildDynamicCatalog([{ ...asset('TABLE_FRONT', 3, 4, true), canPlaceOnSurfaces: true }]);
+    buildDynamicCatalog([
+      { ...asset('TABLE_FRONT', 3, 4, true), canPlaceOnSurfaces: true }, asset('PC_SIDE', 1, 2),
+    ]);
     layout.furniture = [
-      layout.furniture[0], { ...layout.furniture[0], uid: 'second-surface', col: 5 },
+      { ...layout.furniture[0], col: 0 },
+      { ...layout.furniture[0], uid: 'second-surface', col: 1 },
+      { ...layout.furniture[1], col: 0 },
     ];
     expect([...getSurfaceOwners(layoutToFurnitureInstances(layout.furniture))]).toEqual([
-      ['conference-table', 'second-surface'],
+      ['computer-side-1', 'conference-table'],
     ]);
-    expect(drawOrder(layout)).toEqual(['second-surface', 'conference-table']);
+    expect(getSurfaceRiders(layout, 'second-surface')).toEqual([]);
+    expect(getSurfaceRiders(layout, 'conference-table').map(item => item.uid)).toEqual(['computer-side-1']);
+    expect(drawOrder(layout)).toEqual(['conference-table', 'computer-side-1', 'second-surface']);
+    let moved = commitFurniturePlan(layout, planFurnitureMove(layout, 'second-surface', 9, 7))!.layout;
+    expect(moved.furniture[0]).toEqual(layout.furniture[0]);
+    expect(moved.furniture[2]).toEqual(layout.furniture[2]);
+    moved = commitFurniturePlan(moved, planFurnitureRotate(moved, 'second-surface'))!.layout;
+    expect(moved.furniture[0]).toEqual(layout.furniture[0]);
+    expect(moved.furniture[2]).toEqual(layout.furniture[2]);
+    vi.restoreAllMocks();
+    expect(drawOrder(moved)).toEqual(['second-surface', 'conference-table', 'computer-side-1']);
   });
 
   it('keeps composition, orientation and metadata through grouped move, four rotations and save/load', () => {

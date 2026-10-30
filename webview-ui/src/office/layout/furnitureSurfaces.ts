@@ -14,7 +14,9 @@ export function getSurfaceOwners(furniture: readonly FurnitureBounds[]): Map<str
   const surfaces = furniture.filter((item) => getCatalogEntry(item.type)?.isDesk);
   const owners = new Map<string, string>();
   for (const item of furniture) {
-    if (!getCatalogEntry(item.type)?.canPlaceOnSurfaces) continue;
+    const entry = getCatalogEntry(item.type);
+    // Surfaces remain roots even when an imported manifest also marks them as riders.
+    if (!entry?.canPlaceOnSurfaces || entry.isDesk) continue;
     let area = 0;
     for (const surface of surfaces) {
       if (surface.uid === item.uid) continue;
@@ -23,10 +25,6 @@ export function getSurfaceOwners(furniture: readonly FurnitureBounds[]): Map<str
         * Math.max(0, Math.min(item.row + item.height, surface.row + surface.height)
           - Math.max(item.row, surface.row));
       if (overlap > area) {
-        // Imported assets may be both a surface and a rider; never form a support cycle.
-        let ancestor: string | undefined = surface.uid;
-        while (ancestor !== undefined && ancestor !== item.uid) ancestor = owners.get(ancestor);
-        if (ancestor === item.uid) continue;
         area = overlap;
         owners.set(item.uid, surface.uid);
       }

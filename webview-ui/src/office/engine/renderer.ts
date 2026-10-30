@@ -240,16 +240,8 @@ export function renderScene(
 
   drawables.sort((a, b) => a.z - b.z);
 
-  function* withSurfaceRiders(items: Drawable[]): Generator<Drawable> {
-    for (const drawable of items) {
-      yield drawable;
-      if (drawable.surfaceRiders) {
-        yield* withSurfaceRiders(drawable.surfaceRiders.sort((a, b) => a.z - b.z));
-      }
-    }
-  }
-
-  for (const drawable of withSurfaceRiders(drawables)) {
+  for (const drawable of drawables.flatMap((item) =>
+    [item, ...(item.surfaceRiders?.sort((a, b) => a.z - b.z) ?? [])])) {
     if (drawable.type === 'character') {
       const ch = drawable.character;
       const pngDrawn = ch !== undefined && drawCharacterFromSheet(

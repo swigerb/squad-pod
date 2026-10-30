@@ -121,6 +121,50 @@ async function main() {
         assert.equal(pc.matching, pc.opaquePixels, `${pc.uid}: every opaque source pixel must be visible`);
       }
     }
+    if (!baseline) {
+      await page.getByRole('button', { name: 'Edit Layout', exact: true }).click();
+      await page.getByRole('region', { name: 'Layout editor' }).waitFor();
+      await page.getByTitle('Select', { exact: true }).click();
+      const bounds = await page.locator('canvas').boundingBox();
+      const point = (col, row) => ({
+        x: bounds.x + geometry.x + (col * 16 + 8) * geometry.zoom,
+        y: bounds.y + geometry.y + (row * 16 + 8) * geometry.zoom,
+      });
+      const from = point(5, 8);
+      const to = point(10, 8);
+      await page.mouse.move(from.x, from.y);
+      await page.mouse.down();
+      await page.mouse.move(to.x, to.y, { steps: 10 });
+      await page.mouse.up();
+      await page.waitForFunction(() => window.__conference.state.draft.furniture
+        .find(item => item.uid === 'conference-table').col === 9);
+      const moved = await page.evaluate(() => window.__conference.state.draft);
+      for (const original of layout.furniture.filter(item =>
+        item.uid === 'conference-table' || item.uid.startsWith('computer-side-'))) {
+        const item = moved.furniture.find(item => item.uid === original.uid);
+        assert.deepEqual([item.col, item.row, item.rotation], [original.col + 5, original.row, original.rotation]);
+      }
+      for (let turn = 1; turn <= 4; turn++) {
+        await page.getByTitle('Rotate (R)', { exact: true }).click();
+        await page.waitForFunction(rotation => window.__conference.state.draft.furniture
+          .find(item => item.uid === 'conference-table').rotation === rotation, (turn * 90) % 360);
+        if (turn === 1) await page.screenshot({ path: path.join(output, 'after-group-rotated.png') });
+      }
+      const restored = await page.evaluate(() => window.__conference.state.draft);
+      assert.deepEqual(restored, moved, 'four real editor rotations restore moved group and complete layout metadata');
+      await page.getByRole('button', { name: /Save Layout/ }).click();
+      await page.waitForFunction(() => window.__conference.outbound.some(message => message.type === 'saveLayout'));
+      const saved = await page.evaluate(() => window.__conference.outbound.filter(message => message.type === 'saveLayout').at(-1).layout);
+      assert.deepEqual(saved, moved, 'save boundary preserves complete moved group');
+      await page.evaluate(saved => window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'layoutLoaded', layout: saved, revision: 'conference-reloaded', source: 'external' },
+      })), saved);
+      await page.waitForFunction(() => window.__conference.state.draft.furniture
+        .find(item => item.uid === 'conference-table').col === 9);
+      assert.deepEqual(await page.evaluate(() => window.__conference.state.draft), saved);
+      await page.screenshot({ path: path.join(output, 'after-group-saved-reloaded.png') });
+      result.groupedEditor = { move: true, fourRotations: true, saveBoundary: true, externalReload: true };
+    }
     result.passed = true;
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {
