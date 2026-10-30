@@ -375,6 +375,14 @@ try {
     await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
     assert.equal(mobileSent.filter(frame => frame.type === 'launch').length, launchesAfter,
       'card and toggle navigation must not launch additional processes');
+    const landscapeStart = mobileReceived.length;
+    await mobileTab.setViewportSize({ width: 844, height: 390 });
+    await until(() => mobileReceived.slice(landscapeStart).some(frame => frame.type === 'output' &&
+      frame.data.includes('"resized":true')), 'landscape orientation resize reaches native PTY');
+    const portraitStart = mobileReceived.length;
+    await mobileTab.setViewportSize({ width: 390, height: 844 });
+    await until(() => mobileReceived.slice(portraitStart).some(frame => frame.type === 'output' &&
+      frame.data.includes('"resized":true')), 'portrait orientation resize reaches native PTY');
     if (artifacts) {
       await fs.mkdir(artifacts, { recursive: true });
       await mobileTab.getByRole('button', { name: 'Show office', exact: true }).click();
