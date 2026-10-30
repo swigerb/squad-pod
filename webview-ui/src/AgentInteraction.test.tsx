@@ -646,8 +646,8 @@ describe('deterministic measured overlay lanes', () => {
     expect([a, b, toolA, toolB]).toEqual([
       { left: 79.5, top: 314, width: 105, height: 26 },
       { left: 143.5, top: 284, width: 105, height: 26 },
-      { left: 32, top: 220, width: 200, height: 60 },
-      { left: 96, top: 156, width: 200, height: 60 },
+      { left: 32, top: 344, width: 200, height: 60 },
+      { left: 96, top: 220, width: 200, height: 60 },
     ]);
   });
 });

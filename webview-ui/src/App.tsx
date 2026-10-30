@@ -2,7 +2,6 @@ import './index.css';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { OfficeState } from './office/engine/officeState.js';
 import { OfficeCanvas } from './office/components/OfficeCanvas.js';
-import { ToolOverlay } from './office/components/ToolOverlay.js';
 import { AgentLabels } from './components/AgentLabels.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ZoomControls } from './components/ZoomControls.js';
@@ -24,6 +23,7 @@ import { LayoutConflict } from './components/LayoutConflict.js';
 import { DirectoryModal } from './components/DirectoryModal.js';
 import { HostClientProvider, useHostClient } from './HostClientContext.js';
 import { defaultHostClient, defaultHostError, type HostClient } from './hostClient.js';
+import type { CameraRequest } from './office/engine/viewport.js';
 
 const officeStateRef = { current: null as OfficeState | null };
 const editorState = new EditorState();
@@ -105,6 +105,12 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   const containerRef = useRef<HTMLDivElement>(null);
   const [touchMobile, setTouchMobile] = useState(false);
   const [followedAgentId, setFollowedAgentId] = useState<string | null>(null);
+  const [cameraRequest, setCameraRequest] = useState<CameraRequest>();
+  const requestCamera = useCallback((agentId?: string) => {
+    getOfficeState().cameraFollowId = null;
+    setFollowedAgentId(null);
+    setCameraRequest(previous => ({ id: (previous?.id ?? 0) + 1, agentId }));
+  }, []);
 
   useEffect(() => {
     if (!standalone) { setTouchMobile(false); return; }
@@ -325,6 +331,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         zoom={editor.zoom}
         onZoomChange={editor.handleZoomChange}
         panRef={editor.panRef}
+        cameraRequest={cameraRequest}
         onDeskClick={handleDeskClick}
         touchGestures={touchMobile}
         onManualPan={touchMobile ? () => {
@@ -383,7 +390,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         onExpandGrid={editor.handleExpandGrid}
       />}
 
-      <ZoomControls zoom={editor.zoom} onZoomChange={editor.handleZoomChange} />
+      <ZoomControls zoom={editor.zoom} onZoomChange={editor.handleZoomChange} onFitOffice={() => requestCamera()} />
 
       <div
         style={{
@@ -395,7 +402,8 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         }}
       />
 
-      <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef} onAgentClick={handleDeskClick} />
+      <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef}
+        agentTools={agentTools} onAgentClick={handleDeskClick} onLocateAgent={requestCamera} />
 
       <MissingSquad status={sourceStatus} />
       {readOnly && sourceStatus?.teamFound && sourceStatus.error && (
@@ -440,12 +448,6 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
         onShowAreasChange={(enabled) => updateSetting('showAreas', enabled)} />}
 
-      <ToolOverlay
-        officeState={getOfficeState()}
-        agentTools={agentTools}
-        zoom={editor.zoom}
-        panRef={editor.panRef}
-      />
 
       {isDebugMode && (
         <DebugView

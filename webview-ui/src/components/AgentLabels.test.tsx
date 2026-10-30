@@ -10,6 +10,8 @@ import { CharacterState, TileType } from '../office/types.js';
 import { HostClientProvider } from '../HostClientContext.js';
 import { createHostClientFixture } from '../__tests__/hostClientFixture.js';
 import { setContextUsage } from '../office/toolUtils.js';
+import { getCharacterScreenBounds } from '../office/engine/characterGeometry.js';
+import { createCharacter } from '../office/engine/characters.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -19,6 +21,7 @@ describe('AgentLabels over canvas characters', () => {
   let office: OfficeState;
   let frames: Map<number, FrameRequestCallback>;
   let nextFrame: number;
+  let time: number;
   const panRef = { current: { x: 30, y: 40 } };
   const onAgentClick = vi.fn();
   const client = createHostClientFixture();
@@ -26,6 +29,7 @@ describe('AgentLabels over canvas characters', () => {
   beforeEach(() => {
     frames = new Map();
     nextFrame = 0;
+    time = 0;
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
       frames.set(++nextFrame, callback);
       return nextFrame;
@@ -56,9 +60,10 @@ describe('AgentLabels over canvas characters', () => {
   });
 
   function frame() {
+    time += 100;
     const callbacks = [...frames.values()];
     frames.clear();
-    act(() => callbacks.forEach((callback) => callback(0)));
+    act(() => callbacks.forEach((callback) => callback(time)));
   }
 
   function render(zoom = 2, withCanvas = false) {
@@ -69,6 +74,7 @@ describe('AgentLabels over canvas characters', () => {
       <AgentLabels officeState={office} zoom={zoom} panRef={panRef} onAgentClick={onAgentClick} />
     </></HostClientProvider>));
     frame();
+    frame();
   }
 
   function label(name = 'Homer Simpson') {
@@ -77,7 +83,7 @@ describe('AgentLabels over canvas characters', () => {
     return button!;
   }
 
-  it.each([1, 2, 4])('renders only transparent name controls, not DOM characters or fake animations, at zoom %s', (zoom) => {
+  it.each([1, 2, 4])('renders readable native name controls, not DOM characters or fake animations, at zoom %s', (zoom) => {
     office.setAgentActive('homer', true);
     office.characters.get('marge')!.state = CharacterState.WALK;
     render(zoom);
@@ -91,22 +97,18 @@ describe('AgentLabels over canvas characters', () => {
     ]);
     for (const element of elements) {
       expect(element.style.animation).toBe('');
-      // Only the small status dot may have both explicit width and height.
-      if (element.style.width || element.style.height) {
-        expect(element.getAttribute('role')).toBe('img');
-        expect(element.style.width).toBe('6px');
-        expect(element.style.height).toBe('6px');
-      }
     }
     expect(label().style.background).toBe('transparent');
+    expect(label().parentElement!.style.background).toBe('rgba(0, 0, 0, 0.8)');
     expect(label().style.border).toBe('0px');
-    expect(label().parentElement!.parentElement!.style.pointerEvents).toBe('none');
+    expect(label().closest('[data-agent-annotation]')!.parentElement!.parentElement!.style.pointerEvents).toBe('none');
   });
 
   it('tracks authoritative identity, selection, movement, zoom, pan and roster removal', () => {
+    office.removeAgent('marge');
     render();
-    expect(label().style.left).toBe('190px');
-    expect(label().style.top).toBe('194px');
+    expect(label().parentElement!.style.left).toBe('190px');
+    expect(label().parentElement!.style.top).toBe('194px');
     Object.assign(office.characters.get('homer')!, { name: 'Homer Updated', role: 'Reviewer', x: 90, y: 110 });
     office.selectedAgentId = 'homer';
     panRef.current = { x: 50, y: 60 };
@@ -114,12 +116,12 @@ describe('AgentLabels over canvas characters', () => {
     expect(label('Homer Updated').textContent).toContain('Reviewer');
     expect(label('Homer Updated').style.color).toBe('rgb(251, 191, 36)');
     render(3);
-    expect(label('Homer Updated').style.left).toBe('320px');
-    expect(label('Homer Updated').style.top).toBe('328px');
+    expect(label('Homer Updated').parentElement!.style.left).toBe('320px');
+    expect(label('Homer Updated').parentElement!.style.top).toBe('328px');
     office.removeAgent('homer');
     frame();
     expect(host.textContent).not.toContain('Homer');
-    expect(host.querySelectorAll('button')).toHaveLength(1);
+    expect(host.querySelectorAll('button')).toHaveLength(0);
   });
 
   it('retains accessible active, waiting and permission indicators and tool text, clearing waiting on resume', () => {
@@ -206,12 +208,24 @@ describe('AgentLabels over canvas characters', () => {
     expect(frames.size).toBe(0);
   });
 
-  it('reserves separate measured lanes for names, tool bubbles and 40x4 gauges at 2x zoom', () => {
+  it.each(['constructor', 'toString', '__proto__'])('reads only own tool entries for member identity %s', id => {
+    office.removeAgent('homer');
+    office.removeAgent('marge');
+    office.addAgent(id, 'Test Member', 'Developer');
+    render();
+    expect(host.querySelector('[data-agent-tools]')).toBeNull();
+    act(() => root.render(<AgentLabels officeState={office} zoom={2} panRef={panRef}
+      agentTools={Object.fromEntries([[id, [{ toolId: 'test-read', status: 'Read tool', done: false }]]])} />));
+    frame();
+    expect(host.querySelector('[data-agent-tools]')?.textContent).toContain('Read tool');
+  });
+
+  it('keeps names, tools and 40x4 gauges in non-overlapping measured annotation stacks at 2x zoom', () => {
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
-      return this.dataset.agentLabel ? 90 : this.dataset.agentToolBubble ? 120 : 0;
+      return this.dataset.agentAnnotation ? 120 : this.dataset.agentLabel ? 90 : this.dataset.agentToolBubble ? 120 : 0;
     });
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
-      return this.dataset.agentLabel ? 28 : this.dataset.agentToolBubble ? 18 : 0;
+      return this.dataset.agentAnnotation ? 58 : this.dataset.agentLabel ? 28 : this.dataset.agentToolBubble ? 18 : 0;
     });
     for (const id of ['homer', 'marge']) {
       Object.assign(office.characters.get(id)!, { x: 80, y: 100 });
@@ -221,14 +235,13 @@ describe('AgentLabels over canvas characters', () => {
     }
     render(2);
     frame();
-    const boxes = [...host.querySelectorAll<HTMLElement>('[data-agent-label], [data-agent-tool-bubble], [data-agent-context]')]
+    const boxes = [...host.querySelectorAll<HTMLElement>('[data-agent-annotation]')]
       .map(element => {
-        const gauge = !!element.dataset.agentContext;
-        const width = gauge ? 40 : element.offsetWidth;
-        return { left: parseFloat(element.style.left) - (element.dataset.agentLabel ? width / 2 : 0),
-          top: parseFloat(element.style.top), width, height: gauge ? 4 : element.offsetHeight };
+        const width = element.offsetWidth;
+        return { left: parseFloat(element.style.left) - width / 2,
+          top: parseFloat(element.style.top), width, height: element.offsetHeight };
       });
-    expect(boxes).toHaveLength(6);
+    expect(boxes).toHaveLength(2);
     boxes.forEach((a, index) => {
       boxes.slice(index + 1).forEach(b => {
         expect(a.left < b.left + b.width && a.left + a.width > b.left
@@ -239,5 +252,150 @@ describe('AgentLabels over canvas characters', () => {
     office.setAgentActive('homer', false);
     frame();
     expect(host.querySelector('[data-agent-context="homer"]')).toBeNull();
+  });
+
+  it('projects member/subtask and subtask/subtask footprints together through motion and measurement changes', () => {
+    let taskHeight = 20;
+    let memberHeight = 20;
+    vi.stubGlobal('innerHeight', 1000);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 80 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation?.startsWith('subtask:') ? taskHeight
+        : this.dataset.agentAnnotation ? memberHeight : 0;
+    });
+    for (const id of ['homer', 'test-child']) {
+      const character = createCharacter(id, `Test task ${id}`, 'Ephemeral', 0, null, null, 0);
+      Object.assign(character, { x: 80, y: 100 });
+      office.subagents.set(id, { character, parentAgentId: 'homer' });
+    }
+    render();
+    for (let tick = 0; tick < 100; tick++) {
+      taskHeight = tick % 2 ? 80 : 20;
+      memberHeight = tick % 3 ? 20 : 100;
+      office.characters.get('homer')!.x = 80 + Math.sin(tick / 10) * 20;
+      office.subagents.get('homer')!.character.y = 100 + Math.sin(tick / 10) * 20;
+      frame();
+      const annotations = [...host.querySelectorAll<HTMLElement>('[data-agent-annotation]')];
+      expect(annotations).toHaveLength(4); // Member and transient with identical IDs remain distinct.
+      annotations.forEach((element, index) => {
+        const top = parseFloat(element.style.top);
+        annotations.slice(index + 1).forEach(other => {
+          const otherTop = parseFloat(other.style.top);
+          expect(top + element.offsetHeight <= otherTop || otherTop + other.offsetHeight <= top).toBe(true);
+        });
+      });
+      expect(host.querySelectorAll('[data-subagent-label]')).toHaveLength(2);
+      expect(host.querySelector('[data-subagent-label="test-child"]')?.textContent).toContain('Parent: Homer Simpson');
+      expect(host.querySelector('[data-label-dock="true"]')).toBeNull();
+    }
+    office.subagents.clear();
+    frame();
+    expect(host.querySelector('[data-subagent-label]')).toBeNull();
+  });
+
+  it('collapses a crowded dock on Locate, moves keyboard focus to reopen, and keeps hidden labels out of the way', () => {
+    vi.stubGlobal('innerWidth', 360);
+    vi.stubGlobal('innerHeight', 280);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 150 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 100 : 0;
+    });
+    const locate = vi.fn();
+    act(() => root.render(<AgentLabels officeState={office} zoom={3} panRef={panRef}
+      onAgentClick={onAgentClick} onLocateAgent={locate} />));
+    frame();
+    const dock = host.querySelector<HTMLElement>('[data-label-dock="true"]')!;
+    expect(dock).not.toBeNull();
+    const button = host.querySelector<HTMLButtonElement>('[aria-label="Locate Homer Simpson"]')!;
+    button.focus();
+    act(() => button.click());
+    expect(locate).toHaveBeenCalledExactlyOnceWith('homer');
+    expect(dock.style.visibility).toBe('hidden');
+    for (const annotation of host.querySelectorAll<HTMLElement>('[data-agent-annotation]')) {
+      expect(getComputedStyle(annotation).visibility).toBe('hidden');
+    }
+    const toggle = [...host.querySelectorAll('button')].find(item => item.textContent === 'Show office labels')!;
+    expect(document.activeElement).toBe(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    frame();
+    expect(dock.style.visibility).toBe('hidden'); // RAF/resize must not reopen behind the user's choice.
+    act(() => toggle.click());
+    expect(dock.style.visibility).toBe('');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    act(() => label().click());
+    expect(onAgentClick).toHaveBeenCalledOnce();
+  });
+
+  it.each([1.5, 2])('marks off-screen names honestly and offers keyboard Locate at DPR %s', (dpr) => {
+        vi.stubGlobal('devicePixelRatio', dpr);
+        vi.stubGlobal('innerWidth', 788);
+        Object.assign(office.characters.get('homer')!, { x: 400, y: 100 });
+        const locate = vi.fn();
+        act(() => root.render(<AgentLabels officeState={office} zoom={3} panRef={panRef}
+          onAgentClick={onAgentClick} onLocateAgent={locate} />));
+        frame();
+        expect(label().textContent).toContain('Off-screen right');
+        const locateButton = host.querySelector<HTMLButtonElement>('[aria-label="Locate Homer Simpson"]')!;
+        locateButton.focus();
+        act(() => locateButton.click());
+        expect(locate).toHaveBeenCalledExactlyOnceWith('homer');
+        expect(onAgentClick).not.toHaveBeenCalled();
+        expect(host.querySelector('[data-agent-connector="homer"]')).toBeNull();
+        panRef.current.x = -700;
+        frame();
+        expect(label().textContent).not.toContain('Off-screen');
+        expect(host.querySelector('[data-agent-connector="homer"]')).not.toBeNull();
+  });
+
+  it.each([360, 1400].flatMap(width => Array.from({ length: 10 }, (_, i) => [width, i + 1])))
+      ('bounds collision-lane changes over 60s in a %spx panel at zoom %s (CSS pixels, DPR 1.5)', (width, zoom) => {
+        vi.stubGlobal('devicePixelRatio', 1.5);
+        vi.stubGlobal('innerWidth', width);
+        vi.stubGlobal('innerHeight', 900);
+        vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+          return this.dataset.agentAnnotation ? 90 : 0;
+        });
+        vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+          return this.dataset.agentAnnotation ? 28 : 0;
+        });
+        for (let i = 0; i < 6; i++) {
+          const id = `crowd-${i}`;
+          office.addAgent(id, `Moving member ${i}`, 'Developer');
+          Object.assign(office.characters.get(id)!, { x: 80, y: 100 });
+        }
+        render(zoom);
+        frame(); // Real measured dimensions become available after the first DOM commit.
+        const previous = new Map<string, { top: number; anchor: number }>();
+        let maxLaneStep = 0;
+        for (let tick = 0; tick < 600; tick++) {
+          for (let i = 0; i < 6; i++) {
+            Object.assign(office.characters.get(`crowd-${i}`)!, {
+              // Cross repeatedly with unchanged camera and world y, isolating lane motion.
+              x: (width / 2 + Math.sin(tick / 25 + i) * 100 - panRef.current.x) / zoom,
+              y: (450 - panRef.current.y) / zoom,
+            });
+          }
+          frame();
+          for (const element of host.querySelectorAll<HTMLElement>('[data-agent-label]')) {
+            const id = element.dataset.agentLabel!;
+            if (!id.startsWith('crowd-')) continue;
+            const top = parseFloat(element.parentElement!.style.top);
+            const bounds = getCharacterScreenBounds(office.characters.get(id)!, zoom, panRef.current);
+            const anchor = Math.max(4, Math.min(bounds.top - 14, 900 - 28 - 4));
+            const last = previous.get(id);
+            if (last) maxLaneStep = Math.max(maxLaneStep, Math.abs((top - last.top) - (anchor - last.anchor)));
+            previous.set(id, { top, anchor });
+            expect(element.textContent).toContain('Developer');
+            const connector = host.querySelector(`[data-agent-connector="${id}"]`)!;
+            expect(Number(connector.getAttribute('x2'))).toBeCloseTo(
+              office.characters.get(id)!.x * zoom + panRef.current.x);
+          }
+        }
+        expect(maxLaneStep).toBeLessThanOrEqual(12.000001);
+        expect(panRef.current).toEqual({ x: 30, y: 40 });
   });
 });
