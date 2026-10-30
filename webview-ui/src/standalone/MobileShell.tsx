@@ -4,7 +4,7 @@ import {
   initialMobileShellState, reduceMobileShell, type MobileShellEvent,
   type MobileShellState, type MobileTerminalAccess,
 } from '../mobile/mobileShellState.js';
-import { reduceEdgeSwipe, type EdgeSwipeState } from '../mobile/edgeSwipe.js';
+import { reduceEdgeSwipe, type EdgeSwipeEffect, type EdgeSwipeState } from '../mobile/edgeSwipe.js';
 import { OwnedTerminalPanel, type OwnedTerminalPanelProps } from './OwnedTerminalPanel.js';
 
 const INITIAL_ACCESS: MobileTerminalAccess = {
@@ -75,7 +75,41 @@ export function MobileShell({ office, onKeyboardViewport }: MobileShellProps) {
     const track = trackRef.current;
     if (!mobile || !shell || !track) return;
     let current: EdgeSwipeState = { phase: 'idle' };
-    let target: 'office' | 'terminal' | null = state.view === 'office' ? 'terminal' : 'office';
+    const target = state.view === 'office' ? 'terminal' : 'office';
+    const applyEffects = (effects: EdgeSwipeEffect[], event: TouchEvent) => {
+      for (const effect of effects) {
+        if (effect.type === 'arm') {
+          if (event.cancelable) event.preventDefault();
+        } else if (effect.type === 'claim') {
+          const original = event.target;
+          if (original instanceof Element) {
+            const cancel = new Event('touchcancel', { bubbles: true });
+            Object.defineProperties(cancel, {
+              changedTouches: { value: Array.from(event.changedTouches) },
+              touches: { value: [] },
+              targetTouches: { value: [] },
+            });
+            syntheticCancelRef.current = true;
+            try { original.dispatchEvent(cancel); }
+            finally { syntheticCancelRef.current = false; }
+          }
+        } else if (effect.type === 'consume') {
+          event.stopImmediatePropagation();
+          if (event.cancelable) event.preventDefault();
+        } else if (effect.type === 'drag') {
+          track.style.transition = 'none';
+          track.style.transform = `translateX(${effect.translatePx}px)`;
+        } else if (effect.type === 'release') {
+          track.style.transition = 'transform 180ms ease-out';
+        } else if (effect.type === 'commit') {
+          track.style.transition = 'transform 180ms ease-out';
+          changeView();
+        } else if (effect.type === 'settle') {
+          track.style.transition = 'transform 180ms ease-out';
+          track.style.transform = state.view === 'terminal' ? 'translateX(-50%)' : 'translateX(0)';
+        }
+      }
+    };
     const handle = (event: TouchEvent) => {
       if (syntheticCancelRef.current && event.type === 'touchcancel') return;
       const rect = shell.getBoundingClientRect();
@@ -91,7 +125,7 @@ export function MobileShell({ office, onKeyboardViewport }: MobileShellProps) {
           left: rect.left, width: rect.width, optOut: optedOut,
         }, target);
         current = step.state;
-        if (step.effects.some(effect => effect.type === 'arm') && event.cancelable) event.preventDefault();
+        applyEffects(step.effects, event);
         return;
       }
       if (event.type === 'touchmove') {
@@ -100,30 +134,7 @@ export function MobileShell({ office, onKeyboardViewport }: MobileShellProps) {
             type: 'move', touch: { id: touch.identifier, x: touch.clientX, y: touch.clientY, time: event.timeStamp },
           }, target);
           current = step.state;
-          for (const effect of step.effects) {
-            if (effect.type === 'claim') {
-              const original = event.target;
-              if (original instanceof Element) {
-                const cancel = new Event('touchcancel', { bubbles: true });
-                Object.defineProperties(cancel, {
-                  changedTouches: { value: [touch] },
-                  touches: { value: [] },
-                  targetTouches: { value: [] },
-                });
-                syntheticCancelRef.current = true;
-                try { original.dispatchEvent(cancel); }
-                finally { syntheticCancelRef.current = false; }
-              }
-            } else if (effect.type === 'consume') {
-              event.stopImmediatePropagation();
-              if (event.cancelable) event.preventDefault();
-            } else if (effect.type === 'drag') {
-              track.style.transition = 'none';
-              track.style.transform = `translateX(${effect.translatePx}px)`;
-            } else if (effect.type === 'release') {
-              track.style.transition = 'transform 180ms ease-out';
-            }
-          }
+          applyEffects(step.effects, event);
         }
         return;
       }
@@ -133,14 +144,7 @@ export function MobileShell({ office, onKeyboardViewport }: MobileShellProps) {
         type: event.type === 'touchcancel' ? 'cancel' : 'end', id: touch.identifier,
       }, target);
       current = step.state;
-      for (const effect of step.effects) {
-        if (effect.type === 'consume') event.stopImmediatePropagation();
-        else if (effect.type === 'commit') { track.style.transition = 'transform 180ms ease-out'; changeView(); }
-        else if (effect.type === 'settle') {
-          track.style.transition = 'transform 180ms ease-out';
-          track.style.transform = state.view === 'terminal' ? 'translateX(-50%)' : 'translateX(0)';
-        }
-      }
+      applyEffects(step.effects, event);
     };
     shell.addEventListener('touchstart', handle, { capture: true, passive: false });
     shell.addEventListener('touchmove', handle, { capture: true, passive: false });

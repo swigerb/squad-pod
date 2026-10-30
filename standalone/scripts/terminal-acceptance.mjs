@@ -416,6 +416,22 @@ try {
     await until(async () => await officePanel.getAttribute('data-following-agent') === '',
       'one-finger office pan breaks production camera follow');
     check('installed Edge DPR 3 touch: observed-agent camera follow survives pure pinch and ends on one/two-finger manual pan');
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[385, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: touchPoints([[305, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[305, center.y], [200, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await until(async () => {
+      const bounds = await mobileTab.locator('.observer-office-page').boundingBox();
+      return bounds && Math.abs(bounds.x) <= 1;
+    }, 'second finger cancels claimed edge navigation and settles original office page');
+    assert.equal(await mobileTab.locator('.observer-mobile-stage').getAttribute('data-mobile-view'), 'office');
+    check('installed Edge second-finger interruption settles a claimed edge swipe without changing pages');
     const swipe = async (direction) => {
       const startX = direction === 'left' ? 385 : 5;
       const endX = direction === 'left' ? 160 : 230;
@@ -428,6 +444,12 @@ try {
       const bounds = await surface.boundingBox();
       assert.ok(bounds, 'edge swipe requires a visible non-control surface');
       const y = bounds.y + bounds.height / 2;
+      const hit = await mobileTab.evaluate(({ x, y }) => {
+        const element = document.elementFromPoint(x, y);
+        return element && { tag: element.tagName, className: element.className, text: element.textContent?.slice(0, 100) };
+      }, { x: startX, y });
+      (report.swipes ??= []).push({ direction, bounds, startX, y, hit });
+      assert.ok(hit, 'edge swipe starts inside the visible viewport');
       assert.equal(await mobileTab.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest(
         'button, input, select, textarea, a, [role="button"], [contenteditable="true"], [data-mobile-gesture-optout]',
       ), { x: startX, y }), false, 'edge navigation must not start on an opted-out terminal or control');
@@ -544,6 +566,10 @@ try {
   report.failures.push(String(error.stack ?? error));
   process.exitCode = 1;
   console.error(error);
+  if (artifacts && mobileTab && !mobileTab.isClosed()) {
+    await mobileTab.screenshot({ path: path.join(artifacts, 'mobile-failure.png'), fullPage: true });
+    report.screenshots.push('mobile-failure.png');
+  }
 } finally {
   await mobileTab?.context().close();
   await browser?.close();
