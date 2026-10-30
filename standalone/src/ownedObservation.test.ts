@@ -119,6 +119,17 @@ describe('server-generated owned-session binding (synthetic broker, never AI)', 
     expect(live.observationSelection().excludedIds).toContain(secondId);
   });
 
+  it('refuses linked session roots before allocating a UUID or launching', async () => {
+    fs.rmdirSync(path.join(home, 'session-state'));
+    const target = path.join(root, 'fixture target');
+    fs.mkdirSync(target);
+    fs.symlinkSync(target, path.join(home, 'session-state'), 'junction');
+    const live = runtime();
+    await expect(live.launch()).rejects.toThrow('Unsupported Copilot session root');
+    expect(launchOwnedPty).not.toHaveBeenCalled();
+    expect(live.status().runs).toEqual([]);
+  });
+
   it('blocks unrelated same-cwd fallback until the exact owned cwd and Squad marker are present', async () => {
     const live = runtime();
     const office = observer(live);
