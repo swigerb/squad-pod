@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { createHash } = require('node:crypto');
 const { createLiveFixture, spawn, tool, done, event, secret } = require('./acceptance-live-activity.cjs');
 
 const root = path.resolve(__dirname, '..');
@@ -107,6 +108,10 @@ async function main() {
     }
     fs.writeFileSync(path.join(out, 'task-bubbles.json'), JSON.stringify({
       head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+      dirty: execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim(),
+      products: Object.fromEntries(['dist/extension.js', 'dist/webview/assets/index.js'].map(file => [
+        file, createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex'),
+      ])),
       synthetic: true, nativeVsCode: false, realProducer: false, results,
     }, null, 2));
     console.log(JSON.stringify(results, null, 2));
