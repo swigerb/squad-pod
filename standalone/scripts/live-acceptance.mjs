@@ -209,13 +209,14 @@ try {
   }
   check('installed Edge renders whitelisted member tool, 80% context and authoritative transient inventory/temporary child without roster promotion');
   for (const message of [{ type: 'setLiveActivity', enabled: false }, { type: 'launch' },
-    { type: 'saveLayout', layout: {} }]) channel.send(message);
-  await until(() => channel.frames.filter(frame => frame.code === 'READ_ONLY').length === 3, 'read-only mutation rejections');
+    { type: 'saveLayout', layout: {} }, { type: 'selectCliUsage' }, { type: 'refreshCliUsage' },
+    { type: 'clearCliUsage' }]) channel.send(message);
+  await until(() => channel.frames.filter(frame => frame.code === 'READ_ONLY').length === 6, 'read-only mutation and CLI-usage import rejections');
   assert.equal(await digest(project), before);
   const swapped = await fetch(`${host.origin}/terminal-auth`, { method: 'POST',
     headers: { Origin: host.origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ token: host.tokens[0] }) });
   assert.equal(swapped.status, 403);
-  check('live reads grant no layout/settings/launch/terminal authority and do not write project files');
+  check('live reads grant no layout/settings/launch/terminal/CLI-usage import authority and do not write project files');
 
   // Reload creates a new office subscription and must reconstruct only in-flight tools.
   browserMessages.length = 0;

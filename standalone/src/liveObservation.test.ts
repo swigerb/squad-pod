@@ -304,10 +304,11 @@ describe('standalone opted-in live observation', () => {
         && f.message.contextTokens === 800)).toBe(true));
       validate(frames.flatMap(frame => frame.message ? [frame.message] : []));
       for (const message of [{ type: 'setLiveActivity', enabled: false }, { type: 'launch' },
-        { type: 'saveLayout', layout: {} }]) {
+        { type: 'saveLayout', layout: {} }, { type: 'selectCliUsage' }, { type: 'refreshCliUsage' },
+        { type: 'clearCliUsage' }]) {
         ws.send(JSON.stringify({ version: 1, kind: 'office', message }));
       }
-      await vi.waitFor(() => expect(frames.filter(frame => frame.code === 'READ_ONLY')).toHaveLength(3));
+      await vi.waitFor(() => expect(frames.filter(frame => frame.code === 'READ_ONLY')).toHaveLength(6));
       expect(transport.controlToken).toBeNull();
       expect(fs.readdirSync(project)).toEqual(['.squad']);
     } finally {
