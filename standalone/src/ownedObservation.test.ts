@@ -87,6 +87,7 @@ function session(sessionId: string, content = marker + running, cwd = project, a
 }
 const status = (messages: OutboundMessage[]) => messages.find(m => m.type === 'sourceStatus')?.status.liveActivity;
 const agent = (messages: OutboundMessage[]) => messages.find(m => m.type === 'existingAgents')?.agents[0];
+const models = (messages: OutboundMessage[]) => messages.filter(m => m.type === 'liveModels').at(-1)?.snapshot;
 
 describe('server-generated owned-session binding (synthetic broker, never AI)', () => {
   it('only adds a fresh fixed UUID on live opt-in; IDs/binding stay out of terminal wire inventory', async () => {
@@ -158,23 +159,29 @@ describe('server-generated owned-session binding (synthetic broker, never AI)', 
     const live = runtime();
     const office = observer(live);
     const first = await live.launch();
-    session(id);
+    session(id, marker + JSON.stringify({ type: 'session.start', timestamp: new Date().toISOString(),
+      data: { selectedModel: 'fixture-owned-model' } }) + '\n' + running);
     let unsubscribe = office.subscribe(() => {});
     expect(status(await office.snapshot())?.selection).toBe('owned-session');
+    expect(models(await office.snapshot())?.session?.model).toBe('fixture-owned-model');
     unsubscribe();
     unsubscribe = office.subscribe(() => {});
     expect(agent(await office.snapshot())?.status).toBe('active');
     vi.mocked(randomUUID).mockReturnValue(secondId);
     const second = await live.launch();
-    expect(agent(await office.snapshot())?.status).toBe('idle');
+    const waiting = await office.snapshot();
+    expect(agent(waiting)?.status).toBe('idle');
+    expect(models(waiting)).toEqual({ sessionId: null, session: null, members: {} });
     session(secondId);
     await vi.advanceTimersByTimeAsync(5000);
     expect(status(await office.snapshot())?.sessionId).toBe('22345678');
     exits[1](0);
     expect(status(await office.snapshot())?.sessionId).toBe('12345678');
+    expect(models(await office.snapshot())?.session?.model).toBe('fixture-owned-model');
     await live.close(first.runId);
     expect(status(await office.snapshot())?.selection).toBe('matching-project');
     expect(agent(await office.snapshot())?.status).toBe('idle');
+    expect(models(await office.snapshot())).toEqual({ sessionId: null, session: null, members: {} });
     session('external', marker + running);
     await vi.advanceTimersByTimeAsync(5000);
     expect(status(await office.snapshot())?.sessionId).toBe('external');
@@ -185,6 +192,7 @@ describe('server-generated owned-session binding (synthetic broker, never AI)', 
     const revoked = await office.snapshot();
     expect(status(revoked)).toMatchObject({ state: 'searching', selection: 'unavailable', reason: expect.stringContaining('revoked') });
     expect(agent(revoked)?.status).toBe('idle');
+    expect(models(revoked)).toEqual({ sessionId: null, session: null, members: {} });
     unsubscribe();
   });
 
