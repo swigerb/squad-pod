@@ -3,10 +3,14 @@
 # Squad Pod
 
 **Local browser observer:** [Build/run and security instructions](standalone/README.md)
-for the private, authenticated, loopback-only read-only office. It uses the same
+for the private, authenticated, loopback-only office, read-only by default. It uses the same
 production renderer, observes only an explicitly selected project, and has no
 workspace writes. Optional owned terminals use separate authentication and
-`copilot --agent squad`; observation stays read-only. This is separate from the VSIX.
+`copilot --agent squad`; observation stays read-only. Separate `--office-control`
+opt-in and authentication enable selected-project layout editing, seat persistence,
+sound/debug/Areas settings, browser JSON import/export and revision-protected draft
+recovery. Native dialogs, directory management and private-log consent remain unavailable.
+This is separate from the VSIX.
 
 **Your Squad AI team, but make it pixel art.**
 

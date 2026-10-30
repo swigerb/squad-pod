@@ -2,6 +2,7 @@ import { useHostClient } from '../HostClientContext.js';
 
 interface BottomToolbarProps {
   readOnly?: boolean;
+  nativeUnavailable?: boolean;
   isEditMode: boolean;
   onToggleEditMode: () => void;
   onOpenSquadInfo?: () => void;
@@ -12,7 +13,7 @@ interface BottomToolbarProps {
   telemetryCount: number;
 }
 
-export function BottomToolbar({ readOnly = false, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, onOpenSettings, isTelemetryOpen, onToggleTelemetry, telemetryCount }: BottomToolbarProps) {
+export function BottomToolbar({ readOnly = false, nativeUnavailable = false, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, onOpenSettings, isTelemetryOpen, onToggleTelemetry, telemetryCount }: BottomToolbarProps) {
   const client = useHostClient();
 
   const handleSquadInfo = () => {
@@ -115,8 +116,8 @@ export function BottomToolbar({ readOnly = false, isEditMode, onToggleEditMode, 
           {isEditMode ? 'Exit Layout Editor' : 'Edit Layout'}
         </button>
         <button
-          disabled={readOnly}
-          title={readOnly ? 'Only the explicitly selected project is observed. Directory management is unavailable.' : undefined}
+          disabled={readOnly || nativeUnavailable}
+          title={readOnly || nativeUnavailable ? 'Only the explicitly selected project is available. Directory management is unavailable.' : undefined}
           onClick={onOpenDirectories}
           style={{
             padding: '8px 12px',

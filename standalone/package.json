@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Local read-only Squad Pod office with optional owned terminals (not published)",
+  "description": "Local Squad Pod office with separate office-control and terminal authority (not published)",
   "bin": { "squad-pod-observer": "dist/cli.mjs" },
   "files": ["dist", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "TERMINAL_NOTICES.md"],
   "engines": { "node": ">=22.13.0" },
@@ -12,6 +12,7 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "acceptance": "node scripts/acceptance.mjs",
+    "acceptance:office": "node scripts/office-acceptance.mjs",
     "acceptance:terminals": "node scripts/terminal-acceptance.mjs"
   },
   "dependencies": {

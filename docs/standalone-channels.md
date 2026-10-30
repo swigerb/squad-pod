@@ -15,9 +15,53 @@ re-exports it for compatibility. `connectOffice` subscribes before sending
 commands/events remain `WebviewMessage`/`OutboundMessage`; terminal messages are
 not added to that union. This is a trusted typed seam, **not** a JSON validator or
 an authenticated network boundary. The observer's isolated transport validates
-office commands before dispatch and rejects every mutation server-side; its
+office commands before dispatch and rejects every observation-channel mutation server-side; its
 browser adapter separately validates server events. `/office` remains read-only:
 separate terminal authority never enables unsupported office mutations.
+
+The explicit local `--office-control` opt-in adds independent `POST /control-auth`
+authentication and a `/control` WebSocket. Its credential/cookie is neither the
+observation credential nor terminal authority. All endpoints keep exact loopback
+Host/Origin checks and runtime-only credentials. Rotation/restart revokes all three.
+`GET /office-context` requires office observation/control authentication and returns
+noncredential project/server-instance identity for recovery scoping.
+
+The direction-specific control request is
+`{version:1,kind:"control",requestId,expectedRevision,message}`. Only `saveLayout`,
+`saveAgentSeats`, `setSoundEnabled`, `setDebugEnabled`, and `setShowAreas` are allowed,
+with exact keys and bounded shared validation. Layout saves must match the selected
+canonical workspaceRoot identity; it is never used as a supplied filesystem target.
+Native file dialogs, private-source consent, assets, directories and terminal actions
+cannot cross this allowlist. Control frames are at most 2 MiB + 8 KiB; layout data
+is at most 2 MiB and preferences at most 128 KiB. Read-only frames remain 4 KiB.
+
+`{version:1,kind:"controlState",preferencesRevision,preferences}` carries the complete
+validated settings/appearance/seat map together with its revision. The browser applies
+that map to its roster/settings before advancing the expected revision, including
+interleaved detail replies. Revisions never advance independently of corresponding
+state. Replies use `{version:1,kind:"controlResult",requestId,messages}` containing
+validated office events, including `layoutSaved` only after committed bytes are read
+back. The browser accepts only its current in-flight request ID; no mutation queue
+or replay exists. Disconnect/rejection leaves the draft visible and requires a
+deliberate retry. Revision conflicts, malformed saved sources, changed identity,
+authority revocation at commit or storage failure cannot produce successful saves.
+Preference attempts are retained before readiness checks. A different attempt while
+a preference draft remains unresolved is explicitly rejected, not queued or retained,
+and optimistic settings/seats are reconciled to the last authoritative snapshot.
+The prior draft remains exportable/retryable; deliberate discard requires no save in flight.
+Both standalone modes apply complete roster preference maps to existing OfficeState
+characters, reserving explicit seats before automatic fallback rather than issuing
+interactive swaps. Later whole-map seat gestures therefore include other viewers'
+committed moves; native/local roster-refresh behavior is unchanged.
+
+`OfficeStore` writes fixed project targets with exclusive cooperating-writer locks,
+atomic staged/fsynced rename, exact-byte hashed revisions and prior-byte recovery
+copies. A replaced parent identity stops even cleanup; the original lock/staged
+bytes stay retained for manual recovery, rather than touching a replacement path.
+The browser reuses `LayoutDraft` and scoped bounded browser storage, not native
+global settings or filesystem dialogs. Browser import/export are deliberate local
+file selection/download actions; import enters the existing draft/conflict workflow.
+The native VS Code adapter's settings/recovery protocol is unchanged.
 
 ## Terminal wire contract
 
@@ -100,9 +144,9 @@ card has no process-side authority.
 
 The private standalone CLI/runtime remains separately packaged, with native/server
 dependencies and terminal license payloads excluded from the VSIX. It binds only
-`127.0.0.1`. Office and terminal authentication have different runtime credentials,
-cookies and WebSocket channels (`/office` and `/terminal`); both enforce exact
-Host/Origin checks. Rotation revokes both channels and cancels pending unauthorized
+`127.0.0.1`. Office observation, opted-in control and terminal authentication have distinct runtime credentials,
+cookies and WebSocket channels (`/office`, `/control` and `/terminal`); authentication/upgrades enforce exact
+Host/Origin checks. Rotation revokes all channels and cancels pending unauthorized
 launches without terminating already-owned runs. Credentials are runtime-only; no
 tokenless or persistent-credential mode, proxy exposure or remote TLS/auth is claimed.
 
@@ -131,7 +175,7 @@ The native VS Code live-data adapter remains consented/best-effort Copilot JSONL
 standalone office activity remains approximate project-file observation, not a
 fabricated live Squad lifecycle. No automatically started Squad EventBus producer
 is assumed. Real Squad-session and native VS Code acceptance remain user/Scout-owned
-under their separately pinned plan. Full mobile interactions, general browser office
-mutations, remote access and persistent credentials remain separate gates. Narrow
+under their separately pinned plan. Full mobile interactions, cross-project/native browser
+capabilities, remote access and persistent credentials remain separate gates. Narrow
 screenshots are not full mobile parity. Revision-protected drafts, native
 directories/Areas, usage and asset behavior are unchanged.

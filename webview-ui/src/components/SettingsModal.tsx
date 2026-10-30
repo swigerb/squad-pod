@@ -4,6 +4,7 @@ import { SourceStatusView } from './SourceStatusView.js';
 import { AssetDirectories, type AssetStatusData } from './AssetStatus.js';
 
 interface SettingsModalProps {
+  standalone?: boolean;
   assetStatus?: AssetStatusData;
   onClose: () => void;
   isDebugMode?: boolean;
@@ -14,7 +15,7 @@ interface SettingsModalProps {
   sourceStatus: SourceStatus | null;
 }
 
-export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
+export function SettingsModal({ standalone = false, assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
   const client = useHostClient();
   const handleExport = () => {
     client.send({ type: 'exportLayout' });
@@ -105,7 +106,7 @@ export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onTog
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {!standalone && <><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label htmlFor="squad-pod-live-activity" style={{ fontSize: '13px' }}>Live Activity (opt-in)</label>
             <input id="squad-pod-live-activity" type="checkbox"
               checked={!!sourceStatus?.liveActivity && sourceStatus.liveActivity.state !== 'off'}
@@ -115,13 +116,13 @@ export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onTog
             Live source: {sourceStatus?.liveActivity?.state ?? 'unavailable'}
             {sourceStatus?.liveActivity?.sessionId ? ` (${sourceStatus.liveActivity.sessionId})` : ''}.
             {' '}Reads local Copilot CLI session metadata for this workspace after confirmation.
-          </p>
+          </p></>}
           <SourceStatusView status={sourceStatus} />
-          <AssetDirectories status={assetStatus} />
-          <p style={{ fontSize: '12px', margin: 0 }}>
+          {!standalone && <AssetDirectories status={assetStatus} />}
+          {standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and private/live log consent are unavailable. Import selects a browser file; export downloads validated JSON. Neither grants filesystem or terminal access.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
             Automatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code&apos;s normal terminal and Copilot permission prompts.
             Live tools and context use an undocumented, best-effort Copilot CLI session format.
-          </p>
+          </p>}
 
           <div style={{ borderTop: '1px solid var(--vscode-panel-border)', paddingTop: '16px' }}>
             <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Layout</div>

@@ -106,6 +106,54 @@ describe('reconcileAgents', () => {
     expect(office.characters.has('homer')).toBe(false);
   });
 
+  it('applies complete authoritative seats and appearance in two passes without recreating identities', () => {
+    const snapshot = [
+      { id: 'homer', name: 'Homer', role: 'Lead', paletteIndex: 0, seatId: 'chair-1' },
+      { id: 'marge', name: 'Marge', role: 'Dev', paletteIndex: 1, seatId: 'chair-2' },
+    ];
+    reconcileAgents(office, snapshot);
+    const homer = office.characters.get('homer')!;
+    const marge = office.characters.get('marge')!;
+    office.selectedAgentId = homer.id;
+    const swapped = [
+      { ...snapshot[0], paletteIndex: 13, seatId: 'chair-2' },
+      { ...snapshot[1], paletteIndex: 4, seatId: 'chair-1' },
+    ];
+    reconcileAgents(office, swapped);
+    office.applyAgentPreferences(swapped);
+    expect(office.characters.get('homer')).toBe(homer);
+    expect(office.characters.get('marge')).toBe(marge);
+    expect(office.selectedAgentId).toBe('homer');
+    expect(office.getSeatAssignments()).toEqual({ homer: 'chair-2', marge: 'chair-1' });
+    expect(office.seats.map(seat => [seat.id, seat.occupant])).toEqual([
+      ['chair-1', 'marge'], ['chair-2', 'homer'],
+    ]);
+    expect([homer.palette, homer.hueShift, marge.palette, marge.hueShift]).toEqual([1, 90, 4, 0]);
+    const path = homer.path;
+    office.applyAgentPreferences(swapped);
+    expect(homer.path).toBe(path);
+    expect(office.getSeatAssignments()).toEqual({ homer: 'chair-2', marge: 'chair-1' });
+  });
+
+  it('reserves authoritative seats before automatic fallback and never duplicates occupants', () => {
+    const snapshot = [
+      { id: 'homer', name: 'Homer', role: 'Lead', seatId: 'chair-1' },
+      { id: 'marge', name: 'Marge', role: 'Dev', seatId: 'chair-2' },
+    ];
+    reconcileAgents(office, snapshot);
+    office.applyAgentPreferences([
+      { ...snapshot[0], seatId: null }, { ...snapshot[1], seatId: 'chair-1' },
+    ]);
+    expect(office.getSeatAssignments()).toEqual({ homer: 'chair-2', marge: 'chair-1' });
+    office.applyAgentPreferences([
+      { ...snapshot[0], seatId: 'chair-1' }, { ...snapshot[1], seatId: 'chair-1' },
+    ]);
+    expect(office.getSeatAssignments()).toEqual({ homer: 'chair-1', marge: 'chair-2' });
+    expect(office.seats.map(seat => seat.occupant)).toEqual(['homer', 'marge']);
+    office.applyAgentPreferences(snapshot.map(agent => ({ ...agent, seatId: null })));
+    expect(office.getSeatAssignments()).toEqual({ homer: 'chair-1', marge: 'chair-2' });
+  });
+
   it('applies active and waiting status from the snapshot', () => {
     reconcileAgents(office, [
       { id: 'homer', name: 'Homer', role: 'Lead', paletteIndex: 0, status: 'active' },
