@@ -166,6 +166,19 @@ describe('terminal replay and reconnect', () => {
 });
 
 describe('bounded retained history and per-connection replay/live queues', () => {
+  it.each(['bytes', 'frames'] as const)('rejects source snapshots beyond the captured-history %s bound', async limit => {
+    const { history, sink } = fixture();
+    const { source, snapshot } = delayedSource(history);
+    const count = limit === 'bytes' ? 17 : TERMINAL_LIMITS.historyFrames + 1;
+    const frames = Array.from({ length: count }, (_, index) =>
+      limit === 'bytes' ? sizedOutput(index + 1, TERMINAL_LIMITS.frameBytes) : output(index + 1));
+    const attach = attachTerminal(source, 0, sink);
+    snapshot.resolve({ earliest: 1, through: count, frames });
+    await attach.ready;
+    expect(sink.abort).toHaveBeenCalledWith(expect.objectContaining({ reason: 'source-error' }));
+    expect(sink.send).not.toHaveBeenCalled();
+  });
+
   it('retains the exact history frame count and explicitly requires resync for an evicted cursor', async () => {
     const { history, sink, events } = fixture();
     for (let i = 0; i < TERMINAL_LIMITS.historyFrames; i++) {history.append('x');}
@@ -178,6 +191,16 @@ describe('bounded retained history and per-connection replay/live queues', () =>
     expect(events).toEqual([{
       ...base, type: 'resync', reason: 'history-gap', earliest: 2, latest: TERMINAL_LIMITS.historyFrames + 1,
     }]);
+    events.length = 0;
+    vi.mocked(sink.abort).mockClear();
+    const oldest = attachTerminal(history, 1, sink);
+    await oldest.ready;
+    expect(sink.abort).not.toHaveBeenCalled();
+    expect(events).toHaveLength(TERMINAL_LIMITS.historyFrames + 2);
+    const receiver = new TerminalReceiver(id, 1);
+    for (const frame of events) { receiver.accept(frame); }
+    expect(receiver.cursor).toBe(TERMINAL_LIMITS.historyFrames + 1);
+    oldest.dispose();
   });
 
   it('bounds history by serialized UTF-8 bytes and rejects oversized output atomically', async () => {
@@ -202,15 +225,19 @@ describe('bounded retained history and per-connection replay/live queues', () =>
     expect(sink.abort).not.toHaveBeenCalled();
     expect(events.map(frame => frame.type)).toEqual(['replayStart', 'output', 'replayEnd']);
     expect(events[1]).toEqual(snapshot.frames[0]);
-    // At the oldest retained cursor the snapshot is continuous, but boundaries push
-    // the full 1 MiB history past the pending budget: explicit overflow, never truncation.
     const full = fixture();
     const source: TerminalSource = {
       runId: id, subscribe: listener => history.subscribe(listener),
       snapshot: cursor => history.snapshot(cursor),
     };
     await attachTerminal(source, 1, full.sink).ready;
-    expect(full.sink.abort).toHaveBeenCalledWith(expect.objectContaining({ reason: 'overflow' }));
+    expect(full.sink.abort).not.toHaveBeenCalled();
+    expect(full.events).toHaveLength(18);
+    expect(full.events.filter(frame => frame.type === 'output').map(frame => frame.seq))
+      .toEqual(Array.from({ length: 16 }, (_, index) => index + 2));
+    const receiver = new TerminalReceiver(id, 1);
+    for (const frame of full.events) { receiver.accept(frame); }
+    expect(receiver.cursor).toBe(17);
   });
 
   it.each(['bytes', 'frames'] as const)('caps pending live %s during delayed replay at the exact limit', async limit => {
@@ -239,7 +266,7 @@ describe('bounded retained history and per-connection replay/live queues', () =>
     const attach = attachTerminal(history, 0, sink);
     await Promise.resolve();
     expect(sink.send).toHaveBeenCalledOnce();
-    for (let seq = 1; seq <= TERMINAL_LIMITS.pendingFrames - 2; seq++) {history.append('x');}
+    for (let seq = 1; seq <= TERMINAL_LIMITS.pendingFrames - 1; seq++) {history.append('x');}
     expect(sink.abort).not.toHaveBeenCalled();
     history.append('overflow');
     expect(sink.abort).toHaveBeenCalledWith(expect.objectContaining({ reason: 'overflow' }));
@@ -277,8 +304,7 @@ describe('bounded retained history and per-connection replay/live queues', () =>
     const attach = attachTerminal(history, 0, sink);
     await Promise.resolve();
     let remaining = TERMINAL_LIMITS.pendingBytes -
-      utf8Bytes(encodeTerminalFrame({ ...base, type: 'replayStart', cursor: 0, through: 0 })) -
-      utf8Bytes(encodeTerminalFrame({ ...base, type: 'replayEnd', through: 0 }));
+      utf8Bytes(encodeTerminalFrame({ ...base, type: 'replayStart', cursor: 0, through: 0 }));
     let seq = 1;
     while (remaining > 0) {
       const bytes = Math.min(remaining, TERMINAL_LIMITS.frameBytes);
@@ -292,12 +318,56 @@ describe('bounded retained history and per-connection replay/live queues', () =>
     await attach.ready;
   });
 
-  it('refuses a replay that exceeds the combined queue budget instead of silently truncating', async () => {
+  it.each([4094, 4095, TERMINAL_LIMITS.historyFrames])(
+    'incrementally replays all %i retained records to a promptly draining sink',
+    async count => {
+      const { history, sink, events } = fixture();
+      for (let i = 0; i < count; i++) { history.append('x'); }
+      const attach = attachTerminal(history, 0, sink);
+      await attach.ready;
+      expect(sink.abort).not.toHaveBeenCalled();
+      expect(events).toHaveLength(count + 2);
+      expect(events[0]).toEqual({ ...base, type: 'replayStart', cursor: 0, through: count });
+      expect(events.at(-1)).toEqual({ ...base, type: 'replayEnd', through: count });
+      const receiver = new TerminalReceiver(id);
+      expect(events.filter(frame => receiver.accept(frame) === 'output')).toHaveLength(count);
+      expect(receiver.cursor).toBe(count);
+      attach.dispose();
+    },
+  );
+
+  it('incrementally replays an exact full 1 MiB history without discarding any bytes', async () => {
+    const { history, sink, events } = fixture();
+    for (let seq = 1; seq <= 16; seq++) { history.append(sizedOutput(seq, TERMINAL_LIMITS.frameBytes).data); }
+    const attach = attachTerminal(history, 0, sink);
+    await attach.ready;
+    expect(sink.abort).not.toHaveBeenCalled();
+    expect(events).toHaveLength(18);
+    const frames = events.filter(frame => frame.type === 'output');
+    expect(frames.reduce((sum, frame) => sum + utf8Bytes(encodeTerminalFrame(frame)), 0))
+      .toBe(TERMINAL_LIMITS.historyBytes);
+    expect(frames).toEqual((await history.snapshot(0)).frames);
+    attach.dispose();
+  });
+
+  it('counts an in-flight replay output alongside live data while unstaged history stays separately bounded', async () => {
     const { history, sink } = fixture();
-    for (let i = 0; i < TERMINAL_LIMITS.historyFrames; i++) {history.append('x');}
-    await attachTerminal(history, 0, sink).ready;
+    for (let seq = 1; seq <= 16; seq++) { history.append(sizedOutput(seq, TERMINAL_LIMITS.frameBytes).data); }
+    const blocked = deferred<void>();
+    sink.send = vi.fn(async frame => {
+      if (frame.type === 'output') { await blocked.promise; }
+    });
+    const attach = attachTerminal(history, 0, sink);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sink.send).toHaveBeenCalledTimes(2);
+    for (let seq = 17; seq <= 31; seq++) { history.append(sizedOutput(seq, TERMINAL_LIMITS.frameBytes).data); }
+    expect(sink.abort).not.toHaveBeenCalled();
+    history.append('one-over');
     expect(sink.abort).toHaveBeenCalledWith(expect.objectContaining({ reason: 'overflow' }));
-    expect(sink.send).not.toHaveBeenCalled();
+    blocked.resolve();
+    await attach.ready;
+    expect(sink.send).toHaveBeenCalledTimes(2);
   });
 });
 

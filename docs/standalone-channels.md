@@ -58,17 +58,24 @@ snapshot must atomically capture a contiguous range `(cursor, through]`, its
 oldest retained sequence and its high-water mark. Output received while awaiting
 that snapshot is queued, output already covered by the snapshot is removed,
 then replayStart, replay output, replayEnd and queued live output are sent in
-order. Snapshot and send failures produce `source-error`; a cursor beyond the
-source high-water mark produces `cursor-ahead`.
+order. Replay is staged one record at a time, so even the exact full retained
+history can drain without needing extra queue space for its boundaries. A
+captured snapshot is separately bounded to 1 MiB / 4096 records and validated
+before replay. Per attachment this permits at most that bounded snapshot plus
+1 MiB / 4096 pending/in-flight records; no unbounded replay array is constructed.
+Snapshot and send failures produce `source-error`; a cursor beyond the source
+high-water mark produces `cursor-ahead`.
 
 The sink must resolve `send` only when transport backpressure drains, and `abort`
 must signal resync and close even if a send is stalled. Only one send is in
 flight. Dispose removes the subscription; it does not kill a process. Attach is
-given an existing source and has no spawn capability. If a replay plus concurrent
-live output cannot fit the pending budget (including boundaries), attach fails
-explicitly rather than promising continuity. A resync requires a fresh,
-deliberate recovery/clear-terminal policy in the future UI, not an automatic
-retry loop that silently advances the cursor.
+given an existing source and has no spawn capability. The pending budget includes
+queued live output and the one in-flight replay/live record or boundary. If a
+slow sink lets those exceed either cap, attach fails explicitly rather than
+promising continuity. Unstaged snapshot records remain within the separate
+captured-history bound; they do not artificially overflow the queue. A resync
+requires a fresh, deliberate recovery/clear-terminal policy in the future UI,
+not an automatic retry loop that silently advances the cursor.
 
 `TerminalReceiver` rejects wrong runs and invalid replay ordering, suppresses
 already-applied output, and enters a terminal resync state on a sequence gap.

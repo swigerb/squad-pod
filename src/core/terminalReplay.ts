@@ -70,6 +70,8 @@ export function attachTerminal(source: TerminalSource, cursor: number, sink: Ter
   let replaying = true;
   let draining = false;
   let pending: TerminalEvent[] = [];
+  let replay: Iterator<TerminalEvent> | undefined;
+  let inFlight: TerminalEvent | undefined;
   let bytes = 0;
   let latest = 0;
   let earliest = 1;
@@ -77,6 +79,8 @@ export function attachTerminal(source: TerminalSource, cursor: number, sink: Ter
   const dispose = () => {
     stopped = true;
     pending = [];
+    replay = undefined;
+    inFlight = undefined;
     bytes = 0;
     subscription.unsubscribe?.();
   };
@@ -88,7 +92,7 @@ export function attachTerminal(source: TerminalSource, cursor: number, sink: Ter
   const reserve = (frames: TerminalEvent[]) => {
     const size = frames.reduce((total, frame) => total + utf8Bytes(encodeTerminalFrame(frame)), 0);
     if (bytes + size > TERMINAL_LIMITS.pendingBytes ||
-        pending.length + frames.length > TERMINAL_LIMITS.pendingFrames) {
+        pending.length + (inFlight ? 1 : 0) + frames.length > TERMINAL_LIMITS.pendingFrames) {
       fail('overflow');
       return false;
     }
@@ -99,12 +103,25 @@ export function attachTerminal(source: TerminalSource, cursor: number, sink: Ter
     if (draining || replaying || stopped) { return; }
     draining = true;
     try {
-      while (pending.length && !stopped) {
-        const frame = pending[0];
+      while (!stopped) {
+        let frame: TerminalEvent;
+        if (replay) {
+          const next = replay.next();
+          if (next.done) {
+            replay = undefined;
+            continue;
+          }
+          frame = next.value;
+          if (!reserve([frame])) { return; }
+        } else {
+          if (!pending.length) { break; }
+          frame = pending.shift()!;
+        }
+        inFlight = frame;
         await sink.send(frame);
         if (stopped) { break; }
-        pending.shift();
         bytes -= utf8Bytes(encodeTerminalFrame(frame));
+        inFlight = undefined;
       }
     } catch {
       fail('source-error');
@@ -141,22 +158,30 @@ export function attachTerminal(source: TerminalSource, cursor: number, sink: Ter
       latest = Math.max(snapshot.through, latest);
       if (cursor > snapshot.through) { fail('cursor-ahead'); return; }
       if (cursor < earliest - 1) { fail('history-gap'); return; }
+      if (snapshot.frames.length > TERMINAL_LIMITS.historyFrames) {
+        throw new Error('Snapshot exceeds history frame limit');
+      }
       let expected = cursor + 1;
+      let snapshotBytes = 0;
       for (const frame of snapshot.frames) {
         if (frame.runId !== source.runId || frame.seq !== expected++ || frame.seq > snapshot.through) {
           throw new Error('Noncontiguous snapshot');
+        }
+        snapshotBytes += utf8Bytes(encodeTerminalFrame(frame));
+        if (snapshotBytes > TERMINAL_LIMITS.historyBytes) {
+          throw new Error('Snapshot exceeds history byte limit');
         }
       }
       if (expected - 1 !== snapshot.through) { throw new Error('Incomplete snapshot'); }
       pending = pending.filter(frame => frame.type === 'output' && frame.seq > snapshot.through);
       bytes = pending.reduce((total, frame) => total + utf8Bytes(encodeTerminalFrame(frame)), 0);
-      const replay: TerminalEvent[] = [
-        { version: 1, type: 'replayStart', runId: source.runId, cursor, through: snapshot.through },
-        ...snapshot.frames,
-        { version: 1, type: 'replayEnd', runId: source.runId, through: snapshot.through },
-      ];
-      if (!reserve(replay)) { return; }
-      pending = [...replay, ...pending];
+      // The captured history is independently bounded above. Stage only one replay
+      // record at a time so boundaries never disqualify an otherwise full history.
+      replay = (function* (): Generator<TerminalEvent> {
+        yield { version: 1, type: 'replayStart', runId: source.runId, cursor, through: snapshot.through };
+        yield* snapshot.frames;
+        yield { version: 1, type: 'replayEnd', runId: source.runId, through: snapshot.through };
+      })();
       replaying = false;
       await drain();
     } catch {
