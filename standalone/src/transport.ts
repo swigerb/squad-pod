@@ -7,6 +7,8 @@ import { WebSocket, WebSocketServer } from 'ws';
 import type { OutboundMessage, WebviewMessage } from '../../src/types.js';
 import type { OwnedRuns } from './ownedRuns.js';
 import { terminalSocket } from './terminalSocket.js';
+import { decodeControl, MAX_CONTROL_FRAME, type OfficeControl } from './officeControl.js';
+import { defaultPreferences } from './officePreferences.js';
 
 export interface TransportOptions {
   port?: number;
@@ -16,6 +18,7 @@ export interface TransportOptions {
   subscribe: (listener: (messages: OutboundMessage[]) => void) => () => void;
   onRead?: (message: WebviewMessage) => Promise<OutboundMessage[]>;
   terminals?: OwnedRuns;
+  officeControl?: OfficeControl;
 }
 
 const MAX_CONNECTIONS = 8;
@@ -121,11 +124,16 @@ function command(payload: unknown): { message?: WebviewMessage; error?: string }
     return { error: 'READ_ONLY' };
   }
   if (message.type === 'requestAgentDetail') {
-    if (!keys(message, ['type', 'agentId']) || typeof message.agentId !== 'string'
-      || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(message.agentId)) {
+    if (!keys(message, ['type', 'agentId', 'requestId']) || typeof message.agentId !== 'string'
+      || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(message.agentId)
+      || (message.requestId !== undefined
+        && (typeof message.requestId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(message.requestId)))) {
       return { error: 'INVALID_MESSAGE' };
     }
-    return { message: { type: 'requestAgentDetail', agentId: message.agentId } };
+    return { message: {
+      type: 'requestAgentDetail', agentId: message.agentId,
+      ...(message.requestId !== undefined ? { requestId: message.requestId } : {}),
+    } };
   }
   if (!keys(message, ['type'])) { return { error: 'INVALID_MESSAGE' }; }
   return { message: { type: message.type } };
@@ -135,6 +143,7 @@ export async function startTransport(options: TransportOptions): Promise<{
   port: number;
   token: string;
   terminalToken: string;
+  controlToken: string | null;
   rotate: () => string;
   dispose: () => Promise<void>;
 }> {
@@ -151,6 +160,9 @@ export async function startTransport(options: TransportOptions): Promise<{
   let session = credential();
   let terminalToken = credential();
   let terminalSession = credential();
+  let controlToken = credential();
+  let controlSession = credential();
+  const serverIdentity = credential();
   let generation = 0;
   let disposed = false;
   let disposal: Promise<void> | undefined;
@@ -166,8 +178,12 @@ export async function startTransport(options: TransportOptions): Promise<{
   const terminals = new WebSocketServer({
     noServer: true, maxPayload: 64 * 1024, perMessageDeflate: false,
   });
+  const controls = new WebSocketServer({
+    noServer: true, maxPayload: MAX_CONTROL_FRAME, perMessageDeflate: false,
+  });
   const origin = () => `http://127.0.0.1:${port}`;
   const cookieName = (terminal = false) => `squad_${terminal ? 'terminal' : 'office'}_${port}`;
+  const controlCookie = () => `squad_control_${port}`;
   const validHost = (request: IncomingMessage) => {
     const host = singleHeader(request, 'host');
     // URL normalization would also accept alternative numeric IP spellings and userinfo.
@@ -181,6 +197,12 @@ export async function startTransport(options: TransportOptions): Promise<{
     const matches = cookies.filter(([name]) => name === cookieName(terminal));
     return matches.length === 1 && matches[0].length === 2
       && equalCredential(matches[0][1], terminal ? terminalSession : session);
+  };
+  const controlAuthenticated = (request: IncomingMessage) => {
+    const header = singleHeader(request, 'cookie');
+    if (!options.officeControl || !header || header.length > 4096) return false;
+    const matches = header.split(';').map(part => part.trim().split('=')).filter(([name]) => name === controlCookie());
+    return matches.length === 1 && matches[0].length === 2 && equalCredential(matches[0][1], controlSession);
   };
   const headers = (response: ServerResponse) => {
     response.setHeader('Cache-Control', 'no-store');
@@ -203,8 +225,10 @@ export async function startTransport(options: TransportOptions): Promise<{
   const server = createServer({ maxHeaderSize: MAX_INBOUND }, (request, response) => {
     headers(response);
     if (!validHost(request)) { reply(response, 403, 'FORBIDDEN'); return; }
-    if ((request.url === '/auth' || request.url === '/terminal-auth') && request.method === 'POST') {
+    if ((request.url === '/auth' || request.url === '/terminal-auth' || request.url === '/control-auth') && request.method === 'POST') {
       const terminal = request.url === '/terminal-auth';
+      const control = request.url === '/control-auth';
+      if (control && !options.officeControl) { reply(response, 403, 'CONTROL_DISABLED'); return; }
       const startedGeneration = generation;
       if (!validOrigin(request)) { reply(response, 403, 'FORBIDDEN'); return; }
       if (singleHeader(request, 'content-type')?.toLowerCase().split(';')[0].trim() !== 'application/json') {
@@ -236,13 +260,19 @@ export async function startTransport(options: TransportOptions): Promise<{
         try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
         catch { reply(response, 400, 'INVALID_MESSAGE'); return; }
         if (!record(body) || !keys(body, ['token']) || typeof body.token !== 'string'
-          || body.token.length > 128 || !equalCredential(body.token, terminal ? terminalToken : token)) {
+          || body.token.length > 128 || !equalCredential(body.token, control ? controlToken : terminal ? terminalToken : token)) {
           reply(response, 403, 'FORBIDDEN'); return;
         }
-        response.setHeader('Set-Cookie', `${cookieName(terminal)}=${terminal ? terminalSession : session}; HttpOnly; SameSite=Strict; Path=/`);
+        response.setHeader('Set-Cookie', `${control ? controlCookie() : cookieName(terminal)}=${control ? controlSession : terminal ? terminalSession : session}; HttpOnly; SameSite=Strict; Path=/`);
         response.writeHead(204);
         response.end();
       });
+      return;
+    }
+    if (request.url === '/office-context' && request.method === 'GET') {
+      if (!authenticated(request) && !controlAuthenticated(request)) { reply(response, 403, 'FORBIDDEN'); return; }
+      response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      response.end(JSON.stringify({ serverIdentity, projectIdentity: options.officeControl?.projectIdentity ?? null }));
       return;
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -266,15 +296,16 @@ export async function startTransport(options: TransportOptions): Promise<{
   server.on('clientError', (_error, socket) => socket.destroy());
   server.on('upgrade', (request, socket, head) => {
     const terminal = request.url === '/terminal';
-    if (disposed || request.method !== 'GET' || (request.url !== '/office' && !terminal)
+    const control = request.url === '/control';
+    if (disposed || request.method !== 'GET' || (request.url !== '/office' && !terminal && !control)
       || (terminal && !options.terminals)
-      || !validHost(request) || !validOrigin(request) || !authenticated(request, terminal)
-      || wss.clients.size + terminals.clients.size >= MAX_CONNECTIONS) {
+      || !validHost(request) || !validOrigin(request) || !(control ? controlAuthenticated(request) : authenticated(request, terminal))
+      || wss.clients.size + terminals.clients.size + controls.clients.size >= MAX_CONNECTIONS) {
       socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
       return;
     }
-    const target = terminal ? terminals : wss;
-    target.handleUpgrade(request, socket, head, ws => target.emit('connection', ws));
+    const target = terminal ? terminals : control ? controls : wss;
+    target.handleUpgrade(request, socket, head, ws => target.emit('connection', ws, control));
   });
   terminals.on('connection', ws => {
     const admittedGeneration = generation;
@@ -282,7 +313,9 @@ export async function startTransport(options: TransportOptions): Promise<{
     cleanups.set(ws, cleanup);
     ws.once('close', () => cleanups.delete(ws));
   });
-  wss.on('connection', ws => {
+  const handleOffice = (ws: WebSocket, control: boolean) => {
+    const admittedGeneration = generation;
+    let lastMutationId = 0;
     let active = true;
     let ready = false;
     let initializing = false;
@@ -343,6 +376,16 @@ export async function startTransport(options: TransportOptions): Promise<{
       if (++faults >= 8) { stop(); }
     };
     const sendMessages = (messages: OutboundMessage[], deferred = false) => {
+      if (control && options.officeControl) {
+        try {
+          const preferences = options.officeControl.preferences();
+          sendFrame(JSON.stringify({ version: 1, kind: 'controlState',
+            preferencesRevision: preferences.revision, preferences: preferences.value ?? defaultPreferences() }), deferred);
+        } catch {
+          sendFrame(JSON.stringify({ version: 1, kind: 'office', message: { type: 'layoutError',
+            error: 'Cannot read office preferences. Saved source and draft were retained; recover the source before saving.' } }), deferred);
+        }
+      }
       for (const message of messages) {
         if (!active) { break; }
         try { sendFrame(JSON.stringify({ version: 1, kind: 'office', message }), deferred); }
@@ -388,9 +431,40 @@ export async function startTransport(options: TransportOptions): Promise<{
       if (now - windowStart >= 1000) { windowStart = now; received = 0; }
       if (++received > 32) { error('RATE_LIMIT'); stop(); return; }
       if (binary) { error('INVALID_MESSAGE'); return; }
+      if (Buffer.byteLength(data.toString()) > (control ? MAX_CONTROL_FRAME : MAX_INBOUND)) {
+        cleanup();
+        ws.close(1009, 'Office frame exceeds limit');
+        const closing = setTimeout(() => ws.terminate(), 1000);
+        closing.unref();
+        ws.once('close', () => clearTimeout(closing));
+        return;
+      }
       let payload: unknown;
       try { payload = JSON.parse(data.toString()); }
       catch { error('INVALID_MESSAGE'); return; }
+      if (record(payload) && payload.kind === 'control') {
+        if (!control || !options.officeControl) { error('READ_ONLY'); return; }
+        if (busy) { error('BUSY'); return; }
+        if (!ready) { error('NOT_READY'); return; }
+        try {
+          const mutation = decodeControl(payload);
+          if (mutation.requestId <= lastMutationId) { error('INVALID_MESSAGE'); return; }
+          lastMutationId = mutation.requestId;
+          const assertAuthority = () => {
+            if (!active || disposed || generation !== admittedGeneration || ws.readyState !== WebSocket.OPEN) {
+              throw new Error('Office control revoked or disconnected.');
+            }
+          };
+          assertAuthority();
+          const messages = options.officeControl.mutate(mutation, assertAuthority);
+          sendMessages([]);
+          sendFrame(JSON.stringify({ version: 1, kind: 'controlResult', requestId: mutation.requestId, messages }));
+        } catch {
+          // Failed saves are never acknowledged. The browser retains its draft.
+          sendMessages([{ type: 'layoutError', error: 'Office save failed: invalid data, changed authority, identity, or storage. Draft retained; export or reload before retrying.' }]);
+        }
+        return;
+      }
       const parsed = command(payload);
       if (!parsed.message) { error(parsed.error!); return; }
       if (busy) { error('BUSY'); return; }
@@ -398,7 +472,9 @@ export async function startTransport(options: TransportOptions): Promise<{
       if (parsed.message.type !== 'webviewReady' && !ready) { error('NOT_READY'); return; }
       void read(parsed.message);
     });
-  });
+  };
+  wss.on('connection', ws => handleOffice(ws, false));
+  controls.on('connection', ws => handleOffice(ws, true));
 
   try {
     await new Promise<void>((accept, reject) => {
@@ -414,6 +490,7 @@ export async function startTransport(options: TransportOptions): Promise<{
   } catch (error) {
     wss.close();
     terminals.close();
+    controls.close();
     server.close();
     throw error;
   }
@@ -421,26 +498,30 @@ export async function startTransport(options: TransportOptions): Promise<{
     port,
     get token() { return token; },
     get terminalToken() { return terminalToken; },
+    get controlToken() { return options.officeControl ? controlToken : null; },
     rotate: () => {
       generation++;
       token = credential();
       session = credential();
       terminalToken = credential();
       terminalSession = credential();
-      for (const ws of [...wss.clients, ...terminals.clients]) { cleanups.get(ws)?.(); ws.terminate(); }
+      controlToken = credential();
+      controlSession = credential();
+      for (const ws of [...wss.clients, ...terminals.clients, ...controls.clients]) { cleanups.get(ws)?.(); ws.terminate(); }
       return token;
     },
     dispose: () => {
       if (disposal) { return disposal; }
       disposed = true;
       generation++;
-      for (const ws of [...wss.clients, ...terminals.clients]) { cleanups.get(ws)?.(); ws.terminate(); }
+      for (const ws of [...wss.clients, ...terminals.clients, ...controls.clients]) { cleanups.get(ws)?.(); ws.terminate(); }
       disposal = new Promise<void>((accept, reject) => {
         server.close(error => { if (error) { reject(error); } else { accept(); } });
         for (const socket of sockets) { socket.destroy(); }
       }).then(() => Promise.all([
         new Promise<void>(accept => wss.close(() => accept())),
         new Promise<void>(accept => terminals.close(() => accept())),
+        new Promise<void>(accept => controls.close(() => accept())),
         options.terminals?.dispose(),
       ])).then(() => undefined);
       return disposal;

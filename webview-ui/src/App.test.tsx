@@ -14,6 +14,7 @@ import { getFloorSprite, setFloorSprites } from './office/floorTiles.js';
 import { getWallSprite, setWallSprites } from './office/wallTiles.js';
 import { getCharacterSprites, setCharacterTemplates } from './office/sprites/defaultCharacters.js';
 import { createVSCodeClient } from './hostClient.js';
+import { OfficeState } from './office/engine/officeState.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -97,22 +98,162 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     root = createRoot(host);
     act(() => root.render(<App client={client} readOnly />));
     snapshot(imported, 'observer');
+    send({ type: 'sourceStatus', status: {
+      workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad',
+      teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+    } });
+    send({ type: 'existingAgents', agents: [{
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', paletteIndex: 0,
+      seatId: null, status: 'idle', currentTask: 'Approximate observed activity',
+    }] });
+    await nextFrame();
+    for (const label of ['Edit Layout', 'Settings', 'Directories']) {
+      const button = [...host.querySelectorAll('button')].find(button => button.textContent === label);
+      expect(button?.disabled).toBe(true);
+      act(() => button?.click());
+    }
+    const squadInfo = [...host.querySelectorAll('button')].find(button => button.textContent === 'Squad Info');
+    expect(squadInfo?.disabled).toBe(false);
+    act(() => squadInfo?.click());
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('TestBot');
+    expect(host.querySelector('[data-edit-mode="true"]')).toBeNull();
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
+    expect(client.setState).not.toHaveBeenCalled();
+    const detailToggle = host.querySelector<HTMLButtonElement>('[aria-label="Show details for TestBot"]');
+    expect(detailToggle).not.toBeNull();
+    act(() => detailToggle?.click());
+    const detailRequest = vi.mocked(client.send).mock.calls
+      .map(([message]) => message).filter((message) => message.type === 'requestAgentDetail').at(-1);
+    expect(detailRequest?.type).toBe('requestAgentDetail');
+    send({ type: 'agentDetailLoaded',
+      requestId: detailRequest?.type === 'requestAgentDetail' ? detailRequest.requestId : undefined,
+      detail: {
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
+      status: 'active', currentTask: 'Approximate observed activity', charterSummary: null,
+      charterContent: null, charterStatus: 'unavailable', expertise: null,
+      responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+      } });
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Charter content is unavailable.');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed status: active');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed task: Approximate observed activity');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('unavailable in the read-only observer');
+    const collapseToggle = host.querySelector<HTMLButtonElement>('[aria-label="Hide details for TestBot"]');
+    expect(collapseToggle).not.toBeNull();
+    act(() => collapseToggle?.click());
+    send({ type: 'existingAgents', agents: [{
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', paletteIndex: 0,
+      seatId: null, status: 'waiting', currentTask: 'Refreshed observed activity',
+    }] });
+    const refreshedToggle = host.querySelector<HTMLButtonElement>('[aria-label="Show details for TestBot"]');
+    expect(refreshedToggle).not.toBeNull();
+    act(() => refreshedToggle?.click());
+    const refreshedRequest = vi.mocked(client.send).mock.calls
+      .map(([message]) => message).filter((message) => message.type === 'requestAgentDetail').at(-1);
+    expect(refreshedRequest?.type).toBe('requestAgentDetail');
+    expect(refreshedRequest?.type === 'requestAgentDetail' ? refreshedRequest.requestId : undefined)
+      .not.toBe(detailRequest?.type === 'requestAgentDetail' ? detailRequest.requestId : undefined);
+    send({ type: 'agentDetailLoaded',
+      requestId: detailRequest?.type === 'requestAgentDetail' ? detailRequest.requestId : undefined,
+      detail: {
+        id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
+        status: 'active', currentTask: 'Stale observed activity', charterSummary: null,
+        charterContent: null, charterStatus: 'unavailable', expertise: null,
+        responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+      } });
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Loading observed details');
+    send({ type: 'agentDetailLoaded',
+      requestId: refreshedRequest?.type === 'requestAgentDetail' ? refreshedRequest.requestId : undefined,
+      detail: {
+        id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
+        status: 'waiting', currentTask: 'Refreshed observed activity', charterSummary: null,
+        charterContent: null, charterStatus: 'unavailable', expertise: null,
+        responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+      } });
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed status: waiting');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed task: Refreshed observed activity');
+    expect(host.querySelector('[role="dialog"]')?.textContent).not.toContain('Stale observed activity');
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual([
+      'webviewReady', 'requestAgentDetail', 'requestAgentDetail',
+    ]);
+    click('Telemetry');
+    expect(host.textContent).toContain('Live transient tasks are unavailable in the read-only observer.');
+    expect(host.textContent).not.toContain('Enable it in Settings');
+  });
+
+  it('keeps observed Squad Info and correlated details available with standalone control but no native charter action', async () => {
+    act(() => root.unmount());
+    client = createHostClientFixture();
+    root = createRoot(host);
+    act(() => root.render(<App client={client} standalone />));
+    snapshot(imported, 'observer');
+    send({ type: 'sourceStatus', status: {
+      workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad',
+      teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+    } });
     send({ type: 'existingAgents', agents: [{
       id: 'test-agent-1', name: 'TestBot', role: 'Developer', paletteIndex: 0,
       seatId: null, status: 'idle', currentTask: null,
     }] });
     await nextFrame();
-    for (const label of ['Edit Layout', 'Settings', 'Directories', 'Squad Info']) {
-      const button = [...host.querySelectorAll('button')].find(button => button.textContent === label);
-      expect(button?.disabled).toBe(true);
-      act(() => button?.click());
+    for (const label of ['Edit Layout', 'Settings', 'Squad Info']) {
+      expect([...host.querySelectorAll('button')].find(button => button.textContent === label)?.disabled).toBe(false);
     }
-    expect(host.querySelector('[data-edit-mode="true"]')).toBeNull();
-    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
-    expect(client.setState).not.toHaveBeenCalled();
-    click('Telemetry');
-    expect(host.textContent).toContain('Live transient tasks are unavailable in the read-only observer.');
-    expect(host.textContent).not.toContain('Enable it in Settings');
+    expect([...host.querySelectorAll('button')].find(button => button.textContent === 'Directories')?.disabled).toBe(true);
+    click('Squad Info');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('TestBot');
+    const detailToggle = host.querySelector<HTMLButtonElement>('[aria-label="Show details for TestBot"]');
+    act(() => detailToggle?.click());
+    const request = vi.mocked(client.send).mock.calls.map(([message]) => message)
+      .filter(message => message.type === 'requestAgentDetail').at(-1);
+    expect(request?.requestId).toBeTruthy();
+    send({ type: 'agentDetailLoaded', requestId: request?.requestId, detail: {
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
+      status: 'idle', currentTask: null, charterSummary: null, charterContent: null,
+      charterStatus: 'unavailable', expertise: null, responsibilities: null, boundaries: null,
+      recentActivity: [], lastActiveAt: 0,
+    } });
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Charter content is unavailable.');
+    const open = [...host.querySelectorAll('button')].find(button => button.textContent === 'Open charter');
+    expect(open?.disabled).toBe(true);
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)
+      .filter(type => ['openSquadInfo', 'openSquadAgent', 'saveAgentSeats'].includes(type))).toEqual([]);
+  });
+
+  it.each([false, true])('reconciles authoritative standalone seats before the next whole-map gesture with readOnly=%s', async readOnly => {
+    act(() => root.unmount());
+    client = createHostClientFixture();
+    const assignments = vi.spyOn(OfficeState.prototype, 'getSeatAssignments');
+    root = createRoot(host);
+    act(() => root.render(<App client={client} standalone readOnly={readOnly} />));
+    const chairCols = [2, 5, 8, 11];
+    snapshot({ ...imported, furniture: chairCols.flatMap((col, index) => [
+      { uid: `desk-${index}`, type: 'desk', col, row: 1, rotation: 0 },
+      { uid: `chair-${index}`, type: 'chair', col, row: 2, rotation: 0 },
+    ]) }, 'seat-layout');
+    const agents = ['test-agent-1', 'test-agent-2'].map((id, index) => ({
+      id, name: id, role: 'Developer', paletteIndex: index, seatId: `chair-${index * 2 + 1}`,
+      status: 'idle' as const, currentTask: null,
+    }));
+    send({ type: 'existingAgents', agents });
+    await nextFrame();
+    const office = assignments.mock.contexts.at(-1)!;
+    if (!(office instanceof OfficeState)) throw new Error('Expected the actual App OfficeState');
+    const first = office.characters.get('test-agent-1')!;
+    expect(office.getSeatAssignments()).toEqual({ 'test-agent-1': 'chair-1', 'test-agent-2': 'chair-3' });
+    send({ type: 'existingAgents', agents: [{ ...agents[0], seatId: 'chair-0', paletteIndex: 13 }, agents[1]] });
+    expect(office.characters.get('test-agent-1')).toBe(first);
+    expect(office.getSeatAssignments()).toEqual({ 'test-agent-1': 'chair-0', 'test-agent-2': 'chair-3' });
+    expect([first.palette, first.hueShift]).toEqual([1, 90]);
+    expect(vi.mocked(client.send).mock.calls.filter(([message]) => message.type === 'saveAgentSeats')).toEqual([]);
+    if (!readOnly) {
+      office.selectedAgentId = 'test-agent-2';
+      act(() => host.querySelector('canvas')!.dispatchEvent(new MouseEvent('mousedown', {
+        bubbles: true, button: 0, clientX: 8.5 * 32, clientY: 2.5 * 32,
+      })));
+      expect(client.send).toHaveBeenCalledWith({
+        type: 'saveAgentSeats', seats: { 'test-agent-1': 'chair-0', 'test-agent-2': 'chair-2' },
+      });
+    }
   });
 
   it('updates existing roster identity and restores only the observed task from snapshots', async () => {

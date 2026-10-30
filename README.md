@@ -3,10 +3,14 @@
 # Squad Pod
 
 **Local browser observer:** [Build/run and security instructions](standalone/README.md)
-for the private, authenticated, loopback-only read-only office. It uses the same
+for the private, authenticated, loopback-only office, read-only by default. It uses the same
 production renderer, observes only an explicitly selected project, and has no
 workspace writes. Optional owned terminals use separate authentication and
-`copilot --agent squad`; observation stays read-only. This is separate from the VSIX.
+`copilot --agent squad`; observation stays read-only. Separate `--office-control`
+opt-in and authentication enable selected-project layout editing, seat persistence,
+sound/debug/Areas settings, browser JSON import/export and revision-protected draft
+recovery. Native dialogs, directory management and private-log consent remain unavailable.
+This is separate from the VSIX.
 
 **Your Squad AI team, but make it pixel art.**
 
@@ -18,7 +22,7 @@ Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradyga
 - Animate activity inferred from changes to Squad files.
 - Show six built-in character identities with authored walk, typing, and reading poses.
 - Opt in to live member tool labels and context gauges from local Copilot CLI sessions.
-- View an agent's status, current task, recent activity, and charter.
+- View visible members' charter summaries, declared scope, observed status/task, and recent activity in Squad Info.
 - Design the office with floors, walls, furniture, colors, carpets, named Areas, and pets.
 - Manage directories and explicitly launch Squad in a new VS Code terminal.
 - Browse activity and available recorded usage in the Telemetry drawer.
@@ -56,7 +60,7 @@ Open the project in VS Code and press **F5** to launch the Extension Development
 
 ### Open the office
 
-Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character, its name (**Enter** or **Space** also works), or its occupied desk or chair to open the details card; select a character, then click another seat to move it. **View Charter** opens `charter.md`. These clicks never open a terminal.
+Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character, its name (**Enter** or **Space** also works), or its occupied desk or chair to open the details card; select a character, then click another seat to move it. Choose **Squad Info** to expand a visible member's details by keyboard or mouse. **Open charter** opens that member's `charter.md`. In the read-only local observer, observed details remain available while charter contents and editor opening are unavailable. These actions never open a terminal.
 
 ### Edit the office
 

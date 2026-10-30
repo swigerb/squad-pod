@@ -1,5 +1,5 @@
 import './index.css';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { OfficeState } from './office/engine/officeState.js';
 import { OfficeCanvas } from './office/components/OfficeCanvas.js';
 import { ToolOverlay } from './office/components/ToolOverlay.js';
@@ -37,10 +37,12 @@ export default function App({
   client = defaultHostClient,
   hostError = defaultHostError,
   readOnly = false,
+  standalone = false,
 }: {
   client?: HostClient | null;
   hostError?: string | null;
   readOnly?: boolean;
+  standalone?: boolean;
 } = {}) {
   if (!client) {
     return (
@@ -54,12 +56,12 @@ export default function App({
   }
   return (
     <HostClientProvider client={client}>
-      <ConnectedApp readOnly={readOnly} />
+      <ConnectedApp readOnly={readOnly} standalone={standalone} />
     </HostClientProvider>
   );
 }
 
-function ConnectedApp({ readOnly }: { readOnly: boolean }) {
+function ConnectedApp({ readOnly, standalone }: { readOnly: boolean; standalone: boolean }) {
   const client = useHostClient();
   const [recovery] = useState(() => {
     try {
@@ -72,28 +74,32 @@ function ConnectedApp({ readOnly }: { readOnly: boolean }) {
     return (
       <div role="alert" style={{ padding: '24px', color: 'var(--vscode-foreground)' }}>
         <h1>Squad Pod could not read layout recovery state</h1>
-        <p>{recovery.error}. Reopen the panel after the VS Code host is available; existing recovery data was not replaced.</p>
+        <p>{recovery.error}. {standalone
+          ? 'Existing browser recovery data was not replaced. Recover or export that project/server storage before reconnecting.'
+          : 'Reopen the panel after the VS Code host is available; existing recovery data was not replaced.'}</p>
       </div>
     );
   }
-  return <ConnectedOffice recoveryState={recovery.value} readOnly={readOnly} />;
+  return <ConnectedOffice recoveryState={recovery.value} readOnly={readOnly} standalone={standalone} />;
 }
 
-function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; readOnly: boolean }) {
+function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryState: unknown; readOnly: boolean; standalone: boolean }) {
   const client = useHostClient();
   const editor = useEditorActions(getOfficeState, editorState, recoveryState, readOnly);
-  const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, agentDetails, requestAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
     editor.layoutError,
     readOnly,
+    standalone,
   );
   const isDebugMode = settings.debugEnabled;
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [telemetrySeenCount, setTelemetrySeenCount] = useState(0);
   const [isDirectoryModalOpen, setIsDirectoryModalOpen] = useState(false);
+  const [isSquadInfoOpen, setIsSquadInfoOpen] = useState(false);
   const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -119,8 +125,8 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
     getOfficeState().selectedAgentId = agentId;
     setAgentDetail(null);
     setCardPosition({ x: screenX, y: screenY });
-    client.send({ type: 'requestAgentDetail', agentId });
-  }, [client, setAgentDetail]);
+    requestAgentDetail(agentId);
+  }, [requestAgentDetail, setAgentDetail]);
 
   const handleCloseCard = useCallback(() => {
     setAgentDetail(null);
@@ -128,12 +134,43 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
   }, [setAgentDetail]);
 
   const handleOpenSquadInfo = useCallback(() => {
+    setIsSquadInfoOpen(true);
+    if (readOnly || standalone) return;
+    setSquadInfo(null);
     client.send({ type: 'openSquadInfo' });
-  }, [client]);
+  }, [client, readOnly, standalone, setSquadInfo]);
 
   const handleCloseSquadInfo = useCallback(() => {
+    setIsSquadInfoOpen(false);
     setSquadInfo(null);
   }, [setSquadInfo]);
+
+  const readOnlySquadInfo = useMemo(() => {
+    if (!readOnly && !standalone) return null;
+    const characters = getOfficeState().characters;
+    const members = agents.flatMap((id) => {
+      const character = characters.get(id);
+      if (!character) return [];
+      const status = agentStatuses[id] ?? 'unknown';
+      return [{
+        id, name: character.name, role: character.role, status,
+        isActive: status === 'active', currentTask: null,
+      }];
+    });
+    return {
+      teamName: null, description: null, workspaceRoot: sourceStatus?.workspaceRoot ?? null,
+      members, hiddenMembers: [], projectContext: null, totalAgents: members.length,
+      activeAgents: members.filter((member) => member.isActive).length,
+    };
+  }, [agentStatuses, agents, readOnly, standalone, sourceStatus?.workspaceRoot]);
+
+  const visibleSquadInfo = isSquadInfoOpen ? (readOnly || standalone ? readOnlySquadInfo : squadInfo) : null;
+  const handleRequestSquadDetail = useCallback((agentId: string) => {
+    const member = visibleSquadInfo?.members.find((candidate) => candidate.id === agentId);
+    if (member && agents.includes(agentId) && visibleSquadInfo?.workspaceRoot === sourceStatus?.workspaceRoot) {
+      requestAgentDetail(agentId);
+    }
+  }, [agents, requestAgentDetail, sourceStatus?.workspaceRoot, visibleSquadInfo]);
 
   const handleViewCharter = useCallback((agentId: string) => {
     client.send({ type: 'openSquadAgent', agentId });
@@ -174,7 +211,7 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
         }}
       >
         Loading office...
-        <LayoutConflict protection={editor.protection} onResolve={editor.resolveLayout} />
+        <LayoutConflict standalone={standalone} protection={editor.protection} onResolve={editor.resolveLayout} />
       </div>
     );
   }
@@ -328,10 +365,11 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
           {sourceStatus.error}
         </p>
       )}
-      <LayoutConflict protection={editor.protection} onResolve={editor.resolveLayout} />
+      <LayoutConflict standalone={standalone} protection={editor.protection} onResolve={editor.resolveLayout} />
       <AssetWarnings status={assetStatus} furniture={getOfficeState().layout.furniture} />
 
       <BottomToolbar
+        nativeUnavailable={standalone}
         onOpenSettings={() => setShowSettings(true)}
         readOnly={readOnly}
         isEditMode={editor.isEditMode}
@@ -346,7 +384,7 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
       <TelemetryDrawer
         sourceStatus={sourceStatus}
         onOpenSettings={() => setShowSettings(true)}
-        readOnly={readOnly}
+        readOnly={readOnly || standalone}
         observedTasks={observedTasks}
         liveSource={sourceStatus?.liveActivity}
         recordedUsage={recordedUsage}
@@ -355,7 +393,7 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
         onToggle={handleToggleTelemetry}
         onClear={handleClearTelemetry}
       />
-      {showSettings && !readOnly && <SettingsModal onClose={() => setShowSettings(false)} isDebugMode={isDebugMode}
+      {showSettings && !readOnly && <SettingsModal standalone={standalone} onClose={() => setShowSettings(false)} isDebugMode={isDebugMode}
         onToggleDebugMode={() => updateSetting('debugEnabled', !isDebugMode)}
         settings={settings} sourceStatus={sourceStatus} assetStatus={assetStatus}
         onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
@@ -381,11 +419,15 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
         detail={agentDetail && getOfficeState().characters.has(agentDetail.id) ? agentDetail : null}
         position={cardPosition}
         onClose={handleCloseCard}
-        onViewCharter={readOnly ? undefined : handleViewCharter}
+        onViewCharter={readOnly || standalone ? undefined : handleViewCharter}
       />
 
       <SquadInfoCard
-        info={squadInfo}
+        info={visibleSquadInfo}
+        agentDetails={agentDetails}
+        availableAgentIds={agents}
+        onRequestAgentDetail={handleRequestSquadDetail}
+        onOpenCharter={readOnly || standalone ? undefined : handleViewCharter}
         onClose={handleCloseSquadInfo}
       />
       {isDirectoryModalOpen && (
