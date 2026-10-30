@@ -101,7 +101,9 @@ describe('activation-only auto-show through real extension/provider (mocked VS C
       },
       workspace: {
         workspaceFolders: [{ name: 'Synthetic fixture', uri: { fsPath: root, toString: () => `file:${root}` } }],
-        getConfiguration: () => ({ get }),
+        getConfiguration: (section?: string) => section === 'squad-pod'
+          ? { get: (key: string, fallback: unknown) => key === 'directorySuggestions' ? false : fallback }
+          : { get },
         onDidChangeWorkspaceFolders: (listener: () => void) => { retarget = listener; return disposable; },
       },
       window: {

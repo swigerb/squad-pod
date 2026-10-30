@@ -6,12 +6,15 @@ import { buildSync } from 'esbuild';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GLOBAL_KEY_DIRECTORIES } from './constants.js';
 import type { SavedDirectory } from './directories.js';
+import type { OutboundMessage, WebviewMessage } from './types.js';
 
 interface ProviderUnderTest {
-  addDirectory(): Promise<void>;
+  addDirectory(path?: string, name?: string): Promise<void>;
   changeDirectoryPath(id: string): Promise<void>;
   updateDirectoryName(id: string, name: string): Promise<void>;
   removeDirectory(id: string): Promise<void>;
+  handleWebviewMessage(message: WebviewMessage): void;
+  view: { webview: { postMessage(message: OutboundMessage): Promise<boolean> } };
 }
 
 interface ProviderExports {
@@ -43,12 +46,19 @@ describe('compiled provider directory transactions with delayed VS Code dialogs'
   let picker: ReturnType<typeof deferred<Array<{ fsPath: string }>>>;
   let nameInput: ReturnType<typeof deferred<string>>;
   const showInputBox = vi.fn();
-  const workspace: { workspaceFolders: Array<{ name: string; uri: { fsPath: string; toString(): string } }> } = {
+  const configurationGet = vi.fn(() => false);
+  const workspace: {
+    workspaceFolders: Array<{ name: string; uri: { fsPath: string; toString(): string } }>;
+    getConfiguration(): { get(): boolean };
+  } = {
     workspaceFolders: [],
+    getConfiguration: () => ({ get: configurationGet }),
   };
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-provider-directories-'));
+    vi.stubEnv('COPILOT_HOME', path.join(root, 'synthetic-copilot-home'));
+    configurationGet.mockReturnValue(false);
     const firstPath = path.join(root, 'First & (project)');
     secondPath = path.join(root, 'Second project');
     fs.mkdirSync(firstPath);
@@ -84,6 +94,7 @@ describe('compiled provider directory transactions with delayed VS Code dialogs'
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     fs.rmSync(root, { recursive: true, force: true });
   });
 
@@ -173,5 +184,50 @@ describe('compiled provider directory transactions with delayed VS Code dialogs'
     picker.resolve([{ fsPath: secondPath }]);
     await expect(pending).rejects.toThrow('already');
     expect(stored).toEqual(expected);
+  });
+
+  it('only reads synthetic cwd metadata into outbound catalogs, and honors the setting', async () => {
+    const home = path.join(root, 'synthetic-copilot-home');
+    const dir = path.join(home, 'session-state', 'fixture');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(path.join(secondPath, '.squad'));
+    fs.writeFileSync(path.join(secondPath, '.squad', 'team.md'), 'Synthetic roster');
+    fs.writeFileSync(path.join(dir, 'workspace.yaml'),
+      `cwd: ${JSON.stringify(secondPath)}\nsecret: OUTBOUND_SENTINEL_SECRET\nnested:\n  cwd: secret-path\n`);
+    fs.mkdirSync(path.join(dir, 'events.jsonl'));
+    const messages: OutboundMessage[] = [];
+    provider.view = { webview: { postMessage: async (message) => { messages.push(message); return true; } } };
+    configurationGet.mockReturnValue(true);
+    provider.handleWebviewMessage({ type: 'getDirectories' });
+    await vi.waitFor(() => {
+      expect(messages.some((message) => message.type === 'directoryCatalog' && message.catalog.squadHistory.length === 1)).toBe(true);
+    });
+    const last = messages.at(-1);
+    expect(last).toMatchObject({
+      type: 'directoryCatalog',
+      catalog: { squadHistory: [{ name: path.basename(secondPath), path: fs.realpathSync.native(secondPath) }] },
+    });
+    expect(JSON.stringify(messages)).not.toContain('OUTBOUND_SENTINEL_SECRET');
+    expect(JSON.stringify(messages)).not.toContain('secret-path');
+
+    configurationGet.mockReturnValue(false);
+    messages.length = 0;
+    provider.handleWebviewMessage({ type: 'getDirectories' });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({ type: 'directoryCatalog', catalog: { squadHistory: [] } });
+  });
+
+  it('saves a filled form only on an explicit add message, preserving host validation', async () => {
+    expect(stored).toEqual([first]);
+    await provider.addDirectory(secondPath, 'Suggested folder');
+    expect(showInputBox).not.toHaveBeenCalled();
+    expect(stored).toEqual([first, expect.objectContaining({
+      name: 'Suggested folder', path: fs.realpathSync.native(secondPath),
+    })]);
+    await expect(provider.addDirectory(secondPath, 'Duplicate')).resolves.toBeUndefined();
+    expect(stored).toHaveLength(2);
+    await expect(provider.addDirectory('relative', 'Invalid')).rejects.toThrow('absolute path');
+    await expect(provider.addDirectory(root, 'First')).rejects.toThrow('already exists');
   });
 });

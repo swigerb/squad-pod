@@ -14,6 +14,12 @@
     "configuration": {
       "title": "Squad Pod",
       "properties": {
+        "squad-pod.directorySuggestions": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Suggest recent Squad directories by reading only the working-directory field of local Copilot CLI session metadata. Suggestions never launch or save automatically."
+        },
         "squad-pod.autoShowPanel": {
           "type": "boolean",
           "default": false,

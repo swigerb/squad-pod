@@ -72,6 +72,8 @@ In the office's **Settings**, sound notifications play a short chime when an act
 
 Open **Directories** to launch Squad in a workspace folder or a saved directory. Squad Pod opens a new VS Code terminal at that folder and runs `copilot --agent squad` only after you click **Launch**. Workspace trust and the Copilot CLI on `PATH` are required. Squad Pod does not launch automatically.
 
+**Recent Squad directories** fills the add-directory form from local Copilot CLI working-directory metadata without saving or launching; disable this read with `squad-pod.directorySuggestions`.
+
 ### Activity and recorded usage
 
 Open **Telemetry** in the toolbar to browse observed status changes, session activity, logs, orchestration events, and decisions. The drawer also displays historical usage from the local Squad usage ledger when available, including reported token and estimated-cost totals and recent model reports. These reports are historical source data, not live context utilization or billing records.

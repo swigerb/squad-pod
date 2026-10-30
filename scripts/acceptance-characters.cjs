@@ -90,7 +90,7 @@ function providerFixture() {
     workspace: {
       workspaceFolders: [{ uri: uri(directory), name: 'Synthetic character fixture' }],
       onDidChangeWorkspaceFolders: () => disposable,
-      getConfiguration: () => ({ get: (_key, fallback) => fallback }),
+      getConfiguration: () => ({ get: (key, fallback) => key === 'directorySuggestions' ? false : fallback }),
     },
   };
   const load = Module._load;

@@ -206,7 +206,8 @@ export interface TelemetryEvent {
 export type WebviewMessage =
   | { type: 'addAssetDirectory' }
   | { type: 'removeAssetDirectory'; directory: string }
-  | { type: 'getDirectories' | 'addDirectory' }
+  | { type: 'getDirectories' }
+  | { type: 'addDirectory'; path?: string; name?: string }
   | { type: 'updateDirectoryName'; id: string; name: string }
   | { type: 'changeDirectoryPath' | 'removeDirectory' | 'forgetDirectoryLaunch'; id: string }
   | { type: 'launchDirectory'; id: string; source: 'workspace' | 'saved' | 'recent' }
@@ -237,7 +238,7 @@ export interface DirectoryCatalog {
   workspaceDirectories: DirectoryEntry[];
   savedDirectories: DirectoryEntry[];
   recentLaunches: DirectoryEntry[];
-  squadHistoryAvailable: false;
+  squadHistory: DirectoryEntry[];
 }
 
 export interface SourceStatus {

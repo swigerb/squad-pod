@@ -6,9 +6,70 @@ import {
   GLOBAL_KEY_DIRECTORY_LAUNCH_HISTORY,
 } from './constants.js';
 import type { DirectoryEntry } from './types.js';
+import { listCopilotSessions, readSessionCwd, resolveCopilotHome } from './copilotSessionState.js';
 
 const MAX_SAVED_DIRECTORIES = 100;
 const MAX_RECENT_LAUNCHES = 10;
+
+export class SquadDirectorySuggestions {
+  private cache = new Map<string, { mtimeMs: number; metadataMtimeMs: number; cwd: string | null }>();
+
+  async list(
+    enabled: boolean,
+    excluded: readonly Pick<DirectoryEntry, 'path'>[],
+    copilotHome?: string,
+    isEnabled = () => enabled,
+  ): Promise<DirectoryEntry[]> {
+    if (!enabled || !isEnabled()) {
+      this.cache.clear();
+      return [];
+    }
+    // Yield before the bounded synchronous shared reader; roster checks use async I/O.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    if (!isEnabled()) { return []; }
+    const sessions = listCopilotSessions(copilotHome ?? resolveCopilotHome());
+    const nextCache = new Map<string, { mtimeMs: number; metadataMtimeMs: number; cwd: string | null }>();
+    const suggestions: DirectoryEntry[] = [];
+    for (const session of sessions) {
+      if (!isEnabled()) { return []; }
+      if (suggestions.length >= 10) { break; }
+      let metadataMtimeMs: number;
+      try {
+        metadataMtimeMs = (await fs.promises.lstat(path.join(session.dir, 'workspace.yaml'))).mtimeMs;
+      } catch { continue; }
+      if (!isEnabled()) { return []; }
+      const cached = this.cache.get(session.dir);
+      const cwd = cached?.mtimeMs === session.mtimeMs && cached.metadataMtimeMs === metadataMtimeMs
+        ? cached.cwd : readSessionCwd(session.dir);
+      nextCache.set(session.dir, { mtimeMs: session.mtimeMs, metadataMtimeMs, cwd });
+      if (!cwd) { continue; }
+      try {
+        const directoryPath = await fs.promises.realpath(cwd);
+        if (!(await fs.promises.stat(directoryPath)).isDirectory()) { continue; }
+        if ([...excluded, ...suggestions].some((entry) => sameDirectoryPath(entry.path, directoryPath))) { continue; }
+        let teamFound = false;
+        for (const teamDir of ['.squad', '.ai-team']) {
+          try {
+            if ((await fs.promises.stat(path.join(directoryPath, teamDir, 'team.md'))).isFile()) {
+              teamFound = true;
+              break;
+            }
+          } catch { /* Missing or inaccessible rosters are not suggestions. */ }
+        }
+        if (!teamFound) { continue; }
+        suggestions.push({
+          id: `session:${session.id}`,
+          name: path.basename(directoryPath) || directoryPath,
+          path: directoryPath,
+          valid: true,
+          lastLaunchedAt: new Date(session.mtimeMs).toISOString(),
+        });
+      } catch { /* A historical working directory may no longer be accessible. */ }
+    }
+    this.cache = nextCache;
+    return suggestions;
+  }
+}
 
 export interface SavedDirectory {
   id: string;
