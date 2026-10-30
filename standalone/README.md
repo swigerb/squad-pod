@@ -310,9 +310,11 @@ It downloads no browser. Both helpers remove their owned fixtures and stop hosts
 
 These are synthetic checks, **not** real Squad/Copilot session acceptance
 or native VS Code acceptance. Follow `docs/native-acceptance.md` for the
-user/Scout-owned native and real-session plan. Its standalone observation gates
-remain pinned to its accepted baseline; this implementation's synthetic terminal
-procedures are separate. Real Squad launch and native VS Code execution remain
-user/Scout-owned. Private home-log telemetry, persistent credentials, remote
-auth/TLS and full mobile terminals remain later layers. Nothing here completes
-or closes issues #4, #7 or #8.
+user/Scout-owned plan covering native VS Code, real sessions, read-only
+observation, separately authorized office controls and owned terminals. Its
+mobile procedure is prepared but pending #91 acceptance; installed-browser
+touch emulation is BROWSER/FIXTURE evidence, not physical-device acceptance.
+Physical iOS/Android touch and software-keyboard behavior remain unverified.
+Real Squad launch and native VS Code execution remain user/Scout-owned. Private
+home-log telemetry, persistent credentials and remote auth/TLS remain outside
+the plan's authority. Nothing here completes or closes issues #4, #7 or #8.
