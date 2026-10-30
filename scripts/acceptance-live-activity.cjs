@@ -411,10 +411,10 @@ async function browserAcceptance(out) {
       console.log(`PASS production Edge ${viewport.width}x${viewport.height}, device scale 2`);
     }
   } finally {
-    if (fixture) fixture.dispose();
     await browser?.close();
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
+    if (fixture) fixture.dispose();
   }
 }
 
