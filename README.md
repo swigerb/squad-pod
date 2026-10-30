@@ -135,6 +135,15 @@ freedom. No publishing or release operation is needed to validate a local VSIX.
 6. Open **Settings** for sound, layout export/import, and the Debug View
 7. Open **Directories** to launch Squad in an open workspace folder or a saved directory
 
+### Agent details and charter
+
+Click a character, its name (also accessible with Enter or Space), or its occupied
+desk/chair to see its role, status, charter summary and recent activity.
+**View Charter** opens `charter.md`, falling back to `history.md` or the agent's
+folder when needed. Clicking never opens or focuses a terminal or Squad session.
+Repeated clicks retain selection; clicking another seat still moves/swaps the
+selected agent. Cards scroll in narrow panels, and name/tool labels avoid overlap.
+
 ### Panel activation preference
 
 In VS Code Settings, enable **Squad Pod: Auto Show Panel**
