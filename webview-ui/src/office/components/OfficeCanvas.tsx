@@ -13,6 +13,7 @@ import { clampPanOffset, zoomPanAroundAnchor } from '../engine/viewport.js';
 import { officePanStep, pinchZoom, type OfficePanAnchor, type Point } from '../../mobile/touchDecisions.js';
 import {
   updateCharacter,
+  getCharacterWorldPosition,
 } from '../engine/characters.js';
 import { getCharacterScreenBounds } from '../engine/characterGeometry.js';
 import { updatePet } from '../engine/petEntity.js';
@@ -169,6 +170,10 @@ export function OfficeCanvas({
         for (const char of officeState.characters.values()) {
           updateCharacter(char, deltaTime, officeState.walkableTiles, officeState.seats, officeState.tileMap, officeState.blockedTiles);
         }
+        officeState.positionSubagents();
+        for (const { character } of officeState.subagents.values()) {
+          updateCharacter(character, deltaTime, officeState.walkableTiles, [], officeState.tileMap, officeState.blockedTiles);
+        }
         for (const pet of officeState.pets) {
           updatePet(pet, deltaTime, officeState.walkableTileList, officeState.characters, officeState.tileMap, officeState.blockedTiles);
         }
@@ -220,7 +225,7 @@ export function OfficeCanvas({
         ctx.imageSmoothingEnabled = false;
 
         const tileColorsMap = officeState.layout.tileColors ? new Map(Object.entries(officeState.layout.tileColors)) : undefined;
-        const chars = Array.from(officeState.characters.values());
+        const chars = [...officeState.characters.values(), ...[...officeState.subagents.values()].map(entry => entry.character)];
         renderFrame(
           ctx,
           cw,
@@ -248,6 +253,22 @@ export function OfficeCanvas({
           showAreas || (isEditMode && editorState.tool === EditTool.AREA_PAINT),
           editorState.selectedAreaLabel,
         );
+        if (officeState.subagents.size) {
+          ctx.save();
+          ctx.strokeStyle = '#93c5fd';
+          ctx.setLineDash([2 * zoom, 2 * zoom]);
+          for (const { character, parentAgentId } of officeState.subagents.values()) {
+            const parent = officeState.characters.get(parentAgentId);
+            if (!parent) continue;
+            const parentPosition = getCharacterWorldPosition(parent);
+            const childPosition = getCharacterWorldPosition(character);
+            ctx.beginPath();
+            ctx.moveTo(parentPosition.x * zoom + panRef.current!.x, parentPosition.y * zoom + panRef.current!.y);
+            ctx.lineTo(childPosition.x * zoom + panRef.current!.x, childPosition.y * zoom + panRef.current!.y);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
         const preview = dragPreviewRef.current;
         if (isEditMode && preview) {
           ctx.save();
