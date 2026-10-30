@@ -221,8 +221,22 @@ try {
   assert.equal(recovered.areas[0].label, 'Synthetic area');
   await page.getByRole('button', { name: /Keep local draft #/ }).click();
   await page.getByRole('button', { name: 'Edit Layout', exact: true }).click();
+  const resolvedSaveTraceStart = controlTrace.length;
   await page.getByRole('region', { name: 'Layout editor' }).getByRole('button', { name: /Save Layout/ }).click();
   await until(async () => JSON.parse(await fs.readFile(layoutFile, 'utf8')).pets?.length === 1, 'resolved draft commit');
+  await until(() => {
+    const request = controlTrace.slice(resolvedSaveTraceStart).find(frame =>
+      frame.direction === 'sent' && frame.value.message?.type === 'saveLayout');
+    return request && controlTrace.slice(resolvedSaveTraceStart).some(frame =>
+      frame.direction === 'received' && frame.value.kind === 'controlResult'
+      && frame.value.requestId === request.value.requestId
+      && frame.value.messages?.some(message => message.type === 'layoutSaved' && message.layout.pets?.length === 1));
+  }, 'correlated resolved draft acknowledgement', 10_000);
+  await page.getByRole('region', { name: 'Layout editor' }).getByRole('button', { name: 'Save Layout', exact: true }).waitFor();
+  await until(async () => {
+    try { await fs.stat(`${layoutFile}.lock`); return false; }
+    catch (error) { if (error.code === 'ENOENT') return true; throw error; }
+  }, 'prior layout writer lock released', 10_000);
   report.beforeLock = {
     at: Date.now(), controlTrace: structuredClone(controlTrace),
     ui: await page.locator('body').innerText(),
@@ -233,14 +247,21 @@ try {
   };
   check('external conflict does not overwrite; dirty draft survives browser reload, exports and explicitly resolves');
   // An exclusive cooperating-writer lock forces a recoverable storage failure.
-  await fs.writeFile(`${layoutFile}.lock`, 'synthetic competing writer');
+  const beforeLockedSave = await fs.readFile(layoutFile, 'utf8');
+  await fs.writeFile(`${layoutFile}.lock`, 'synthetic competing writer', { flag: 'wx' });
   await page.getByRole('region', { name: 'Layout editor' }).getByTitle('Pets', { exact: true }).click();
   await page.getByRole('region', { name: 'Layout editor' }).locator('button[data-pet-type]').first().click();
+  assert.equal(await page.getByRole('region', { name: 'Layout editor' })
+    .getByRole('button', { name: '● Save Layout', exact: true }).count(), 1);
   await page.getByRole('region', { name: 'Layout editor' }).getByRole('button', { name: /Save Layout/ }).click();
   await page.getByText(/Office save failed:/).waitFor();
   report.lockedFailure = { at: Date.now(), controlTrace: structuredClone(controlTrace),
     layout: JSON.parse(await fs.readFile(layoutFile, 'utf8')), lock: await fs.readFile(`${layoutFile}.lock`, 'utf8') };
   assert.equal(JSON.parse(await fs.readFile(layoutFile, 'utf8')).pets.length, 1);
+  assert.equal(await fs.readFile(layoutFile, 'utf8'), beforeLockedSave);
+  assert.equal(await fs.readFile(`${layoutFile}.lock`, 'utf8'), 'synthetic competing writer');
+  assert.equal(await page.getByRole('region', { name: 'Layout editor' })
+    .getByRole('button', { name: '● Save Layout', exact: true }).count(), 1);
   await fs.unlink(`${layoutFile}.lock`);
   await page.getByRole('region', { name: 'Layout editor' }).getByRole('button', { name: /Save Layout/ }).click();
   await until(async () => JSON.parse(await fs.readFile(layoutFile, 'utf8')).pets.length === 0, 'retry after storage failure');
