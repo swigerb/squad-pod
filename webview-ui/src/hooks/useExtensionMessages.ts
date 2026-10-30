@@ -503,7 +503,10 @@ export function useExtensionMessages(
 
         case 'agentDetailLoaded': {
           const { detail } = message;
-          setAgentDetail(detail);
+          const office = getOfficeState();
+          if (office.characters.has(detail.id) && office.selectedAgentId === detail.id) {
+            setAgentDetail(detail);
+          }
           break;
         }
 

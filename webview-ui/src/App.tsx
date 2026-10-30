@@ -1,5 +1,5 @@
 import './index.css';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { OfficeState } from './office/engine/officeState.js';
 import { OfficeCanvas } from './office/components/OfficeCanvas.js';
 import { ToolOverlay } from './office/components/ToolOverlay.js';
@@ -79,7 +79,7 @@ function ConnectedApp() {
 function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
   const client = useHostClient();
   const editor = useEditorActions(getOfficeState, editorState, recoveryState);
-  const { recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
@@ -91,6 +91,13 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
   const [isDirectoryModalOpen, setIsDirectoryModalOpen] = useState(false);
   const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (agentDetail && !agents.includes(agentDetail.id)) {
+      setAgentDetail(null);
+      setCardPosition(null);
+    }
+  }, [agents, agentDetail, setAgentDetail]);
 
   useEditorKeyboard(
     editor.isEditMode && !isDirectoryModalOpen,
@@ -104,9 +111,11 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
   );
 
   const handleDeskClick = useCallback((agentId: string, screenX: number, screenY: number) => {
-    client.send({ type: 'requestAgentDetail', agentId });
+    getOfficeState().selectedAgentId = agentId;
+    setAgentDetail(null);
     setCardPosition({ x: screenX, y: screenY });
-  }, [client]);
+    client.send({ type: 'requestAgentDetail', agentId });
+  }, [client, setAgentDetail]);
 
   const handleCloseCard = useCallback(() => {
     setAgentDetail(null);
@@ -350,7 +359,7 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
       )}
 
       <AgentCard
-        detail={agentDetail}
+        detail={agentDetail && getOfficeState().characters.has(agentDetail.id) ? agentDetail : null}
         position={cardPosition}
         onClose={handleCloseCard}
         onViewCharter={handleViewCharter}

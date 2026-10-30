@@ -186,6 +186,18 @@ describe('AgentLabels over canvas characters', () => {
     expect(onAgentClick.mock.calls).toEqual([['homer', 190, 220], ['marge', 310, 186]]);
   });
 
+  it('isolates native Space activation from the canvas global pan shortcut', () => {
+    render(2, true);
+    const key = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+    act(() => label().dispatchEvent(key));
+    expect(key.defaultPrevented).toBe(false);
+    // The global shortcut still pans when the canvas, not a button, owns input.
+    const canvasKey = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+    act(() => host.querySelector('canvas')!.dispatchEvent(canvasKey));
+    expect(canvasKey.defaultPrevented).toBe(true);
+    window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space' }));
+  });
+
   it('cancels its position update on unmount', () => {
     render();
     expect(frames.size).toBe(1);

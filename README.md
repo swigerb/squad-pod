@@ -48,7 +48,7 @@ Open the project in VS Code and press **F5** to launch the Extension Development
 
 ### Open the office
 
-Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character to open its details card and select it, then click another seat to move it. The card shows the agent's task and recent activity and lets you open its charter.
+Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character, its name (**Enter** or **Space** also works), or its occupied desk or chair to open the details card; select a character, then click another seat to move it. **View Charter** opens `charter.md`. These clicks never open a terminal.
 
 ### Edit the office
 
@@ -118,7 +118,7 @@ The original [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by 
 
 ## Roadmap
 
-- Connect to live Squad activity if a supported event API becomes available.
+- Show live per-tool activity and context usage.
 - Support custom character skins.
 - Visualize team ceremonies in the office.
 
