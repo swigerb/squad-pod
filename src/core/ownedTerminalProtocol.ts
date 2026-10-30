@@ -68,12 +68,12 @@ export function decodeOwnedTerminalEvent(json: string): OwnedTerminalEvent {
     }
     if (result.ok === true) {
       exact(result, ['ok', 'runId']);
-      if (typeof result.runId !== 'string') throw new Error('Invalid terminal launch result');
+      if (typeof result.runId !== 'string') { throw new Error('Invalid terminal launch result'); }
       runId(result.runId);
     } else if (result.ok === false) {
       exact(result, ['ok', 'message']);
-      if (!message(result.message)) throw new Error('Invalid terminal launch failure');
-    } else throw new Error('Invalid terminal launch result');
+      if (!message(result.message)) { throw new Error('Invalid terminal launch failure'); }
+    } else { throw new Error('Invalid terminal launch result'); }
     return value as OwnedTerminalEvent;
   }
   if (value.type === 'runs') {
