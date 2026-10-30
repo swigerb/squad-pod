@@ -102,6 +102,29 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   const [isSquadInfoOpen, setIsSquadInfoOpen] = useState(false);
   const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [touchMobile, setTouchMobile] = useState(false);
+  const [followedAgentId, setFollowedAgentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!standalone) { setTouchMobile(false); return; }
+    const query = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 700px), (pointer: coarse)') : null;
+    const update = () => setTouchMobile(query?.matches ?? false);
+    update();
+    query?.addEventListener('change', update);
+    return () => query?.removeEventListener('change', update);
+  }, [standalone]);
+
+  useEffect(() => {
+    if (touchMobile && editor.isEditMode) editor.handleToggleEditMode();
+  }, [touchMobile, editor.isEditMode, editor.handleToggleEditMode]);
+
+  useEffect(() => {
+    if (!touchMobile || (followedAgentId && !agents.includes(followedAgentId))) {
+      getOfficeState().cameraFollowId = null;
+      if (followedAgentId) setFollowedAgentId(null);
+    } else getOfficeState().cameraFollowId = followedAgentId;
+  }, [agents, followedAgentId, touchMobile]);
 
   useEffect(() => {
     if (agentDetail && !agents.includes(agentDetail.id)) {
@@ -111,7 +134,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   }, [agents, agentDetail, setAgentDetail]);
 
   useEditorKeyboard(
-    editor.isEditMode && !isDirectoryModalOpen,
+    editor.isEditMode && !touchMobile && !isDirectoryModalOpen,
     editorState,
     editor.handleDeleteSelected,
     editor.handleRotateSelected,
@@ -123,10 +146,14 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
 
   const handleDeskClick = useCallback((agentId: string, screenX: number, screenY: number) => {
     getOfficeState().selectedAgentId = agentId;
+    if (touchMobile) {
+      getOfficeState().cameraFollowId = agentId;
+      setFollowedAgentId(agentId);
+    }
     setAgentDetail(null);
     setCardPosition({ x: screenX, y: screenY });
     requestAgentDetail(agentId);
-  }, [requestAgentDetail, setAgentDetail]);
+  }, [requestAgentDetail, setAgentDetail, touchMobile]);
 
   const handleCloseCard = useCallback(() => {
     setAgentDetail(null);
@@ -269,14 +296,16 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   }
 
   return (
-    <div className="office-panel" data-edit-mode={editor.isEditMode} ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+    <div className="office-panel" data-edit-mode={editor.isEditMode}
+      data-following-agent={touchMobile ? followedAgentId ?? '' : undefined}
+      ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`@keyframes pixel-agents-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} } .pixel-agents-pulse{animation:pixel-agents-pulse ${PULSE_ANIMATION_DURATION_SEC}s ease-in-out infinite}`}</style>
 
       <OfficeCanvas
         readOnly={readOnly}
         isDebugMode={isDebugMode}
         officeState={getOfficeState()}
-        isEditMode={editor.isEditMode}
+        isEditMode={editor.isEditMode && !touchMobile}
         showAreas={settings.showAreas}
         editorState={editorState}
         furnitureColorPickTarget={editor.furnitureColorPickTarget}
@@ -296,9 +325,14 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         onZoomChange={editor.handleZoomChange}
         panRef={editor.panRef}
         onDeskClick={handleDeskClick}
+        touchGestures={touchMobile}
+        onManualPan={touchMobile ? () => {
+          getOfficeState().cameraFollowId = null;
+          setFollowedAgentId(null);
+        } : undefined}
       />
 
-      <EditorToolbar
+      {!touchMobile && <EditorToolbar
         editorState={editorState}
         isEditMode={editor.isEditMode}
         onToolChange={editor.handleToolChange}
@@ -346,7 +380,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         isDirty={editor.isDirty}
         hasSelection={editorState.selectedFurnitureUid !== null}
         onExpandGrid={editor.handleExpandGrid}
-      />
+      />}
 
       <ZoomControls zoom={editor.zoom} onZoomChange={editor.handleZoomChange} />
 
@@ -375,7 +409,8 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         nativeUnavailable={standalone}
         onOpenSettings={() => setShowSettings(true)}
         readOnly={readOnly}
-        isEditMode={editor.isEditMode}
+        hideEditor={touchMobile}
+        isEditMode={editor.isEditMode && !touchMobile}
         onToggleEditMode={editor.handleToggleEditMode}
         onOpenSquadInfo={handleOpenSquadInfo}
         isTelemetryOpen={isTelemetryOpen}

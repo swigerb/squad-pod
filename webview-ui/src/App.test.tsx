@@ -23,6 +23,8 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   let root: Root;
   let persisted: LayoutRecovery | undefined;
   let client: HostClientFixture;
+  let touchMediaDescriptor: PropertyDescriptor | undefined;
+  let touchPointsDescriptor: PropertyDescriptor | undefined;
   const imported: OfficeLayout = {
     version: 2, cols: 20, rows: 15, tiles: Array(300).fill(1), furniture: [],
     tileColors: { '0,0': { h: 40, s: 20, b: -5, c: 10 } },
@@ -48,6 +50,16 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     await act(async () => {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     });
+  }
+  function dispatchTouch(
+    target: Element, type: string, touches: Array<{ identifier: number; clientX: number; clientY: number }>,
+  ) {
+    const event = new Event(type, { bubbles: true, cancelable: true }) as TouchEvent;
+    Object.defineProperties(event, {
+      touches: { value: touches },
+      changedTouches: { value: touches },
+    });
+    target.dispatchEvent(event);
   }
   function saves() {
     return vi.mocked(client.send).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout');
@@ -77,6 +89,10 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   afterEach(() => {
     act(() => root.unmount());
     host.remove();
+    if (touchMediaDescriptor) Object.defineProperty(window, 'matchMedia', touchMediaDescriptor);
+    else Reflect.deleteProperty(window, 'matchMedia');
+    if (touchPointsDescriptor) Object.defineProperty(navigator, 'maxTouchPoints', touchPointsDescriptor);
+    else Reflect.deleteProperty(navigator, 'maxTouchPoints');
     resetPetTemplates();
     setFloorSprites([]);
     setWallSprites([]);
@@ -180,6 +196,77 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     click('Telemetry');
     expect(host.textContent).toContain('Live transient tasks are unavailable in the read-only observer.');
     expect(host.textContent).not.toContain('Enable it in Settings');
+  });
+
+  it('preserves the desktop layout editor on a hybrid fine-pointer touchscreen', async () => {
+    touchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    touchPointsDescriptor = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints');
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: () => ({
+      matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    }) });
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 10 });
+    act(() => root.unmount());
+    client = createHostClientFixture();
+    root = createRoot(host);
+    act(() => root.render(<App client={client} standalone />));
+    snapshot(imported, 'hybrid-desktop');
+    await nextFrame();
+    expect([...host.querySelectorAll('button')].map(button => button.textContent?.trim()))
+      .toContain('Edit Layout');
+    click('Edit Layout');
+    expect(host.querySelector('[role="region"][aria-label="Layout editor"]')).not.toBeNull();
+    expect(host.querySelector('.office-panel')?.hasAttribute('data-following-agent')).toBe(false);
+  });
+
+  it('hides the desktop layout editor on standalone touch while keeping mobile office tools', async () => {
+    touchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    touchPointsDescriptor = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints');
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: () => ({
+      matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    }) });
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 1 });
+    act(() => root.unmount());
+    client = createHostClientFixture();
+    root = createRoot(host);
+    act(() => root.render(<App client={client} standalone readOnly />));
+    snapshot(imported, 'mobile-observer');
+    await nextFrame();
+    expect([...host.querySelectorAll('button')].map(button => button.textContent?.trim()))
+      .not.toContain('Edit Layout');
+    expect([...host.querySelectorAll('button')].map(button => button.textContent?.trim()))
+      .toContain('Squad Info');
+    expect([...host.querySelectorAll('button')].map(button => button.textContent?.trim()))
+      .toContain('Telemetry');
+    expect(host.querySelector('[role="region"][aria-label="Layout editor"]')).toBeNull();
+    send({ type: 'existingAgents', agents: [{
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', paletteIndex: 0,
+      seatId: null, status: 'idle', currentTask: null,
+    }] });
+    await nextFrame();
+    const label = host.querySelector<HTMLButtonElement>('[data-agent-label="test-agent-1"]');
+    expect(label).not.toBeNull();
+    act(() => label?.click());
+    const officePanel = host.querySelector<HTMLElement>('.office-panel')!;
+    expect(officePanel.dataset.followingAgent).toBe('test-agent-1');
+    const canvas = host.querySelector('canvas')!;
+    act(() => {
+      dispatchTouch(canvas, 'touchstart', [
+        { identifier: 1, clientX: 100, clientY: 100 }, { identifier: 2, clientX: 200, clientY: 100 },
+      ]);
+      dispatchTouch(canvas, 'touchmove', [
+        { identifier: 1, clientX: 50, clientY: 100 }, { identifier: 2, clientX: 250, clientY: 100 },
+      ]);
+    });
+    expect(officePanel.dataset.followingAgent).toBe('test-agent-1');
+    act(() => {
+      dispatchTouch(canvas, 'touchstart', [
+        { identifier: 1, clientX: 100, clientY: 100 }, { identifier: 2, clientX: 200, clientY: 100 },
+      ]);
+      dispatchTouch(canvas, 'touchmove', [
+        { identifier: 1, clientX: 120, clientY: 120 }, { identifier: 2, clientX: 220, clientY: 120 },
+      ]);
+    });
+    expect(officePanel.dataset.followingAgent).toBe('');
   });
 
   it('keeps observed Squad Info and correlated details available with standalone control but no native charter action', async () => {

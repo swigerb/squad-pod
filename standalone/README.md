@@ -160,14 +160,40 @@ Sends/startup/cleanup have bounded timeouts. Nothing is silently
 dropped or retried as a process action.
 
 xterm renders escape sequences as terminal data, not HTML; output links cannot
-navigate the authenticated page. Input is disabled until replay finishes. The
+inject into or replace the authenticated page. Terminal output links open only
+validated HTTP(S) URLs in a separate tab; on touch they require a short,
+unmoved tap and never open during drag, long-press or active selection. Input is
+disabled until replay finishes. The
 cursor advances only after the terminal's write callback succeeds. An ordinary
 disconnect drains pending rendered output before reconnecting; reload authenticates
 again and rebuilds from cursor zero, not an orphaned persisted cursor. History
 eviction/slow-client overflow produces explicit resync. **Clear terminal and resync
 retained history** acknowledges that earlier output/terminal state is lost; it never
-quietly launches a replacement. Scrollback is capped at 2000 lines. Narrow controls
-are usable, but full mobile gestures/keyboard/clipboard parity is not claimed.
+quietly launches a replacement. Scrollback is capped at 2000 lines.
+
+On narrow (700px or less) or primary-coarse-pointer browsers the observer has synchronized office/terminal pages,
+owned-run cards, an explicit launch card and edge-swipe navigation. Selecting a run
+card opens that exact owned run; changing pages never launches or terminates a
+process. Selecting an observed agent follows it with the office camera, not an
+owned terminal. Pure pinch zoom preserves follow; one/two-finger manual panning
+breaks follow. Pan distances use CSS pixels independently of screen density.
+The desktop layout editor is hidden in this mode; fine-pointer hybrid desktops
+keep their desktop layout even when a touchscreen is available. Start navigation
+within the 24px page-edge zone, away from controls and the terminal selection area.
+Edge may reserve the outermost screen pixels for browser Back; the installed
+emulation checks start 20px inside the page. Use the page toggle if the browser
+intercepts an edge gesture. The terminal includes a keyboard accessory, viewport/orientation
+resizing, explicit selection/copy/paste controls and a manual clipboard fallback.
+Clipboard reads happen only after the user presses Paste; plain HTTP and denied
+clipboard access use the manual fallback. Installed Edge touch emulation exercises
+these browser interactions against synthetic native PTYs. Paste is bounded to
+256 KiB without silently truncating the manual field. A changed/disconnected
+terminal invalidates an in-progress clipboard read even if the original run
+reconnects before it finishes; text stays available for explicit review/retry.
+A newer Paste supersedes an older pending read. Queueing input does not confirm
+that the process consumed it; blocked/partial sends retain only unsent text and
+never replay it automatically. Physical iOS/Android
+touch and software-keyboard behavior remains unverified.
 
 Without `--terminals`, without a supported executable, or without the optional native
 dependency, the office still works and terminal authentication shows an explicit
@@ -314,5 +340,5 @@ user/Scout-owned native and real-session plan. Its standalone observation gates
 remain pinned to its accepted baseline; this implementation's synthetic terminal
 procedures are separate. Real Squad launch and native VS Code execution remain
 user/Scout-owned. Private home-log telemetry, persistent credentials, remote
-auth/TLS and full mobile terminals remain later layers. Nothing here completes
+auth/TLS and physical-device mobile acceptance remain later layers. Nothing here completes
 or closes issues #4, #7 or #8.
