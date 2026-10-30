@@ -92,6 +92,10 @@ Squad Pod watches the selected project's `.squad/` files, including the roster, 
 - File-observed activity is approximate. Opt-in live activity uses an undocumented, best-effort Copilot CLI session format, not a supported Squad event API. Unmatched members remain unattributed; stale or missing sessions fall back to file observations. Bounded scans may miss older in-flight members. Context gauges appear only when a live member's tool completion includes context metrics.
 - Directory launches do not switch the office's observed project.
 
+## Acceptance testing
+
+Use the [native VS Code and real Squad acceptance plan](docs/native-acceptance.md) for a Scout-ready, approval-gated test handoff.
+
 ## Custom assets
 
 Add a local asset directory in **Settings** for furniture, pets, and character sheets. Folder layouts, supported images, reload behavior, and import limits are described in [Custom asset manifests](docs/custom-assets.md).
