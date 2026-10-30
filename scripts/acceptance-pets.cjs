@@ -162,6 +162,12 @@ try {
   const observedRoster = messages.find((message) => message.type === 'existingAgents');
   const fixtureAgent = observedRoster.agents.find((agent) => agent.id === 'fixture-agent');
   assert.ok(fixtureAgent, 'compiled provider must attach the selected real synthetic roster');
+  assert.deepEqual(Object.keys(fixtureAgent).sort(), [
+    'currentTask', 'directoryId', 'directoryMappingIds', 'id', 'name',
+    'paletteIndex', 'role', 'seatId', 'status',
+  ], 'compiled provider snapshot must keep the complete roster/activity payload shape');
+  assert.equal(fixtureAgent.status, 'idle', 'new roster members start idle');
+  assert.equal(fixtureAgent.currentTask, null, 'historical usage is not a current task');
   assert.equal(fixtureAgent.directoryId, expectedDirectoryId, 'workspace URI identity remains the primary stable ID');
   assert.deepEqual(fixtureAgent.directoryMappingIds, [expectedDirectoryId, savedDirectory.id],
     'canonical saved-path alias contributes a durable mapping ID after the workspace ID');

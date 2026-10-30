@@ -71,6 +71,53 @@ async function main() {
         record.observedRoster = hostFacts.roster;
         record.providerMappingIds = hostFacts.roster[0].directoryMappingIds;
 
+        const providerAgent = await page.evaluate(() =>
+          window.__petAcceptance.fixtures.find((message) => message.type === 'existingAgents')?.agents
+            .find((agent) => agent.id === 'fixture-agent'));
+        const renamedAgent = {
+          ...providerAgent,
+          name: 'Renamed Fixture Agent',
+          role: 'Lead Developer',
+          status: 'active',
+          currentTask: 'Production fixture observed task',
+        };
+        await page.waitForFunction((name) => [...document.querySelectorAll('button')]
+          .some((button) => button.textContent.includes(name)), providerAgent.name);
+        await page.evaluate((agent) => window.__sendHost({ type: 'existingAgents', agents: [agent] }), renamedAgent);
+        async function expectAgentStatus(status) {
+          await page.waitForFunction(({ name, expectedStatus }) => [...document.querySelectorAll('button')].some((button) =>
+            button.textContent.includes(name)
+              && button.querySelector(`[role="img"][aria-label="${expectedStatus}"]`)),
+          { name: renamedAgent.name, expectedStatus: status });
+        }
+        await expectAgentStatus('Active');
+        await page.getByText('Observed task: Production fixture observed task', { exact: true }).waitFor();
+        assert.equal(await page.getByText('Observed task: Production fixture observed task', { exact: true }).count(), 1,
+          'App must render the reconnect snapshot task as observed task text');
+        await page.evaluate(() => window.__sendHost({
+          type: 'agentStatus', agentId: 'fixture-agent', status: 'waiting',
+        }));
+        await expectAgentStatus('Waiting');
+        await page.evaluate(() => window.__sendHost({
+          type: 'agentStatus', agentId: 'fixture-agent', status: 'active',
+        }));
+        await expectAgentStatus('Active');
+        await page.evaluate(() => window.__sendHost({
+          type: 'agentStatus', agentId: 'fixture-agent', status: 'idle',
+        }));
+        await expectAgentStatus('Idle');
+        assert.equal(await page.getByText('Observed task: Production fixture observed task', { exact: true }).count(), 0,
+          'idle must clear the stale reconnect task row');
+        assert.equal(await page.evaluate(() =>
+          window.__petAcceptance.outbound.some((message) => ['agentToolStart', 'telemetryEvent'].includes(message.type))), false,
+        'snapshot task text must not create webview tool or telemetry messages');
+        record.rosterSnapshot = {
+          renamed: renamedAgent.name,
+          task: renamedAgent.currentTask,
+          statusTransitions: ['Active', 'Waiting', 'Active', 'Idle'],
+          evidence: 'Compiled-provider roster payload delivered through the production webview bundle in mocked Edge',
+        };
+
         async function hitClick(locator, name) {
           await locator.scrollIntoViewIfNeeded();
           const hit = await locator.evaluate((element) => {

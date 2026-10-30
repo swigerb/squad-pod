@@ -11,6 +11,7 @@ All notable changes to Squad Pod are documented here.
 - Diagnostics moved to the **Squad Pod** output channel (no more workspace debug logs or popups).
 
 ### Added
+- Reconnect snapshots now refresh existing roster names and roles and restore observed current-task text alongside status without changing saved appearance or seats.
 - A typed webview client seam for outbound requests, inbound subscriptions and protected recovery state, backed by the existing VS Code API. Missing hosts and recovery-read/write failures are surfaced without replacing protected drafts; this is foundation only, not standalone/browser support, and #8 remains open.
 - Legacy sprite payloads are validated and ignored with a diagnostic when they do not match the renderer format, retaining existing assets.
 - Three source-pinned auto-tiling carpet styles with main/accent colors, style/color eyedropper, single-transaction paint/right-erase undo/redo, and resize/save/import/export preservation. Carpets are an optional visual layer: floor/wall IDs, walkability, furniture and Squad displays are unchanged. Separate PR316 asset provenance, exact blob checks and MIT contributor notices retained. Directory launch and full upstream parity remain separate slices.
