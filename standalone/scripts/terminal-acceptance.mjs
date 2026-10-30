@@ -364,6 +364,8 @@ try {
       frame.data.includes('"input":"\\u0004"')), 'mobile keyboard accessory input reaches PTY');
     await mobileTab.getByRole('button', { name: 'Show office', exact: true }).click();
     await mobileTab.locator('.observer-mobile-stage[data-mobile-view="office"]').waitFor();
+    await until(async () => Math.abs((await mobileTab.locator('.observer-office-page').boundingBox()).x) <= 1,
+      'office page settles before canvas touch gestures');
     const cdp = await mobileTab.context().newCDPSession(mobileTab);
     await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
     const officePanel = mobileTab.locator('.office-panel');
@@ -380,8 +382,11 @@ try {
     const touchPoints = points => points.map(([x, y], id) => ({ x, y, id, radiusX: 2, radiusY: 2, force: 1 }));
     const canvasBounds = await canvas.boundingBox();
     assert.ok(canvasBounds);
-    const center = { x: canvasBounds.x + canvasBounds.width / 2, y: canvasBounds.y + canvasBounds.height / 2 };
+    const center = { x: canvasBounds.x + canvasBounds.width / 2, y: canvasBounds.y + canvasBounds.height * 0.75 };
     await followObservedAgent();
+    assert.equal(await mobileTab.evaluate(({ x, y }) =>
+      document.elementFromPoint(x, y)?.tagName, center), 'CANVAS',
+    'manual camera gestures start on the canvas, not an observed-agent label overlay');
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchStart', touchPoints: touchPoints([[center.x - 30, center.y], [center.x + 30, center.y]]),
     });
