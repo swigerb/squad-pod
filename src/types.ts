@@ -39,6 +39,7 @@ export interface AgentDetailInfo {
   charterSummary: string | null;  // first 2-3 sentences from charter.md
   charterContent: string | null;
   charterStatus: 'available' | 'missing' | 'unreadable' | 'unavailable';
+  modelSources?: import('./declaredModels.js').ModelConfigSource[];
   expertise: string | null;
   responsibilities: string | null;
   boundaries: string | null;
