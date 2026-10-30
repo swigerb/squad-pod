@@ -122,9 +122,8 @@ export function initializeAgents(
 ): Map<string, SquadAgentState> {
   const members = readTeamRoster(workspaceRoot);
   const persisted = loadPersistedMeta(context);
-  const previous = agents;
-
   cancelAllTimers();
+  liveRuns.clear();
   agents = new Map();
   disposed = false;
 
@@ -134,13 +133,6 @@ export function initializeAgents(
   );
   ordered.forEach((member, index) => {
     const state = memberToState(member, index, persisted, usedPalettes());
-    const prior = previous.get(state.id);
-    if (prior) {
-      state.status = prior.status;
-      state.currentTask = prior.currentTask;
-      state.currentTaskSource = prior.currentTaskSource;
-      state.lastActiveAt = prior.lastActiveAt;
-    }
     agents.set(state.id, state);
   });
 

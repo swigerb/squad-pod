@@ -96,6 +96,22 @@ describe('agentManager', () => {
       expect(homer?.status).toBe('idle');
       expect(homer?.currentTask).toBeNull();
     });
+
+    it('does not carry expired source hints into a newly initialized workspace with the same member', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('TestBot', 'testbot')]);
+      initializeAgents('/workspace-one', context, webview);
+      updateAgentStatus('testbot', 'active', 'Old workspace file hint', webview);
+      initializeAgents('/workspace-two', context, webview);
+      expect(getAgents().get('testbot')).toMatchObject({
+        status: 'idle', currentTask: null, currentTaskSource: null,
+      });
+      setLiveAgentStatus('testbot', true, 'Old live source', webview);
+      initializeAgents('/workspace-three', context, webview);
+      updateAgentStatus('testbot', 'active', 'New workspace hint', webview);
+      expect(getAgents().get('testbot')).toMatchObject({
+        status: 'active', currentTask: 'New workspace hint', currentTaskSource: 'file',
+      });
+    });
   });
 
   describe('updateAgentStatus', () => {
