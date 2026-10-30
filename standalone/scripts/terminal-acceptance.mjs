@@ -329,9 +329,11 @@ try {
     await mobileTab.getByLabel('Runtime credential from the observer console', { exact: true }).fill(tokens[0]);
     await mobileTab.getByRole('button', { name: 'Connect read-only office', exact: true }).click();
     await mobileTab.locator('.office-panel canvas').waitFor();
-    for (const name of ['Edit Layout', 'Directories', 'Settings']) {
-      assert.equal(await mobileTab.getByRole('button', { name, exact: true }).count(), 0,
-        `mobile must hide desktop control ${name}`);
+    assert.equal(await mobileTab.getByRole('button', { name: 'Edit Layout', exact: true }).count(), 0,
+      'mobile must hide the desktop layout editor');
+    for (const name of ['Directories', 'Settings']) {
+      assert.equal(await mobileTab.getByRole('button', { name, exact: true }).isDisabled(), true,
+        `read-only mobile must not enable ${name}`);
     }
     assert.ok(await mobileTab.getByRole('button', { name: 'Squad Info', exact: true }).count());
     await mobileTab.getByRole('button', { name: 'Show terminal', exact: true }).click();
