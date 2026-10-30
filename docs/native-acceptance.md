@@ -23,6 +23,9 @@ Stop on data loss, privacy leaks, wrong-member attribution, or unintended launch
 Keep evidence local and redacted. Do not delete, post to GitHub, publish,
 merge, or change permissions automatically. Return results and defects for
 my review and explicit sign-off; do not claim acceptance on my behalf.
+Save the full report as report.md with relative links to redacted evidence.
+Keep the report and evidence local, outside the product workspace; do not
+commit, upload, or publish them without my explicit approval.
 ```
 
 ## Scope and outcomes
@@ -40,9 +43,28 @@ Record independent subchecks separately. For example, live tool labels can PASS 
 
 **Evidence classes:** `NATIVE` means the installed extension in desktop VS Code; `REAL` means data actually emitted by the approved supported Squad process; `FIXTURE` means deliberately authored test data; `BROWSER` means browser-only evidence. Fixtures and browser tests cannot establish real producer or native-host acceptance.
 
+## Expected run output
+
+Produce a **Markdown acceptance report and a folder of supporting evidence**. No Word document is required. Choose a local results directory outside the product workspace and use a unique Run ID, for example:
+
+```text
+acceptance-results\<run-id>\
+  report.md
+  evidence\
+    screenshots\
+    recordings\
+    build-and-test-logs\
+```
+
+In `report.md`, include the completed run manifest (including exact source SHA and VSIX SHA-256), approvals, applicability decisions, results for every full-suite test and subcheck, relative links to redacted evidence, defects, cleanup status, and separate native and real Squad acceptance decisions for human sign-off. Use the results, defect, and sign-off templates below. For a smoke-only run, identify that limited scope and leave the unexecuted full-suite checks explicitly BLOCKED with the reason.
+
+Give every result an outcome of **PASS, FAIL, BLOCKED, or NOT-PRODUCED**. Keep missing producer data and pending implementations explicit; do not summarize them as passes. Include the evidence index and any running processes, retained data, or cleanup still awaiting approval.
+
+Keep the report and evidence local. Apply the evidence-handling rules below, and retain any restricted originals separately from redacted material intended for review. Do not commit, upload, post to GitHub, or publish the report or evidence without separate explicit approval.
+
 ## Run manifest
 
-Copy this template to a local results file outside the product workspace. Complete it before execution; do not put secrets in it.
+Copy this template into the run's `report.md` outside the product workspace. Complete it before execution; do not put secrets in it.
 
 ```text
 Run ID / UTC start and end:
