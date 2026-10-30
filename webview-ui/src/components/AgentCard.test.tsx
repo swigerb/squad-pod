@@ -60,4 +60,18 @@ describe('AgentCard activity time', () => {
 
     expect(card.textContent).toContain('2 min ago');
   });
+
+  it.each([
+    ['file', 'File activity hint'],
+    ['live', 'Live task'],
+    [undefined, 'Observed activity'],
+  ] as const)('labels task provenance %s without claiming every source is live', (currentTaskSource, label) => {
+    act(() => root.render(<AgentCard
+      detail={{ ...detail, currentTask: 'Synthetic description', currentTaskSource }}
+      position={{ x: 10, y: 10 }} onClose={() => {}}
+    />));
+    expect(host.textContent).toContain(label);
+    expect(host.textContent).toContain('Synthetic description');
+    expect(host.textContent).not.toContain('Current Task');
+  });
 });

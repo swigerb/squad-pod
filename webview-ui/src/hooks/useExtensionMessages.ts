@@ -226,7 +226,8 @@ export function useExtensionMessages(
               if (task) {
                 next[agent.id] = [{
                   toolId: OBSERVED_TASK_ROW_ID,
-                  status: `Observed task: ${task}`,
+                  status: `${agent.currentTaskSource === 'file' ? 'File activity hint'
+                    : agent.currentTaskSource === 'live' ? 'Live task' : 'Observed activity'}: ${task}`,
                   done: false,
                 }];
               }
