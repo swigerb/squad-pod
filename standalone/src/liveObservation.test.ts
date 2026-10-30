@@ -94,6 +94,31 @@ describe('standalone opted-in live observation', () => {
     } finally { observer.dispose(); }
   });
 
+  it('stops private reads with the last viewer and resumes only through a new opted-in subscription', async () => {
+    vi.useFakeTimers();
+    const { project, home, session } = fixture();
+    session('matching', marker + running() + tool());
+    const observer = createObserver(project, assets, 1000, { liveActivity: true, copilotHome: home });
+    const list = vi.spyOn(fs, 'opendirSync');
+    const open = vi.spyOn(fs, 'openSync');
+    const unsubscribe = observer.subscribe(() => {});
+    await observer.snapshot();
+    expect(open.mock.calls.some(([file]) => String(file).startsWith(home))).toBe(true);
+    unsubscribe();
+    open.mockClear();
+    list.mockClear();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(open).not.toHaveBeenCalled();
+    expect(list).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+    const resume = observer.subscribe(() => {});
+    try {
+      expect(agent(await observer.snapshot())).toMatchObject({ status: 'active', currentTaskSource: 'live' });
+      expect(open.mock.calls.some(([file]) => String(file).startsWith(home))).toBe(true);
+    } finally { resume(); observer.dispose(); }
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('selects only the newest exact-workspace Squad source and preserves live/file precedence, detail and expiry', async () => {
     vi.useFakeTimers();
     const { project, home, session } = fixture();
