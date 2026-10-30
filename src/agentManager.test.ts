@@ -96,9 +96,69 @@ describe('agentManager', () => {
       expect(homer?.status).toBe('idle');
       expect(homer?.currentTask).toBeNull();
     });
+
+    it('does not carry expired source hints into a newly initialized workspace with the same member', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('TestBot', 'testbot')]);
+      initializeAgents('/workspace-one', context, webview);
+      updateAgentStatus('testbot', 'active', 'Old workspace file hint', webview);
+      initializeAgents('/workspace-two', context, webview);
+      expect(getAgents().get('testbot')).toMatchObject({
+        status: 'idle', currentTask: null, currentTaskSource: null,
+      });
+      setLiveAgentStatus('testbot', true, 'Old live source', webview);
+      initializeAgents('/workspace-three', context, webview);
+      updateAgentStatus('testbot', 'active', 'New workspace hint', webview);
+      expect(getAgents().get('testbot')).toMatchObject({
+        status: 'active', currentTask: 'New workspace hint', currentTaskSource: 'file',
+      });
+    });
   });
 
   describe('updateAgentStatus', () => {
+    it('expires file hints in state, snapshots and detail updates without retaining old work', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('TestBot', 'testbot')]);
+      initializeAgents('/workspace', context, webview);
+      updateAgentStatus('testbot', 'active', 'File changed: history.md', webview);
+      expect(getAgents().get('testbot')).toMatchObject({
+        currentTask: 'File changed: history.md', currentTaskSource: 'file',
+      });
+      expect(webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'agentToolStart', status: 'File activity hint: File changed: history.md',
+      }));
+      const callback = vi.mocked(resetActivityTimer).mock.calls.at(-1)![2];
+      callback();
+      expect(getAgents().get('testbot')).toMatchObject({ status: 'idle', currentTask: null, currentTaskSource: null });
+      expect(webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'agentStatus', status: 'idle', currentTask: null, currentTaskSource: null,
+      }));
+      sendExistingAgents(getAgents(), context, webview);
+      expect(webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'existingAgents', agents: [expect.objectContaining({ currentTask: null, currentTaskSource: null })],
+      }));
+      updateAgentStatus('testbot', 'active', null, webview);
+      expect(getAgents().get('testbot')?.currentTask).toBeNull();
+    });
+
+    it('keeps live provenance through file overlap and clears it on source fallback', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('TestBot', 'testbot')]);
+      initializeAgents('/workspace', context, webview);
+      updateAgentStatus('testbot', 'active', 'file hint', webview);
+      const callback = vi.mocked(resetActivityTimer).mock.calls.at(-1)![2];
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview);
+      callback();
+      updateAgentStatus('testbot', 'active', 'file overwrite', webview);
+      expect(getAgents().get('testbot')).toMatchObject({
+        status: 'active', currentTask: 'Actual live task', currentTaskSource: 'live',
+      });
+      sendExistingAgents(getAgents(), context, webview);
+      expect(webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'existingAgents', agents: [expect.objectContaining({ currentTaskSource: 'live' })],
+      }));
+      setLiveAgentStatus('testbot', false, null, webview);
+      expect(getAgents().get('testbot')).toMatchObject({ status: 'idle', currentTask: null, currentTaskSource: null });
+      updateAgentStatus('testbot', 'active', 'new file hint', webview);
+      expect(getAgents().get('testbot')).toMatchObject({ currentTask: 'new file hint', currentTaskSource: 'file' });
+    });
     it('never lets file activity or an already queued idle timer overwrite a live run', () => {
       mockReadTeamRoster.mockReturnValue([makeMember('Ada', 'ada')]);
       initializeAgents('/workspace', context, webview);
@@ -144,8 +204,8 @@ describe('agentManager', () => {
       const statuses = webview.postMessage.mock.calls.map(([message]) => message)
         .filter(message => message.type === 'agentStatus');
       expect(statuses).toEqual([
-        { type: 'agentStatus', agentId: 'homer', status: 'active', currentTask: 'second task' },
-        { type: 'agentStatus', agentId: 'homer', status: 'idle', currentTask: null },
+        { type: 'agentStatus', agentId: 'homer', status: 'active', currentTask: 'second task', currentTaskSource: 'file' },
+        { type: 'agentStatus', agentId: 'homer', status: 'idle', currentTask: null, currentTaskSource: null },
       ]);
     });
 
@@ -157,8 +217,8 @@ describe('agentManager', () => {
       setLiveAgentStatus('homer', false, null, webview);
       expect(webview.postMessage.mock.calls.map(([message]) => message)
         .filter(message => message.type === 'agentStatus')).toEqual([
-        { type: 'agentStatus', agentId: 'homer', status: 'active', currentTask: 'live task' },
-        { type: 'agentStatus', agentId: 'homer', status: 'idle', currentTask: null },
+        { type: 'agentStatus', agentId: 'homer', status: 'active', currentTask: 'live task', currentTaskSource: 'live' },
+        { type: 'agentStatus', agentId: 'homer', status: 'idle', currentTask: null, currentTaskSource: null },
       ]);
     });
 
@@ -266,8 +326,7 @@ describe('agentManager', () => {
         const event = webview.postMessage.mock.calls.find(
           ([msg]: [any]) => msg.type === 'telemetryEvent',
         )[0].event;
-        // currentTask was set previously but the null task param doesn't update it,
-        // so the summary may include the old task. The key check: no ": null" in summary
+        expect(event.summary).not.toContain('some task');
         expect(event.summary).not.toContain(': null');
       });
 

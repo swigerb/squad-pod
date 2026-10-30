@@ -107,6 +107,7 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
       seatId: preferences?.agents[member.slug]?.seatId ?? null,
       status: active.has(member.slug) ? 'active' : 'idle',
       currentTask: active.has(member.slug) ? 'Approximate local file activity (not live tool execution)' : null,
+      currentTaskSource: active.has(member.slug) ? 'file' : null,
     }));
     return [
       { ...settings, ...preferences?.settings },
@@ -156,7 +157,8 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
       ...(message.requestId !== undefined ? { requestId: message.requestId } : {}),
       detail: {
         id: agent.id, name: agent.name, role: agent.role, workspaceRoot: files.root, status: agent.status,
-        currentTask: agent.currentTask, charterSummary: null, recentActivity: [],
+        currentTask: agent.currentTask, currentTaskSource: agent.currentTaskSource,
+        charterSummary: null, recentActivity: [],
         charterContent: null, charterStatus: 'unavailable',
         expertise: null, responsibilities: null, boundaries: null,
         lastActiveAt: 0,

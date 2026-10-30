@@ -41,6 +41,7 @@ export const isObserverLayout = layout;
 const agent = {
   id: short, name: short, role: short, paletteIndex: integer, seatId: nullable(short),
   status: oneOf('active', 'idle', 'waiting'), currentTask: nullable(text),
+  currentTaskSource: optional(nullable(oneOf('file', 'live'))),
 };
 const schemas: Record<string, Check> = {
   settingsLoaded: object({ type: oneOf('settingsLoaded'), soundEnabled: boolean, debugEnabled: boolean, showAreas: boolean }),
@@ -58,6 +59,7 @@ const schemas: Record<string, Check> = {
   existingAgents: object({ type: oneOf('existingAgents'), agents: array(object(agent), 128) }),
   agentDetailLoaded: object({ type: oneOf('agentDetailLoaded'), requestId: optional(short), detail: object({
     id: short, name: short, role: short, workspaceRoot: text, status: agent.status, currentTask: nullable(text),
+    currentTaskSource: agent.currentTaskSource,
     charterSummary: nullable(text), charterContent: nullable(text),
     charterStatus: oneOf('available', 'missing', 'unreadable', 'unavailable'),
     expertise: nullable(text), responsibilities: nullable(text), boundaries: nullable(text),

@@ -133,9 +133,16 @@ describe('read-only selected-project observer', () => {
     const received: OutboundMessage[] = [];
     const unsubscribe = observer.subscribe(messages => received.push(...messages));
     const expectStatus = async (status: string) => {
-      expect((await observer.snapshot()).find(message => message.type === 'existingAgents')).toMatchObject({
-        agents: [expect.objectContaining({ status })],
+      const message = (await observer.snapshot()).find(message => message.type === 'existingAgents');
+      expect(message).toMatchObject({
+        agents: [expect.objectContaining({ status, currentTaskSource: status === 'active' ? 'file' : null })],
       });
+      expect(decodeEvent(JSON.stringify({ version: 1, kind: 'office', message }))).toEqual(message);
+      const details = await observer.onRead({ type: 'requestAgentDetail', agentId: 'test-agent-1', requestId: 'provenance' });
+      expect(details[0]).toMatchObject({
+        type: 'agentDetailLoaded', detail: { currentTaskSource: status === 'active' ? 'file' : null },
+      });
+      expect(decodeEvent(JSON.stringify({ version: 1, kind: 'office', message: details[0] }))).toEqual(details[0]);
     };
     try {
       await expectStatus('idle');

@@ -74,6 +74,7 @@ export function parseSessionFile(content: string): SquadSession | null {
 export function parseLogEntry(
   content: string,
 ): { agent: string | null; timestamp: string; summary: string } | null {
+  content = stripHtmlComments(content);
   if (!content.trim()) {
     return null;
   }
@@ -95,7 +96,7 @@ export function parseLogEntry(
 
   // Extract agent from **Agent:** line
   let agent: string | null = null;
-  const agentMatch = /\*\*Agent:\*\*\s*(.+?)(?:\s*\(|$)/i.exec(content);
+  const agentMatch = /\*\*Agent:\*\*[ \t]*([^\r\n(]+)/i.exec(content);
   if (agentMatch?.[1]) {
     agent = agentMatch[1]
       .trim()
@@ -119,15 +120,19 @@ export function parseLogEntry(
 
   // Build a one-line summary from the first meaningful non-heading line
   let summary = '';
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
+    if (/^[-=]+$/.test(lines[index + 1] ?? '')) {
+      continue;
+    }
     if (line.startsWith('#')) {
       continue;
     }
     if (/^\*\*(Timestamp|Agent|Task|Status):\*\*/i.test(line)) {
       continue;
     }
-    if (line.length > 3) {
-      summary = line.replace(/^\*\*\w+:\*\*\s*/, '').slice(0, 120);
+    const meaningful = meaningfulLine(line);
+    if (meaningful) {
+      summary = meaningful.slice(0, 120);
       break;
     }
   }
@@ -155,13 +160,26 @@ export function detectAgentFromInboxFile(filename: string): string | null {
   return stem && stem !== filename ? stem : null;
 }
 
-/** Most recent heading or bullet in an agent history file, used as the task label. */
+function stripHtmlComments(content: string): string {
+  return content.replace(/<!--[\s\S]*?(?:-->|$)/g, '');
+}
+
+function meaningfulLine(line: string): string | null {
+  if (/^#{1,6}(?:\s|$)/.test(line) || /^[-=|:\s]+$/.test(line)) { return null; }
+  const cleaned = line.replace(/^[-*+]\s+|^\d+[.)]\s+/, '')
+    .replace(/^\[[ xX]\]\s*/, '').replace(/\*\*/g, '').trim();
+  if (cleaned.length <= 3 || /^[\w -]+:\s*$/.test(cleaned)) { return null; }
+  return cleaned;
+}
+
+/** Most recent non-structural content, never a claim that the work is live. */
 export function summarizeHistory(content: string): string | null {
-  const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const lines = stripHtmlComments(content).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
-    const cleaned = line.replace(/^#+\s*/, '').replace(/^[-*]\s+/, '').replace(/\*\*/g, '').trim();
-    if (cleaned.length > 3 && !/^[-=|:]+$/.test(cleaned)) {
+    if (/^[-=]+$/.test(lines[i + 1] ?? '')) { continue; }
+    const cleaned = meaningfulLine(line);
+    if (cleaned) {
       return cleaned.length > 80 ? cleaned.slice(0, 77) + '...' : cleaned;
     }
   }
@@ -205,8 +223,7 @@ function extractSessionTask(session: SquadSession): string | null {
   if (!last) {
     return null;
   }
-  const cleaned = last.content.replace(/\n/g, ' ').trim();
-  return cleaned.length > 80 ? cleaned.slice(0, 77) + '...' : cleaned;
+  return summarizeHistory(last.content);
 }
 
 // ─── Squad Watcher ──────────────────────────────────────────────────
@@ -389,8 +406,10 @@ export class SquadWatcher {
     }
   }
 
-  private emitActivity(agentId: string, task: string | null, source: ActivitySource): void {
-    this.callbacks.onAgentActivity({ agentId, status: 'active', task, source });
+  private emitActivity(agentId: string, task: string | null, source: ActivitySource, filePath: string): void {
+    this.callbacks.onAgentActivity({
+      agentId, status: 'active', task: task ?? `File changed: ${path.basename(filePath)}`, source,
+    });
   }
 
   private onSessionFile(filePath: string, filename: string): void {
@@ -401,7 +420,7 @@ export class SquadWatcher {
     }
     const agentId = session.agent ?? detectAgentFromFilename(filename);
     if (agentId) {
-      this.emitActivity(agentId, extractSessionTask(session), 'session');
+      this.emitActivity(agentId, extractSessionTask(session), 'session', filePath);
     }
   }
 
@@ -409,21 +428,22 @@ export class SquadWatcher {
     const content = safeReadFile(filePath);
     const entry = content ? parseLogEntry(content) : null;
     if (entry?.agent) {
-      this.emitActivity(entry.agent, entry.summary || null, 'log');
+      this.emitActivity(entry.agent, entry.summary || null, 'log', filePath);
     }
   }
 
   private onOrchestrationFile(filePath: string, filename: string): void {
-    const content = safeReadFile(filePath) ?? '';
+    const content = stripHtmlComments(safeReadFile(filePath) ?? '');
     let agentId = detectAgentFromFilename(filename);
-    let task: string | null = /\*\*Task:\*\*\s*(.+)/i.exec(content)?.[1]?.trim() ?? null;
+    const taskField = /\*\*Task:\*\*[ \t]*([^\r\n]*)/i.exec(content)?.[1]?.trim();
+    let task: string | null = taskField ? meaningfulLine(taskField) : null;
     if (!agentId || !task) {
       const entry = parseLogEntry(content);
       agentId = agentId ?? entry?.agent ?? null;
       task = task ?? (entry?.summary || null);
     }
     if (agentId) {
-      this.emitActivity(agentId, task, 'orchestration-log');
+      this.emitActivity(agentId, task, 'orchestration-log', filePath);
     }
   }
 
@@ -432,9 +452,10 @@ export class SquadWatcher {
     if (!agentId) {
       return;
     }
-    const content = safeReadFile(filePath) ?? '';
+    const content = stripHtmlComments(safeReadFile(filePath) ?? '');
     const title = /^#\s+(.+)/m.exec(content)?.[1]?.trim();
-    this.emitActivity(agentId, title ? `Decision: ${title}` : 'Recording a decision', 'decision');
+    const meaningfulTitle = title && !/^(?:decisions?|inbox|history|learnings)\s*$/i.test(title) ? meaningfulLine(title) : null;
+    this.emitActivity(agentId, meaningfulTitle ? `Decision: ${meaningfulTitle}` : summarizeHistory(content), 'decision', filePath);
   }
 
   private onAgentFile(slug: string, filePath: string, filename: string): void {
@@ -442,7 +463,7 @@ export class SquadWatcher {
     if (/^history\.md$/i.test(filename)) {
       task = summarizeHistory(safeReadFile(filePath) ?? '');
     }
-    this.emitActivity(slug, task ?? `Updated ${filename}`, 'agent-files');
+    this.emitActivity(slug, task, 'agent-files', filePath);
   }
 }
 

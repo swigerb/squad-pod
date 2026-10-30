@@ -103,6 +103,8 @@ Open **Telemetry** in the toolbar to browse observed status changes, session act
 
 Squad Pod watches the selected project's `.squad/` files, including the roster, sessions, logs, orchestration logs, decision inbox, and agent files. It uses filesystem notifications with polling as a fallback and treats the initial scan as a baseline rather than replaying old files.
 
+Descriptions inferred from those files are labeled **File activity hint**, not live tasks. HTML comments, structural headings, and empty scaffolding are excluded; a change without meaningful content uses a neutral `File changed: <filename>` hint. File hints clear after 30 seconds without activity. An observed **Live task** takes precedence until its live source finishes or expires; file observations cannot overwrite it. These descriptions never modify the underlying history files.
+
 ## Known limitations
 
 - File-observed activity is approximate. Opt-in live activity uses an undocumented, best-effort Copilot CLI session format, not a supported Squad event API. Unmatched members remain unattributed; stale or missing sessions fall back to file observations. Bounded scans may miss older in-flight members. Context gauges appear only when a live member's tool completion includes context metrics.
