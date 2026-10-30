@@ -122,13 +122,25 @@ async function main() {
       }
     }
     if (!baseline) {
+      const groupLayout = {
+        ...layout, tiles: Array(layout.cols * layout.rows).fill(1),
+        furniture: layout.furniture.filter(item =>
+          item.uid === 'conference-table' || item.uid.startsWith('computer-side-')),
+      };
+      await page.evaluate(groupLayout => window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'layoutLoaded', layout: groupLayout, revision: 'group-open-floor-fixture', source: 'external' },
+      })), groupLayout);
+      await page.waitForFunction(() => window.__conference.state.draft.furniture.length === 5);
       await page.getByRole('button', { name: 'Edit Layout', exact: true }).click();
       await page.getByRole('region', { name: 'Layout editor' }).waitFor();
       await page.getByTitle('Select', { exact: true }).click();
+      await page.waitForTimeout(100);
       const bounds = await page.locator('canvas').boundingBox();
+      // Editing resizes the canvas but preserves its world pan.
+      const editorGeometry = geometry;
       const point = (col, row) => ({
-        x: bounds.x + geometry.x + (col * 16 + 8) * geometry.zoom,
-        y: bounds.y + geometry.y + (row * 16 + 8) * geometry.zoom,
+        x: bounds.x + editorGeometry.x + (col * 16 + 8) * editorGeometry.zoom,
+        y: bounds.y + editorGeometry.y + (row * 16 + 8) * editorGeometry.zoom,
       });
       const from = point(5, 8);
       const to = point(10, 8);
@@ -163,7 +175,10 @@ async function main() {
         .find(item => item.uid === 'conference-table').col === 9);
       assert.deepEqual(await page.evaluate(() => window.__conference.state.draft), saved);
       await page.screenshot({ path: path.join(output, 'after-group-saved-reloaded.png') });
-      result.groupedEditor = { move: true, fourRotations: true, saveBoundary: true, externalReload: true };
+      result.groupedEditor = {
+        fixture: 'Same real table/PC assets in isolated open-floor synthetic layout; default office is unchanged in product and pixel screenshots',
+        move: true, fourRotations: true, saveBoundary: true, externalReload: true,
+      };
     }
     result.passed = true;
     console.log(JSON.stringify(result, null, 2));
