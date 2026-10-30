@@ -45,7 +45,23 @@ const agent = {
   status: oneOf('active', 'idle', 'waiting'), currentTask: nullable(text),
   currentTaskSource: optional(nullable(oneOf('file', 'live'))),
 };
+const runtimeModel = object({
+  model: v => typeof v === 'string' && v.length > 0 && v.length <= 160
+    && v.trim() === v && !/[\x00-\x1f\x7f]/.test(v),
+  kind: oneOf('session-selection', 'assistant-message', 'tool-call', 'subagent-model'),
+  source: oneOf('session.start.selectedModel', 'session.resume.selectedModel', 'session.model_change.newModel',
+    'assistant.message.model', 'tool.execution_complete.model', 'subagent.started.model', 'subagent.configured.model'),
+  timestamp: v => typeof v === 'string' && v.length <= 40
+    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(v)
+    && Number.isFinite(Date.parse(v)),
+});
 const schemas: Record<string, Check> = {
+  liveModels: object({ type: oneOf('liveModels'), snapshot: object({
+    sessionId: nullable(v => typeof v === 'string' && /^[a-zA-Z0-9-]{1,8}$/.test(v)),
+    session: nullable(runtimeModel),
+    members: v => dictionary(runtimeModel, 2048)(v)
+      && Object.keys(v as object).every(key => key.length <= 256),
+  }) }),
   agentToolStart: object({
     type: oneOf('agentToolStart'), agentId: short, tool: short,
     toolId: v => !!taskIdentity(v), status: short,

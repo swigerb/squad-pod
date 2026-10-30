@@ -54,7 +54,8 @@ Squad v1.1.0 exposes no durable hierarchy or authoritative automatic promotion
 contract in the audited roster/config/state surfaces. Those criteria remain
 unsupported; the transient view is not their implementation. A manually edited
 roster remains authoritative but is not evidence that a producer promoted a
-teammate. Issue #111 retains that disposition for user/coordinator approval.
+teammate. The [technical unsupported disposition](https://github.com/swigerb/squad-pod/issues/111#issuecomment-6533950112)
+is recorded on issue #111; native and real-producer acceptance remain separate.
 
 The shared webview supports the same snapshot protocol in any host. Standalone
 live observation is default-off and requires local CLI consent via

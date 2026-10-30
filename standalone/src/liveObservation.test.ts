@@ -66,6 +66,29 @@ function validate(messages: OutboundMessage[]) {
 }
 
 describe('standalone opted-in live observation', () => {
+  it('accepts only bounded authoritative runtime-model observations and their source timestamps', () => {
+    const observation = { model: 'fixture-model', kind: 'session-selection',
+      source: 'session.start.selectedModel', timestamp: '2026-10-30T12:00:00.123456789Z' };
+    const message = { type: 'liveModels', snapshot: {
+      sessionId: 'fixture-', session: observation, members: { 'test-agent-1': {
+        ...observation, kind: 'tool-call', source: 'tool.execution_complete.model',
+      } },
+    } };
+    const decode = (message: object) => decodeEvent(JSON.stringify({ version: 1, kind: 'office', message }));
+    expect(decode(message)).toEqual(message);
+    expect(decode({ type: 'liveModels', snapshot: { sessionId: null, session: null, members: {} } }))
+      .toEqual({ type: 'liveModels', snapshot: { sessionId: null, session: null, members: {} } });
+    for (const invalid of [{ model: 'x'.repeat(161) }, { model: ' fixture-model' }, { model: 'bad\nmodel' },
+      { timestamp: '2026-10-30' }, { timestamp: 'not-a-date' }, { kind: 'configured' },
+      { source: 'task.arguments.model' }, { prompt: secret }]) {
+      expect(() => decode({ ...message, snapshot: { ...message.snapshot,
+        session: { ...observation, ...invalid } } })).toThrow('Invalid server office frame');
+    }
+    expect(() => decode({ ...message, snapshot: { ...message.snapshot,
+      members: Object.fromEntries(Array.from({ length: 2049 }, (_, i) => [`agent-${i}`, observation])) } }))
+      .toThrow('Invalid server office frame');
+  });
+
   it('preserves bounded authoritative transient identities from the shared adapter wire projection', () => {
     const message = { type: 'observedTasks', snapshot: { sessionId: 'fixture', limited: false, tasks: [{
       sessionId: 'fixture', toolCallId: 'call', parentToolCallId: null, name: 'TestBot',
