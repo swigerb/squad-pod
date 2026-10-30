@@ -100,7 +100,7 @@ describe('explicit in-memory file selection', () => {
     const { root, file } = setup();
     const importer = new CliUsageImport();
     expect(importer.refresh(root)).toMatchObject({ state: 'unselected', report: null });
-    expect(importer.select(root, file).report?.premiumRequests).toBe(0.5);
+    expect(importer.select(root, file)).toMatchObject({ state: 'ready', diagnostic: null, report: { premiumRequests: 0.5 } });
     expect(importer.refresh(root).report?.premiumRequests).toBe(0.5);
     const r = raw(); r.totalPremiumRequestCost = 0;
     fs.writeFileSync(file, JSON.stringify(r));

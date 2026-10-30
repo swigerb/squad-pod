@@ -156,7 +156,9 @@ interface Identity { dev: number; ino: number; birthtimeMs: number }
 interface Selection { root: string; rootIdentity: Identity; file: string; identity: Identity }
 
 function identity(stat: fs.Stats): Identity {
-  return { dev: stat.dev, ino: stat.ino, birthtimeMs: stat.birthtimeMs };
+  // Windows path stat can report dev=0 while descriptor stat reports the volume ID.
+  // Canonical root/file binding and rejection of junctions fix the volume separately.
+  return { dev: process.platform === 'win32' ? 0 : stat.dev, ino: stat.ino, birthtimeMs: stat.birthtimeMs };
 }
 
 function sameIdentity(a: Identity, b: Identity): boolean {
