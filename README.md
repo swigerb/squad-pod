@@ -17,6 +17,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Team auto-discovery** — reads your `.squad/team.md` roster (or a legacy `.ai-team/team.md`) and spawns a character for every agent, no setup needed. In multi-root workspaces it picks the folder that contains Squad.
 - **One agent, one character** — Homer gets a desk, Lisa gets a desk, everyone gets a desk. Adding or removing roster members updates the office live.
 - **Live activity tracking** — watches Squad's sessions, logs, orchestration log, decision inbox, and per-agent folders to animate the right character when real work happens (see [File Watching & Activity Detection](#file-watching--activity-detection))
+- **Reading animation** — an explicit supported tool name selects supplied reading sprites instead of typing sprites. The bundled employee PNG sheets have no reading frames, so that pose uses inline sprite templates; the generated fallback reuses typing art until a template supplies dedicated reading frames. The current provider does not emit tool metadata, and reading cannot be observed live yet.
 - **Stable look and seats** — each member keeps the same appearance and desk across reloads; reopening the panel restores the whole office without duplicating anyone
 - **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
 - **Recorded usage / model history** — the same telemetry drawer passively reads a bounded local Squad usage ledger, with freshness, coverage and explicit partial/unavailable states; historical reports never drive activity or chimes.
@@ -26,7 +27,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Manifest furniture and live imports** — verified original Pixel Agents furniture/floors/walls; Settings can load local furniture manifests and pick up edits without restarting VS Code.
 - **Explicit directory launches** — manage named directories and open `copilot --agent squad` in a new terminal at the selected working directory; no automatic launch.
 - **Speech bubbles** — visual indicators when an agent needs your attention
-- **Sound notifications** — optional chime when a file-observed active member returns to idle (not proof of task completion; turn it off in Settings if you're in a meeting)
+- **Sound notifications** — optional two-note chime on an `active` → non-active status transition. The current file observer reports active/idle only; waiting is not a live producer event. Audio stays silent until the persisted preference loads, and muting cancels already scheduled notes. The chime is not proof of task completion; turn it off in Settings if you're in a meeting.
 - **Persistent layouts** — your office design is saved and shared across VS Code windows
 - **6 distinct characters** — two bundled character sheets, color-shifted into six looks (more members cycle through further hue shifts), no external assets required
 - **Desk-as-directory** — click any occupied desk to see the agent's charter summary, current task, and recent activity

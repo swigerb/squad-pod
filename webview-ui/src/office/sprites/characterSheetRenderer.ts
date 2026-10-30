@@ -11,6 +11,8 @@
  *
  * Each row contains multiple animation frames laid out side-by-side.
  * Background is pre-removed during asset loading (see assetLoader.ts).
+ * The bundled employee sheets contain only walk-cycle frames; reading
+ * artwork, when supplied, is rendered from the inline sprite template.
  */
 
 import { getCharacterSheet } from './assetLoader.js';

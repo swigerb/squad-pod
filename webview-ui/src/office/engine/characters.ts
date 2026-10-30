@@ -95,8 +95,7 @@ export function updateCharacter(
   switch (ch.state) {
     case CharacterState.TYPE: {
       ch.frameTimer += dt;
-      const frameDur = isReadingTool(ch.tool) ? TYPE_FRAME_DURATION_SEC : TYPE_FRAME_DURATION_SEC;
-      if (ch.frameTimer >= frameDur) {
+      if (ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
         ch.frameTimer = 0;
         ch.frameIndex = (ch.frameIndex + 1) % 2;
       }
