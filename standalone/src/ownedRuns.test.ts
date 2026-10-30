@@ -52,7 +52,7 @@ describe('owned native PTY (no Windows skip)', () => {
     const text = async () => (await history.snapshot(0)).frames.map(frame => frame.data).join('');
     await until(async () => (await text()).includes('"ready":true'), 'native fixture ready');
     let output = await text();
-    expect(output).toContain(JSON.stringify(project));
+    expect(output).toContain(JSON.stringify(await realpath(project)));
     expect(output).toContain(JSON.stringify(['argument with spaces', 'literal"quote', 'trailing\\']));
     expect(output).toContain('\u00e9\u4e2d\ud83d\ude80');
     await runtime.command({ version: 1, type: 'resize', runId: info.runId, cols: 101, rows: 37 });
