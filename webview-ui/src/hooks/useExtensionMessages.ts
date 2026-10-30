@@ -13,7 +13,7 @@ import {
   type AgentStatus,
 } from '../office/engine/agentSync.js';
 import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
-import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/types.js';
+import type { DirectoryCatalog, LiveModelSnapshot, PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 import type { ObservedTaskSnapshot } from '../../../src/observedTasks.js';
@@ -66,6 +66,7 @@ function isAgentActivityMessage(message: OutboundMessage): message is AgentActiv
 
 export interface ExtensionMessageState {
   observedTasks: ObservedTaskSnapshot | null;
+  liveModels: LiveModelSnapshot | null;
   recordedUsage: RecordedUsageSnapshot | null;
   assetStatus: Pick<AssetSnapshot, 'directories' | 'diagnostics'>;
   settings: PodSettings;
@@ -102,6 +103,7 @@ export function useExtensionMessages(
 ): ExtensionMessageState {
   const client = useHostClient();
   const [observedTasks, setObservedTasks] = useState<ObservedTaskSnapshot | null>(null);
+  const [liveModels, setLiveModels] = useState<LiveModelSnapshot | null>(null);
   const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [legacyAssetDiagnostics, setLegacyAssetDiagnostics] = useState<Record<string, string>>({});
@@ -243,6 +245,16 @@ export function useExtensionMessages(
         case 'observedTasks':
           setObservedTasks(message.snapshot);
           break;
+        case 'liveModels': {
+          const liveActivity = sourceStatusRef.current?.liveActivity;
+          if (liveActivity?.state !== 'following'
+            || message.snapshot.sessionId !== liveActivity.sessionId) {
+            setLiveModels(null);
+            break;
+          }
+          setLiveModels(message.snapshot);
+          break;
+        }
         case 'recordedUsage':
           setRecordedUsage(message.snapshot);
           break;
@@ -537,6 +549,8 @@ export function useExtensionMessages(
         }
 
         case 'sourceStatus': {
+          const previousLiveSession = sourceStatusRef.current?.liveActivity?.sessionId;
+          const nextLiveSession = message.status.liveActivity?.sessionId;
           if (sourceStatusRef.current?.workspaceRoot !== message.status.workspaceRoot) {
             agentsRef.current = [];
             statusesRef.current = {};
@@ -551,10 +565,17 @@ export function useExtensionMessages(
             setAgentDetail(null);
             setSquadInfo(null);
             requestedAgentDetailsRef.current.clear();
+            setLiveModels(null);
+          }
+          if (previousLiveSession !== nextLiveSession) {
+            setLiveModels(null);
           }
           sourceStatusRef.current = message.status;
           setSourceStatus(message.status);
-          if (message.status.liveActivity?.state !== 'following') { setObservedTasks(null); }
+          if (message.status.liveActivity?.state !== 'following') {
+            setObservedTasks(null);
+            setLiveModels(null);
+          }
           setNoWorkspace(message.status.workspaceRoot === null);
           break;
         }
@@ -667,6 +688,7 @@ export function useExtensionMessages(
 
   return {
     observedTasks,
+    liveModels,
     recordedUsage,
     assetStatus: { ...assetStatus, diagnostics: [...assetStatus.diagnostics, ...Object.values(legacyAssetDiagnostics)] },
     settings,

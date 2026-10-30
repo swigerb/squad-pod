@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react';
+import type { LiveSourceStatus, RuntimeModelObservation } from '../../../src/types.js';
+import { liveModelUnavailableReason, RuntimeModelStatus } from './RuntimeModelStatus.js';
 
 /** Agent detail info received from the extension */
 export interface AgentDetailInfo {
@@ -25,6 +27,9 @@ interface AgentCardProps {
   position: { x: number; y: number } | null;
   onClose: () => void;
   onViewCharter?: (agentId: string) => void;
+  runtimeModel?: RuntimeModelObservation | null;
+  liveActivity?: LiveSourceStatus;
+  readOnly?: boolean;
 }
 
 function formatRelativeTime(timestamp: number): string {
@@ -43,7 +48,9 @@ function formatRelativeTime(timestamp: number): string {
   return `${hours} hour${hours > 1 ? 's' : ''} ago`;
 }
 
-export function AgentCard({ detail, position, onClose, onViewCharter }: AgentCardProps) {
+export function AgentCard({
+  detail, position, onClose, onViewCharter, runtimeModel, liveActivity, readOnly = false,
+}: AgentCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({ width: window.innerWidth, height: window.innerHeight, cardHeight: 0 });
 
@@ -211,6 +218,14 @@ export function AgentCard({ detail, position, onClose, onViewCharter }: AgentCar
           </div>
         </div>
       )}
+
+      <div style={{ marginBottom: '12px', overflowWrap: 'anywhere' }}>
+        <RuntimeModelStatus
+          label="Member runtime model"
+          observation={runtimeModel}
+          unavailableReason={liveModelUnavailableReason(liveActivity, readOnly)}
+        />
+      </div>
 
       {/* Recent activity */}
       {detail.recentActivity.length > 0 && (
