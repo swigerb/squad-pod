@@ -94,7 +94,7 @@ export function useExtensionMessages(
   const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [legacyAssetDiagnostics, setLegacyAssetDiagnostics] = useState<Record<string, string>>({});
-  const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false, showAreas: false });
+  const [settings, setSettings] = useState<PodSettings>({ soundEnabled: false, debugEnabled: false, showAreas: false });
   const [sourceStatus, setSourceStatus] = useState<SourceStatus | null>(null);
   const [directoryCatalog, setDirectoryCatalog] = useState<DirectoryCatalog | null>(null);
   const [directoryError, setDirectoryError] = useState<string | null>(null);
@@ -113,6 +113,7 @@ export function useExtensionMessages(
   const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
   const bufferedAgentsRef = useRef<AgentSnapshot[] | null>(null);
   const bufferedActivityMessagesRef = useRef<AgentActivityMessage[]>([]);
+  const soundSettingsLoadedRef = useRef(false);
   const statusesRef = useRef<Record<string, string>>({});
   const agentsRef = useRef<string[]>([]);
   const layoutReadyRef = useRef(false);
@@ -125,7 +126,7 @@ export function useExtensionMessages(
   const clearTelemetry = useCallback(() => setTelemetryEvents([]), []);
   const updateSetting = useCallback((setting: keyof PodSettings, enabled: boolean) => {
     setSettings((prev) => ({ ...prev, [setting]: enabled }));
-    if (setting === 'soundEnabled') setSoundEnabled(enabled);
+    if (setting === 'soundEnabled' && soundSettingsLoadedRef.current) setSoundEnabled(enabled);
     const type = setting === 'soundEnabled' ? 'setSoundEnabled'
       : setting === 'debugEnabled' ? 'setDebugEnabled' : 'setShowAreas';
     client.send({ type, enabled });
@@ -422,6 +423,7 @@ export function useExtensionMessages(
         }
 
         case 'settingsLoaded': {
+          soundSettingsLoadedRef.current = true;
           setSettings({
             soundEnabled: message.soundEnabled,
             debugEnabled: message.debugEnabled,
@@ -456,7 +458,7 @@ export function useExtensionMessages(
         }
 
         case 'soundEnabled': {
-          setSoundEnabled(message.enabled ?? true);
+          if (soundSettingsLoadedRef.current) setSoundEnabled(message.enabled);
           break;
         }
 

@@ -11,6 +11,17 @@
   "main": "./dist/extension.js",
   "activationEvents": [],
   "contributes": {
+    "configuration": {
+      "title": "Squad Pod",
+      "properties": {
+        "squad-pod.autoShowPanel": {
+          "type": "boolean",
+          "default": false,
+          "scope": "window",
+          "description": "Focus the Squad Pod panel once when the extension activates. Does not launch Squad, a terminal, or any process. Changes take effect on the next extension activation."
+        }
+      }
+    },
     "commands": [
       {
         "command": "squad-pod.showPanel",
