@@ -28,11 +28,13 @@ export function createBrowserClient(
     const current = createSocket(url.href);
     socket = current;
     current.onopen = () => {
+      if (disposed || socket !== current) return;
       delay = 500;
       status('Connected - read-only');
       if (requested) current.send(encode({ type: 'webviewReady' }));
     };
     current.onmessage = event => {
+      if (disposed || socket !== current) return;
       try {
         if (typeof event.data !== 'string') throw new Error('Expected text office frame.');
         const message = decodeEvent(event.data);
@@ -46,9 +48,12 @@ export function createBrowserClient(
         current.close(1002, 'Invalid server frame');
       }
     };
-    current.onerror = () => status('Connection failed - authenticate again if the credential was revoked');
+    current.onerror = () => {
+      if (!disposed && socket === current) status('Connection failed - authenticate again if the credential was revoked');
+    };
     current.onclose = () => {
-      if (socket === current) socket = undefined;
+      if (socket !== current) return;
+      socket = undefined;
       if (disposed || !listeners.size) return;
       status('Disconnected - retrying observation only; authenticate again after rotation');
       retry = setTimeout(connect, delay);
@@ -60,7 +65,13 @@ export function createBrowserClient(
     retry = undefined;
     const current = socket;
     socket = undefined;
-    if (current) { current.onclose = null; current.close(); }
+    if (current) {
+      current.onopen = null;
+      current.onmessage = null;
+      current.onerror = null;
+      current.onclose = null;
+      current.close();
+    }
   }
   return {
     send(message) {

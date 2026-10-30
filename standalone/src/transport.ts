@@ -283,7 +283,8 @@ export async function startTransport(options: TransportOptions): Promise<{
       pending = [];
       queued = 0;
       cleanups.delete(ws);
-      try { unsubscribe?.(); } catch { /* Subscriber teardown must not leak sockets. */ }
+      try { unsubscribe?.(); }
+      catch { console.error('Observer subscription cleanup failed; socket was closed.'); }
     };
     const stop = () => { cleanup(); ws.terminate(); };
     const heartbeat = setInterval(() => {
