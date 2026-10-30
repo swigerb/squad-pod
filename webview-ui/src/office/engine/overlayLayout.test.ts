@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AnnotationLayout, OverlayLayout, type LabelBox } from './overlayLayout.js';
+import { AnnotationLayout } from './overlayLayout.js';
 
 describe('ordered character annotation projection', () => {
   it('keeps full measured stacks disjoint through horizontal and vertical crossings', () => {
@@ -40,42 +40,22 @@ describe('ordered character annotation projection', () => {
   });
 });
 
-describe('persistent production overlay layout', () => {
-  it('does not repack a settled collision lane when a neighbor leaves, and forgets removed identities', () => {
-    const layout = new OverlayLayout();
-    let occupied: LabelBox[] = [];
-    layout.begin();
-    layout.place('first', 180, 300, 100, 28, 360, 800, occupied, 0);
-    const second = layout.place('second', 180, 300, 100, 28, 360, 800, occupied, 0);
-    layout.end();
-    expect(second.top).toBe(268);
-    layout.begin();
-    occupied = [];
-    expect(layout.place('second', 180, 300, 100, 28, 360, 800, occupied, 100).top).toBe(268);
-    layout.end();
-    layout.begin();
-    layout.end();
-    layout.begin();
-    expect(layout.place('second', 180, 300, 100, 28, 360, 800, [], 200).top).toBe(300);
-  });
-
-  it('bounds new collision lane movement after a long suspended frame', () => {
-    const layout = new OverlayLayout();
-    layout.begin();
-    layout.place('label', 180, 300, 100, 28, 360, 800, [], 0);
-    layout.end();
-    layout.begin();
-    const occupied = [{ left: 100, top: 100, width: 200, height: 300 }];
-    const box = layout.place('label', 180, 300, 100, 28, 360, 800, occupied, 60_000);
-    expect(Math.abs(box.top - 300)).toBeLessThanOrEqual(12);
-  });
-
-  it('does not remember viewport clamping as a distant character-relative lane', () => {
-    const layout = new OverlayLayout();
-    layout.begin();
-    expect(layout.place('label', 200, 2000, 100, 28, 360, 600, [], 0).top).toBe(568);
-    layout.end();
-    layout.begin();
-    expect(layout.place('label', 200, 300, 100, 28, 360, 600, [], 100).top).toBe(300);
+describe('shared member and transient projection', () => {
+  it('separates the exact new-parent collision instead of smoothing a transient back into occupied text', () => {
+    const layout = new AnnotationLayout();
+    const subtask = { id: 'subtask:test', x: 100, y: 100, width: 80, height: 20 };
+    expect(layout.place([subtask], 360, 800).boxes.get(subtask.id)?.top).toBe(100);
+    const parent = { ...subtask, id: 'member:test' };
+    const otherTask = { ...subtask, id: 'subtask:other' };
+    for (let tick = 0; tick < 100; tick++) {
+      subtask.y = 100 + Math.sin(tick / 10) * 20;
+      parent.height = tick % 2 ? 80 : 20; // New measured tool/context footprint.
+      otherTask.height = tick % 3 ? 20 : 60; // Wrapping transient description.
+      const { boxes, docked } = layout.place([subtask, parent, otherTask], 360, 800);
+      expect(docked).toBe(false);
+      const values = [...boxes.values()];
+      values.forEach((box, i) => values.slice(i + 1).forEach(other =>
+        expect(box.top + box.height <= other.top || other.top + other.height <= box.top).toBe(true)));
+    }
   });
 });

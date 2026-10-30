@@ -19,7 +19,7 @@ const entry = `
 import React, { useState } from ${JSON.stringify(require.resolve('react', { paths: [path.join(root, 'webview-ui')] }))};
 import { createRoot } from ${JSON.stringify(require.resolve('react-dom/client', { paths: [path.join(root, 'webview-ui')] }))};
 import { AgentLabels } from ${source('components/AgentLabels.tsx')};
-import { ToolOverlay } from ${source('office/components/ToolOverlay.tsx')};
+/* baseline-tool-import */
 import { ZoomControls } from ${source('components/ZoomControls.tsx')};
 import { OfficeCanvas } from ${source('office/components/OfficeCanvas.tsx')};
 import { OfficeState } from ${source('office/engine/officeState.ts')};
@@ -28,6 +28,7 @@ import { HostClientProvider } from ${source('HostClientContext.tsx')};
 import { getCharacterScreenBounds } from ${source('office/engine/characterGeometry.ts')};
 import { setContextUsage } from ${source('office/toolUtils.ts')};
 import { CharacterState } from ${source('office/types.ts')};
+import { createCharacter } from ${source('office/engine/characters.ts')};
 const office = new OfficeState({version:2,cols:21,rows:15,tiles:Array(315).fill(1),furniture:[]});
 const pan = {current:{x:0,y:0}}, editor = new EditorState(), sent = [];
 const client = {send: m=>sent.push(m), subscribe:()=>()=>{}, getState:()=>undefined, setState:s=>s};
@@ -37,6 +38,7 @@ for(let i=0;i<8;i++){
   office.addAgent(id,'Member '+i+' Full Name','Developer');
   tools[id] = [{toolId:'read-'+i,status:'Read complete tool description',done:false}];
 }
+/* transient-fixture */
 let currentZoom = 3;
 const initialLayout = JSON.stringify(office.layout);
 function Fixture(){
@@ -51,29 +53,45 @@ function Fixture(){
          y:(innerHeight/2+Math.sin(t/1100+i)*24-pan.current.y)/zoom,
          state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
      }
+     for(const {character:c} of office.subagents.values()) c.wanderTimer=1000;
    },
    sample(){
-     return [...document.querySelectorAll('[data-agent-label]')].map(e=>{
-       const id=e.dataset.agentLabel,c=office.characters.get(id);
+     return [...document.querySelectorAll('[data-agent-label], [data-subagent-label]')].map(e=>{
+       const id=e.dataset.agentLabel||e.dataset.subagentLabel;
+       const c=e.dataset.subagentLabel?office.subagents.get(id).character:office.characters.get(id);
        const r=(e.closest('[data-agent-annotation]')||e).getBoundingClientRect();
        const b=getCharacterScreenBounds(c,currentZoom,pan.current);
        return {id,x:r.x,y:r.y,width:r.width,height:r.height,anchor:b.top-14,
          world:{x:c.x,y:c.y},pan:{...pan.current},zoom:currentZoom,offscreen:e.textContent.includes('Off-screen'),
-         text:e.textContent,connector:!!document.querySelector('[data-agent-connector="'+id+'"]')};
+         text:e.textContent,transient:!!e.dataset.subagentLabel,
+         connector:!!document.querySelector('[data-'+(e.dataset.subagentLabel?'subagent':'agent')+'-connector="'+id+'"]')};
      });
    },
    active(){
      office.setAgentActive('member-0',true); office.setAgentTool('member-0','Read file');
      setContextUsage(office,'member-0',{contextTokens:600,maxContextTokens:1000});
    },
+   resizeText(t){
+     for(const [id,{character:c}] of office.subagents) {
+       c.name=t%2?'Short task '+id:'Long transient task description that wraps to several lines '+id;
+     }
+     office.setAgentActive('member-0',t%2===0);
+     office.setAgentTool('member-0','Read file with a measured tool footprint');
+   },
+   isolateTarget(){
+     for(let i=0;i<8;i++) Object.assign(office.characters.get('member-'+i),{
+       x:i===7?168:16+i*16,y:i===7?120:16,state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
+   },
+   bounds(id){ return getCharacterScreenBounds(office.characters.get(id),currentZoom,pan.current); },
    unchanged:()=>JSON.stringify(office.layout)===initialLayout
  };
  return <HostClientProvider client={client}>
    <OfficeCanvas officeState={office} editorState={editor} isEditMode={false} editorTick={0}
-     zoom={zoom} onZoomChange={setZoom} panRef={pan} cameraRequest={request}/>
+     zoom={zoom} onZoomChange={setZoom} panRef={pan} cameraRequest={request}
+     onDeskClick={id=>window.lastCanvasDetail=id}/>
    <AgentLabels officeState={office} zoom={zoom} panRef={pan} agentTools={tools}
      onAgentClick={id=>window.lastDetail=id} onLocateAgent={agentId=>setRequest({id:Date.now(),agentId})}/>
-   <ToolOverlay officeState={office} zoom={zoom} panRef={pan} agentTools={tools}/>
+   {/* baseline-tool-render */}
    <ZoomControls zoom={zoom} onZoomChange={setZoom} onFitOffice={()=>setRequest({id:Date.now()})}/>
  </HostClientProvider>;
 }
@@ -88,10 +106,28 @@ async function main() {
     node: process.version, cases: [], errors: [] };
   try {
     for (const variant of ['baseline', 'current']) {
-      await build({ stdin: { contents: entry, loader: 'tsx', resolveDir: root }, bundle: true,
+      const contents = entry.replace('/* baseline-tool-import */', variant === 'baseline'
+        ? "import { ToolOverlay } from 'frozen-tool-overlay';" : '')
+        .replace('{/* baseline-tool-render */}', variant === 'baseline'
+          ? '<ToolOverlay officeState={office} zoom={zoom} panRef={pan} agentTools={tools}/>' : '')
+        .replace('/* transient-fixture */', variant === 'current' ? `
+          for(let i=0;i<2;i++){
+            const id='task-'+i, character=createCharacter(id,'Test subtask '+i,'Ephemeral',0,null,null,0);
+            character.wanderTimer=1000;
+            office.subagents.set(id,{character,parentAgentId:'member-'+i});
+          }` : '');
+      await build({ stdin: { contents, loader: 'tsx', resolveDir: root }, bundle: true,
         outfile: path.join(output, variant + '.js'), platform: 'browser', format: 'esm', jsx: 'automatic',
         plugins: variant === 'baseline' ? [{ name: 'frozen-overlay-baseline', setup(b) {
-          b.onLoad({ filter: /(?:AgentLabels|ToolOverlay)\.tsx$/ }, args => ({
+          b.onResolve({ filter: /^frozen-tool-overlay$/ }, () => ({
+            path: 'frozen-tool-overlay', namespace: 'baseline',
+          }));
+          b.onLoad({ filter: /.*/, namespace: 'baseline' }, () => ({
+            contents: execFileSync('git', ['show', `${baseline}:webview-ui/src/office/components/ToolOverlay.tsx`],
+              { cwd: root, encoding: 'utf8' }), loader: 'tsx',
+            resolveDir: path.join(root, 'webview-ui', 'src', 'office', 'components'),
+          }));
+          b.onLoad({ filter: /AgentLabels\.tsx$/ }, args => ({
             contents: execFileSync('git', ['show', `${baseline}:${path.relative(root, args.path).replaceAll('\\', '/')}`],
               { cwd: root, encoding: 'utf8' }),
             loader: 'tsx', resolveDir: path.dirname(args.path),
@@ -163,12 +199,32 @@ async function main() {
         if (scenario.variant === 'current') {
           assert.equal(record.jumpsOver50, 0, 'lane residual must not jump over50 CSSpx/100ms');
           assert.equal(record.maxCameraStep, 0, 'fixture must isolate lane motion from camera movement');
+          assert.equal(await page.locator('[data-subagent-label]').count(), 2);
+          record.transientCount = 2;
+          record.measurementChanges = await page.evaluate(async () => {
+            const samples=[];
+            for(let tick=0;tick<36;tick++){
+              window.fixture.resizeText(tick);
+              // Observe after React's before-paint measurement pass, on every
+              // browser frame, not only after a lane has had time to settle.
+              await new Promise(resolve=>requestAnimationFrame(resolve));
+              const labels=window.fixture.sample();
+              const overlaps=labels.some((a,i)=>labels.slice(i+1).some(b=>
+                a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y));
+              samples.push({tick,labels,overlaps});
+            }
+            return samples;
+          });
+          assert.ok(record.measurementChanges.every(sample => !sample.overlaps),
+            'member/subtask and subtask/subtask footprints must separate through frame-by-frame measurement changes');
           await page.evaluate(() => { window.fixture.pan.current.x = -4000; });
           await page.waitForTimeout(150);
           assert.ok(await page.locator('[data-agent-label]').first().textContent().then(t => t.includes('Off-screen')));
           await page.getByRole('button', { name: 'Locate Member 0 Full Name', exact: true }).focus();
           await page.keyboard.press('Enter');
           await page.waitForTimeout(150);
+          const reopen = page.getByRole('button', { name: 'Show office labels', exact: true });
+          if (await reopen.count()) await reopen.click();
           assert.ok(!(await page.locator('[data-agent-label]').first().textContent()).includes('Off-screen'));
           await page.getByRole('button', { name: 'Fit and center office' }).click();
           await page.waitForTimeout(150);
@@ -187,7 +243,31 @@ async function main() {
           await page.evaluate(() => window.fixture.active());
           await page.waitForTimeout(200);
           assert.equal(await page.getByRole('progressbar').getAttribute('aria-valuenow'), '60');
-          record.crowded = 'explicit scrollable list; keyboard member details and context preserved';
+          await page.evaluate(() => window.fixture.isolateTarget());
+          await page.waitForTimeout(100);
+          await page.getByRole('button', { name: 'Locate Member 7 Full Name', exact: true }).focus();
+          await page.keyboard.press('Enter');
+          await page.waitForTimeout(200);
+          // Read production geometry through the fixture, not a guessed center point.
+          record.locatedTarget = await page.evaluate(() => {
+            const bounds=window.fixture.bounds('member-7');
+            const x=(bounds.left+bounds.right)/2,y=(bounds.top+bounds.bottom)/2;
+            return {x,y,bounds, visibleLabels:
+              [...document.querySelectorAll('[data-agent-annotation]')].filter(e=>getComputedStyle(e).visibility!=='hidden').length,
+              topElement:document.elementFromPoint(x,y)?.tagName};
+          });
+          assert.ok(record.locatedTarget.bounds.left >= 0 && record.locatedTarget.bounds.right <= 360
+            && record.locatedTarget.bounds.top >= 0 && record.locatedTarget.bounds.bottom <= 280,
+          'located target must be wholly visible in the crowded narrow viewport');
+          assert.equal(record.locatedTarget.visibleLabels, 0, 'Locate must collapse the dock and reveal the target');
+          assert.equal(record.locatedTarget.topElement, 'CANVAS', 'located character must be pointer-accessible');
+          assert.equal(await page.getByRole('button', { name: 'Show office labels', exact: true })
+            .evaluate(element => element === document.activeElement), true, 'keyboard focus returns to reopen control');
+          await page.mouse.click(record.locatedTarget.x, record.locatedTarget.y);
+          assert.equal(await page.evaluate(() => window.lastCanvasDetail), 'member-7');
+          await page.getByRole('button', { name: 'Show office labels', exact: true }).click();
+          assert.equal(await page.getByRole('button', { name: 'Hide office labels', exact: true }).getAttribute('aria-expanded'), 'true');
+          record.crowded = 'Locate collapses list; target exposed and canvas-clickable; keyboard focus on reopen control';
         }
       } finally { await context.close(); }
     }

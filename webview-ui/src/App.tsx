@@ -2,7 +2,6 @@ import './index.css';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { OfficeState } from './office/engine/officeState.js';
 import { OfficeCanvas } from './office/components/OfficeCanvas.js';
-import { ToolOverlay } from './office/components/ToolOverlay.js';
 import { AgentLabels } from './components/AgentLabels.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ZoomControls } from './components/ZoomControls.js';
@@ -449,11 +448,6 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
         onShowAreasChange={(enabled) => updateSetting('showAreas', enabled)} />}
 
-      <ToolOverlay
-        officeState={getOfficeState()}
-        zoom={editor.zoom}
-        panRef={editor.panRef}
-      />
 
       {isDebugMode && (
         <DebugView

@@ -11,6 +11,7 @@ import { HostClientProvider } from '../HostClientContext.js';
 import { createHostClientFixture } from '../__tests__/hostClientFixture.js';
 import { setContextUsage } from '../office/toolUtils.js';
 import { getCharacterScreenBounds } from '../office/engine/characterGeometry.js';
+import { createCharacter } from '../office/engine/characters.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -251,6 +252,82 @@ describe('AgentLabels over canvas characters', () => {
     office.setAgentActive('homer', false);
     frame();
     expect(host.querySelector('[data-agent-context="homer"]')).toBeNull();
+  });
+
+  it('projects member/subtask and subtask/subtask footprints together through motion and measurement changes', () => {
+    let taskHeight = 20;
+    let memberHeight = 20;
+    vi.stubGlobal('innerHeight', 1000);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 80 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation?.startsWith('subtask:') ? taskHeight
+        : this.dataset.agentAnnotation ? memberHeight : 0;
+    });
+    for (const id of ['homer', 'test-child']) {
+      const character = createCharacter(id, `Test task ${id}`, 'Ephemeral', 0, null, null, 0);
+      Object.assign(character, { x: 80, y: 100 });
+      office.subagents.set(id, { character, parentAgentId: 'homer' });
+    }
+    render();
+    for (let tick = 0; tick < 100; tick++) {
+      taskHeight = tick % 2 ? 80 : 20;
+      memberHeight = tick % 3 ? 20 : 100;
+      office.characters.get('homer')!.x = 80 + Math.sin(tick / 10) * 20;
+      office.subagents.get('homer')!.character.y = 100 + Math.sin(tick / 10) * 20;
+      frame();
+      const annotations = [...host.querySelectorAll<HTMLElement>('[data-agent-annotation]')];
+      expect(annotations).toHaveLength(4); // Member and transient with identical IDs remain distinct.
+      annotations.forEach((element, index) => {
+        const top = parseFloat(element.style.top);
+        annotations.slice(index + 1).forEach(other => {
+          const otherTop = parseFloat(other.style.top);
+          expect(top + element.offsetHeight <= otherTop || otherTop + other.offsetHeight <= top).toBe(true);
+        });
+      });
+      expect(host.querySelectorAll('[data-subagent-label]')).toHaveLength(2);
+      expect(host.querySelector('[data-subagent-label="test-child"]')?.textContent).toContain('Parent: Homer Simpson');
+      expect(host.querySelector('[data-label-dock="true"]')).toBeNull();
+    }
+    office.subagents.clear();
+    frame();
+    expect(host.querySelector('[data-subagent-label]')).toBeNull();
+  });
+
+  it('collapses a crowded dock on Locate, moves keyboard focus to reopen, and keeps hidden labels out of the way', () => {
+    vi.stubGlobal('innerWidth', 360);
+    vi.stubGlobal('innerHeight', 280);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 150 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 100 : 0;
+    });
+    const locate = vi.fn();
+    act(() => root.render(<AgentLabels officeState={office} zoom={3} panRef={panRef}
+      onAgentClick={onAgentClick} onLocateAgent={locate} />));
+    frame();
+    const dock = host.querySelector<HTMLElement>('[data-label-dock="true"]')!;
+    expect(dock).not.toBeNull();
+    const button = host.querySelector<HTMLButtonElement>('[aria-label="Locate Homer Simpson"]')!;
+    button.focus();
+    act(() => button.click());
+    expect(locate).toHaveBeenCalledExactlyOnceWith('homer');
+    expect(dock.style.visibility).toBe('hidden');
+    for (const annotation of host.querySelectorAll<HTMLElement>('[data-agent-annotation]')) {
+      expect(getComputedStyle(annotation).visibility).toBe('hidden');
+    }
+    const toggle = [...host.querySelectorAll('button')].find(item => item.textContent === 'Show office labels')!;
+    expect(document.activeElement).toBe(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    frame();
+    expect(dock.style.visibility).toBe('hidden'); // RAF/resize must not reopen behind the user's choice.
+    act(() => toggle.click());
+    expect(dock.style.visibility).toBe('');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    act(() => label().click());
+    expect(onAgentClick).toHaveBeenCalledOnce();
   });
 
   it.each([1.5, 2])('marks off-screen names honestly and offers keyboard Locate at DPR %s', (dpr) => {
