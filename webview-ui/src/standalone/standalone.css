@@ -36,7 +36,7 @@ html, body, #root { height: 100%; margin: 0; }
 .terminal-notice { margin: 4px 12px; overflow-wrap: anywhere; }
 .observer-pages-track { transition: transform 180ms ease-out; }
 @media (max-width: 700px), (pointer: coarse) {
-  html, body, #root { overflow: hidden; }
+  html, body, #root { overflow: hidden; overscroll-behavior-x: none; }
   .observer-shell { height: 100dvh; min-height: 0; overflow: hidden; }
   .observer-shell > header { flex: none; padding: 6px 8px; gap: 8px; }
   .observer-shell > header strong { font-size: 14px; }
