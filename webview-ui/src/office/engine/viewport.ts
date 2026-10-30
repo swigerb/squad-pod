@@ -1,5 +1,13 @@
 export interface Point { x: number; y: number }
 export interface Size { width: number; height: number }
+export interface CameraRequest { id: number; agentId?: string }
+
+/** CSS-pixel framing is independent of the canvas backing-store DPR. */
+export function fitOffice(view: Size, world: Size, minZoom: number, maxZoom: number): { zoom: number; pan: Point } {
+  const zoom = Math.max(minZoom, Math.min(maxZoom,
+    Math.floor(Math.min(Math.max(1, view.width - 64) / world.width, Math.max(1, view.height - 96) / world.height))));
+  return { zoom, pan: { x: (view.width - world.width * zoom) / 2, y: (view.height - world.height * zoom) / 2 } };
+}
 
 /**
  * Pan range for one axis. A map that fits the viewport stays fully inside it.

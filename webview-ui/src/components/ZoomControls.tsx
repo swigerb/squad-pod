@@ -4,9 +4,10 @@ import { ZOOM_MIN, ZOOM_MAX, ZOOM_LEVEL_FADE_DELAY_MS, ZOOM_LEVEL_HIDE_DELAY_MS,
 interface ZoomControlsProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  onFitOffice?: () => void;
 }
 
-export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
+export function ZoomControls({ zoom, onZoomChange, onFitOffice }: ZoomControlsProps) {
   const [showZoomLevel, setShowZoomLevel] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
 
@@ -55,6 +56,12 @@ export function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) {
       }}
     >
       <div className="zoom-buttons" style={{ display: 'flex', gap: '4px' }}>
+        {onFitOffice && <button type="button" aria-label="Fit and center office"
+          title="Fit and center office (large layouts use minimum zoom)" onClick={onFitOffice}
+          style={{ height: 32, padding: '0 8px', background: 'var(--vscode-button-background)',
+            color: 'var(--vscode-button-foreground)', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+          Fit office
+        </button>}
         <button
           aria-label="Zoom in"
           onClick={handleZoomIn}

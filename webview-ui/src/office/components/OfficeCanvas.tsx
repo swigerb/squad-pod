@@ -9,7 +9,7 @@ import { getFurnitureFootprint } from '../layout/layoutManager.js';
 import { getCatalogEntry } from '../layout/furnitureCatalog.js';
 import { startGameLoop } from '../engine/gameLoop.js';
 import { renderFrame } from '../engine/renderer.js';
-import { clampPanOffset, zoomPanAroundAnchor } from '../engine/viewport.js';
+import { clampPanOffset, fitOffice, zoomPanAroundAnchor, type CameraRequest } from '../engine/viewport.js';
 import { officePanStep, pinchZoom, type OfficePanAnchor, type Point } from '../../mobile/touchDecisions.js';
 import {
   updateCharacter,
@@ -22,6 +22,8 @@ import {
   TILE_SIZE,
   PAN_MARGIN_FRACTION,
   ZOOM_SCROLL_THRESHOLD,
+  ZOOM_MIN,
+  ZOOM_MAX,
 } from '../../constants.js';
 
 interface OfficeCanvasProps {
@@ -51,6 +53,7 @@ interface OfficeCanvasProps {
   onDeskClick?: (agentId: string, screenX: number, screenY: number) => void;
   touchGestures?: boolean;
   onManualPan?: () => void;
+  cameraRequest?: CameraRequest;
 }
 
 export function getCharacterHitBounds(
@@ -85,6 +88,7 @@ export function OfficeCanvas({
   onDeskClick,
   touchGestures = false,
   onManualPan,
+  cameraRequest,
 }: OfficeCanvasProps) {
   const client = useHostClient();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -99,6 +103,7 @@ export function OfficeCanvas({
   const strokeRef = useRef<{ col: number; row: number; erase: boolean } | null>(null);
   const gestureOpenRef = useRef(false);
   const hasCenteredRef = useRef(false);
+  const handledCameraRequest = useRef<CameraRequest | undefined>(undefined);
   const frameCountRef = useRef(0);
   const screenToWorld = useCallback(
     (screenX: number, screenY: number): { col: number; row: number } => {
@@ -144,12 +149,37 @@ export function OfficeCanvas({
     clampPan();
   }, [zoom, panRef, clampPan]);
 
+  useLayoutEffect(() => {
+    if (!cameraRequest || handledCameraRequest.current === cameraRequest) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return;
+    if (cameraRequest.agentId) {
+      const agent = officeState.characters.get(cameraRequest.agentId);
+      if (!agent) return;
+      const bounds = getCharacterScreenBounds(agent, zoom, panRef.current!);
+      panRef.current!.x += rect.width / 2 - (bounds.left + bounds.right) / 2;
+      panRef.current!.y += rect.height / 2 - (bounds.top + bounds.bottom) / 2;
+    } else {
+      const fit = fitOffice(rect, {
+        width: officeState.layout.cols * TILE_SIZE, height: officeState.layout.rows * TILE_SIZE,
+      }, ZOOM_MIN, ZOOM_MAX);
+      if (fit.zoom !== zoom && onZoomChange) {
+        onZoomChange(fit.zoom);
+        return;
+      }
+      Object.assign(panRef.current!, fit.pan);
+    }
+    clampPan();
+    hasCenteredRef.current = true;
+    handledCameraRequest.current = cameraRequest;
+  }, [cameraRequest, zoom, onZoomChange, officeState, panRef, clampPan]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    let dpr = window.devicePixelRatio || 1;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -186,6 +216,7 @@ export function OfficeCanvas({
         // clear the backing store AFTER rAF draw but BEFORE browser paint,
         // producing an always-blank canvas.
         const r = container.getBoundingClientRect();
+        dpr = window.devicePixelRatio || 1;
         const targetW = Math.round(r.width * dpr);
         const targetH = Math.round(r.height * dpr);
         if (targetW > 0 && targetH > 0 && (canvas.width !== targetW || canvas.height !== targetH)) {
