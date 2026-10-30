@@ -54,7 +54,7 @@ const schemas: Record<string, Check> = {
     source: optional(oneOf('external', 'import')),
   }),
   existingAgents: object({ type: oneOf('existingAgents'), agents: array(object(agent), 128) }),
-  agentDetailLoaded: object({ type: oneOf('agentDetailLoaded'), detail: object({
+  agentDetailLoaded: object({ type: oneOf('agentDetailLoaded'), requestId: optional(short), detail: object({
     id: short, name: short, role: short, workspaceRoot: text, status: agent.status, currentTask: nullable(text),
     charterSummary: nullable(text), charterContent: nullable(text),
     charterStatus: oneOf('available', 'missing', 'unreadable', 'unavailable'),

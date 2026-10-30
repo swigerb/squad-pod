@@ -160,8 +160,10 @@ order, so existing and reconnecting viewers agree without writing metadata.
 
 Layout/editor/appearance/seat changes, settings, asset registration, directory
 management, native file dialogs and charter opening are disabled. Pan, zoom,
-agent details, and recorded-usage inspection remain available. No draft recovery
-is persisted by the standalone adapter. VS Code draft/recovery behavior is unchanged.
+Squad Info, per-agent observed details, and recorded-usage inspection remain
+available; charter content is explicitly unavailable in this observer. No draft
+recovery is persisted by the standalone adapter. VS Code draft/recovery behavior
+is unchanged.
 
 ## Security and limits
 

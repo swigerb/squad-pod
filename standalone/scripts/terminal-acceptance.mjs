@@ -228,9 +228,23 @@ try {
     await until(() => received.slice(reconnectStart).some(frame => frame.type === 'replayStart' && frame.cursor > 0),
       'actual browser reconnect uses last applied cursor');
     await tab.getByText('Terminal connected. Office remains read-only.', { exact: true }).waitFor();
-    for (const name of ['Edit Layout', 'Directories', 'Settings', 'Squad Info']) {
+    for (const name of ['Edit Layout', 'Directories', 'Settings']) {
       assert.equal(await tab.getByRole('button', { name, exact: true }).isDisabled(), true);
     }
+    const squadInfoButton = tab.getByRole('button', { name: 'Squad Info', exact: true });
+    assert.equal(await squadInfoButton.isDisabled(), false);
+    await squadInfoButton.click();
+    const squadInfo = tab.getByRole('dialog', { name: 'Squad Info' });
+    await squadInfo.waitFor();
+    await squadInfo.getByRole('button', { name: 'Show details for TestBot', exact: true }).click();
+    await squadInfo.getByText(/Observed status:/).waitFor();
+    await squadInfo.getByText(/Observed task:/).waitFor();
+    await squadInfo.getByText(/Recent activity \(from workspace activity logs/).waitFor();
+    await squadInfo.getByText('Charter content is unavailable.', { exact: false }).waitFor();
+    assert.equal(await squadInfo.getByRole('button', { name: 'Open charter', exact: true }).isDisabled(), true);
+    await squadInfo.getByText('Opening a charter in the editor is unavailable in the read-only observer.', { exact: true }).waitFor();
+    check('read-only Squad Info expands observed details and explains unavailable charter opening');
+    await squadInfo.getByRole('button', { name: 'Close Squad Info', exact: true }).click();
     if (artifacts) {
       await fs.mkdir(artifacts, { recursive: true });
       await tab.screenshot({ path: path.join(artifacts, 'terminal-desktop.png'), fullPage: true });

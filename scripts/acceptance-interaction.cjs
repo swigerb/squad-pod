@@ -173,20 +173,20 @@ function disposableSource(ref) {
 
 const mutants = [
   { name: 'wrong-agent', file: 'webview-ui/src/App.tsx',
-    pattern: /^    client\.send\(\{ type: 'requestAgentDetail', agentId \}\);\r?$/gm,
-    replacement: "    client.send({ type: 'requestAgentDetail', agentId: agentId === 'ada' ? 'grace' : 'ada' });" },
+    pattern: /^    requestAgentDetail\(agentId\);\r?$/gm,
+    replacement: "    requestAgentDetail(agentId === 'ada' ? 'grace' : 'ada');" },
   { name: 'duplicate-request', file: 'webview-ui/src/App.tsx',
-    pattern: /^    client\.send\(\{ type: 'requestAgentDetail', agentId \}\);\r?$/gm,
-    replacement: "    client.send({ type: 'requestAgentDetail', agentId });\n    client.send({ type: 'requestAgentDetail', agentId });" },
+    pattern: /^    requestAgentDetail\(agentId\);\r?$/gm,
+    replacement: "    requestAgentDetail(agentId);\n    requestAgentDetail(agentId);" },
   { name: 'wrong-charter', file: 'src/SquadPodViewProvider.ts',
     pattern: /^    this\.openAgentFile\(agentId, \['charter\.md', 'history\.md'\]\);\r?$/gm,
     replacement: "    this.openAgentFile(agentId, ['history.md', 'charter.md']);" },
   { name: 'stray-focus', file: 'webview-ui/src/App.tsx',
-    pattern: /^    client\.send\(\{ type: 'requestAgentDetail', agentId \}\);\r?$/gm,
-    replacement: "    client.send({ type: 'requestAgentDetail', agentId });\n    client.send({ type: 'focusAgent', agentId });" },
+    pattern: /^    requestAgentDetail\(agentId\);\r?$/gm,
+    replacement: "    requestAgentDetail(agentId);\n    client.send({ type: 'focusAgent', agentId });" },
   { name: 'terminal-call', file: 'src/SquadPodViewProvider.ts',
-    pattern: /^  private onRequestAgentDetail\(agentId: string \| undefined\): void \{\r?$/gm,
-    replacement: "  private onRequestAgentDetail(agentId: string | undefined): void {\n    const terminal = vscode.window.createTerminal('forbidden interaction');\n    terminal.show();\n    terminal.sendText('forbidden');" },
+    pattern: /^  private onRequestAgentDetail\(agentId: string \| undefined, requestId\?: string\): void \{\r?$/gm,
+    replacement: "  private onRequestAgentDetail(agentId: string | undefined, requestId?: string): void {\n    const terminal = vscode.window.createTerminal('forbidden interaction');\n    terminal.show();\n    terminal.sendText('forbidden');" },
 ];
 
 function bridge(messages) {
@@ -311,7 +311,11 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
             const before = requests().length;
             await action();
             await poll(page, () => Boolean(document.querySelector('[role="dialog"]')), `${agent.id} detail card`);
-            assert.deepEqual(requests().slice(before), [{ type: 'requestAgentDetail', agentId: agent.id }], 'correct agent exactly once');
+            const requested = requests().slice(before);
+            assert.equal(requested.length, 1, 'detail requested exactly once');
+            assert.deepEqual({ type: requested[0].type, agentId: requested[0].agentId },
+              { type: 'requestAgentDetail', agentId: agent.id }, 'correct agent requested');
+            assert.match(requested[0].requestId, /^\d+$/, 'request is correlated to its response');
             const card = page.getByRole('dialog', { name: `${agent.name} details` });
             const text = await card.innerText();
             for (const expected of [agent.name, agent.role, 'idle', agent.summary, agent.activity]) assert.ok(text.includes(expected), expected);

@@ -223,7 +223,8 @@ export type WebviewMessage =
   | { type: 'saveAgentSeats'; seats: Record<string, string> }
   | { type: 'saveLayout'; layout: LayoutData; expectedRevision?: string | null; workspaceRoot?: string | null }
   | { type: 'exportLayoutSnapshot'; layout: LayoutData }
-  | { type: 'focusAgent' | 'openSquadAgent' | 'requestAgentDetail'; agentId: string }
+  | { type: 'focusAgent' | 'openSquadAgent'; agentId: string }
+  | { type: 'requestAgentDetail'; agentId: string; requestId?: string }
   | { type: 'diagnosticReport'; characterSheetsSize?: number; characterSheetKeys?: string[]; bootstrapRan?: boolean; errors?: string[] };
 
 export interface PodSettings {
@@ -361,7 +362,7 @@ export type OutboundMessage =
   | { type: 'furnitureAssetsLoaded'; catalog?: unknown; sprites?: unknown }
   | { type: 'assetBaseUrl'; url: string }
   | { type: 'soundEnabled'; enabled: boolean }
-  | { type: 'agentDetailLoaded'; detail: AgentDetailInfo }
+  | { type: 'agentDetailLoaded'; detail: AgentDetailInfo; requestId?: string }
   | { type: 'squadInfoLoaded'; info: SquadInfoData }
   | { type: 'telemetryEvent'; event: TelemetryEvent }
   | { type: 'tilesetAssetsLoaded'; tilesetPngUri: string; tilesetData: TilesetData }

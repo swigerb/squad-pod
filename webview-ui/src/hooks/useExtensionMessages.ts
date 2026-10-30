@@ -84,6 +84,7 @@ export interface ExtensionMessageState {
   agentDetail: AgentDetailInfo | null;
   setAgentDetail: React.Dispatch<React.SetStateAction<AgentDetailInfo | null>>;
   agentDetails: Record<string, AgentDetailInfo>;
+  requestAgentDetail: (agentId: string) => void;
   squadInfo: SquadInfoData | null;
   setSquadInfo: React.Dispatch<React.SetStateAction<SquadInfoData | null>>;
   telemetryEvents: TelemetryEvent[];
@@ -118,6 +119,8 @@ export function useExtensionMessages(
   const [noWorkspace, setNoWorkspace] = useState(false);
   const [agentDetail, setAgentDetail] = useState<AgentDetailInfo | null>(null);
   const [agentDetails, setAgentDetails] = useState<Record<string, AgentDetailInfo>>({});
+  const detailRequestSequenceRef = useRef(0);
+  const requestedAgentDetailsRef = useRef(new Map<string, string>());
   const [squadInfo, setSquadInfo] = useState<SquadInfoData | null>(null);
   const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
   const bufferedAgentsRef = useRef<AgentSnapshot[] | null>(null);
@@ -135,6 +138,17 @@ export function useExtensionMessages(
   statusesRef.current = agentStatuses;
 
   const clearTelemetry = useCallback(() => setTelemetryEvents([]), []);
+  const requestAgentDetail = useCallback((agentId: string) => {
+    const requestId = String(++detailRequestSequenceRef.current);
+    requestedAgentDetailsRef.current.set(agentId, requestId);
+    setAgentDetails((previous) => {
+      if (!previous[agentId]) return previous;
+      const next = { ...previous };
+      delete next[agentId];
+      return next;
+    });
+    client.send({ type: 'requestAgentDetail', agentId, requestId });
+  }, [client]);
   const updateSetting = useCallback((setting: keyof PodSettings, enabled: boolean) => {
     setSettings((prev) => ({ ...prev, [setting]: enabled }));
     if (setting === 'soundEnabled' && soundSettingsLoadedRef.current) setSoundEnabled(enabled);
@@ -181,6 +195,9 @@ export function useExtensionMessages(
         const ids = snapshot.map((a) => a.id);
         agentsRef.current = ids;
         setAgents(ids);
+        for (const id of requestedAgentDetailsRef.current.keys()) {
+          if (!ids.includes(id)) requestedAgentDetailsRef.current.delete(id);
+        }
         setAgentDetails((previous) => Object.fromEntries(
           Object.entries(previous).filter(([id]) => ids.includes(id)),
         ));
@@ -266,6 +283,7 @@ export function useExtensionMessages(
             delete next[id];
             return next;
           });
+          requestedAgentDetailsRef.current.delete(id);
           setAgentDetail((prev) => prev?.id === id ? null : prev);
           setAgentTools((prev) => {
             const next = { ...prev };
@@ -499,6 +517,7 @@ export function useExtensionMessages(
             setAgentDetails({});
             setAgentDetail(null);
             setSquadInfo(null);
+            requestedAgentDetailsRef.current.clear();
           }
           sourceStatusRef.current = message.status;
           setSourceStatus(message.status);
@@ -562,6 +581,10 @@ export function useExtensionMessages(
 
         case 'agentDetailLoaded': {
           const { detail } = message;
+          const expectedRequestId = requestedAgentDetailsRef.current.get(detail.id);
+          if (expectedRequestId === undefined || message.requestId !== expectedRequestId) {
+            break;
+          }
           const office = getOfficeState();
           if (detail.workspaceRoot === sourceStatusRef.current?.workspaceRoot
             && agentsRef.current.includes(detail.id)) {
@@ -629,6 +652,7 @@ export function useExtensionMessages(
     agentDetail,
     setAgentDetail,
     agentDetails,
+    requestAgentDetail,
     squadInfo,
     setSquadInfo,
     telemetryEvents,

@@ -108,7 +108,10 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
   function assertCard(agent: Agent, action: () => void) {
     const before = requests().length;
     action();
-    expect(requests().slice(before)).toEqual([{ type: 'requestAgentDetail', agentId: agent.id }]);
+    const requested = requests().slice(before);
+    expect(requested).toHaveLength(1);
+    expect(requested[0]).toMatchObject({ type: 'requestAgentDetail', agentId: agent.id });
+    expect(requested[0].requestId).toEqual(expect.any(String));
     for (const text of [agent.name, agent.role, 'idle', agent.summary, agent.activity]) expect(card()?.textContent).toContain(text);
     const other = agents.find((a) => a.id !== agent.id)!;
     expect(card()?.textContent).not.toContain(other.summary);
@@ -136,9 +139,10 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     expect(office.selectedAgentId).toBe('ada');
     canvasClick(160, 350);
     expect(office.selectedAgentId).toBe('ada');
-    expect(requests()).toEqual([
+    expect(requests().map(({ type, agentId }) => ({ type, agentId }))).toEqual([
       { type: 'requestAgentDetail', agentId: 'ada' }, { type: 'requestAgentDetail', agentId: 'ada' },
     ]);
+    expect(new Set(requests().map((request) => request.requestId)).size).toBe(2);
   });
 
   it('clears A while B loads, rejects delayed A after B, and hides a removed card and its stale replies', () => {
@@ -198,7 +202,8 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     expect(card()?.textContent).toContain('Grace');
 
     click('Show details for Ada');
-    expect(requests().at(-1)).toEqual({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(requests().at(-1)).toMatchObject({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(requests().at(-1)?.requestId).toEqual(expect.any(String));
     expect(memberDetail()?.textContent).toContain('Ada builds precise interaction contracts.');
     expect(memberDetail()?.textContent).toContain('Ada expertise');
     expect(memberDetail()?.textContent).toContain('Ada responsibilities');
@@ -211,7 +216,8 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     ]);
 
     click('Show details for Grace');
-    expect(requests().at(-1)).toEqual({ type: 'requestAgentDetail', agentId: 'grace' });
+    expect(requests().at(-1)).toMatchObject({ type: 'requestAgentDetail', agentId: 'grace' });
+    expect(requests().at(-1)?.requestId).toEqual(expect.any(String));
     expect(memberDetail()?.textContent).toContain('Grace reviews the complete user transaction.');
     expect(memberDetail()?.textContent).not.toContain('Ada builds');
     expect(card()?.querySelector('[aria-label="Show details for Scribe"]')).toBeNull();
@@ -251,6 +257,32 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     fixture.removeAgent('ada');
     act(() => vi.advanceTimersByTime(2000));
     expect(card()?.textContent).not.toContain('Ada builds precise interaction contracts.');
+  });
+
+  it('refreshes the same agent charter and activity on re-expansion and ignores its older reply', () => {
+    hold = true;
+    click('Squad Info');
+    click('Show details for Ada');
+    expect(held).toHaveLength(1);
+    click('Hide details for Ada');
+
+    const charter = path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'charter.md');
+    const activity = path.join(fixture.workspaceRoot, '.squad', 'log', '2026-10-29-ada.md');
+    fs.writeFileSync(charter, '# Ada\n\nAda now verifies refreshed charter details.');
+    fs.writeFileSync(activity, '# Activity\nAda confirmed refreshed activity.');
+
+    click('Show details for Ada');
+    expect(held).toHaveLength(2);
+    expect(held[0].type).toBe('agentDetailLoaded');
+    expect(held[1].type).toBe('agentDetailLoaded');
+    act(() => deliver(held[0]));
+    expect(memberDetail()?.textContent).toContain('Loading observed details');
+    act(() => deliver(held[1]));
+    expect(memberDetail()?.textContent).toContain('Ada now verifies refreshed charter details.');
+    expect(memberDetail()?.textContent).toContain('Ada confirmed refreshed activity.');
+    expect(memberDetail()?.textContent).not.toContain('Ada builds precise interaction contracts.');
+    expect(memberDetail()?.textContent).not.toContain('Ada verified character navigation.');
+    hold = false;
   });
 
   it('clamps the measured border-box card rather than an estimated content size at 360x640', () => {

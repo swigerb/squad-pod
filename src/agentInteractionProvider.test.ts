@@ -44,9 +44,10 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
 
   it.each(agents)('returns exactly $name detail and opens that charter, never a terminal/session', (agent) => {
     const before = details().length;
-    fixture.send({ type: 'requestAgentDetail', agentId: agent.id });
+    const requestId = `${agent.id}-detail-1`;
+    fixture.send({ type: 'requestAgentDetail', agentId: agent.id, requestId });
     expect(details().slice(before)).toEqual([{
-      type: 'agentDetailLoaded', detail: {
+      type: 'agentDetailLoaded', requestId, detail: {
         id: agent.id, name: agent.name, role: agent.role, workspaceRoot: fixture.workspaceRoot, status: 'idle',
         charterSummary: agent.summary, charterContent: expect.stringContaining(agent.summary),
         charterStatus: 'available', expertise: `${agent.name} expertise`, responsibilities: `- ${agent.name} responsibilities`,
@@ -72,10 +73,13 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     } });
 
     fs.writeFileSync(charter, `# Oversized\n\n${'x'.repeat(65537)}`);
+    const read = vi.spyOn(require('node:fs'), 'readSync');
     fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
     expect(details().at(-1)).toMatchObject({ type: 'agentDetailLoaded', detail: {
       id: 'ada', charterStatus: 'unreadable', charterContent: null, charterSummary: null,
     } });
+    expect(read).not.toHaveBeenCalled();
+    read.mockRestore();
   });
 
   it.each(agents)('uses history, folder reveal, then information only for $name', (agent) => {

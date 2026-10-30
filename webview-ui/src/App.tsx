@@ -82,7 +82,7 @@ function ConnectedApp({ readOnly }: { readOnly: boolean }) {
 function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; readOnly: boolean }) {
   const client = useHostClient();
   const editor = useEditorActions(getOfficeState, editorState, recoveryState, readOnly);
-  const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, agentDetails, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, agentDetails, requestAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
@@ -120,8 +120,8 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
     getOfficeState().selectedAgentId = agentId;
     setAgentDetail(null);
     setCardPosition({ x: screenX, y: screenY });
-    client.send({ type: 'requestAgentDetail', agentId });
-  }, [client, setAgentDetail]);
+    requestAgentDetail(agentId);
+  }, [requestAgentDetail, setAgentDetail]);
 
   const handleCloseCard = useCallback(() => {
     setAgentDetail(null);
@@ -163,9 +163,9 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
   const handleRequestSquadDetail = useCallback((agentId: string) => {
     const member = visibleSquadInfo?.members.find((candidate) => candidate.id === agentId);
     if (member && agents.includes(agentId) && visibleSquadInfo?.workspaceRoot === sourceStatus?.workspaceRoot) {
-      client.send({ type: 'requestAgentDetail', agentId });
+      requestAgentDetail(agentId);
     }
-  }, [agents, client, sourceStatus?.workspaceRoot, visibleSquadInfo]);
+  }, [agents, requestAgentDetail, sourceStatus?.workspaceRoot, visibleSquadInfo]);
 
   const handleViewCharter = useCallback((agentId: string) => {
     client.send({ type: 'openSquadAgent', agentId });

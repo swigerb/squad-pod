@@ -200,7 +200,7 @@ export function SquadInfoCard({
                       setExpandedAgentId(null);
                     } else {
                       setExpandedAgentId(m.id);
-                      if (availableAgentIds.includes(m.id) && !agentDetails[m.id]) {
+                      if (availableAgentIds.includes(m.id)) {
                         onRequestAgentDetail?.(m.id);
                       }
                     }

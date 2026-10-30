@@ -90,9 +90,10 @@ describe('read-only selected-project observer', () => {
     const observer = createObserver(root, packageRoot);
     try {
       await observer.snapshot();
-      const messages = await observer.onRead({ type: 'requestAgentDetail', agentId: 'test-agent-1' });
+      const requestId = 'observer-detail-1';
+      const messages = await observer.onRead({ type: 'requestAgentDetail', agentId: 'test-agent-1', requestId });
       expect(messages).toEqual([expect.objectContaining({
-        type: 'agentDetailLoaded',
+        type: 'agentDetailLoaded', requestId,
         detail: expect.objectContaining({
           id: 'test-agent-1', workspaceRoot: root, charterStatus: 'unavailable',
           charterContent: null, expertise: null, responsibilities: null, boundaries: null,

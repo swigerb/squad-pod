@@ -260,7 +260,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'requestAgentDetail':
-        this.onRequestAgentDetail(message.agentId);
+        this.onRequestAgentDetail(message.agentId, message.requestId);
         break;
 
       case 'openSquadInfo':
@@ -892,7 +892,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private onRequestAgentDetail(agentId: string | undefined): void {
+  private onRequestAgentDetail(agentId: string | undefined, requestId?: string): void {
     if (!agentId) {return;}
 
     const workspaceRoot = this.getWorkspaceRoot();
@@ -900,7 +900,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     const detail = getAgentDetail(workspaceRoot, agentId);
     if (detail) {
-      this.postMessage({ type: 'agentDetailLoaded', detail });
+      this.postMessage({
+        type: 'agentDetailLoaded', detail,
+        ...(requestId !== undefined ? { requestId } : {}),
+      });
     }
   }
 
@@ -1136,6 +1139,31 @@ function getNonce(): string {
   return nonce;
 }
 
+const MAX_AGENT_CHARTER_BYTES = 64 * 1024;
+
+function readAgentCharter(filePath: string): string {
+  let fd: number | undefined;
+  try {
+    if (!fs.statSync(filePath).isFile()) { throw new Error('Charter is not a regular file.'); }
+    fd = fs.openSync(filePath, 'r');
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile()) { throw new Error('Charter is not a regular file.'); }
+    if (stat.size > MAX_AGENT_CHARTER_BYTES) {
+      throw new Error('Charter exceeds the 64 KiB detail limit.');
+    }
+    const buffer = Buffer.alloc(Math.min(stat.size + 1, MAX_AGENT_CHARTER_BYTES + 1));
+    const bytes = fs.readSync(fd, buffer, 0, buffer.length, 0);
+    const after = fs.fstatSync(fd);
+    if (bytes !== stat.size || after.size !== stat.size
+      || after.mtimeMs !== stat.mtimeMs || after.ctimeMs !== stat.ctimeMs) {
+      throw new Error('Charter changed while reading.');
+    }
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, bytes));
+  } finally {
+    if (fd !== undefined) { fs.closeSync(fd); }
+  }
+}
+
 function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo | null {
   const agents = getAgents();
   const agent = agents.get(agentId);
@@ -1152,10 +1180,7 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
   let boundaries: string | null = null;
   const charterPath = path.join(squadDir, 'agents', agentId, 'charter.md');
   try {
-    const source = fs.readFileSync(charterPath, 'utf8');
-    if (Buffer.byteLength(source, 'utf8') > 65536) {
-      throw new Error('Charter exceeds the 64 KiB detail limit.');
-    }
+    const source = readAgentCharter(charterPath);
     charterContent = source;
     charterStatus = 'available';
     const lines = source.split(/\r?\n/);
