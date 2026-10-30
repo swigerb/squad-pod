@@ -3,22 +3,22 @@ import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 export function RecordedUsage({ snapshot }: { snapshot: RecordedUsageSnapshot | null }) {
   return (
     <section aria-label="Recorded Squad usage" style={{ padding: '8px 12px', borderBottom: '1px solid var(--vscode-panel-border)', overflowWrap: 'anywhere', color: 'var(--vscode-foreground, #cccccc)' }}>
-      <details>
-        <summary style={{ cursor: 'pointer' }}><strong>Recorded usage / model history</strong> - {snapshot?.state ?? 'waiting for source'}</summary>
+        <h3 style={{ margin: 0, fontSize: 12 }}>Recorded usage / model history - {snapshot?.state ?? 'waiting for source'}</h3>
         <p>Historical reports only, not current model, live context or billing-grade accounting.</p>
         {!snapshot ? <p>Usage source has not reported yet; no totals available.</p> : <>
           {snapshot.totals ? <p>
             {snapshot.state === 'partial' ? 'Partial sums (valid records only)' : 'Recorded event sums'}: {snapshot.totals.inputTokens.toLocaleString()} input / {snapshot.totals.outputTokens.toLocaleString()} output tokens;
             {' '}reported estimated cost {snapshot.totals.estimatedCost.toPrecision(6)} (producer units).
-          </p> : <p>No usage totals available. An empty, missing or rejected source is not recorded zero.</p>}
+          </p> : <p>No usage totals available. An empty, missing or rejected source is not recorded zero consumption.
+            {' '}Usage requires a local ledger; enabling live CLI observation does not create one.</p>}
+          <details>
+            <summary>Usage coverage and source diagnostics</summary>
           <p>{snapshot.usageRecords} usage reports; {snapshot.attemptedTurns > 0
             ? `${snapshot.coveredTurns} / ${snapshot.attemptedTurns} recorded starts have usage (distinct turn IDs, as in Squad cost).`
             : 'coverage unavailable (0 / 0 recorded starts).'}
             {' '}{snapshot.unlinkedUsageRecords} reports without a matching start. This is ledger coverage, not all-runtime coverage.
           </p>
           <p>Latest usage report: {snapshot.lastUsageAt ? new Date(snapshot.lastUsageAt).toLocaleString() : 'unavailable'}</p>
-          <details>
-            <summary>Source diagnostics and unavailable live capabilities</summary>
             <p>Scope: all valid complete local ledger records; no agent or time filter.</p>
             <p>Local source: <strong>{snapshot.state}</strong><br />{snapshot.sourcePath ?? 'No selected workspace source'}</p>
             {snapshot.diagnostic && <p role="status">{snapshot.diagnostic}</p>}
@@ -44,7 +44,6 @@ export function RecordedUsage({ snapshot }: { snapshot: RecordedUsageSnapshot | 
             </div>)}
           </details>
         </>}
-      </details>
     </section>
   );
 }

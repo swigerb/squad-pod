@@ -4,7 +4,8 @@ import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 import { RecordedUsage } from './RecordedUsage.js';
 import { ObservedTasks } from './ObservedTasks.js';
 import type { ObservedTaskSnapshot } from '../../../src/observedTasks.js';
-import type { LiveSourceStatus } from '../../../src/types.js';
+import type { LiveSourceStatus, SourceStatus } from '../../../src/types.js';
+import { SourceStatusView } from './SourceStatusView.js';
 
 interface TelemetryDrawerProps {
   readOnly?: boolean;
@@ -12,6 +13,8 @@ interface TelemetryDrawerProps {
   recordedUsage: RecordedUsageSnapshot | null;
   observedTasks?: ObservedTaskSnapshot | null;
   liveSource?: LiveSourceStatus;
+  sourceStatus?: SourceStatus | null;
+  onOpenSettings: () => void;
   isOpen: boolean;
   onToggle: () => void;
   onClear: () => void;
@@ -40,15 +43,16 @@ function formatTimestamp(ts: number): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function TelemetryDrawer({ readOnly = false, events, recordedUsage, observedTasks = null, liveSource, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
+export function TelemetryDrawer({ readOnly = false, events, recordedUsage, observedTasks = null, liveSource, sourceStatus = null, onOpenSettings, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   // Auto-scroll to bottom when new events arrive
   useEffect(() => {
-    if (autoScroll && listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+    if (listRef.current && (autoScroll || !events.length)) {
+      listRef.current.scrollTop = events.length ? listRef.current.scrollHeight : 0;
+      if (!events.length) { setAutoScroll(true); }
     }
   }, [events.length, autoScroll]);
 
@@ -109,7 +113,7 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, obser
         }}
       >
         <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--vscode-foreground)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          Telemetry ({events.length})
+          Telemetry
         </span>
         <div style={{ display: 'flex', gap: '8px' }}>
           {!autoScroll && (
@@ -118,15 +122,13 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, obser
             </button>
           )}
           <button onClick={onClear} title="Clear activity feed only; observed tasks and recorded usage are unchanged" style={smallButtonStyle}>
-            Clear
+            Clear activity
           </button>
           <button onClick={onToggle} style={smallButtonStyle}>
             ✕
           </button>
         </div>
       </div>
-
-      {isOpen && <ObservedTasks readOnly={readOnly} snapshot={observedTasks} source={liveSource} />}
 
       {/* Event list */}
       <div
@@ -139,14 +141,28 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, obser
           fontFamily: 'var(--vscode-editor-font-family, monospace)',
           fontSize: '12px',
           lineHeight: '18px',
+          color: 'var(--vscode-foreground)',
         }}
       >
-        <RecordedUsage snapshot={recordedUsage} />
+        <h3 style={{ padding: '0 12px', margin: '4px 0', fontSize: 12 }}>Activity events ({events.length})</h3>
         {events.length === 0 ? (
-          <div style={{ padding: '16px', color: 'var(--vscode-descriptionForeground)', textAlign: 'center' }}>
-            No telemetry events yet. Activity from Squad agents will appear here.
+          <div style={{ padding: '4px 12px', color: 'var(--vscode-descriptionForeground)' }}>
+            No activity events observed since this panel opened or activity was cleared.
+            {' '}Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.
           </div>
-        ) : (
+        ) : null}
+        <RecordedUsage snapshot={recordedUsage} />
+        <div style={{ padding: '6px 12px', overflowWrap: 'anywhere' }}>
+          {readOnly ? <p role="status">Settings and live-log consent are unavailable in this read-only observer. Nothing is enabled here.</p>
+            : <><button onClick={onOpenSettings} style={smallButtonStyle}>Observation settings and consent</button>
+              <p>Review live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.</p></>}
+          <details>
+            <summary>Activity source diagnostics</summary>
+            <SourceStatusView status={sourceStatus} readOnly={readOnly} />
+          </details>
+        </div>
+        {isOpen && <ObservedTasks readOnly={readOnly} snapshot={observedTasks} source={liveSource} />}
+        {events.length > 0 && (
           events.map((event) => {
             const isExpanded = expandedIds.has(event.id);
             const hasDetail = !!event.detail;
