@@ -168,7 +168,7 @@ describe('production browser HostClient adapter', () => {
         id, name: id, role: 'Developer', paletteIndex: 0, seatId: 'old-seat', status: 'idle', currentTask: null,
       }));
       f.frame({ version: 1, kind: 'office', message: { type: 'existingAgents', agents } });
-      f.client.send({ type: 'requestAgentDetail', agentId: 'test-agent-1' });
+      f.client.send({ type: 'requestAgentDetail', agentId: 'test-agent-1', requestId: 'detail-a' });
       f.frame({ version: 1, kind: 'controlState', preferencesRevision: 'a'.repeat(64),
         preferences: { ...defaultPreferences(), agents: { 'test-agent-2': { seatId: 'viewer-b-seat' } } } });
       expect(f.received).toHaveBeenLastCalledWith(expect.objectContaining({

@@ -119,6 +119,12 @@ try {
   await page.getByRole('button', { name: 'Connect office control', exact: true }).click();
   check('office-control form submitted with separate authority');
   assert.equal(await page.getByRole('button', { name: 'Directories', exact: true }).isDisabled(), true);
+  await page.getByRole('button', { name: 'Squad Info', exact: true }).click();
+  await page.getByRole('button', { name: 'Show details for TestBot', exact: true }).click();
+  await page.getByText('Charter content is unavailable.', { exact: true }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Open charter', exact: true }).isDisabled(), true);
+  await page.getByRole('button', { name: 'Close Squad Info', exact: true }).click();
+  check('office control preserves observed Squad Info and correlated details without native charter authority');
   await page.getByRole('button', { name: 'Edit Layout', exact: true }).click();
   const editor = page.getByRole('region', { name: 'Layout editor' });
   await editor.getByTitle('Pets', { exact: true }).click();

@@ -212,9 +212,10 @@ Built-in appearances are deterministically scoped to member identity, not roster
 order, so existing and reconnecting viewers agree without writing metadata.
 
 Read-only viewers cannot change layouts/appearance/seats or settings and do not
-persist drafts. Pan, zoom, agent details and recorded usage remain available.
+persist drafts. Pan, zoom, Squad Info, per-agent observed details and recorded usage remain available.
 Separately authorized office control adds the selected-project slice described above;
 asset registration, directory management, native dialogs and charter opening remain unavailable.
+Charter content remains explicitly unavailable in both standalone modes.
 
 ## Security and limits
 

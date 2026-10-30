@@ -124,11 +124,16 @@ function command(payload: unknown): { message?: WebviewMessage; error?: string }
     return { error: 'READ_ONLY' };
   }
   if (message.type === 'requestAgentDetail') {
-    if (!keys(message, ['type', 'agentId']) || typeof message.agentId !== 'string'
-      || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(message.agentId)) {
+    if (!keys(message, ['type', 'agentId', 'requestId']) || typeof message.agentId !== 'string'
+      || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(message.agentId)
+      || (message.requestId !== undefined
+        && (typeof message.requestId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(message.requestId)))) {
       return { error: 'INVALID_MESSAGE' };
     }
-    return { message: { type: 'requestAgentDetail', agentId: message.agentId } };
+    return { message: {
+      type: 'requestAgentDetail', agentId: message.agentId,
+      ...(message.requestId !== undefined ? { requestId: message.requestId } : {}),
+    } };
   }
   if (!keys(message, ['type'])) { return { error: 'INVALID_MESSAGE' }; }
   return { message: { type: message.type } };

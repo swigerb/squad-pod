@@ -260,7 +260,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'requestAgentDetail':
-        this.onRequestAgentDetail(message.agentId);
+        this.onRequestAgentDetail(message.agentId, message.requestId);
         break;
 
       case 'openSquadInfo':
@@ -892,7 +892,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private onRequestAgentDetail(agentId: string | undefined): void {
+  private onRequestAgentDetail(agentId: string | undefined, requestId?: string): void {
     if (!agentId) {return;}
 
     const workspaceRoot = this.getWorkspaceRoot();
@@ -900,7 +900,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     const detail = getAgentDetail(workspaceRoot, agentId);
     if (detail) {
-      this.postMessage({ type: 'agentDetailLoaded', detail });
+      this.postMessage({
+        type: 'agentDetailLoaded', detail,
+        ...(requestId !== undefined ? { requestId } : {}),
+      });
     }
   }
 
@@ -912,6 +915,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         info: {
           teamName: null,
           description: null,
+          workspaceRoot: null,
           members: [],
           hiddenMembers: [],
           projectContext: null,
@@ -931,6 +935,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         info: {
           teamName: null,
           description: 'No .squad/team.md found. Run `squad init` or open a Squad-configured project.',
+          workspaceRoot,
           members: [],
           hiddenMembers: [],
           projectContext: null,
@@ -959,6 +964,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     const members = visible.map(m => {
       const agent = agents.get(m.slug);
       return {
+        id: m.slug,
         name: m.name,
         role: m.role,
         status: m.status,
@@ -976,6 +982,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     const info: SquadInfoData = {
       teamName,
       description: projectContext,
+      workspaceRoot,
       members,
       hiddenMembers,
       projectContext,
@@ -1132,6 +1139,31 @@ function getNonce(): string {
   return nonce;
 }
 
+const MAX_AGENT_CHARTER_BYTES = 64 * 1024;
+
+function readAgentCharter(filePath: string): string {
+  let fd: number | undefined;
+  try {
+    if (!fs.statSync(filePath).isFile()) { throw new Error('Charter is not a regular file.'); }
+    fd = fs.openSync(filePath, 'r');
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile()) { throw new Error('Charter is not a regular file.'); }
+    if (stat.size > MAX_AGENT_CHARTER_BYTES) {
+      throw new Error('Charter exceeds the 64 KiB detail limit.');
+    }
+    const buffer = Buffer.alloc(Math.min(stat.size + 1, MAX_AGENT_CHARTER_BYTES + 1));
+    const bytes = fs.readSync(fd, buffer, 0, buffer.length, 0);
+    const after = fs.fstatSync(fd);
+    if (bytes !== stat.size || after.size !== stat.size
+      || after.mtimeMs !== stat.mtimeMs || after.ctimeMs !== stat.ctimeMs) {
+      throw new Error('Charter changed while reading.');
+    }
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, bytes));
+  } finally {
+    if (fd !== undefined) { fs.closeSync(fd); }
+  }
+}
+
 function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo | null {
   const agents = getAgents();
   const agent = agents.get(agentId);
@@ -1139,35 +1171,32 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
     return null;
   }
 
-  // Read charter summary
-  let charterSummary: string | null = null;
   const squadDir = resolveSquadDir(workspaceRoot);
+  let charterSummary: string | null = null;
+  let charterContent: string | null = null;
+  let charterStatus: AgentDetailInfo['charterStatus'] = 'missing';
+  let expertise: string | null = null;
+  let responsibilities: string | null = null;
+  let boundaries: string | null = null;
   const charterPath = path.join(squadDir, 'agents', agentId, 'charter.md');
   try {
-    const charterContent = fs.readFileSync(charterPath, 'utf8');
-    const lines = charterContent.split('\n');
-    
-    // Skip title line (first # heading), find first paragraph
-    let foundHeading = false;
+    const source = readAgentCharter(charterPath);
+    charterContent = source;
+    charterStatus = 'available';
+    const lines = source.split(/\r?\n/);
+    const titleIndex = lines.findIndex(line => /^\s*#\s+/.test(line));
     const paragraphLines: string[] = [];
-    
-    for (const line of lines) {
-      const trimmed = line.trim();
-      
-      if (!foundHeading && trimmed.startsWith('#')) {
-        foundHeading = true;
-        continue;
+    if (titleIndex >= 0) {
+      let index = titleIndex + 1;
+      while (index < lines.length && !lines[index].trim()) {
+        index++;
       }
-      
-      if (foundHeading && trimmed.length > 0) {
-        paragraphLines.push(trimmed);
-        // Collect lines until we have enough content
-        if (paragraphLines.join(' ').length > 100) {
-          break;
-        }
+      while (index < lines.length && lines[index].trim() && !/^\s*#{1,6}\s+/.test(lines[index])) {
+        paragraphLines.push(lines[index].trim());
+        index++;
       }
     }
-    
+
     if (paragraphLines.length > 0) {
       const paragraph = paragraphLines.join(' ');
       // Take first 2-3 sentences
@@ -1177,9 +1206,17 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
         charterSummary += '.';
       }
     }
-  } catch {
-    // Charter doesn't exist or can't be read
+    expertise = source.split(/\r?\n/).map(line => /^\s*[-*]\s+\*\*Expertise:\*\*\s*(.+)$/i.exec(line)?.[1]?.trim() ?? '')
+      .find(Boolean) ?? null;
+    responsibilities = extractDeclaredSection(source, ['Responsibilities', 'What I Own']);
+    boundaries = extractDeclaredSection(source, ['Boundaries']);
+  } catch (error) {
     charterSummary = null;
+    charterContent = null;
+    charterStatus = (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'unreadable';
+    expertise = null;
+    responsibilities = null;
+    boundaries = null;
   }
 
   // Scan log directory for recent activity
@@ -1235,10 +1272,30 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
     id: agent.id,
     name: agent.name,
     role: agent.role,
+    workspaceRoot,
     status: agent.status,
     currentTask: agent.currentTask,
     charterSummary,
+    charterContent,
+    charterStatus,
+    expertise,
+    responsibilities,
+    boundaries,
     recentActivity,
     lastActiveAt: agent.lastActiveAt,
   };
+}
+
+function extractDeclaredSection(source: string, headings: string[]): string | null {
+  const lines = source.split(/\r?\n/);
+  const heading = new RegExp(`^#{1,6}\\s+(?:${headings.map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s*#*\\s*$`, 'i');
+  const start = lines.findIndex(line => heading.test(line.trim()));
+  if (start < 0) {return null;}
+  const section: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^#{1,6}\s+/.test(line.trim())) {break;}
+    if (line.trim()) {section.push(line.trim());}
+  }
+  const text = section.join('\n').trim();
+  return text ? text.slice(0, 4096) : null;
 }

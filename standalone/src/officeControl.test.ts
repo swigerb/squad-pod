@@ -226,7 +226,7 @@ describe('separate authenticated office control', () => {
     b.send({ version: 1, kind: 'control', requestId: 2, expectedRevision: bState.preferencesRevision,
       message: { type: 'setShowAreas', enabled: true } });
     await b.next(frame => frame.kind === 'controlResult' && frame.requestId === 2);
-    a.send({ version: 1, kind: 'office', message: { type: 'requestAgentDetail', agentId: 'test-agent-1' } });
+    a.send({ version: 1, kind: 'office', message: { type: 'requestAgentDetail', agentId: 'test-agent-1', requestId: 'detail-a' } });
     const authoritative = await a.next(frame => frame.kind === 'controlState');
     expect(authoritative).toMatchObject({ preferencesRevision: expect.stringMatching(/^[a-f0-9]{64}$/),
       preferences: { agents: { 'test-agent-2': { seatId: 'viewer-b-seat' } }, settings: { showAreas: true } } });

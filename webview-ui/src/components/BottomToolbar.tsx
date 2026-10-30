@@ -48,8 +48,6 @@ export function BottomToolbar({ readOnly = false, nativeUnavailable = false, isE
         }}
       >
         <button
-          disabled={readOnly || nativeUnavailable}
-          title={readOnly || nativeUnavailable ? 'Native Squad information dialog is unavailable in standalone.' : undefined}
           onClick={handleSquadInfo}
           style={{
             padding: '8px 16px',
