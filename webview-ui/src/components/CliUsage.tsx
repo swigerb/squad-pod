@@ -20,9 +20,9 @@ export function CliUsage({ snapshot, readOnly, onAction }: {
       {' '}Launch with <code>copilot --agent squad --usage-output-file &lt;file.json&gt;</code> to request an export;
       {' '}then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.</p> : <>
       <p>Producer-reported session quantities: {report.userRequests.toLocaleString()} user-initiated API requests;
-        {' '}{report.premiumRequests.toLocaleString()} premium-request cost (multiplier applied);
-        {' '}{report.apiDurationMs.toLocaleString()} ms API time;
-        {' '}nano-AI units: {report.nanoAiu === null ? 'not reported' : report.nanoAiu.toLocaleString()}.</p>
+        {' '}{String(report.premiumRequests)} premium-request cost (multiplier applied);
+        {' '}{String(report.apiDurationMs)} ms API time;
+        {' '}nano-AI units: {report.nanoAiu === null ? 'not reported' : String(report.nanoAiu)}.</p>
       <p>Session identity: unknown. Workspace attribution: user-selected file location only, not verified producer attribution.
         {' '}Agent attribution: unknown. Completion, resumed history and all-agent coverage: unknown.
         {' '}Reported session start: {report.sessionStartTime} (not a session ID).</p>
@@ -35,8 +35,8 @@ export function CliUsage({ snapshot, readOnly, onAction }: {
           <div>{m.inputTokens.toLocaleString()} input / {m.outputTokens.toLocaleString()} output tokens;
             {' '}{m.cacheReadTokens.toLocaleString()} cache-read / {m.cacheWriteTokens.toLocaleString()} cache-write tokens;
             {' '}reasoning tokens: {m.reasoningTokens === null ? 'not reported' : m.reasoningTokens.toLocaleString()}.</div>
-          <div>{m.requests.toLocaleString()} model API requests; {m.premiumRequests.toLocaleString()} premium-request cost;
-            {' '}nano-AI units: {m.nanoAiu === null ? 'not reported' : m.nanoAiu.toLocaleString()}.</div>
+          <div>{m.requests.toLocaleString()} model API requests; {String(m.premiumRequests)} premium-request cost;
+            {' '}nano-AI units: {m.nanoAiu === null ? 'not reported' : String(m.nanoAiu)}.</div>
         </div>)}
       </details>
     </>}

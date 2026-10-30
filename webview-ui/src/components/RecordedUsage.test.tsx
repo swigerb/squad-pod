@@ -66,7 +66,22 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
       }],
     });
 
-    it('keeps CLI exports separate, unknown and historical through the real App seam and explicit actions', () => {
+    expect(section.textContent).toContain('Partial sums (valid records only): 0 input / 0 output');
+    expect(section.textContent).toContain('1 / 2 recorded starts');
+    expect(section.textContent).toContain('unattributed (ambiguous roster identity)');
+    expect(section.textContent).toContain('Reported model: unknown');
+    expect(section.textContent).toContain('Zero is not evidence that usage was measured');
+    expect(section.textContent).not.toContain('current model: unknown');
+    expect(audio).not.toHaveBeenCalled();
+    expect(vi.mocked(client.send).mock.calls).toHaveLength(before);
+    expect(addAgent).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Activity events (0)');
+    send({ ...empty, state: 'unavailable', sourcePath: null, diagnostic: 'No workspace selected.' });
+    expect(section.textContent).not.toContain('old-session');
+    expect(section.textContent).toContain('No usage totals available');
+  });
+
+  it('keeps CLI exports separate, unknown and historical through the real App seam and explicit actions', () => {
       send(empty);
       const snapshot: CliUsageSnapshot = {
         state: 'ready', sourcePath: 'C:\\fixture\\cli.json', canRefresh: true, checkedAt: '2026-10-30T12:00:00Z', diagnostic: null,
@@ -90,6 +105,17 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
       expect(host.textContent).toContain('Activity events (0)');
       expect(addAgent).not.toHaveBeenCalled();
       expect(audio).not.toHaveBeenCalled();
+      const fractions: CliUsageSnapshot = {
+        ...snapshot, report: {
+          ...snapshot.report!, premiumRequests: 0.0001, apiDurationMs: 1.23456789, nanoAiu: 0.0000001,
+          models: [{ ...snapshot.report!.models[0], premiumRequests: 0.0001, nanoAiu: 1.23456789 }],
+        },
+      };
+      act(() => client.emit({ type: 'cliUsage', snapshot: fractions }));
+      expect(section.textContent?.match(/0\.0001 premium-request cost/g)).toHaveLength(2);
+      expect(section.textContent).toContain('1.23456789 ms API time');
+      expect(section.textContent).toContain('nano-AI units: 1e-7');
+      expect(section.textContent).toContain('nano-AI units: 1.23456789');
       const click = (name: string) => act(() => [...section.querySelectorAll('button')].find(b => b.textContent === name)!.click());
       click('Select CLI usage JSON...');
       click('Refresh selected export');
@@ -109,21 +135,6 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
       expect(section.textContent).toContain('CLI usage import is unavailable in standalone/read-only observation');
       expect(section.querySelectorAll('button')).toHaveLength(0);
     });
-    expect(section.textContent).toContain('Partial sums (valid records only): 0 input / 0 output');
-    expect(section.textContent).toContain('1 / 2 recorded starts');
-    expect(section.textContent).toContain('unattributed (ambiguous roster identity)');
-    expect(section.textContent).toContain('Reported model: unknown');
-    expect(section.textContent).toContain('Zero is not evidence that usage was measured');
-    expect(section.textContent).not.toContain('current model: unknown');
-    expect(audio).not.toHaveBeenCalled();
-    expect(vi.mocked(client.send).mock.calls).toHaveLength(before);
-    expect(addAgent).not.toHaveBeenCalled();
-    expect(host.textContent).toContain('Activity events (0)');
-    send({ ...empty, state: 'unavailable', sourcePath: null, diagnostic: 'No workspace selected.' });
-    expect(section.textContent).not.toContain('old-session');
-    expect(section.textContent).toContain('No usage totals available');
-  });
-
   const source: SourceStatus = {
     workspaceRoot: 'C:\\fixture', squadDir: 'C:\\fixture\\.squad', teamFound: true,
     observer: 'watching', nativeWatch: false, error: null, liveActivity: { state: 'off', sessionId: null },

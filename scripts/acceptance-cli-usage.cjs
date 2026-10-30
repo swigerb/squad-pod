@@ -52,7 +52,7 @@ async function main() {
           await section.getByText('Reported model breakdowns', { exact: false }).click();
           const text = await section.textContent();
           for (const value of [
-            '0.5 premium-request cost', 'nano-AI units: 450,000', '120 input / 30 output', '40 cache-read / 10 cache-write',
+            '0.5 premium-request cost', 'nano-AI units: 450000', '120 input / 30 output', '40 cache-read / 10 cache-write',
             'reasoning tokens: not reported', 'Session identity: unknown', 'Completion, resumed history and all-agent coverage: unknown',
             'Historical model: synthetic-model', 'never added to Squad ledger totals',
           ]) assert.ok(text.includes(value), `Missing CLI usage text: ${value}`);

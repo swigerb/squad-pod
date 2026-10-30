@@ -228,6 +228,7 @@ export class CliUsageImport {
       selectedFile(root, selection.file);
       if (bytes !== before.size || before.size !== after.size || before.mtimeMs !== after.mtimeMs
         || before.ctimeMs !== after.ctimeMs || live.size !== after.size || live.mtimeMs !== after.mtimeMs
+        || after.nlink !== 1 || live.nlink !== 1 || !live.isFile()
         || !sameIdentity(identity(live), selection.identity)
         || !sameIdentity(identity(fs.statSync(root)), selection.rootIdentity)) {
         throw new Error('Metrics changed while reading; retry manually.');

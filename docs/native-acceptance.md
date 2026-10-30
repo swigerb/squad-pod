@@ -359,6 +359,42 @@ Prepare `acceptance-input.txt` with a few nonsecret sentences. A harmless unique
 
 ## Recorded-usage fallback suite
 
+#### CLI import contract
+
+The importer projects the Copilot CLI **1.0.105 shipped `UsageGetMetricsResult`**
+declaration and raw `JSON.stringify(metrics)` writer inspected in
+[#102 artifact 1](https://github.com/swigerb/squad-pod/issues/102/artifacts/1).
+[`cli-usage-1.0.105.synthetic.json`](../src/__fixtures__/cli-usage-1.0.105.synthetic.json)
+is authored from that contract, not an observed export. Actual producer version is
+unverified; file location and session start are not identity or completeness evidence.
+Native accumulator overlap, resumed history and all-agent coverage remain unknown.
+
+Interpreted JSON pointers: `/sessionStartTime`, `/totalUserRequests`,
+`/totalPremiumRequestCost`, `/totalApiDurationMs`, optional `/totalNanoAiu`, and
+`/modelMetrics/*/{requests/{count,cost},usage/{inputTokens,outputTokens,cacheReadTokens,cacheWriteTokens,reasoningTokens?},totalNanoAiu?}`.
+Required last-call token and code-change shapes are validated but not retained/displayed.
+`currentModel`, task descriptions, code-change paths, provider/agent breakdowns,
+token details and unknown fields are not displayed or used for live state.
+Optional interpreted quantities may be omitted, not null; missing says **not reported**.
+Fractional raw quantities use round-trip numeric text, not default locale rounding.
+
+One selection replaces one report; repeated refresh never accumulates. No multi-file,
+cross-source, parent/agent/provider summation or inferred model-token rollup. Cache,
+reasoning and token details are not assumed disjoint. The ledger's sum-every-row
+behavior is unchanged. CLI units are premium-request cost (multiplier applied),
+milliseconds and optional nano-AI units, never USD or inferred credit conversions.
+
+Bounds: regular workspace-local JSON file, 2 MiB before allocation, strict UTF-8,
+one document, depth 8, 1,000 entries per object/array, 10,000 total fields/entries,
+128 model keys (128 characters each) and 40 rendered rows. Counters are nonnegative
+safe integers; other interpreted quantities finite, nonnegative and at most
+`Number.MAX_SAFE_INTEGER`. Unsupported version envelopes, duplicate keys,
+invalid JSON/UTF-8 and bounds failures visibly withhold the report, never retain stale
+quantities or zero-fill. Links/junctions, hardlinks and workspace escapes are rejected.
+Root/file identity changes revoke selection; changed reads fail without quantities.
+Consent is exact root/file, in-memory only, with manual refresh and no background
+discovery/polling. Standalone import remains unavailable, even with office control.
+
 ### U-01: Missing source, partial data, and no deduplication
 
 - **Setup:** Native installed build; a separate disposable fixture workspace, not the actual producer workspace. Back up any run-owned ledger before approved replacement.
