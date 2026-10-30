@@ -140,6 +140,8 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
       } });
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Charter content is unavailable.');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Declared model metadata is unavailable in the read-only observer.');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Current-session model: unavailable');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed status: active');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed task: Approximate observed activity');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('unavailable in the read-only observer');

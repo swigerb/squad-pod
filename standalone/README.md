@@ -296,7 +296,10 @@ cache, using local tarballs of the already-restored runtime dependencies (no fee
 metadata lookup). When `PLAYWRIGHT_MODULE` points to an
 already installed Playwright module, it additionally drives the actual browser
 authentication form and renderer, observes live fixture changes, reconnects, and
-writes desktop/narrow screenshots to `OBSERVER_ARTIFACTS`. A saved-project Floor10
+writes desktop/narrow screenshots to `OBSERVER_ARTIFACTS`. It also opens the
+installed production agent card and asserts that the observer's unavailable
+activity timestamp is displayed explicitly; when artifacts are enabled, that card
+is captured as `observer-unavailable-activity-card.png`. A saved-project Floor10
 probe checks exact installed source-sheet canvas pixels and legacy VOID8 transparency.
 `EDGE_PATH` optionally
 selects an installed Edge executable; it installs no browsers.

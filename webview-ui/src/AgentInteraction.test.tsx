@@ -285,6 +285,38 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     hold = false;
   });
 
+  it('keeps auto, charter and JSON conflicts separate, refreshes on reopen, and withholds stale model replies', () => {
+    const squad = path.join(fixture.workspaceRoot, '.squad');
+    const charter = path.join(squad, 'agents', 'ada', 'charter.md');
+    fs.appendFileSync(charter, '\n## Model\n- **Preferred:** auto\n- **Rationale:** Synthetic policy\n- **Fallback:** synthetic-fallback\n');
+    fs.writeFileSync(path.join(squad, 'config.json'), JSON.stringify({
+      defaultModel: 'synthetic-default', agentModelOverrides: { Ada: 'synthetic-override', ada: 'not-the-name' },
+    }));
+    click('Squad Info');
+    click('Show details for Ada');
+    const text = memberDetail()?.textContent;
+    for (const expected of ['Current-session model: unavailable', 'Automatic selection (auto; not a concrete model)',
+      'Rationale: Synthetic policy', 'Fallback: synthetic-fallback', 'defaultModel: synthetic-default',
+      'agentModelOverrides["Ada"]: synthetic-override', path.join(squad, 'config.json'),
+      'not effective runtime selection']) expect(text).toContain(expected);
+    expect(text).not.toContain('not-the-name');
+    hold = true;
+    click('Show details for Grace');
+    const stale = held.at(-1)!;
+    click('Close Squad Info');
+    fs.writeFileSync(path.join(squad, 'config.json'), '{');
+    click('Squad Info');
+    click('Show details for Ada');
+    act(() => deliver(stale));
+    expect(memberDetail()?.textContent).toContain('Loading observed details');
+    act(() => deliver(held.at(-1)!));
+    expect(memberDetail()?.textContent).toContain('malformed');
+    expect(memberDetail()?.textContent).not.toContain('synthetic-default');
+    expect(memberDetail()?.textContent).not.toContain('synthetic-override');
+    expect(memberDetail()?.textContent).toContain('Current-session model: unavailable');
+    hold = false;
+  });
+
   it('clamps the measured border-box card rather than an estimated content size at 360x640', () => {
     vi.stubGlobal('innerWidth', 360);
     vi.stubGlobal('innerHeight', 640);

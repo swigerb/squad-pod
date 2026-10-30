@@ -11,6 +11,7 @@ export interface AgentDetailInfo {
   charterSummary: string | null;
   charterContent: string | null;
   charterStatus: 'available' | 'missing' | 'unreadable' | 'unavailable';
+  modelSources?: import('../../../src/declaredModels.js').ModelConfigSource[];
   expertise: string | null;
   responsibilities: string | null;
   boundaries: string | null;
@@ -26,6 +27,8 @@ interface AgentCardProps {
 }
 
 function formatRelativeTime(timestamp: number): string {
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return 'Activity time unavailable';
+
   const now = Date.now();
   const diff = now - timestamp;
   const seconds = Math.floor(diff / 1000);

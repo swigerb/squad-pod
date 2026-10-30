@@ -28,7 +28,7 @@ const option = (name) => {
 const hash = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 
 // Shared by the host and webview suites; only the VS Code boundary is mocked.
-function createProviderFixture({ artifactRoot = root, extensionCode, baseUrl = 'http://127.0.0.1' } = {}) {
+function createProviderFixture({ artifactRoot = root, extensionCode, baseUrl = 'http://127.0.0.1', modelMetadata = false } = {}) {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-interaction-fixture-'));
   const squad = path.join(workspaceRoot, '.squad');
   fs.mkdirSync(path.join(squad, 'log'), { recursive: true });
@@ -43,6 +43,14 @@ function createProviderFixture({ artifactRoot = root, extensionCode, baseUrl = '
       `# ${agent.name}\n\n${agent.summary}\n\n## Identity\n\n- **Expertise:** ${agent.name} expertise\n\n## Responsibilities\n\n- ${agent.name} responsibilities\n\n## Boundaries\n\n- ${agent.name} boundaries\n${agent.id === 'ada' ? '<img src=x onerror="window.__charterExecuted=true">' : ''}\n`);
     fs.writeFileSync(path.join(directory, 'history.md'), `# ${agent.name} history\n`);
     fs.writeFileSync(path.join(squad, 'log', `2026-10-29-${agent.id}.md`), `# Activity\n${agent.activity}\n`);
+  }
+  if (modelMetadata) {
+    fs.appendFileSync(path.join(squad, 'agents', 'ada', 'charter.md'),
+      '\n## Model\n- **Preferred:** auto\n- **Rationale:** Synthetic task policy\n- **Fallback:** synthetic-fallback\n');
+    fs.writeFileSync(path.join(squad, 'config.json'), JSON.stringify({
+      defaultModel: 'synthetic-default', agentModelOverrides: { Ada: 'synthetic-override', ada: 'not-the-name' },
+    }));
+    fs.writeFileSync(path.join(workspaceRoot, 'squad.config.ts'), 'throw new Error("never execute")');
   }
   const calls = { documents: [], commands: [], information: [], terminals: [] };
   const messages = [];
@@ -254,7 +262,7 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
           server.once('error', reject); server.listen(0, '127.0.0.1', resolve);
         });
         const baseUrl = `http://127.0.0.1:${server.address().port}`;
-        fixture = createProviderFixture({ artifactRoot, baseUrl });
+        fixture = createProviderFixture({ artifactRoot, baseUrl, modelMetadata: true });
         fixture.send({ type: 'webviewReady' });
         const nonce = fixture.webview.html.match(/<script nonce="([^"]+)"/)?.[1];
         assert.ok(nonce, 'provider HTML retains nonce-gated CSP');
@@ -330,6 +338,7 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
             await page.screenshot({ path: path.join(outputDir, `card-${agent.id}-${viewport.width}.png`) });
             await card.getByRole('button', { name: 'Close agent details' }).click();
           }
+          const squad = path.join(fixture.workspaceRoot, '.squad');
           await page.getByRole('button', { name: 'Squad Info' }).click();
           const adaDetails = page.getByRole('button', { name: 'Show details for Ada' });
           await adaDetails.focus();
@@ -344,6 +353,19 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
           assert.ok((await adaPanel.innerText()).includes('Ada expertise'), 'declared expertise is shown');
           assert.ok((await adaPanel.innerText()).includes('Ada responsibilities'), 'declared responsibilities are shown');
           assert.ok((await adaPanel.innerText()).includes('Ada boundaries'), 'declared boundaries are shown');
+          const modelText = await adaPanel.locator('section[aria-label="Model metadata"]').innerText();
+          for (const expected of ['Current-session model: unavailable', 'not effective runtime selection',
+            'Automatic selection (auto; not a concrete model)', 'Rationale: Synthetic task policy',
+            'Fallback: synthetic-fallback', 'defaultModel: synthetic-default',
+            'agentModelOverrides["Ada"]: synthetic-override', path.join(squad, 'config.json'),
+            'Executable/legacy configuration is present; not imported, executed or resolved.']) {
+            assert.ok(modelText.includes(expected), `model source evidence: ${expected}`);
+          }
+          assert.ok(!modelText.includes('not-the-name'), 'no fuzzy agent override matching');
+          await adaPanel.locator('section[aria-label="Model metadata"]').screenshot({
+            path: path.join(outputDir, `model-metadata-${viewport.width}.png`),
+          });
+          result.modelMetadata = modelText;
           assert.equal(await adaPanel.locator('img,script').count(), 0, 'charter source is rendered as text, not HTML');
           assert.ok((await adaPanel.innerText()).includes('<img src=x'), 'literal charter markup remains visible as source text');
           const beforeInfoCharter = fixture.calls.documents.length;
