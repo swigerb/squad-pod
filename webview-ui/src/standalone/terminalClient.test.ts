@@ -111,10 +111,13 @@ describe('production owned terminal client', () => {
     const { client, socket, callbacks } = await selected();
     socket.event(start(0, 0)); socket.event(end(0)); await flush();
     const chunkBytes = Math.min(TERMINAL_LIMITS.inputBytes, Math.floor((TERMINAL_LIMITS.frameBytes - 512) / 6));
+    const sentBeforeInput = socket.send.mock.calls.length;
     Object.defineProperty(socket, 'bufferedAmount', {
-      configurable: true, get: () => socket.send.mock.calls.length ? TERMINAL_LIMITS.pendingBytes + 1 : 0,
+      configurable: true,
+      get: () => socket.send.mock.calls.length > sentBeforeInput ? TERMINAL_LIMITS.pendingBytes + 1 : 0,
     });
     expect(client.input('x'.repeat(chunkBytes + 1))).toEqual({ status: 'partial', sentCodeUnits: chunkBytes });
+    expect(client.input('blocked retry')).toEqual({ status: 'not-sent' });
     expect(socket.commands().filter(command => command.type === 'input')).toHaveLength(1);
     expect(callbacks.status).toHaveBeenCalledWith(expect.stringContaining('backpressured'));
     client.dispose();

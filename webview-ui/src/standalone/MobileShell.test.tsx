@@ -125,6 +125,30 @@ describe('standalone mobile shell', () => {
     expect(panel.props?.selectedRunId).toBe(second);
   });
 
+  it('clears a correlated busy rejection and permits a later deliberate launch', async () => {
+    await act(async () => root.render(<MobileShell office={<div>office</div>} />));
+    await act(async () => panel.props?.onAccessChange?.(access));
+    await act(async () => button('Launch owned terminal').click());
+    const firstRequest = panel.launchRequests[0];
+    expect(button('Launch owned terminal').disabled).toBe(true);
+    await act(async () => panel.props?.onLaunchResult?.(firstRequest, {
+      ok: false, message: 'Owned action in progress.',
+    }));
+    expect(host.textContent).toContain('Launch failed: Owned action in progress.');
+    expect(button('Launch owned terminal').disabled).toBe(false);
+    expect(host.querySelector<HTMLElement>('[data-mobile-view]')?.dataset.mobileView).toBe('office');
+    await act(async () => button('Launch owned terminal').click());
+    expect(panel.launchRequests).toHaveLength(2);
+    expect(panel.launchRequests[1]).not.toBe(firstRequest);
+    await act(async () => panel.props?.onAccessChange?.({
+      ...access,
+      runs: [...access.runs, { runId: second, pid: 2, state: 'running', exitCode: null }],
+    }));
+    await act(async () => panel.props?.onLaunchResult?.(panel.launchRequests[1], { ok: true, runId: second }));
+    expect(panel.props?.selectedRunId).toBe(second);
+    expect(host.querySelector<HTMLElement>('[data-mobile-view]')?.dataset.mobileView).toBe('terminal');
+  });
+
   it('commits edge swipes in both directions after cancelling the child gesture', async () => {
     await act(async () => root.render(<MobileShell office={<div data-testid="office">office</div>} />));
     const stage = host.querySelector<HTMLElement>('.observer-mobile-stage')!;
