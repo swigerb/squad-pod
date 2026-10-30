@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useState } from 'react';
 import type { AgentDetailInfo } from './AgentCard.js';
-import type { CurrentTaskSource } from '../../../src/types.js';
+import type { CurrentTaskSource, LiveModelSnapshot, LiveSourceStatus } from '../../../src/types.js';
+import { liveModelUnavailableReason, RuntimeModelStatus } from './RuntimeModelStatus.js';
 
 export interface SquadInfoData {
   teamName: string | null;
@@ -29,6 +30,9 @@ interface SquadInfoCardProps {
   onRequestAgentDetail?: (agentId: string) => void;
   onOpenCharter?: (agentId: string) => void;
   onClose: () => void;
+  liveModels?: LiveModelSnapshot | null;
+  liveActivity?: LiveSourceStatus;
+  readOnly?: boolean;
 }
 
 function statusDot(isActive: boolean): string {
@@ -50,6 +54,7 @@ function roleEmoji(role: string): string {
 
 export function SquadInfoCard({
   info, agentDetails = {}, availableAgentIds = [], onRequestAgentDetail, onOpenCharter, onClose,
+  liveModels, liveActivity, readOnly = false,
 }: SquadInfoCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
@@ -194,6 +199,14 @@ export function SquadInfoCard({
           </div>
         </div>
 
+        <div style={{ marginBottom: '16px', overflowWrap: 'anywhere' }} aria-label="Current-session model">
+          <RuntimeModelStatus
+            label="Current-session model"
+            observation={liveModels?.session}
+            unavailableReason={liveModelUnavailableReason(liveActivity, readOnly)}
+          />
+        </div>
+
         {/* Project Context */}
         {info.projectContext && (
           <div style={{
@@ -277,8 +290,12 @@ export function SquadInfoCard({
                     ) : (
                       <>
                         <section aria-label="Model metadata" style={{ marginTop: '8px', overflowWrap: 'anywhere' }}>
-                          <div><strong>Current-session model:</strong> unavailable</div>
-                          <div>No authoritative runtime model field is implemented. Historical model reports remain historical.</div>
+                          <RuntimeModelStatus
+                            label="Member runtime model"
+                            observation={liveModels?.members[m.id]}
+                            unavailableReason={liveModelUnavailableReason(liveActivity, readOnly)}
+                          />
+                          <div>Historical model reports remain historical. Runtime selection, emitted assistant models, and declared metadata are separate sources.</div>
                           <strong>Declared model metadata (not effective runtime selection):</strong>
                           {detail.modelSources ? detail.modelSources.map(source => (
                             <div key={source.sourcePath} style={{ marginTop: '8px' }}>

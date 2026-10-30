@@ -331,7 +331,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       if (enabled && !this.liveConsent) {
         this.livePending = true;
         const answer = await vscode.window.showWarningMessage(
-          'Show live Squad activity? Squad Pod will read local Copilot CLI workspace metadata and session event logs for this workspace. Only member/task names, task types/modes, short task descriptions, opaque call/parent IDs, tool names, file basenames, command names and context counts are used. Observed transient tasks are kept in memory only, not added to the team. Prompts, other arguments and outputs are never displayed or stored. The session format is undocumented and best-effort.',
+          'Show live Squad activity? Squad Pod will read local Copilot CLI workspace metadata and session event logs for this workspace. Only member/task names, task types/modes, short task descriptions, opaque call/parent IDs, tool names, file basenames, command names, context counts, emitted model identifiers and their source timestamps are used. Observed transient tasks are kept in memory only, not added to the team. Prompts, other arguments and outputs are never displayed or stored. The session format is best-effort.',
           { modal: true }, 'Enable Live Activity',
         );
         if (request !== this.liveRequest) {return;}

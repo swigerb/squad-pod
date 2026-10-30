@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AgentCard, type AgentDetailInfo } from './AgentCard.js';
+import { liveModelUnavailableReason } from './RuntimeModelStatus.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -73,5 +74,48 @@ describe('AgentCard activity time', () => {
     expect(host.textContent).toContain(label);
     expect(host.textContent).toContain('Synthetic description');
     expect(host.textContent).not.toContain('Current Task');
+  });
+
+  it('shows only runtime model observations with their producer source and timestamp', () => {
+    act(() => root.render(<AgentCard
+      detail={detail}
+      position={{ x: 10, y: 10 }}
+      onClose={() => {}}
+      runtimeModel={{
+        model: 'synthetic-runtime-model', kind: 'assistant-message',
+        source: 'assistant.message.model', timestamp: '2026-10-30T12:34:56.000Z',
+      }}
+      liveActivity={{ state: 'following', sessionId: 'session' }}
+    />));
+    expect(host.textContent).toContain('Member runtime model: synthetic-runtime-model');
+    expect(host.textContent).toContain('assistant.message.model');
+    expect(host.textContent).toContain('2026-10-30T12:34:56.000Z');
+    expect(host.textContent).not.toContain('Declared');
+  });
+
+  it('distinguishes automatic selection and tool-call provenance', () => {
+    act(() => root.render(<AgentCard
+      detail={detail}
+      position={{ x: 10, y: 10 }}
+      onClose={() => {}}
+      runtimeModel={{
+        model: 'auto', kind: 'tool-call',
+        source: 'tool.execution_complete.model', timestamp: '2026-10-30T12:34:56.000Z',
+      }}
+      liveActivity={{ state: 'following', sessionId: 'session' }}
+    />));
+    expect(host.textContent).toContain('Automatic selection (auto; not a concrete model)');
+    expect(host.textContent).toContain('Model emitted for a tool call');
+    expect(host.textContent).toContain('tool.execution_complete.model');
+  });
+
+  it.each([
+    [undefined, false, 'Live Activity is off; enable it to observe runtime model events.'],
+    [{ state: 'searching', sessionId: null }, false, 'No matching Copilot CLI session is currently being followed.'],
+    [{ state: 'error', sessionId: null }, false, 'The selected Copilot CLI session could not be read.'],
+    [{ state: 'following', sessionId: 'session' }, false, 'No current runtime model observation is available for this session or member.'],
+    [{ state: 'following', sessionId: 'session' }, true, 'Live model observation is unavailable in the read-only observer.'],
+  ] as const)('explains unavailable model state %s', (liveActivity, readOnly, reason) => {
+    expect(liveModelUnavailableReason(liveActivity, readOnly)).toBe(reason);
   });
 });

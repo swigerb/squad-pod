@@ -102,6 +102,303 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(messages).toContainEqual({ type: 'agentContextUsage', agentId: 'ada', contextTokens: 800, maxContextTokens: 1000 });
   });
 
+  it('projects only authoritative model fields and excludes ephemeral or message content', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    expect(parseLiveEvent(line('session.start', { selectedModel: 'selected-model' }, { timestamp })))
+      .toMatchObject({ modelObservation: {
+        model: 'selected-model', kind: 'session-selection', source: 'session.start.selectedModel', timestamp,
+      }, identityOmitted: false });
+    expect(parseLiveEvent(line('session.model_change', { newModel: 'changed-model' }, { timestamp })))
+      .toMatchObject({ modelObservation: {
+        model: 'changed-model', kind: 'session-selection', source: 'session.model_change.newModel', timestamp,
+      } });
+    expect(parseLiveEvent(line('session.resume', { selectedModel: 'resumed-model' }, { timestamp })))
+      .toMatchObject({ modelObservation: {
+        model: 'resumed-model', kind: 'session-selection', source: 'session.resume.selectedModel', timestamp,
+      } });
+    expect(parseLiveEvent(line('subagent.started', { model: 'member-model' }, { timestamp })))
+      .toMatchObject({ modelObservation: {
+        model: 'member-model', kind: 'subagent-model', source: 'subagent.started.model', timestamp,
+      } });
+    expect(parseLiveEvent(line('tool.execution_complete', { model: 'tool-model' }, { timestamp })))
+      .toMatchObject({ modelObservation: {
+        model: 'tool-model', kind: 'tool-call', source: 'tool.execution_complete.model', timestamp,
+      } });
+    const assistant = parseLiveEvent(line('assistant.message', {
+      model: 'observed-model', content: secret, toolRequests: [{ arguments: { prompt: secret } }],
+    }, { timestamp }));
+    expect(assistant?.modelObservation).toMatchObject({
+      model: 'observed-model', kind: 'assistant-message', source: 'assistant.message.model', timestamp,
+    });
+    expect(JSON.stringify(assistant)).not.toContain(secret);
+    expect(parseLiveEvent(line('assistant.message', { model: 'ephemeral-model', content: secret },
+      { timestamp, ephemeral: true }))?.modelObservation).toBeUndefined();
+    expect(parseLiveEvent(line('assistant.usage', { model: 'ephemeral-model' }, { timestamp }))).toBeNull();
+    expect(parseLiveEvent(line('assistant.message', { model: 'bad\nmodel' }, { timestamp }))?.modelObservation)
+      .toBeUndefined();
+    expect(parseLiveEvent(line('assistant.message', { model: 'missing-timestamp' } ) )?.modelObservation)
+      .toBeUndefined();
+  });
+
+  it('uses session-start model metadata without replaying completed member lifecycle', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    session('history', marked(
+      line('session.start', { selectedModel: 'session-model' }, { timestamp })
+      + taskCall('past', 'ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'past', model: 'member-model' },
+        { agentId: 'instance-1', timestamp })
+      + line('subagent.completed', { toolCallId: 'past' }, { agentId: 'instance-1', timestamp }),
+    ));
+    reader.start();
+    expect(lifecycle).not.toHaveBeenCalled();
+    expect(messages.filter(message => message.type === 'observedTasks').at(-1)?.snapshot.limited).toBe(false);
+    expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot).toEqual({
+      sessionId: 'history',
+      session: {
+        model: 'session-model', kind: 'session-selection', source: 'session.start.selectedModel', timestamp,
+      },
+      members: {},
+    });
+  });
+
+  it('clears current model observations on session switch, staleness and disable', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const models = () => messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot;
+    session('first', marked(line('session.start', { selectedModel: 'first-model' }, { timestamp })
+      + line('tool.execution_start', { toolCallId: 'old-root-tool', toolName: 'view' })));
+    reader.start();
+    expect(models()).toMatchObject({ sessionId: 'first', session: { model: 'first-model' } });
+
+    now += 6000;
+    const second = session('second', marked(line('session.resume', { selectedModel: 'second-model' }, { timestamp })));
+    reader.poll();
+    expect(models()).toMatchObject({ sessionId: 'second', session: {
+      model: 'second-model', source: 'session.resume.selectedModel',
+    } });
+    fs.appendFileSync(second, line('tool.execution_complete', { toolCallId: 'old-root-tool', model: 'old-tool-model' },
+      { timestamp }));
+    reader.poll();
+    expect(models()?.session?.model).toBe('second-model');
+
+    now += LIVE_STALE_MS + 1;
+    reader.poll();
+    expect(models()).toEqual({ sessionId: null, session: null, members: {} });
+    reader.stop();
+    expect(models()).toEqual({ sessionId: null, session: null, members: {} });
+  });
+
+  it('attributes tool-call models to their known member and scopes subagent shutdown', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const file = session('scoped-models', marked(
+      line('session.start', { selectedModel: 'root-model' }, { timestamp })
+      + taskCall('ada-run', 'ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'ada-run' }, { agentId: 'ada-instance', timestamp })
+      + taskCall('grace-run', 'grace', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'grace-run', model: 'grace-model' },
+        { agentId: 'grace-instance', timestamp })
+      + line('tool.execution_start', { toolCallId: 'ada-tool', parentToolCallId: 'ada-run',
+        toolName: 'view', arguments: { path: 'C:\\private\\test.ts' } }),
+    ));
+    reader.start();
+    const models = () => messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot;
+    expect(models()).toMatchObject({ session: { model: 'root-model' } });
+
+    fs.appendFileSync(file, line('tool.execution_complete', { toolCallId: 'ada-tool', model: 'ada-tool-model' },
+      { timestamp }));
+    reader.poll();
+    expect(models()).toMatchObject({
+      session: { model: 'root-model' },
+      members: { ada: { model: 'ada-tool-model', source: 'tool.execution_complete.model' } },
+    });
+
+    fs.appendFileSync(file, line('session.shutdown', { currentModel: 'ada-tool-model' },
+      { agentId: 'ada-instance', timestamp }));
+    reader.poll();
+    expect(models()).toEqual({
+      sessionId: 'scoped-m', session: { model: 'root-model', kind: 'session-selection',
+        source: 'session.start.selectedModel', timestamp },
+      members: { grace: { model: 'grace-model', kind: 'subagent-model',
+        source: 'subagent.started.model', timestamp } },
+    });
+
+    fs.appendFileSync(file, line('assistant.message', { model: 'grace-next', content: secret },
+      { agentId: 'grace-instance', timestamp }));
+    reader.poll();
+    expect(models()?.members.grace?.model).toBe('grace-next');
+    expect(models()?.session?.model).toBe('root-model');
+
+    fs.appendFileSync(file, line('tool.execution_start', { toolCallId: 'root-tool', toolName: 'view' })
+      + line('tool.execution_complete', { toolCallId: 'root-tool', model: 'root-tool-model' }, { timestamp }));
+    reader.poll();
+    expect(models()?.session).toMatchObject({
+      model: 'root-tool-model', source: 'tool.execution_complete.model',
+    });
+  });
+
+  it('does not promote late or duplicate member-tool completions to the session model', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const file = session('late-tool', marked(
+      line('session.start', { selectedModel: 'root-model' }, { timestamp })
+      + taskCall('grace-run', 'grace', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'grace-run' }, { agentId: 'grace-instance', timestamp })
+      + line('tool.execution_start', { toolCallId: 'grace-tool', parentToolCallId: 'grace-run', toolName: 'view' }),
+    ));
+    reader.start();
+    fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'grace-run' },
+      { agentId: 'grace-instance', timestamp }));
+    reader.poll();
+    expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot).toMatchObject({
+      session: { model: 'root-model' }, members: {},
+    });
+
+    fs.appendFileSync(file, line('tool.execution_complete', { toolCallId: 'grace-tool', model: 'late-grace-tool-model' },
+      { timestamp }));
+    reader.poll();
+    expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot).toMatchObject({
+      session: { model: 'root-model' }, members: {},
+    });
+    fs.appendFileSync(file, line('tool.execution_complete', { toolCallId: 'grace-tool', model: 'duplicate-model' },
+      { timestamp }));
+    reader.poll();
+    expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot).toMatchObject({
+      session: { model: 'root-model' }, members: {},
+    });
+  });
+
+  it('joins delayed selected-agent ownership only through a retained running call instance', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const file = session('late-selection', marked(
+      line('session.start', { selectedModel: 'root-model' }, { timestamp })
+      + taskCall('child', 'unknown', 'explore', 'parent')
+      + line('subagent.started', { toolCallId: 'child', model: 'child-model' },
+        { agentId: 'child-instance', timestamp })
+      + line('subagent.selected', { agentName: 'grace' }, { agentId: 'child-instance', timestamp })
+      + line('assistant.message', { model: 'grace-actual', content: secret },
+        { agentId: 'child-instance', timestamp }),
+    ));
+    reader.start();
+    const models = () => messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot;
+    expect(models()).toMatchObject({
+      session: { model: 'root-model' },
+      members: { grace: { model: 'grace-actual', source: 'assistant.message.model' } },
+    });
+    expect(inventory().tasks).toContainEqual(expect.objectContaining({
+      toolCallId: 'child', state: 'running', agentId: 'grace', instanceId: 'child-instance',
+    }));
+    expect(lifecycle).toHaveBeenCalledWith('grace', true, 'Inspect fixture');
+
+    fs.appendFileSync(file, line('subagent.selected', { agentName: 'grace' },
+      { agentId: 'unretained-instance', timestamp })
+      + line('assistant.message', { model: 'unrelated-model', content: secret },
+        { agentId: 'unretained-instance', timestamp }));
+    reader.poll();
+    expect(models()?.session?.model).toBe('root-model');
+    expect(models()?.members.grace?.model).toBe('grace-actual');
+    expect(models()?.members).not.toHaveProperty('unknown');
+  });
+
+  it('bounds root tool ownership and withholds model events after owner eviction', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const rootCalls = Array.from({ length: 2049 }, (_, index) => {
+      const id = `root-${index}`;
+      return line('tool.execution_start', { toolCallId: id, toolName: 'view' })
+        + line('tool.execution_complete', { toolCallId: id, model: `root-model-${index}` }, { timestamp });
+    }).join('');
+    const file = session('bounded-owners', marked(
+      line('session.start', { selectedModel: 'initial-root-model' }, { timestamp }) + rootCalls,
+    ));
+    reader.start();
+    const models = () => messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot;
+    expect(models()?.session?.model).toBe('root-model-2048');
+
+    fs.appendFileSync(file, line('tool.execution_complete', { toolCallId: 'root-0', model: 'evicted-owner-model' },
+      { timestamp }));
+    reader.poll();
+    expect(models()?.session?.model).toBe('root-model-2048');
+  });
+
+  it('keeps session selections, actual root messages and exactly attributed member models separate', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const file = session('models', marked(
+      line('session.start', { selectedModel: 'session-selection' }, { timestamp })
+      + taskCall('run', 'ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run', model: 'member-selection' },
+        { agentId: 'instance-1', timestamp })
+      + line('assistant.message', { model: 'member-message', content: secret }, { agentId: 'instance-1', timestamp })
+      + line('assistant.message', { model: 'root-message', content: secret }, { timestamp }),
+    ));
+    reader.start();
+    const models = () => messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot;
+    expect(models()).toEqual({
+      sessionId: 'models',
+      session: {
+        model: 'root-message', kind: 'assistant-message', source: 'assistant.message.model', timestamp,
+      },
+      members: { ada: {
+        model: 'member-message', kind: 'assistant-message', source: 'assistant.message.model', timestamp,
+      } },
+    });
+    expect(JSON.stringify(messages)).not.toContain(secret);
+
+    fs.appendFileSync(file, line('session.model_change', { newModel: 'member-changed' },
+      { agentId: 'instance-1', timestamp }));
+    reader.poll();
+    expect(models()?.session?.model).toBe('root-message');
+    expect(models()?.members.ada).toMatchObject({
+      model: 'member-changed', kind: 'session-selection', source: 'session.model_change.newModel',
+    });
+
+    fs.appendFileSync(file, line('assistant.message', { model: 'unattributed-model', content: secret },
+      { agentId: 'unknown-instance', timestamp }));
+    reader.poll();
+    expect(models()?.members.ada?.model).toBe('member-changed');
+    expect(models()?.session?.model).toBe('root-message');
+
+    fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'run' }, { agentId: 'instance-1', timestamp }));
+    reader.poll();
+    expect(models()?.members).toEqual({});
+    expect(models()?.session?.model).toBe('root-message');
+
+    fs.appendFileSync(file, line('session.model_deselected', { previousModel: 'root-message' }, { timestamp }));
+    reader.poll();
+    expect(models()?.session).toBeNull();
+    fs.appendFileSync(file, line('session.start', { selectedModel: 'shutting-down-model' }, { timestamp })
+      + line('session.shutdown', { currentModel: 'shutting-down-model' }, { timestamp }));
+    reader.poll();
+    expect(models()?.session).toBeNull();
+    reader.stop();
+    expect(models()).toEqual({ sessionId: null, session: null, members: {} });
+  });
+
+  it('does not attribute a session model to a member and clears models when the followed session changes', () => {
+    const file = session('old-session', marked(line('session.start', { selectedModel: 'old-model' },
+      { timestamp: '2026-10-30T12:34:56.000Z' })));
+    reader.start();
+    expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot.session?.model)
+      .toBe('old-model');
+    now += 6000;
+    session('new-session', marked(''));
+    reader.poll();
+    expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot).toEqual({
+      sessionId: 'new-sess', session: null, members: {},
+    });
+    expect(file).toContain('old-session');
+    reader.stop();
+  });
+
+  it('clears the current model after the matched source becomes stale', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    session('stale-model', marked(line('session.start', { selectedModel: 'stale-model' }, { timestamp })));
+    reader.start();
+    expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot.session?.model)
+      .toBe('stale-model');
+    now += LIVE_STALE_MS + 1;
+    reader.poll();
+    expect(statuses.at(-1)?.state).toBe('searching');
+    expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot)
+      .toEqual({ sessionId: null, session: null, members: {} });
+  });
+
   it('switches to a newer matching session and clears the previous run', () => {
     session('old', marked(spawnLines()), workspace, 1000);
     reader.start();
@@ -250,7 +547,7 @@ describe('read-only Copilot live activity with synthetic homes', () => {
       + line('tool.execution_start', { toolCallId: 'root', toolName: 'view' }) + done('root')));
     reader.start();
     expect(lifecycle).not.toHaveBeenCalled();
-    expect(messages.filter(m => m.type !== 'observedTasks')).toEqual([]);
+    expect(messages.filter(m => !['observedTasks', 'liveModels'].includes(m.type))).toEqual([]);
     expect(inventory().tasks).toHaveLength(4);
     expect(inventory().tasks.every(task => task.agentId === null)).toBe(true);
     expect(exactLiveAgent('ADA', roster)).toBe('ada');
