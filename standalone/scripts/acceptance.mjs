@@ -143,7 +143,9 @@ try {
   check('forged production mutations rejected without project or synthetic-home writes');
 
   if (process.env.PLAYWRIGHT_MODULE) {
-    const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
+    const playwright = await import(pathToFileURL(createRequire(import.meta.url).resolve(process.env.PLAYWRIGHT_MODULE)).href);
+    const chromium = playwright.chromium ?? playwright.default?.chromium;
+    if (!chromium?.launch) throw new Error('PLAYWRIGHT_MODULE must export chromium.launch.');
     browser = await chromium.launch({ headless: true, ...(process.env.EDGE_PATH ? { executablePath: process.env.EDGE_PATH } : {}) });
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
     const tab = await context.newPage();
