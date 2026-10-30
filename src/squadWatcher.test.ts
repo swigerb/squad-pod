@@ -141,6 +141,20 @@ describe('detectAgentFromFilename', () => {
 });
 
 describe('summarizeHistory', () => {
+  it.each([
+    '# TestBot History\n\n## Learnings\n<!-- Append only work actually completed. -->',
+    '# History\n<!-- multi-line\n- Not completed work\n-->\n## Completed Work\n---\n- [ ]\n**Task:**',
+    '# History\n## Empty section\n===\n| --- | :---: |',
+    'TestBot History\n===\nLearnings\n---',
+  ])('does not infer work from scaffolding: %s', content => {
+    expect(summarizeHistory(content)).toBeNull();
+  });
+
+  it('removes inline comments without discarding meaningful work', () => {
+    expect(summarizeHistory('# History\n- Added **retry** logic <!-- template -->\n## Learnings'))
+      .toBe('Added retry logic');
+  });
+
   it('returns the latest meaningful line', () => {
     expect(summarizeHistory('# History\n\n## Learnings\n- Added **retry** logic\n')).toBe('Added retry logic');
   });
@@ -213,6 +227,31 @@ describe('SquadWatcher', () => {
     events = [];
     watcher.scan();
     expect(events).toEqual([]);
+  });
+
+  it('uses neutral hints for scaffolding across file sources and leaves history untouched', () => {
+    write('team.md', '# Team');
+    start();
+    const history = '# TestBot History\n## Learnings\n<!-- Append only work actually completed. -->';
+    write('agents/testbot/history.md', history);
+    write('log/test.md', '**Agent:** TestBot\n<!-- Not work -->\n## Activity');
+    write('orchestration-log/2026-01-02T10-00-00Z-testbot.md', '**Task:** <!-- Not work -->');
+    write('decisions/inbox/testbot-choice.md', '# Decision\n<!-- Write a decision here -->');
+    write('sessions/test.json', JSON.stringify({
+      id: 'test', createdAt: '2026-01-02', agent: 'testbot',
+      messages: [{ content: '# Session\n<!-- Not work -->' }],
+    }));
+    watcher.scan();
+    expect(events.map(event => event.task).sort()).toEqual([
+      'File changed: history.md', 'File changed: test.md',
+      'File changed: 2026-01-02T10-00-00Z-testbot.md',
+      'File changed: testbot-choice.md', 'File changed: test.json',
+    ].sort());
+    expect(fs.readFileSync(path.join(root, '.squad', 'agents', 'testbot', 'history.md'), 'utf8')).toBe(history);
+    events = [];
+    write('agents/testbot/history.md', `${history}\n- Fixed retry handling\n`);
+    watcher.scan();
+    expect(events).toEqual([expect.objectContaining({ task: 'Fixed retry handling', source: 'agent-files' })]);
   });
 
   it('reports roster changes when team.md changes', () => {

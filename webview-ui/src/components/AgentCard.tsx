@@ -8,6 +8,7 @@ export interface AgentDetailInfo {
   workspaceRoot: string;
   status: 'active' | 'idle' | 'waiting';
   currentTask: string | null;
+  currentTaskSource?: import('../../../src/types.js').CurrentTaskSource | null;
   charterSummary: string | null;
   charterContent: string | null;
   charterStatus: 'available' | 'missing' | 'unreadable' | 'unavailable';
@@ -202,7 +203,8 @@ export function AgentCard({ detail, position, onClose, onViewCharter }: AgentCar
           border: '1px solid rgba(74, 158, 255, 0.3)',
         }}>
           <div style={{ fontSize: '10px', color: '#4a9eff', marginBottom: '4px' }}>
-            🔧 Current Task
+            {detail.currentTaskSource === 'file' ? 'File activity hint'
+              : detail.currentTaskSource === 'live' ? 'Live task' : 'Observed activity'}
           </div>
           <div style={{ fontSize: '11px', lineHeight: '1.4' }}>
             {detail.currentTask}

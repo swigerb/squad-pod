@@ -244,7 +244,8 @@ export function SquadInfoCard({
                     ) : (
                       <>
                         <div><strong>Observed status:</strong> {detail.status}</div>
-                        <div><strong>Observed task:</strong> {detail.currentTask || 'No current task observed.'}</div>
+                        <div><strong>{detail.currentTaskSource === 'file' ? 'File activity hint:'
+                          : detail.currentTaskSource === 'live' ? 'Live task:' : 'Observed activity:'}</strong> {detail.currentTask || 'No current task observed.'}</div>
                         <section aria-label="Model metadata" style={{ marginTop: '8px', overflowWrap: 'anywhere' }}>
                           <div><strong>Current-session model:</strong> unavailable</div>
                           <div>No authoritative runtime model field is implemented. Historical model reports remain historical.</div>

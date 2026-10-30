@@ -6,6 +6,8 @@ export interface SquadTeamMember {
   charterPath: string; // e.g. ".squad/agents/homer-simpson/charter.md"
 }
 
+export type CurrentTaskSource = 'file' | 'live';
+
 export interface SquadAgentState {
   id: string;                    // agent slug (e.g. "homer-simpson")
   name: string;                  // display name (e.g. "Homer Simpson")
@@ -13,7 +15,8 @@ export interface SquadAgentState {
   paletteIndex: number;          // character sprite palette index
   seatId: string | null;         // assigned seat in office
   status: 'active' | 'idle' | 'waiting'; // current activity
-  currentTask: string | null;    // what they're working on
+  currentTask: string | null;    // source-observed description, not necessarily live work
+  currentTaskSource?: CurrentTaskSource | null;
   lastActiveAt: number;          // timestamp of last activity
 }
 
@@ -36,6 +39,7 @@ export interface AgentDetailInfo {
   workspaceRoot: string;
   status: 'active' | 'idle' | 'waiting';
   currentTask: string | null;
+  currentTaskSource?: CurrentTaskSource | null;
   charterSummary: string | null;  // first 2-3 sentences from charter.md
   charterContent: string | null;
   charterStatus: 'available' | 'missing' | 'unreadable' | 'unavailable';
@@ -282,6 +286,8 @@ export interface AgentStatusMessage {
   type: 'agentStatus';
   agentId: string;
   status: 'active' | 'idle' | 'waiting';
+  currentTask?: string | null;
+  currentTaskSource?: CurrentTaskSource | null;
 }
 
 export interface AgentToolStartMessage {
@@ -311,6 +317,7 @@ export interface ExistingAgentsMessage {
     directoryMappingIds?: string[];
     status: 'active' | 'idle' | 'waiting';
     currentTask: string | null;
+    currentTaskSource?: CurrentTaskSource | null;
   }>;
 }
 

@@ -16,6 +16,7 @@ export interface AgentSnapshot {
   name: string;
   role: string;
   currentTask?: string | null;
+  currentTaskSource?: import('../../../../src/types.js').CurrentTaskSource | null;
   paletteIndex?: number;
   seatId?: string | null;
   directoryId?: string | null;

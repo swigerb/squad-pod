@@ -182,6 +182,11 @@ export function useExtensionMessages(
         return;
       }
 
+      const syncDetailActivity = (id: string, activity: Partial<Pick<AgentDetailInfo, 'status' | 'currentTask' | 'currentTaskSource'>>) => {
+        setAgentDetail(previous => previous?.id === id ? { ...previous, ...activity } : previous);
+        setAgentDetails(previous => previous[id] ? { ...previous, [id]: { ...previous[id], ...activity } } : previous);
+      };
+
       const applySnapshot = (snapshot: AgentSnapshot[]) => {
         const officeState = getOfficeState();
         reconcileAgents(officeState, snapshot);
@@ -190,6 +195,13 @@ export function useExtensionMessages(
           if (agent.status !== undefined || agent.currentTask !== undefined) {
             officeState.setAgentTool(agent.id, null);
             runningToolsRef.current.delete(agent.id);
+            syncDetailActivity(agent.id, {
+              ...(agent.status ? { status: agent.status } : {}),
+              ...(agent.currentTask !== undefined || agent.status === 'idle' ? {
+                currentTask: agent.status === 'idle' ? null : agent.currentTask,
+                currentTaskSource: agent.status === 'idle' ? null : agent.currentTaskSource,
+              } : {}),
+            });
           }
         }
         const seats = officeState.getSeatAssignments();
@@ -220,7 +232,8 @@ export function useExtensionMessages(
               if (task) {
                 next[agent.id] = [{
                   toolId: OBSERVED_TASK_ROW_ID,
-                  status: `Observed task: ${task}`,
+                  status: `${agent.currentTaskSource === 'file' ? 'File activity hint'
+                    : agent.currentTaskSource === 'live' ? 'Live task' : 'Observed activity'}: ${task}`,
                   done: false,
                 }];
               }
@@ -309,6 +322,13 @@ export function useExtensionMessages(
           const previous = statusesRef.current[id];
           statusesRef.current = { ...statusesRef.current, [id]: status };
           setAgentStatuses((prev) => ({ ...prev, [id]: status }));
+          syncDetailActivity(id, {
+            status,
+            ...(message.currentTask !== undefined || status === 'idle' ? {
+              currentTask: status === 'idle' ? null : message.currentTask,
+              currentTaskSource: status === 'idle' ? null : message.currentTaskSource,
+            } : {}),
+          });
           applyAgentStatus(getOfficeState(), id, status);
           if (previous === 'active' && status !== 'active') {
             playDoneSound();

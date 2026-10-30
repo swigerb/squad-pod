@@ -10,6 +10,7 @@ import type { HostClient } from './hostClient.js';
 import type { OutboundMessage, WebviewMessage } from '../../src/types.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { placeOverlay } from './components/AgentLabels.js';
+import { setSoundEnabled } from './notificationSound.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const repo = path.resolve('..');
@@ -143,6 +144,43 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
       { type: 'requestAgentDetail', agentId: 'ada' }, { type: 'requestAgentDetail', agentId: 'ada' },
     ]);
     expect(new Set(requests().map((request) => request.requestId)).size).toBe(2);
+  });
+
+  it('labels comment-only history as a file hint and expires open current-task text through the real watcher', () => {
+    setSoundEnabled(false);
+    const historyPath = path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'history.md');
+    const history = '# History\n\n## Learnings\n<!-- Append only work actually completed. -->';
+    fs.writeFileSync(historyPath, history);
+    act(() => vi.advanceTimersByTime(2000));
+    frame();
+    expect(host.querySelector('[data-agent-tools="ada"]')?.textContent)
+      .toContain('File activity hint: File changed: history.md');
+    expect(host.textContent).not.toContain('Append only work actually completed');
+    click('AdaDeveloper');
+    expect(card()?.textContent).toContain('File activity hint');
+    expect(card()?.textContent).toContain('File changed: history.md');
+    act(() => vi.advanceTimersByTime(31000));
+    frame();
+    expect(card()?.textContent).not.toContain('File changed: history.md');
+    expect(host.querySelector('[data-agent-tools="ada"]')).toBeNull();
+    expect(received.filter(message => message.type === 'agentStatus').at(-1)).toMatchObject({
+      status: 'idle', currentTask: null, currentTaskSource: null,
+    });
+    expect(fs.readFileSync(historyPath, 'utf8')).toBe(history);
+    fs.appendFileSync(historyPath, '\n- Fixed retry handling\n');
+    act(() => vi.advanceTimersByTime(2000));
+    frame();
+    expect(card()?.textContent).toContain('File activity hint');
+    expect(card()?.textContent).toContain('Fixed retry handling');
+    expect(host.querySelector('[data-agent-tools="ada"]')?.textContent)
+      .toContain('File activity hint: Fixed retry handling');
+    click('Close agent details');
+    click('Squad Info');
+    click('Show details for Ada');
+    expect(memberDetail()?.textContent).toContain('File activity hint:');
+    expect(memberDetail()?.textContent).toContain('Fixed retry handling');
+    act(() => vi.advanceTimersByTime(31000));
+    expect(memberDetail()?.textContent).not.toContain('Fixed retry handling');
   });
 
   it('clears A while B loads, rejects delayed A after B, and hides a removed card and its stale replies', () => {

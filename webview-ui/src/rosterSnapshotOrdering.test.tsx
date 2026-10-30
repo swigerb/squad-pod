@@ -106,7 +106,7 @@ describe('roster snapshot ordering at the App host boundary', () => {
     await nextFrame();
     expect(agentLabel()?.textContent).toContain('Renamed Fixture Agent');
     expect(agentLabel()?.textContent).toContain('Lead Developer');
-    expect(host.textContent).toContain('Observed task: latest observed task');
+    expect(host.textContent).toContain('Observed activity: latest observed task');
     expect(host.textContent).not.toContain('Fixture activity after reconnect');
 
     send({ type: 'agentStatus', agentId: 'fixture-agent', status: 'waiting' });
@@ -120,7 +120,7 @@ describe('roster snapshot ordering at the App host boundary', () => {
     send({ type: 'agentToolsClear', agentId: 'fixture-agent' });
     await nextFrame();
     expect(agentLabel()?.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Idle');
-    expect(host.textContent).not.toContain('Observed task:');
+    expect(host.textContent).not.toContain('Observed activity:');
 
     send({ type: 'existingAgents', agents: [] });
     await nextFrame();
