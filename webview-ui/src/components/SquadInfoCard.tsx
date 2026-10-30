@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useState } from 'react';
 import type { AgentDetailInfo } from './AgentCard.js';
+import type { CurrentTaskSource } from '../../../src/types.js';
 
 export interface SquadInfoData {
   teamName: string | null;
@@ -13,6 +14,7 @@ export interface SquadInfoData {
     status: string;
     isActive: boolean;
     currentTask: string | null;
+    currentTaskSource?: CurrentTaskSource | null;
   }>;
   hiddenMembers: Array<{ name: string; role: string; status: string }>;
   projectContext: string | null;
@@ -51,6 +53,34 @@ export function SquadInfoCard({
 }: SquadInfoCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
+  const isOpen = info !== null;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus = document.activeElement;
+    cardRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const controls = cardRef.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), summary, [tabindex="0"]',
+      );
+      if (!controls?.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', trapFocus);
+    return () => {
+      document.removeEventListener('keydown', trapFocus);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, [isOpen]);
 
   const handleClickOutside = useCallback((e: MouseEvent) => {
     if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
@@ -237,15 +267,15 @@ export function SquadInfoCard({
                     margin: '4px 0 6px', padding: '10px', background: 'rgba(0, 0, 0, 0.25)',
                     border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '6px',
                   }}>
+                    <div><strong>Observed status:</strong> {m.status === 'unknown' ? 'unavailable' : m.status}</div>
+                    <div><strong>{m.currentTaskSource === 'file' ? 'File activity hint'
+                      : m.currentTaskSource === 'live' ? 'Live task' : 'Observed activity'}:</strong> {m.currentTask || 'No current task observed.'}</div>
                     {!availableAgentIds.includes(m.id) ? (
                       <div role="status">This agent is no longer available in the current workspace.</div>
                     ) : !detail ? (
                       <div role="status">Loading observed details…</div>
                     ) : (
                       <>
-                        <div><strong>Observed status:</strong> {detail.status}</div>
-                        <div><strong>{detail.currentTaskSource === 'file' ? 'File activity hint:'
-                          : detail.currentTaskSource === 'live' ? 'Live task:' : 'Observed activity:'}</strong> {detail.currentTask || 'No current task observed.'}</div>
                         <section aria-label="Model metadata" style={{ marginTop: '8px', overflowWrap: 'anywhere' }}>
                           <div><strong>Current-session model:</strong> unavailable</div>
                           <div>No authoritative runtime model field is implemented. Historical model reports remain historical.</div>

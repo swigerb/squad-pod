@@ -224,12 +224,124 @@ function bridge(messages) {
   `;
 }
 
-async function poll(page, predicate, description) {
+async function poll(page, predicate, description, argument) {
   for (let attempt = 0; attempt < 100; attempt++) {
-    if (await page.evaluate(predicate)) return;
+    if (await page.evaluate(predicate, argument)) return;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw new Error(`Timed out: ${description}`);
+}
+
+async function checkSquadInfo(page, fixture, outputDir, viewport) {
+  await page.evaluate(() => {
+    window.__sendHost({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: false });
+    for (const agentId of ['ada', 'grace']) window.__sendHost({ type: 'agentStatus', agentId, status: 'idle', currentTask: null });
+  });
+  await page.getByRole('button', { name: 'Squad Info', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Squad Info', exact: true });
+  const close = dialog.getByRole('button', { name: 'Close Squad Info' });
+  assert.equal(await close.evaluate(element => element === document.activeElement), true, 'dialog receives focus once');
+  await page.keyboard.press('Shift+Tab');
+  assert.equal(await page.getByRole('button', { name: 'Show details for Grace' })
+    .evaluate(element => element === document.activeElement), true, 'reverse Tab stays in modal');
+  await page.keyboard.press('Tab');
+  assert.equal(await close.evaluate(element => element === document.activeElement), true, 'Tab wraps inside modal');
+  await page.keyboard.press('Tab');
+  const ada = dialog.getByRole('button', { name: /details for Ada/ });
+  assert.equal(await ada.evaluate(element => element === document.activeElement), true, 'Tab reaches member control');
+  await page.keyboard.press('Space');
+  await page.locator('#agent-detail-ada').waitFor();
+  assert.equal(await ada.getAttribute('aria-expanded'), 'true', 'native Space expands with canvas mounted');
+  await page.keyboard.press('Space');
+  assert.equal(await ada.getAttribute('aria-expanded'), 'false', 'native Space collapses');
+  await page.keyboard.press('Enter');
+  assert.equal(await ada.getAttribute('aria-expanded'), 'true', 'native Enter expands');
+  const panel = page.locator('#agent-detail-ada');
+  const requestsBefore = fixture.sent.length;
+  const transitions = [];
+  for (const [status, task] of [['active', 'Synthetic first task'], ['active', 'Synthetic changed task'], ['idle', null]]) {
+    await page.evaluate(({ status, task }) => window.__sendHost({
+      type: 'agentStatus', agentId: 'ada', status, currentTask: task,
+    }), { status, task });
+    await page.waitForFunction(({ status, task }) => {
+      const text = document.querySelector('#agent-detail-ada')?.textContent ?? '';
+      return text.includes(`Observed status: ${status}`) && text.includes(task ?? 'No current task observed.');
+    }, { status, task });
+    assert.ok((await dialog.innerText()).includes(`${status === 'active' ? 1 : 0} active`), 'active count follows current status');
+    assert.equal(await ada.evaluate(element => element === document.activeElement), true, 'live update preserves focus');
+    assert.equal(await ada.getAttribute('aria-expanded'), 'true', 'live update preserves expansion');
+    assert.ok((await panel.innerText()).includes(agents[0].summary), 'cached metadata remains visible');
+    transitions.push({ status, task, text: await panel.innerText() });
+    await dialog.screenshot({ path: path.join(outputDir, `squad-live-${transitions.length}-${viewport.width}.png`) });
+  }
+  assert.deepEqual(fixture.sent.slice(requestsBefore), [], 'activity updates do not rerequest charters or team metadata');
+  const staleInfo = fixture.messages.filter(message => message.type === 'squadInfoLoaded').at(-1);
+  const staleDetail = fixture.messages.filter(message => message.type === 'agentDetailLoaded').at(-1);
+  await page.evaluate(({ staleInfo, staleDetail }) => {
+    window.__sendHost({ type: 'agentStatus', agentId: 'ada', status: 'active', currentTask: 'Newest task' });
+    window.__sendHost(staleInfo);
+    window.__sendHost(staleDetail);
+  }, { staleInfo, staleDetail });
+  await page.waitForFunction(() => document.querySelector('#agent-detail-ada')?.textContent.includes('Newest task'));
+  await page.evaluate(({ staleInfo, staleDetail }) => {
+    window.__sendHost({ type: 'agentClosed', agentId: 'ada' });
+    window.__sendHost(staleInfo);
+    window.__sendHost(staleDetail);
+  }, { staleInfo, staleDetail });
+  await page.getByRole('button', { name: /details for Ada/ }).waitFor({ state: 'detached' });
+  assert.ok(!(await dialog.innerText()).includes(agents[0].summary), 'removed member cannot be resurrected by old replies');
+  const source = fixture.messages.find(message => message.type === 'sourceStatus');
+  await page.evaluate(({ source, staleInfo, staleDetail }) => {
+    window.__sendHost({ ...source, status: { ...source.status, workspaceRoot: 'synthetic-next-workspace' } });
+    window.__sendHost(staleInfo);
+    window.__sendHost(staleDetail);
+  }, { source, staleInfo, staleDetail });
+  await dialog.waitFor({ state: 'detached' });
+  // Restore a complete authoritative snapshot before checking canvas navigation.
+  await page.evaluate(messages => messages.forEach(window.__sendHost), fixture.messages.filter(message =>
+    ['sourceStatus', 'existingAgents'].includes(message.type)));
+  await page.getByRole('button', { name: 'Directories', exact: true }).click();
+  const input = page.getByRole('textbox', { name: 'Directory path', exact: true });
+  await input.fill('synthetic');
+  await input.press('End');
+  await input.press('Space');
+  await input.press('r');
+  assert.equal(await input.inputValue(), 'synthetic r', 'Space and editor shortcuts remain text input');
+  await page.getByRole('button', { name: 'Close directories' }).click();
+  const canvas = page.locator('canvas');
+  await canvas.focus();
+  const label = page.getByRole('button').filter({ hasText: 'GraceReviewer' });
+  const before = await label.boundingBox();
+  const origin = await canvas.evaluate(element => {
+    for (const y of [100, 160, 220]) {
+      for (const x of [innerWidth / 2, innerWidth * 0.8]) {
+        if (document.elementFromPoint(x, y) === element && document.elementFromPoint(x + 12, y + 12) === element) return { x, y };
+      }
+    }
+    return null;
+  });
+  assert.ok(origin, 'pan starts on exposed canvas, not an overlaid office control');
+  await page.keyboard.down('Space');
+  await page.mouse.move(origin.x, origin.y);
+  await page.mouse.down();
+  assert.equal(await canvas.evaluate(element => element.parentElement.style.cursor), 'grabbing', 'canvas Space arms pan');
+  await page.mouse.move(origin.x + 12, origin.y + 12, { steps: 4 });
+  await page.mouse.up();
+  await page.keyboard.up('Space');
+  await poll(page, ({ x, y }) => {
+    const button = [...document.querySelectorAll('button')].find(element => element.textContent === 'GraceReviewer');
+    const box = button?.getBoundingClientRect();
+    return box && (Math.abs(box.x - x) > 2 || Math.abs(box.y - y) > 2);
+  }, 'canvas Space-drag moves the office', before);
+  const after = await label.boundingBox();
+  fixture.noFocus();
+  return {
+    transitions, pan: { before, after },
+    keyboard: ['Tab', 'Shift+Tab', 'Space expand/collapse', 'Enter expand', 'text input', 'canvas Space-drag'],
+    staleReplies: ['detail after activity', 'roster/detail after removal', 'roster/detail after workspace switch'],
+    requestsDuringActivity: fixture.sent.slice(requestsBefore).filter(message =>
+      ['openSquadInfo', 'requestAgentDetail'].includes(message.type)).length,
+  };
 }
 
 async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
@@ -277,6 +389,21 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
         });
         await page.goto(baseUrl, { waitUntil: 'networkidle' });
         await poll(page, () => window.__interaction?.ready && document.querySelectorAll('button [role="img"]').length === 2, 'two real name labels');
+        if (process.argv.includes('--squad-info-only')) {
+          const result = {
+            viewport, overlaps: [], errors,
+            boundary: 'Production App and compiled provider with synthetic messages/mocked VS Code; not native or real-session acceptance',
+            head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+            dirty: execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim(),
+            browser: browser.version(),
+            extensionHash: hash(path.join(artifactRoot, 'dist', 'extension.js')),
+            webviewHash: hash(path.join(artifactRoot, 'dist', 'webview', 'assets', 'index.js')),
+          };
+          results.push(result);
+          result.squadInfo = await checkSquadInfo(page, fixture, outputDir, viewport);
+          assert.deepEqual(errors, [], 'zero page errors');
+          continue;
+        }
         // Default zoom is 2. Verify it rather than silently testing another scale.
         assert.equal(await page.getByRole('group', { name: 'Office zoom' }).innerText().then((text) => text.includes('2x')), true);
         await new Promise((resolve) => setTimeout(resolve, 250));
@@ -485,7 +612,7 @@ async function main() {
     return;
   }
   await acceptance(artifactRoot, outputDir);
-  console.log(`PASS compiled-provider interaction and non-overlapping 2x labels at 1280x900 and 360x640; evidence: ${outputDir}`);
+  console.log(`PASS ${process.argv.includes('--squad-info-only') ? 'targeted live Squad Info and native browser keyboard routing' : 'compiled-provider interaction and non-overlapping 2x labels'} at 1280x900 and 360x640; evidence: ${outputDir}`);
 }
 
 module.exports = { createProviderFixture, agents, layout };

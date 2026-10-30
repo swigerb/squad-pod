@@ -16,7 +16,7 @@ export function useEditorKeyboard(
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target;
-      if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
+      if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"], [role="dialog"]')) {
         return;
       }
 

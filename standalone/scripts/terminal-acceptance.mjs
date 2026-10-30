@@ -237,13 +237,20 @@ try {
     const squadInfo = tab.getByRole('dialog', { name: 'Squad Info' });
     await squadInfo.waitFor();
     await squadInfo.getByRole('button', { name: 'Show details for TestBot', exact: true }).click();
-    await squadInfo.getByText(/Observed status:/).waitFor();
-    await squadInfo.getByText(/Observed task:/).waitFor();
+    await squadInfo.getByText('Observed status: idle', { exact: true }).waitFor();
+    await squadInfo.getByText('Observed activity: No current task observed.', { exact: true }).waitFor();
     await squadInfo.getByText(/Recent activity \(from workspace activity logs/).waitFor();
     await squadInfo.getByText('Charter content is unavailable.', { exact: false }).waitFor();
     assert.equal(await squadInfo.getByRole('button', { name: 'Open charter', exact: true }).isDisabled(), true);
     await squadInfo.getByText('Opening a charter in the editor is unavailable in the read-only observer.', { exact: true }).waitFor();
     check('read-only Squad Info expands observed details and explains unavailable charter opening');
+    await fs.mkdir(path.join(project, '.squad', 'log'), { recursive: true });
+    await fs.writeFile(path.join(project, '.squad', 'log', '2026-10-30T12-30-00Z-test-agent-1.md'),
+      '**Agent:** test-agent-1\n<!-- Synthetic empty scaffolding -->\n');
+    await squadInfo.getByText('Observed status: active', { exact: true }).waitFor();
+    await squadInfo.getByText('File activity hint: Approximate local file activity (not live tool execution)', { exact: true }).waitFor();
+    assert.equal(await squadInfo.getByText('Live task:', { exact: false }).count(), 0);
+    check('owned-terminal surface keeps observed file hints distinct from owned execution');
     await squadInfo.getByRole('button', { name: 'Close Squad Info', exact: true }).click();
     if (artifacts) {
       await fs.mkdir(artifacts, { recursive: true });

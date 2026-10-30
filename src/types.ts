@@ -332,6 +332,7 @@ export interface SquadInfoData {
     status: string;
     isActive: boolean;
     currentTask: string | null;
+    currentTaskSource?: CurrentTaskSource | null;
   }>;
   hiddenMembers: Array<{ name: string; role: string; status: string }>;
   projectContext: string | null;

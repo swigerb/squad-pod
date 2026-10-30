@@ -17,7 +17,7 @@ import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/t
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 import type { ObservedTaskSnapshot } from '../../../src/observedTasks.js';
-import type { OutboundMessage } from '../../../src/types.js';
+import type { CurrentTaskSource, OutboundMessage } from '../../../src/types.js';
 import { pruneCompletedTools, setContextUsage } from '../office/toolUtils.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
@@ -78,6 +78,7 @@ export interface ExtensionMessageState {
   selectedAgent: string | null;
   agentTools: Record<string, ToolActivity[]>;
   agentStatuses: Record<string, string>;
+  agentTasks: Record<string, { currentTask: string | null; currentTaskSource: CurrentTaskSource | null }>;
   rosterMembers: SquadTeamMember[];
   layoutReady: boolean;
   noWorkspace: boolean;
@@ -113,6 +114,7 @@ export function useExtensionMessages(
   const [selectedAgent] = useState<string | null>(null);
   const [agentTools, setAgentTools] = useState<Record<string, ToolActivity[]>>({});
   const [agentStatuses, setAgentStatuses] = useState<Record<string, string>>({});
+  const [agentTasks, setAgentTasks] = useState<ExtensionMessageState['agentTasks']>({});
   const [rosterMembers, setRosterMembers] = useState<SquadTeamMember[]>([]);
   // Every applied snapshot must render App's layout-derived UI, even after ready.
   const [layoutRevision, setLayoutRevision] = useState(0);
@@ -182,11 +184,6 @@ export function useExtensionMessages(
         return;
       }
 
-      const syncDetailActivity = (id: string, activity: Partial<Pick<AgentDetailInfo, 'status' | 'currentTask' | 'currentTaskSource'>>) => {
-        setAgentDetail(previous => previous?.id === id ? { ...previous, ...activity } : previous);
-        setAgentDetails(previous => previous[id] ? { ...previous, [id]: { ...previous[id], ...activity } } : previous);
-      };
-
       const applySnapshot = (snapshot: AgentSnapshot[]) => {
         const officeState = getOfficeState();
         reconcileAgents(officeState, snapshot);
@@ -195,13 +192,6 @@ export function useExtensionMessages(
           if (agent.status !== undefined || agent.currentTask !== undefined) {
             officeState.setAgentTool(agent.id, null);
             runningToolsRef.current.delete(agent.id);
-            syncDetailActivity(agent.id, {
-              ...(agent.status ? { status: agent.status } : {}),
-              ...(agent.currentTask !== undefined || agent.status === 'idle' ? {
-                currentTask: agent.status === 'idle' ? null : agent.currentTask,
-                currentTaskSource: agent.status === 'idle' ? null : agent.currentTaskSource,
-              } : {}),
-            });
           }
         }
         const seats = officeState.getSeatAssignments();
@@ -223,6 +213,10 @@ export function useExtensionMessages(
         }
         statusesRef.current = statuses;
         setAgentStatuses(statuses);
+        setAgentTasks(Object.fromEntries(snapshot.map((agent) => [agent.id, {
+          currentTask: agent.status === 'idle' ? null : agent.currentTask ?? null,
+          currentTaskSource: agent.status === 'idle' ? null : agent.currentTaskSource ?? null,
+        }])));
         setAgentTools((prev) => {
           const next: Record<string, ToolActivity[]> = {};
           for (const agent of snapshot) {
@@ -301,6 +295,11 @@ export function useExtensionMessages(
             return next;
           });
           requestedAgentDetailsRef.current.delete(id);
+          setAgentTasks((previous) => {
+            const next = { ...previous };
+            delete next[id];
+            return next;
+          });
           setAgentDetail((prev) => prev?.id === id ? null : prev);
           setAgentTools((prev) => {
             const next = { ...prev };
@@ -318,17 +317,18 @@ export function useExtensionMessages(
 
         case 'agentStatus': {
           const id = message.agentId;
+          if (!agentsRef.current.includes(id)) break;
           const status = message.status as AgentStatus;
           const previous = statusesRef.current[id];
           statusesRef.current = { ...statusesRef.current, [id]: status };
           setAgentStatuses((prev) => ({ ...prev, [id]: status }));
-          syncDetailActivity(id, {
-            status,
-            ...(message.currentTask !== undefined || status === 'idle' ? {
-              currentTask: status === 'idle' ? null : message.currentTask,
-              currentTaskSource: status === 'idle' ? null : message.currentTaskSource,
-            } : {}),
-          });
+          setAgentTasks((previous) => ({
+            ...previous,
+            [id]: {
+              currentTask: status === 'idle' ? null : message.currentTask ?? null,
+              currentTaskSource: status === 'idle' ? null : message.currentTaskSource ?? null,
+            },
+          }));
           applyAgentStatus(getOfficeState(), id, status);
           if (previous === 'active' && status !== 'active') {
             playDoneSound();
@@ -538,6 +538,15 @@ export function useExtensionMessages(
 
         case 'sourceStatus': {
           if (sourceStatusRef.current?.workspaceRoot !== message.status.workspaceRoot) {
+            agentsRef.current = [];
+            statusesRef.current = {};
+            setAgents([]);
+            setAgentStatuses({});
+            setAgentTasks({});
+            setAgentTools({});
+            runningToolsRef.current.clear();
+            bufferedAgentsRef.current = null;
+            bufferedActivityMessagesRef.current = [];
             setAgentDetails({});
             setAgentDetail(null);
             setSquadInfo(null);
@@ -670,6 +679,7 @@ export function useExtensionMessages(
     selectedAgent,
     agentTools,
     agentStatuses,
+    agentTasks,
     rosterMembers,
     layoutReady,
     noWorkspace,
