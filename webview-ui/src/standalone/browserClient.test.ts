@@ -18,6 +18,31 @@ class Socket {
 afterEach(() => vi.useRealTimers());
 describe('production browser HostClient adapter', () => {
   const layout: OfficeLayout = { version: 2, cols: 2, rows: 2, tiles: [1, 1, 1, 1], furniture: [] };
+  it('clears task-derived displays on disconnect without granting authority or replaying old snapshots', async () => {
+    vi.useFakeTimers();
+    const sockets: Socket[] = [];
+    const client = createBrowserClient(vi.fn(), () => {
+      const ws = new Socket(); sockets.push(ws); return ws as unknown as WebSocket;
+    }, 'http://127.0.0.1:1234');
+    const received = vi.fn();
+    const unsubscribe = connectOffice(client, received);
+    try {
+      sockets[0].open();
+      sockets[0].onmessage?.({ data: JSON.stringify({ version: 1, kind: 'office',
+        message: { type: 'observedTasks', snapshot: { sessionId: 'fixture', limited: false, tasks: [] } } }) });
+      sockets[0].onclose?.();
+      expect(received).toHaveBeenLastCalledWith({
+        type: 'observedTasks', snapshot: { sessionId: null, tasks: [], limited: false },
+      });
+      const count = received.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(500);
+      sockets[1].open();
+      expect(received).toHaveBeenCalledTimes(count);
+      expect(sockets[1].send).toHaveBeenCalledExactlyOnceWith(JSON.stringify({
+        version: 1, kind: 'office', message: { type: 'webviewReady' },
+      }));
+    } finally { unsubscribe(); client.dispose(); }
+  });
   it('accepts whitelisted live observation frames without granting consent or terminal/control authority', () => {
     const ws = new Socket();
     const client = createBrowserClient(vi.fn(), () => ws as unknown as WebSocket, 'http://127.0.0.1:1234');
