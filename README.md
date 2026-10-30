@@ -126,9 +126,9 @@ Add a local asset directory in **Settings** for furniture, pets, and character s
 
 ## Compared with Pixel Agents
 
-**Supported:** Squad roster discovery, file-observed activity, opt-in live tool labels and context gauges, the animated office, layout editing, directional furniture groups, pets, local furniture assets, and explicit Squad CLI launches. The standalone local observer is authenticated and read-only by default; separately authenticated options provide selected-project office controls and owned terminals.
+**Supported:** Squad roster discovery, file-observed activity, opt-in live tool labels and context gauges, the animated office, layout editing, directional furniture groups, pets, local furniture assets, and explicit Squad CLI launches. The standalone local observer is authenticated and read-only by default; separately authenticated options provide selected-project office controls and owned terminals. Responsive mobile office and owned-terminal interactions include page navigation, touch pan/zoom, keyboard controls and deliberate clipboard actions.
 
-**Still limited or unverified:** there is no supported Squad event API or remote-access mode, and persistent credentials are not supported. Mobile office and owned-terminal helpers are in pending acceptance; browser touch emulation does not establish physical-device behavior. iOS/Android touch and software-keyboard behavior remain unverified.
+**Still limited or unverified:** there is no supported Squad event API or remote-access mode, and persistent credentials are not supported. Browser touch emulation does not establish physical-device behavior; iOS/Android touch and software-keyboard behavior remain unverified.
 
 ## How we built this
 
