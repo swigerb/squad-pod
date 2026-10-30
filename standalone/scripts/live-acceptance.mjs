@@ -231,7 +231,8 @@ try {
   await until(() => tab.evaluate(() => {
     const gauge = document.querySelector('[role="progressbar"]')?.getBoundingClientRect();
     const child = document.querySelector('[data-subagent-label]')?.getBoundingClientRect();
-    return gauge?.width > 0 && gauge.top >= 0 && gauge.bottom <= innerHeight
+    const drawer = document.querySelector('[aria-label="Telemetry content"]')?.parentElement?.getBoundingClientRect();
+    return drawer?.height < 1 && gauge?.width > 0 && gauge.top >= 0 && gauge.bottom <= innerHeight
       && child?.width > 0 && child.top >= 0 && child.bottom <= innerHeight;
   }), 'unoccluded tool/context and temporary child evidence');
   if (artifacts) {
