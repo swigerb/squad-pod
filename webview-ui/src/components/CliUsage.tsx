@@ -11,9 +11,9 @@ export function CliUsage({ snapshot, readOnly, onAction }: {
     <p>Separate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.</p>
     {readOnly ? <p>CLI usage import is unavailable in standalone/read-only observation. Use the VS Code extension to select an export.</p>
       : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <button onClick={() => onAction('selectCliUsage')}>Select CLI usage JSON...</button>
-        <button disabled={!snapshot?.canRefresh} onClick={() => onAction('refreshCliUsage')}>Refresh selected export</button>
-        <button disabled={!snapshot || snapshot.state === 'unselected'} onClick={() => onAction('clearCliUsage')}>Forget export</button>
+        <button type="button" className="cli-usage-action" onClick={() => onAction('selectCliUsage')}>Select CLI usage JSON...</button>
+        <button type="button" className="cli-usage-action" disabled={!snapshot?.canRefresh} onClick={() => onAction('refreshCliUsage')}>Refresh selected export</button>
+        <button type="button" className="cli-usage-action" disabled={!snapshot || snapshot.state === 'unselected'} onClick={() => onAction('clearCliUsage')}>Forget export</button>
       </div>}
     {snapshot?.diagnostic && <p role="alert">{snapshot.diagnostic}</p>}
     {!report ? <p>No imported CLI quantities available. Missing or rejected data is not zero consumption.

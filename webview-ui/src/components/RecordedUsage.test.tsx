@@ -83,6 +83,10 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
 
   it('keeps CLI exports separate, unknown and historical through the real App seam and explicit actions', () => {
       send(empty);
+      const initial = host.querySelector('[aria-label="Imported CLI usage"]')!;
+      const initialActions = [...initial.querySelectorAll('button')];
+      expect(initialActions.map(b => b.disabled)).toEqual([false, true, true]);
+      expect(initialActions.every(b => b.classList.contains('cli-usage-action') && b.type === 'button')).toBe(true);
       const snapshot: CliUsageSnapshot = {
         state: 'ready', sourcePath: 'C:\\fixture\\cli.json', canRefresh: true, checkedAt: '2026-10-30T12:00:00Z', diagnostic: null,
         report: { sessionStartTime: '2026-10-28T15:00:00Z', userRequests: 2, premiumRequests: 0.5,
@@ -94,6 +98,7 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
       const addAgent = vi.spyOn(OfficeState.prototype, 'addAgent');
       act(() => client.emit({ type: 'cliUsage', snapshot }));
       const section = host.querySelector('[aria-label="Imported CLI usage"]')!;
+      expect([...section.querySelectorAll('button')].map(b => b.disabled)).toEqual([false, false, false]);
       expect(section.textContent).toContain('0.5 premium-request cost');
       expect(section.textContent).toContain('nano-AI units: not reported');
       expect(section.textContent).toContain('nano-AI units: 0');
