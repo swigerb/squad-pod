@@ -172,6 +172,17 @@ try {
     for (const label of ['Edit Layout', 'Directories', 'Settings']) {
       assert.equal(await tab.getByRole('button', { name: label, exact: true }).isDisabled(), true);
     }
+    await tab.getByRole('button', { name: /TestBot.*Developer/ }).click();
+    const agentCard = tab.getByRole('dialog', { name: 'TestBot details' });
+    await agentCard.getByText('Activity time unavailable', { exact: true }).waitFor();
+    assert.doesNotMatch(await agentCard.innerText(), /\d+ hours? ago/);
+    if (artifacts) {
+      await fs.mkdir(artifacts, { recursive: true });
+      await agentCard.screenshot({ path: path.join(artifacts, 'observer-unavailable-activity-card.png') });
+      report.screenshots.push('observer-unavailable-activity-card.png');
+    }
+    check('installed production browser card labels the observer activity time unavailable');
+    await agentCard.getByRole('button', { name: 'Close agent details', exact: true }).click();
     const squadInfoButton = tab.getByRole('button', { name: 'Squad Info', exact: true });
     assert.equal(await squadInfoButton.isDisabled(), false);
     await squadInfoButton.click();
