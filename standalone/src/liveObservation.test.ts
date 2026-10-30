@@ -66,6 +66,21 @@ function validate(messages: OutboundMessage[]) {
 }
 
 describe('standalone opted-in live observation', () => {
+  it('preserves bounded authoritative transient identities from the shared adapter wire projection', () => {
+    const message = { type: 'observedTasks', snapshot: { sessionId: 'fixture', limited: false, tasks: [{
+      sessionId: 'fixture', toolCallId: 'call', parentToolCallId: null, name: 'TestBot',
+      agentType: 'general-purpose', mode: 'background', description: 'Fixture',
+      agentId: 'test-agent-1', instanceId: 'instance', selectedAgentName: 'test-agent-1',
+      state: 'running', fieldsTruncated: false,
+    }] } };
+    expect(decodeEvent(JSON.stringify({ version: 1, kind: 'office', message }))).toEqual(message);
+    for (const field of ['instanceId', 'selectedAgentName']) {
+      expect(() => decodeEvent(JSON.stringify({ version: 1, kind: 'office', message: {
+        ...message, snapshot: { ...message.snapshot, tasks: [{ ...message.snapshot.tasks[0], [field]: 'x'.repeat(161) }] },
+      } }))).toThrow('Invalid server office frame');
+    }
+  });
+
   it.each([
     { type: 'agentToolStart', agentId: 'ada', tool: 'view', toolId: 'id', status: 'Reading', arguments: { prompt: secret } },
     { type: 'agentToolDone', agentId: 'ada', tool: 'view', toolId: 'id', output: secret },

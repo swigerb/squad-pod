@@ -66,6 +66,8 @@ const schemas: Record<string, Check> = {
       name: short, agentType: short, mode: short,
       description: v => typeof v === 'string' && v.length <= TASK_DESCRIPTION_DISPLAY_MAX_LENGTH,
       agentId: nullable(short), state: oneOf('observed', 'running', 'completed', 'failed', 'aborted'),
+      instanceId: optional(v => !!taskIdentity(v)),
+      selectedAgentName: optional(v => !!taskIdentity(v)),
       fieldsTruncated: boolean,
     }), MAX_OBSERVED_TASKS),
   }) }),
