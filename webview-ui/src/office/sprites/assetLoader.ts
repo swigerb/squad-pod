@@ -63,13 +63,15 @@ export interface TilesetMetadata {
 export interface CharacterSheetData {
   /** Sprite sheet image source for ctx.drawImage(). */
   image: CanvasImageSource;
+  /** Built-in Pixel Agents pose atlas or the legacy external walk atlas. */
+  layout?: 'pixel-agents' | 'legacy';
   /** Width of a single frame in source pixels. */
   frameWidth: number;
   /** Height of a single frame in source pixels. */
   frameHeight: number;
   /** Number of animation frames per direction row. */
   framesPerRow: number;
-  /** Number of direction rows (always 4). */
+  /** Number of direction rows. */
   rows: number;
   /** Source pixels per base game pixel (e.g. 20 if 320px row = 16 base). */
   scale: number;
@@ -315,49 +317,6 @@ function loadImage(src: string, label = src): Promise<HTMLImageElement> {
   });
 }
 
-/**
- * Remove the near-white background from a sprite sheet by making
- * matching pixels transparent.  Samples the top-left corner for
- * the reference colour.
- *
- * If `getImageData()` throws (e.g. cross-origin canvas taint in
- * a VS Code webview), returns the canvas with the raw image drawn
- * on it — the character will have a visible background, but at
- * least it renders.
- */
-function removeBackground(img: HTMLImageElement, tolerance: number = 45): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(img, 0, 0);
-
-  try {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const d = imageData.data;
-
-    // Reference background from top-left pixel
-    const bgR = d[0], bgG = d[1], bgB = d[2];
-
-    for (let i = 0; i < d.length; i += 4) {
-      const dr = Math.abs(d[i] - bgR);
-      const dg = Math.abs(d[i + 1] - bgG);
-      const db = Math.abs(d[i + 2] - bgB);
-      if (dr + dg + db < tolerance) {
-        d[i + 3] = 0; // transparent
-      }
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-  } catch (e) {
-    // Canvas tainted by cross-origin image (SecurityError).
-    // Return canvas with raw image — character has a background
-    // but at least renders instead of falling back to colored circles.
-    console.warn('[assetLoader] removeBackground failed (CORS?), using raw image:', e);
-  }
-  return canvas;
-}
-
 function resolveUrl(relativePath: string): string {
   return assetBaseUrl + relativePath;
 }
@@ -367,7 +326,7 @@ function resolveUrl(relativePath: string): string {
 const externalSheetUris = new Map<string, string>();
 let characterGeneration = 0;
 
-/** Reconcile only the external namespace; embedded A/B never leave the map. */
+/** Reconcile only external sheets; built-in sheets remain synchronously available. */
 export async function loadCharacterSheetsFromUris(
   characters: Array<{ id: string; uri: string; paletteIndex?: number }>,
 ): Promise<string[]> {
@@ -435,42 +394,21 @@ export function loadAssets(): Promise<void> {
 
   loadingPromise = (async () => {
     try {
-      // Load all character sprite sheets in parallel
-      const charKeys = ['A', 'B'];
+      const charKeys = Array.from({ length: 6 }, (_, index) => `builtin:${index}`);
       const charImages = await Promise.all(
-        charKeys.map(key =>
-          loadImage(resolveUrl(`assets/characters/char_employee${key}.png`))
+        charKeys.map((_, index) =>
+          loadImage(resolveUrl(`assets/characters/char_${index}.png`)),
         ),
       );
 
       for (let i = 0; i < charKeys.length; i++) {
         const img = charImages[i];
-        const processed = removeBackground(img);
-
-        const rows = 4;
-        const frameHeight = img.height / rows;
-        const scale = Math.round(frameHeight / TILE_SIZE);
-        const baseHeight = Math.round(frameHeight / scale);
-        // Determine frame width: try dividing evenly by 7 first (known layout)
-        const framesPerRow = img.width % 7 === 0 ? 7 : Math.round(img.width / (baseHeight * scale * (img.width / img.height)));
-        const frameWidth = Math.round(img.width / (framesPerRow || 7));
-        const baseWidth = Math.round(frameWidth / scale);
-
-        characterSheets.set(charKeys[i], {
-          image: processed,
-          frameWidth,
-          frameHeight,
-          framesPerRow: framesPerRow || 7,
-          rows,
-          scale,
-          baseWidth,
-          baseHeight,
-        });
+        storePixelAgentsCharacterSheet(charKeys[i], img.width, img.height, img);
       }
 
       console.log('[assetLoader] ✅ URL asset load complete', getAssetLoadSnapshot());
     } catch (e) {
-      console.warn('[assetLoader] PNG assets unavailable via URL fetch, using inline sprites:', e);
+      console.warn('[assetLoader] Built-in character URL load failed; synchronous embedded sheets remain in use where available:', e);
     }
   })();
 
@@ -494,6 +432,7 @@ function storeCharacterSheet(key: string, width: number, height: number, source:
 
   characterSheets.set(key, {
     image: source,
+    layout: 'legacy',
     frameWidth,
     frameHeight,
     framesPerRow: framesPerRow || 7,
@@ -501,6 +440,30 @@ function storeCharacterSheet(key: string, width: number, height: number, source:
     scale,
     baseWidth,
     baseHeight,
+  });
+  expectedCharacterSheetKeys.add(key);
+  loadedCharacterSheetKeys.add(key);
+}
+
+function storePixelAgentsCharacterSheet(
+  key: string,
+  width: number,
+  height: number,
+  source: CanvasImageSource,
+): void {
+  if (width !== 112 || height !== 96) {
+    throw new Error(`Expected Pixel Agents 112x96 (7 x 3 frames of 16x32), found ${width}x${height}`);
+  }
+  characterSheets.set(key, {
+    image: source,
+    layout: 'pixel-agents',
+    frameWidth: 16,
+    frameHeight: 32,
+    framesPerRow: 7,
+    rows: 3,
+    scale: 1,
+    baseWidth: 16,
+    baseHeight: 32,
   });
   expectedCharacterSheetKeys.add(key);
   loadedCharacterSheetKeys.add(key);
@@ -514,9 +477,14 @@ const _bootstrapErrors: string[] = [];
 const _bootstrapRan = typeof document !== 'undefined' && typeof atob === 'function' && EMBEDDED_CHARACTERS.length > 0;
 if (_bootstrapRan) {
   
-  for (const { id, width, height, rgbaBase64 } of EMBEDDED_CHARACTERS) {
-    const key = id.replace(/^char_employee/, '');
-    if (!key) continue;
+  for (const { id, width, height, rgbaBase64, layout } of EMBEDDED_CHARACTERS) {
+    const match = /^char_(\d+)$/.exec(id);
+    if (!match || layout !== 'pixel-agents') {
+      _bootstrapErrors.push(`${id}: unsupported embedded character sheet`);
+      console.error(`[assetLoader] Unsupported embedded character sheet "${id}"`);
+      continue;
+    }
+    const key = `builtin:${match[1]}`;
     
     try {
       // Decode base64 → raw RGBA bytes
@@ -542,7 +510,7 @@ if (_bootstrapRan) {
       ctx.putImageData(imageData, 0, 0);
       
       // Store immediately — characterSheets Map is now populated
-      storeCharacterSheet(key, width, height, canvas);
+      storePixelAgentsCharacterSheet(key, width, height, canvas);
     } catch (e) {
       _bootstrapErrors.push(`${key}: ${e}`);
       console.warn(`[assetLoader] Sync embedded load failed for "${key}":`, e);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { OfficeState } from '../engine/officeState.js';
 import { placeOverlay } from '../../components/AgentLabels.js';
+import { getCharacterScreenBounds } from '../engine/characterGeometry.js';
 
 interface ToolOverlayProps {
   officeState: OfficeState;
@@ -36,8 +37,9 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
         if (tools.length === 0) continue;
         const char = officeState.characters.get(agentId);
         if (!char) continue;
-        const screenX = char.x * zoom + panRef.current!.x;
-        const screenY = char.y * zoom + panRef.current!.y - 40 * zoom;
+        const bounds = getCharacterScreenBounds(char, zoom, panRef.current!);
+        const screenX = (bounds.left + bounds.right) / 2;
+        const screenY = bounds.top - 8 * zoom;
         const label = [...(container?.querySelectorAll<HTMLElement>('[data-agent-tools]') ?? [])]
           .find((element) => element.dataset.agentTools === agentId);
         const box = placeOverlay(screenX, screenY, label?.offsetWidth ?? 0, label?.offsetHeight ?? 0,

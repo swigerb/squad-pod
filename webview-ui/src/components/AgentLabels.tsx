@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
 import { getContextUsage, contextGauge } from '../office/toolUtils.js';
+import { getCharacterScreenBounds } from '../office/engine/characterGeometry.js';
 
 interface AgentLabelsProps {
   officeState: OfficeState;
@@ -61,11 +62,11 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
       const width = container?.clientWidth || window.innerWidth;
       const height = container?.clientHeight || window.innerHeight;
       for (const [agentId, char] of [...officeState.characters].sort(([a], [b]) => a.localeCompare(b))) {
-        // Use char.x/y for smooth movement tracking
         const px = panRef.current!.x;
         const py = panRef.current!.y;
-        const labelX = char.x * zoom + px;
-        const characterTop = char.y * zoom + py - 20 * zoom;
+        const bounds = getCharacterScreenBounds(char, zoom, { x: px, y: py });
+        const labelX = (bounds.left + bounds.right) / 2;
+        const characterTop = bounds.top;
         const labelY = characterTop - 14;
         const label = [...(container?.querySelectorAll<HTMLElement>('[data-agent-label]') ?? [])]
           .find((element) => element.dataset.agentLabel === agentId);

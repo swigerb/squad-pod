@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createCharacter, updateCharacter } from './characters.js';
-import { WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC } from '../../constants.js';
+import {
+  WALK_FRAME_DURATION_SEC,
+  TYPE_FRAME_DURATION_SEC,
+  WANDER_PAUSE_MIN_SEC,
+  WANDER_PAUSE_MAX_SEC
+} from '../../constants.js';
 import { CharacterState, Direction, TileType } from '../types.js';
 import type { Seat } from '../types.js';
 
@@ -235,6 +240,95 @@ describe('characters', () => {
       updateCharacter(character, 0.2, walkableTiles, seats, tileMap, blockedTiles);
 
       expect(character.frameIndex).toBeGreaterThan(0);
+    });
+
+    it('preserves animation timer remainder across updates', () => {
+      const character = createCharacter('id', 'Name', 'Role', 0, null, null, 0);
+      character.state = CharacterState.WALK;
+      character.path = [{ col: 10, row: 1 }];
+
+      const tileMap = Array(10).fill(0).map(() => Array(10).fill(TileType.FLOOR_1));
+      const walkableTiles = new Set<string>();
+      const seats: Seat[] = [];
+      const blockedTiles = new Set<string>();
+
+      updateCharacter(character, WALK_FRAME_DURATION_SEC * 0.75, walkableTiles, seats, tileMap, blockedTiles);
+      updateCharacter(character, WALK_FRAME_DURATION_SEC * 0.75, walkableTiles, seats, tileMap, blockedTiles);
+
+      expect(character.frameIndex).toBe(1);
+      expect(character.frameTimer).toBeCloseTo(WALK_FRAME_DURATION_SEC * 0.5);
+
+      updateCharacter(character, WALK_FRAME_DURATION_SEC * 0.5, walkableTiles, seats, tileMap, blockedTiles);
+      expect(character.frameIndex).toBe(2);
+      expect(character.frameTimer).toBeCloseTo(0);
+
+      const typing = createCharacter('typing', 'Name', 'Role', 0, null, null, 0);
+      typing.state = CharacterState.TYPE;
+      typing.active = true;
+      updateCharacter(typing, TYPE_FRAME_DURATION_SEC * 0.75, walkableTiles, seats, tileMap, blockedTiles);
+      updateCharacter(typing, TYPE_FRAME_DURATION_SEC * 0.75, walkableTiles, seats, tileMap, blockedTiles);
+
+      expect(typing.frameIndex).toBe(1);
+      expect(typing.frameTimer).toBeCloseTo(TYPE_FRAME_DURATION_SEC * 0.5);
+    });
+
+    it('preserves movement remainder across multiple tiles in one update', () => {
+      const character = createCharacter('id', 'Name', 'Role', 0, null, null, 0);
+      character.state = CharacterState.WALK;
+      character.path = [{ col: 2, row: 1 }, { col: 3, row: 1 }, { col: 3, row: 2 }];
+
+      const tileMap = Array(10).fill(0).map(() => Array(10).fill(TileType.FLOOR_1));
+      updateCharacter(character, 0.5, new Set(), [], tileMap, new Set());
+
+      expect(character.col).toBe(2);
+      expect(character.row).toBe(1);
+      expect(character.path).toEqual([{ col: 3, row: 1 }, { col: 3, row: 2 }]);
+      expect(character.moveProgress).toBeCloseTo(0.5);
+      expect(character.x).toBe(40);
+      expect(character.y).toBe(24);
+      expect(character.state).toBe(CharacterState.WALK);
+    });
+
+    it('faces the first movement direction before the first tile is complete', () => {
+      const character = createCharacter('id', 'Name', 'Role', 0, null, null, 0);
+      character.state = CharacterState.WALK;
+      character.path = [{ col: 2, row: 1 }];
+      character.direction = Direction.DOWN;
+
+      updateCharacter(character, 0.01, new Set(), [], [], new Set());
+
+      expect(character.direction).toBe(Direction.RIGHT);
+      expect(character.moveProgress).toBeCloseTo(0.03);
+    });
+
+    it('turns to face the next path segment immediately at a corner', () => {
+      const character = createCharacter('id', 'Name', 'Role', 0, null, null, 0);
+      character.state = CharacterState.WALK;
+      character.path = [{ col: 2, row: 1 }, { col: 2, row: 2 }];
+      character.moveProgress = 0.99;
+      character.direction = Direction.RIGHT;
+
+      updateCharacter(character, 0.01, new Set(), [], [], new Set());
+
+      expect(character.col).toBe(2);
+      expect(character.row).toBe(1);
+      expect(character.direction).toBe(Direction.DOWN);
+      expect(character.moveProgress).toBeCloseTo(0.02);
+    });
+
+    it('preserves an in-flight tile while rerouting to an active character seat', () => {
+      const seat: Seat = { id: 'chair-1', col: 4, row: 1, direction: Direction.UP };
+      const character = createCharacter('id', 'Name', 'Role', 0, 'chair-1', seat, 0);
+      character.state = CharacterState.WALK;
+      character.active = true;
+      character.path = [{ col: 2, row: 1 }, { col: 3, row: 1 }];
+      character.moveProgress = 0.5;
+
+      const tileMap = Array(10).fill(0).map(() => Array(10).fill(TileType.FLOOR_1));
+      updateCharacter(character, 0, new Set(), [seat], tileMap, new Set());
+
+      expect(character.path).toEqual([{ col: 2, row: 1 }, { col: 3, row: 1 }, { col: 4, row: 1 }]);
+      expect(character.moveProgress).toBe(0.5);
     });
 
     it('character direction updates based on movement', () => {

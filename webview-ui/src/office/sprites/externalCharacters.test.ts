@@ -37,37 +37,42 @@ describe('external sheets after synchronous bootstrap', () => {
     id: `external_${paletteIndex}`, paletteIndex, uri: `data:image/png;base64,${suffix}`,
   });
 
-  it('preserves the embedded A/B pair and pinned-master draw commands for indices 0-63', async () => {
+  it('preserves six built-in identities, stored hue variants, and their draw commands for indices 0-63', async () => {
     const m = await modules();
-    expect(m.getFullDiagnosticReport().characterSheetKeys).toEqual(['A', 'B']);
-    const sheets = [m.getCharacterSheet('A'), m.getCharacterSheet('B')];
-    expect(sheets.every((sheet) => sheet?.frameWidth === 32 && sheet.frameHeight === 32
-      && sheet.baseWidth === 16 && sheet.baseHeight === 16 && sheet.framesPerRow === 7 && sheet.rows === 4)).toBe(true);
-    // Frozen mapping from 949972fc: A/B alternation, three variants, 45-degree groups.
-    const golden = [
-      'A:0', 'B:0', 'A:120', 'B:120', 'A:240', 'B:240',
-      'A:45', 'B:45', 'A:165', 'B:165', 'A:285', 'B:285',
-      'A:90', 'B:90', 'A:210', 'B:210', 'A:330', 'B:330',
-      'A:135', 'B:135', 'A:255', 'B:255', 'A:15', 'B:15',
-      'A:180', 'B:180', 'A:300', 'B:300', 'A:60', 'B:60',
-      'A:225', 'B:225', 'A:345', 'B:345', 'A:105', 'B:105',
-      'A:270', 'B:270', 'A:30', 'B:30', 'A:150', 'B:150',
-      'A:315', 'B:315', 'A:75', 'B:75', 'A:195', 'B:195',
-      'A:0', 'B:0', 'A:120', 'B:120', 'A:240', 'B:240',
-      'A:45', 'B:45', 'A:165', 'B:165', 'A:285', 'B:285',
-      'A:90', 'B:90', 'A:210', 'B:210',
-    ];
+    expect(m.getFullDiagnosticReport().characterSheetKeys).toEqual([
+      'builtin:0', 'builtin:1', 'builtin:2', 'builtin:3', 'builtin:4', 'builtin:5',
+    ]);
+    const sheets = Array.from({ length: 6 }, (_, index) => m.getCharacterSheet(`builtin:${index}`));
+    expect(sheets.every((sheet) => sheet?.layout === 'pixel-agents'
+      && sheet.frameWidth === 16 && sheet.frameHeight === 32
+      && sheet.baseWidth === 16 && sheet.baseHeight === 32
+      && sheet.framesPerRow === 7 && sheet.rows === 3)).toBe(true);
     for (let index = 0; index < 64; index++) {
       const { palette, hueShift } = m.appearanceFromIndex(index);
       const appearance = m.sheetAppearance(palette, hueShift);
-      expect(`${appearance.sheetKey}:${appearance.hueDegrees}`).toBe(golden[index]);
+      expect(palette).toBe(index % 6);
+      expect(hueShift).toBe((Math.floor(index / 6) * 45) % 360);
+      expect(appearance).toEqual({
+        sheetKey: `builtin:${palette}`,
+        hueDegrees: hueShift,
+      });
       for (const direction of [Direction.DOWN, Direction.LEFT, Direction.RIGHT, Direction.UP]) {
-        const ctx = { drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(), filter: '' };
+        const ctx = {
+          drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(),
+          translate: vi.fn(), scale: vi.fn(), filter: '',
+        };
         expect(m.drawCharacterFromSheet(ctx as unknown as CanvasRenderingContext2D, palette, direction, 3, 10, 20, 2, hueShift)).toBe(true);
-        const rows = [2, 3, 1, 0];
+        const row = direction === Direction.DOWN ? 0
+          : direction === Direction.UP ? 1 : 2;
+        const x = direction === Direction.LEFT ? 0 : 10;
+        const y = direction === Direction.LEFT ? 0 : 20;
         expect(ctx.drawImage).toHaveBeenCalledWith(
-          sheets[index % 2]?.image, 96, rows[direction] * 32, 32, 32, 10, 20, 32, 32,
+          sheets[palette]?.image, 16, row * 32, 16, 32, x, y, 32, 64,
         );
+        if (direction === Direction.LEFT) {
+          expect(ctx.translate).toHaveBeenCalledWith(42, 20);
+          expect(ctx.scale).toHaveBeenCalledWith(-1, 1);
+        }
         expect(ctx.filter).toBe(appearance.hueDegrees ? `hue-rotate(${appearance.hueDegrees}deg)` : '');
       }
     }
@@ -81,7 +86,7 @@ describe('external sheets after synchronous bootstrap', () => {
       const p = m.appearanceFromIndex(i);
       return m.sheetAppearance(p.palette, p.hueShift);
     });
-    const originalA = m.getCharacterSheet('A');
+    const originalSheet = m.getCharacterSheet('builtin:0');
     await m.loadCharacterSheetsFromUris([entry(a), entry(b)]);
     expect(m.sheetAppearance(a)).toEqual({ sheetKey: `external:${a}`, hueDegrees: 0 });
     expect(m.sheetAppearance(b)).toEqual({ sheetKey: `external:${b}`, hueDegrees: 0 });
@@ -92,10 +97,10 @@ describe('external sheets after synchronous bootstrap', () => {
     await m.loadCharacterSheetsFromUris([entry(a, 'replacement')]);
     expect(m.getCharacterSheet(`external:${a}`)).not.toBe(externalA);
     expect(m.getCharacterSheet(`external:${b}`)).toBeNull();
-    expect(m.sheetAppearance(b)).toEqual({ sheetKey: 'A', hueDegrees: 0 });
+    expect(m.sheetAppearance(b)).toEqual({ sheetKey: 'builtin:0', hueDegrees: 0 });
     await m.loadCharacterSheetsFromUris([]);
-    expect(m.sheetAppearance(a)).toEqual({ sheetKey: 'A', hueDegrees: 0 });
-    expect(m.getCharacterSheet('A')).toBe(originalA);
+    expect(m.sheetAppearance(a)).toEqual({ sheetKey: 'builtin:0', hueDegrees: 0 });
+    expect(m.getCharacterSheet('builtin:0')).toBe(originalSheet);
     expect(Array.from({ length: 64 }, (_, i) => {
       const p = m.appearanceFromIndex(i);
       return m.sheetAppearance(p.palette, p.hueShift);
@@ -113,7 +118,9 @@ describe('external sheets after synchronous bootstrap', () => {
     expect(m.getCharacterSheet(`external:${base}`)).not.toBeNull();
     expect(m.getCharacterSheet(`external:${base + 48}`)).toBeNull();
     expect(m.getCharacterSheet(`external:${base + 96}`)).toBeNull();
-    expect(m.getFullDiagnosticReport().characterSheetKeys).toEqual(['A', 'B', `external:${base}`]);
+    expect(m.getFullDiagnosticReport().characterSheetKeys).toEqual([
+      'builtin:0', 'builtin:1', 'builtin:2', 'builtin:3', 'builtin:4', 'builtin:5', `external:${base}`,
+    ]);
   });
 
   it('keeps stale asynchronous decodes from resurrecting removed sheets', async () => {
@@ -126,7 +133,9 @@ describe('external sheets after synchronous bootstrap', () => {
     await m.loadCharacterSheetsFromUris([]);
     images[0].onload?.();
     await pending;
-    expect(m.getFullDiagnosticReport().characterSheetKeys).toEqual(['A', 'B']);
+    expect(m.getFullDiagnosticReport().characterSheetKeys).toEqual([
+      'builtin:0', 'builtin:1', 'builtin:2', 'builtin:3', 'builtin:4', 'builtin:5',
+    ]);
   });
 
   it('uses the exact legacy fallback cycle for persisted external variants', async () => {
