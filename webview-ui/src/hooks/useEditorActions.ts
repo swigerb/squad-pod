@@ -23,6 +23,7 @@ import {
 import { MAX_LAYOUT_PETS } from '../../../src/layoutValidation.js';
 import { getPetSprites } from '../office/sprites/petSpriteData.js';
 import { clearColorizeCache } from '../office/colorize.js';
+import { getCatalogEntry, getToggledType } from '../office/layout/furnitureCatalog.js';
 
 export function useEditorActions(getOfficeState: () => OfficeState, editorState: EditorState, recoveryState: unknown) {
   const client = useHostClient();
@@ -395,15 +396,18 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
 
   const handleToggleState = useCallback(() => {
     if (!editorState.selectedFurnitureUid) return;
-    pushUndo();
     const officeState = getOfficeState();
     const layout = officeState.getLayout();
-    const furniture = layout.furniture.find((f) => f.uid === editorState.selectedFurnitureUid);
-    if (furniture && furniture.state) {
-      furniture.state = furniture.state === 'on' ? 'off' : 'on';
-      officeState.rebuildFromLayout(layout);
-      setEditorTick((t) => t + 1);
-    }
+    const furniture = layout.furniture.find((item) => item.uid === editorState.selectedFurnitureUid);
+    const type = furniture && getToggledType(furniture.type);
+    if (!furniture || !type) return;
+    pushUndo();
+    const nextLayout = {
+      ...layout,
+      furniture: layout.furniture.map((item) => item.uid === furniture.uid ? { ...item, type } : item),
+    };
+    officeState.rebuildFromLayout(nextLayout);
+    setEditorTick((t) => t + 1);
   }, [editorState, getOfficeState, pushUndo]);
 
   const handleUndo = useCallback(() => {
@@ -616,6 +620,10 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     setEditorTick((t) => t + 1);
   }, [getOfficeState, protection, persist, editorState]);
 
+  const selectedFurniture = editorState.selectedFurnitureUid
+    ? getOfficeState().layout.furniture.find((item) => item.uid === editorState.selectedFurnitureUid)
+    : undefined;
+
   return {
     isEditMode,
     isDirty: isDirty(),
@@ -626,6 +634,8 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     furnitureColorPickTarget,
     canUndo: historyRef.current.canUndo,
     canRedo: historyRef.current.canRedo,
+    canToggleSelectedState: selectedFurniture !== undefined && getToggledType(selectedFurniture.type) !== null,
+    isSelectedFurnitureOn: selectedFurniture !== undefined && getCatalogEntry(selectedFurniture.type)?.state === 'on',
     handleGestureStart,
     handleGestureEnd,
     handleToggleEditMode,

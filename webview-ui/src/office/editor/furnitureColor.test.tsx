@@ -115,8 +115,11 @@ describe('furniture color controls and eyedrop', () => {
             onRedo={actions.handleRedo}
             onDeleteSelected={actions.handleDeleteSelected}
             onRotateSelected={actions.handleRotateSelected}
+            onToggleSelectedState={actions.handleToggleState}
             canUndo={actions.canUndo}
             canRedo={actions.canRedo}
+            canToggleSelectedState={actions.canToggleSelectedState}
+            isSelectedFurnitureOn={actions.isSelectedFurnitureOn}
             isDirty={actions.isDirty}
             hasSelection={editorState.selectedFurnitureUid !== null}
           />

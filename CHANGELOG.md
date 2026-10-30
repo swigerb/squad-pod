@@ -4,6 +4,7 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+- Stateful furniture animates at active desks and supports manual on/off toggles.
 - Furniture groups now support directional rotation and mirrored views, with one palette entry per group, preserved tint and seat assignments, and one undo step per turn.
 
 ### Changed
