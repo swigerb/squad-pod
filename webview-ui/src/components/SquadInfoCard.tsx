@@ -1,9 +1,13 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { useState } from 'react';
+import type { AgentDetailInfo } from './AgentCard.js';
 
 export interface SquadInfoData {
   teamName: string | null;
   description: string | null;
+  workspaceRoot: string | null;
   members: Array<{
+    id: string;
     name: string;
     role: string;
     status: string;
@@ -18,6 +22,10 @@ export interface SquadInfoData {
 
 interface SquadInfoCardProps {
   info: SquadInfoData | null;
+  agentDetails?: Record<string, AgentDetailInfo>;
+  availableAgentIds?: string[];
+  onRequestAgentDetail?: (agentId: string) => void;
+  onOpenCharter?: (agentId: string) => void;
   onClose: () => void;
 }
 
@@ -38,8 +46,11 @@ function roleEmoji(role: string): string {
   return '👤';
 }
 
-export function SquadInfoCard({ info, onClose }: SquadInfoCardProps) {
+export function SquadInfoCard({
+  info, agentDetails = {}, availableAgentIds = [], onRequestAgentDetail, onOpenCharter, onClose,
+}: SquadInfoCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
 
   const handleClickOutside = useCallback((e: MouseEvent) => {
     if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
@@ -50,6 +61,13 @@ export function SquadInfoCard({ info, onClose }: SquadInfoCardProps) {
   const handleEscape = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') onClose();
   }, [onClose]);
+
+  useEffect(() => {
+    if (expandedAgentId && (!info?.members.some(member => member.id === expandedAgentId)
+      || !availableAgentIds.includes(expandedAgentId))) {
+      setExpandedAgentId(null);
+    }
+  }, [availableAgentIds, expandedAgentId, info]);
 
   useEffect(() => {
     if (info) {
@@ -63,6 +81,8 @@ export function SquadInfoCard({ info, onClose }: SquadInfoCardProps) {
   }, [info, handleClickOutside, handleEscape]);
 
   if (!info) return null;
+  const expandedDetail = expandedAgentId ? agentDetails[expandedAgentId] : undefined;
+  const detail = expandedDetail?.workspaceRoot === info.workspaceRoot ? expandedDetail : undefined;
 
   const accentColor = '#4a9eff';
 
@@ -79,10 +99,14 @@ export function SquadInfoCard({ info, onClose }: SquadInfoCardProps) {
     }}>
       <div
         ref={cardRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Squad Info"
         style={{
           width: '400px',
-          maxWidth: '90vw',
-          maxHeight: '80vh',
+          maxWidth: 'calc(100vw - 20px)',
+          maxHeight: 'calc(100vh - 20px)',
+          boxSizing: 'border-box',
           background: 'rgba(26, 26, 46, 0.97)',
           border: `2px solid ${accentColor}`,
           borderRadius: '12px',
@@ -97,6 +121,8 @@ export function SquadInfoCard({ info, onClose }: SquadInfoCardProps) {
       >
         {/* Close button */}
         <button
+          type="button"
+          aria-label="Close Squad Info"
           onClick={onClose}
           style={{
             position: 'absolute',
@@ -163,58 +189,97 @@ export function SquadInfoCard({ info, onClose }: SquadInfoCardProps) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {info.members.map((m) => (
-              <div
-                key={m.name}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 10px',
-                  background: m.isActive
-                    ? 'rgba(74, 158, 255, 0.1)'
-                    : 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '6px',
-                  border: m.isActive
-                    ? '1px solid rgba(74, 158, 255, 0.3)'
-                    : '1px solid rgba(255, 255, 255, 0.06)',
-                }}
-              >
-                <span style={{ fontSize: '14px', flexShrink: 0 }}>
-                  {roleEmoji(m.role)}
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
+              <div key={m.id}>
+                <button
+                  type="button"
+                  aria-expanded={expandedAgentId === m.id}
+                  aria-controls={`agent-detail-${encodeURIComponent(m.id)}`}
+                  aria-label={`${expandedAgentId === m.id ? 'Hide' : 'Show'} details for ${m.name}`}
+                  onClick={() => {
+                    if (expandedAgentId === m.id) {
+                      setExpandedAgentId(null);
+                    } else {
+                      setExpandedAgentId(m.id);
+                      if (availableAgentIds.includes(m.id)) {
+                        onRequestAgentDetail?.(m.id);
+                      }
+                    }
+                  }}
+                  style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    marginBottom: '2px',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '8px 10px',
+                    textAlign: 'left',
+                    font: 'inherit',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    background: m.isActive
+                      ? 'rgba(74, 158, 255, 0.1)'
+                      : 'rgba(255, 255, 255, 0.03)',
+                    borderRadius: '6px',
+                    border: m.isActive
+                      ? '1px solid rgba(74, 158, 255, 0.3)'
+                      : '1px solid rgba(255, 255, 255, 0.06)',
                   }}>
-                    <span style={{
-                      fontWeight: 600,
-                      fontSize: '12px',
-                      color: m.isActive ? accentColor : '#e0e0e0',
-                    }}>
+                  <span style={{ fontSize: '14px', flexShrink: 0 }}>{roleEmoji(m.role)}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontWeight: 600, fontSize: '12px', color: m.isActive ? accentColor : '#e0e0e0' }}>
                       {m.name}
                     </span>
-                    <span style={{ fontSize: '10px', color: '#888' }}>
-                      {m.role}
-                    </span>
+                    <span style={{ marginLeft: '6px', fontSize: '10px', color: '#888' }}>{m.role}</span>
+                  </span>
+                  <span style={{ fontSize: '11px', flexShrink: 0 }}>{statusDot(m.isActive)}</span>
+                </button>
+                {expandedAgentId === m.id && (
+                  <div id={`agent-detail-${encodeURIComponent(m.id)}`} style={{
+                    margin: '4px 0 6px', padding: '10px', background: 'rgba(0, 0, 0, 0.25)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '6px',
+                  }}>
+                    {!availableAgentIds.includes(m.id) ? (
+                      <div role="status">This agent is no longer available in the current workspace.</div>
+                    ) : !detail ? (
+                      <div role="status">Loading observed details…</div>
+                    ) : (
+                      <>
+                        <div><strong>Observed status:</strong> {detail.status}</div>
+                        <div><strong>Observed task:</strong> {detail.currentTask || 'No current task observed.'}</div>
+                        <div style={{ marginTop: '8px' }}>
+                          <strong>Charter summary (from charter.md):</strong>
+                          <div>{detail.charterSummary || (detail.charterStatus === 'available'
+                            ? 'No summary paragraph found in the charter.'
+                            : `Charter content is ${detail.charterStatus}.`)}</div>
+                        </div>
+                        {detail.expertise && <div style={{ marginTop: '8px' }}><strong>Declared expertise:</strong><div>{detail.expertise}</div></div>}
+                        {detail.responsibilities && <div style={{ marginTop: '8px' }}><strong>Declared responsibilities:</strong><div style={{ whiteSpace: 'pre-wrap' }}>{detail.responsibilities}</div></div>}
+                        {detail.boundaries && <div style={{ marginTop: '8px' }}><strong>Declared boundaries:</strong><div style={{ whiteSpace: 'pre-wrap' }}>{detail.boundaries}</div></div>}
+                        <div style={{ marginTop: '8px' }}>
+                          <strong>Recent activity (from workspace activity logs; no timestamps supplied):</strong>
+                          {detail.recentActivity.length
+                            ? detail.recentActivity.map((activity, index) => <div key={index} style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{activity}</div>)
+                            : <div>No recent activity entries observed.</div>}
+                        </div>
+                        <details style={{ marginTop: '8px' }}>
+                          <summary>Charter source text</summary>
+                          {detail.charterContent
+                            ? <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '240px', overflow: 'auto' }}>{detail.charterContent}</pre>
+                            : <div role="status">Charter text is {detail.charterStatus}.</div>}
+                        </details>
+                        {onOpenCharter ? (
+                          <button type="button" onClick={() => onOpenCharter(m.id)} style={{ marginTop: '8px' }}>
+                            Open charter
+                          </button>
+                        ) : (
+                          <div style={{ marginTop: '8px' }}>
+                            <button type="button" disabled title="Opening files is unavailable in the read-only observer.">Open charter</button>
+                            <div role="note">Opening a charter in the editor is unavailable in the read-only observer.</div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                  {m.currentTask && (
-                    <div style={{
-                      fontSize: '10px',
-                      color: '#60a5fa',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
-                      🔧 {m.currentTask}
-                    </div>
-                  )}
-                </div>
-                <span style={{ fontSize: '11px', flexShrink: 0 }}>
-                  {statusDot(m.isActive)}
-                </span>
+                )}
               </div>
             ))}
           </div>

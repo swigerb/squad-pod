@@ -5,7 +5,8 @@
 **Local browser observer:** [Build/run and security instructions](standalone/README.md)
 for the private, authenticated, loopback-only read-only office. It uses the same
 production renderer, observes only an explicitly selected project, and has no
-terminal/process launcher or workspace writes. This is separate from the VSIX.
+workspace writes. Optional owned terminals use separate authentication and
+`copilot --agent squad`; observation stays read-only. This is separate from the VSIX.
 
 **Your Squad AI team, but make it pixel art.**
 
@@ -17,7 +18,7 @@ Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradyga
 - Animate activity inferred from changes to Squad files.
 - Show six built-in character identities with authored walk, typing, and reading poses.
 - Opt in to live member tool labels and context gauges from local Copilot CLI sessions.
-- View an agent's status, current task, recent activity, and charter.
+- View visible members' charter summaries, declared scope, observed status/task, and recent activity in Squad Info.
 - Design the office with floors, walls, furniture, colors, carpets, named Areas, and pets.
 - Manage directories and explicitly launch Squad in a new VS Code terminal.
 - Browse activity and available recorded usage in the Telemetry drawer.
@@ -55,7 +56,7 @@ Open the project in VS Code and press **F5** to launch the Extension Development
 
 ### Open the office
 
-Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character, its name (**Enter** or **Space** also works), or its occupied desk or chair to open the details card; select a character, then click another seat to move it. **View Charter** opens `charter.md`. These clicks never open a terminal.
+Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character, its name (**Enter** or **Space** also works), or its occupied desk or chair to open the details card; select a character, then click another seat to move it. Choose **Squad Info** to expand a visible member's details by keyboard or mouse. **Open charter** opens that member's `charter.md`. In the read-only local observer, observed details remain available while charter contents and editor opening are unavailable. These actions never open a terminal.
 
 ### Edit the office
 
@@ -90,6 +91,8 @@ Open **Directories** to launch Squad in a workspace folder or a saved directory.
 
 Open **Telemetry** in the toolbar to browse observed status changes, session activity, logs, orchestration events, and decisions. The drawer also displays historical usage from the local Squad usage ledger when available, including reported token and estimated-cost totals and recent model reports. These reports are historical source data, not live context utilization or billing records.
 
+**Activity events** counts only observed events; **Clear activity** leaves recorded usage and observed tasks unchanged. Existing files are not replayed. Missing usage is not zero consumption, and enabling live CLI observation does not create a usage ledger. Source diagnostics distinguish file watching from opt-in live CLI observation; **Observation settings and consent** opens the existing Settings flow without enabling anything. Settings and live-log consent are unavailable in the read-only observer.
+
 ## Activity detection
 
 Squad Pod watches the selected project's `.squad/` files, including the roster, sessions, logs, orchestration logs, decision inbox, and agent files. It uses filesystem notifications with polling as a fallback and treats the initial scan as a baseline rather than replaying old files.
@@ -117,7 +120,8 @@ Add a local asset directory in **Settings** for furniture, pets, and character s
 
 **Supported:** Squad roster discovery, file-observed activity, opt-in live tool labels and context gauges, the animated office, layout editing, directional furniture groups, pets, local furniture assets, and explicit Squad CLI launches.
 
-**Not yet supported:** a supported Squad event API, a standalone browser runtime, and an embedded terminal.
+**Not yet supported:** a supported Squad event API, general browser office mutations,
+remote access, and full mobile terminal parity.
 
 ## How we built this
 

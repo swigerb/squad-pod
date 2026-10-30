@@ -305,10 +305,10 @@ describe('office WebSocket protocol', () => {
     await client.next();
     client.send({ type: 'getSettings' });
     expect((await client.next()).message).toEqual(settings);
-    client.send({ type: 'requestAgentDetail', agentId: 'test-agent_1' });
+    client.send({ type: 'requestAgentDetail', agentId: 'test-agent_1', requestId: 'detail-42' });
     await client.next();
     expect(onRead.mock.calls.map(([message]) => message)).toEqual([
-      { type: 'getSettings' }, { type: 'requestAgentDetail', agentId: 'test-agent_1' },
+      { type: 'getSettings' }, { type: 'requestAgentDetail', agentId: 'test-agent_1', requestId: 'detail-42' },
     ]);
     client.send({ type: 'webviewReady' });
     expect((await client.next()).code).toBe('ALREADY_READY');
@@ -337,6 +337,7 @@ describe('office WebSocket protocol', () => {
     { version: 1, kind: 'office', message: { type: 'requestAgentDetail', agentId: 'a'.repeat(129) } },
     { version: 1, kind: 'office', message: { type: 'requestAgentDetail', agentId: '' } },
     { version: 1, kind: 'office', message: { type: 'requestAgentDetail', agentId: 42 } },
+    { version: 1, kind: 'office', message: { type: 'requestAgentDetail', agentId: 'test-agent_1', requestId: 'x'.repeat(129) } },
     { version: 1, kind: 'office', message: null }, null, [],
   ])('rejects invalid envelopes and unexpected fields %#', async envelope => {
     const { transport, onRead, snapshot } = await launch();

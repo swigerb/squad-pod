@@ -10,7 +10,8 @@ export function ObservedTasks({ snapshot, source, readOnly = false }: {
   const tasks = following ? snapshot?.tasks ?? [] : [];
   const unavailable = readOnly
     ? 'Live transient tasks are unavailable in the read-only observer. Private home/session logs are not read and cannot be enabled here.'
-    : source?.state === 'off' || !source
+    : !source ? 'Live source status is unavailable. No task state is available.'
+    : source.state === 'off'
     ? 'Live Activity is off. Enable it in Settings and accept the confirmation.'
     : source.state === 'error'
       ? 'Live source unavailable. Task state cleared.'

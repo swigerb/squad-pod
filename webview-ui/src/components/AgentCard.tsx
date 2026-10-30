@@ -5,9 +5,15 @@ export interface AgentDetailInfo {
   id: string;
   name: string;
   role: string;
+  workspaceRoot: string;
   status: 'active' | 'idle' | 'waiting';
   currentTask: string | null;
   charterSummary: string | null;
+  charterContent: string | null;
+  charterStatus: 'available' | 'missing' | 'unreadable' | 'unavailable';
+  expertise: string | null;
+  responsibilities: string | null;
+  boundaries: string | null;
   recentActivity: string[];
   lastActiveAt: number;
 }

@@ -8,6 +8,13 @@ const { spawnSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const secret = 'SENTINEL_SECRET_NEVER_LEAVE_PARSER';
 const event = (type, data, envelope = {}) => JSON.stringify({ type, data, ...envelope }) + '\n';
+async function poll(page, predicate) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (await page.evaluate(predicate)) return;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  throw new Error('Timed out waiting for fixture state');
+}
 const spawn = () => event('tool.execution_start', {
   toolCallId: 'member-run', toolName: 'task', arguments: {
     name: 'ada', agent_type: 'general-purpose', mode: 'background', description: 'Fixture live task', prompt: secret,
@@ -353,7 +360,7 @@ async function browserAcceptance(out) {
       ]);
       await page.evaluate(expected => { window.__expectedFloor = expected; }, expectedFloor);
       try {
-        await page.waitForFunction(() => window.__liveAssetProof.character && window.__liveAssetProof.bundledFloor);
+        await poll(page, () => window.__liveAssetProof.character && window.__liveAssetProof.bundledFloor);
       } catch (error) {
         console.error(await page.evaluate(() => ({ assets: window.__liveAssetProof, text: document.body.innerText })));
         throw error;
@@ -380,7 +387,7 @@ async function browserAcceptance(out) {
       assert.equal(fixture.reads.length, 0, 'default-off production provider must not touch the injected home');
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
       await page.locator('#squad-pod-live-activity').click();
-      await page.waitForFunction(() => document.querySelector('#squad-pod-live-activity').checked);
+      await poll(page, () => document.querySelector('#squad-pod-live-activity').checked);
       await page.getByRole('button', { name: '×', exact: true }).click();
       fixture.append(spawn() + done('member-run') + tool('read-one', 'view', { path: `C:\\private\\${secret}\\fixture.ts` }));
       await page.locator('[data-agent-tools="ada"]').filter({ hasText: 'Reading fixture.ts' }).waitFor();
@@ -419,7 +426,7 @@ async function browserAcceptance(out) {
       });
       assert.deepEqual(overlaps, [], '2x overlays must not overlap');
       await page.evaluate(() => { window.__liveAssetProof.character = false; window.__liveAssetProof.bundledFloor = false; });
-      await page.waitForFunction(() => window.__liveAssetProof.character && window.__liveAssetProof.bundledFloor);
+      await poll(page, () => window.__liveAssetProof.character && window.__liveAssetProof.bundledFloor);
       await assertAssetDiagnostics();
       await page.screenshot({ path: path.join(out, `live-${viewport.width}x${viewport.height}.png`) });
       const observedCall = (id, name, agentType, parent, description = 'Inspect fixture safely') => event('tool.execution_start', {
@@ -440,6 +447,7 @@ async function browserAcceptance(out) {
       assert.match(await inventory.locator('[data-observed-task="unknown-two"]').innerText(), /metadata truncated or omitted/);
       assert.match(await inventory.locator('[data-observed-task="exact-name-other-type"]').innerText(), /Unattributed.*explore/s);
       assert.equal(await page.locator('[data-agent-label]').count(), 1, 'transient tasks must not create characters');
+      await inventory.scrollIntoViewIfNeeded();
       const inventoryBounds = await inventory.boundingBox();
       assert.ok(inventoryBounds.x >= 0 && inventoryBounds.x + inventoryBounds.width <= viewport.width
         && inventoryBounds.y >= 0 && inventoryBounds.y + inventoryBounds.height <= viewport.height);
@@ -486,7 +494,7 @@ async function browserAcceptance(out) {
       await page.getByRole('progressbar').waitFor();
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
       await page.locator('#squad-pod-live-activity').click();
-      await page.waitForFunction(() => !document.querySelector('#squad-pod-live-activity').checked);
+      await poll(page, () => !document.querySelector('#squad-pod-live-activity').checked);
       await page.getByRole('button', { name: '×', exact: true }).click();
       await page.getByRole('progressbar').waitFor({ state: 'detached' });
       await page.locator('[data-agent-label="ada"] [aria-label="Idle"]').waitFor();

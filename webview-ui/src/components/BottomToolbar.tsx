@@ -1,30 +1,19 @@
-import { useState } from 'react';
-import { SettingsModal } from './SettingsModal.js';
 import { useHostClient } from '../HostClientContext.js';
-import type { PodSettings, SourceStatus } from '../../../src/types.js';
-import type { AssetStatusData } from './AssetStatus.js';
 
 interface BottomToolbarProps {
   readOnly?: boolean;
-  assetStatus?: AssetStatusData;
   isEditMode: boolean;
   onToggleEditMode: () => void;
   onOpenSquadInfo?: () => void;
   onOpenDirectories: () => void;
+  onOpenSettings: () => void;
   isTelemetryOpen: boolean;
   onToggleTelemetry: () => void;
   telemetryCount: number;
-  isDebugMode?: boolean;
-  onToggleDebugMode?: () => void;
-  settings: PodSettings;
-  sourceStatus: SourceStatus | null;
-  onSoundChange: (enabled: boolean) => void;
-  onShowAreasChange: (enabled: boolean) => void;
 }
 
-export function BottomToolbar({ readOnly = false, assetStatus, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode, settings, sourceStatus, onSoundChange, onShowAreasChange }: BottomToolbarProps) {
+export function BottomToolbar({ readOnly = false, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, onOpenSettings, isTelemetryOpen, onToggleTelemetry, telemetryCount }: BottomToolbarProps) {
   const client = useHostClient();
-  const [showSettings, setShowSettings] = useState(false);
 
   const handleSquadInfo = () => {
     if (onOpenSquadInfo) {
@@ -58,8 +47,6 @@ export function BottomToolbar({ readOnly = false, assetStatus, isEditMode, onTog
         }}
       >
         <button
-          disabled={readOnly}
-          title={readOnly ? 'Squad information dialog is unavailable in the read-only observer.' : undefined}
           onClick={handleSquadInfo}
           style={{
             padding: '8px 16px',
@@ -147,7 +134,7 @@ export function BottomToolbar({ readOnly = false, assetStatus, isEditMode, onTog
         <button
           disabled={readOnly}
           title={readOnly ? 'Settings, live logs and external assets are unavailable in the read-only observer.' : undefined}
-          onClick={() => setShowSettings(true)}
+          onClick={onOpenSettings}
           style={{
             padding: '8px 16px',
             background: 'var(--vscode-button-background)',
@@ -162,8 +149,6 @@ export function BottomToolbar({ readOnly = false, assetStatus, isEditMode, onTog
           Settings
         </button>
       </div>
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} isDebugMode={isDebugMode} onToggleDebugMode={onToggleDebugMode}
-        settings={settings} sourceStatus={sourceStatus} assetStatus={assetStatus} onSoundChange={onSoundChange} onShowAreasChange={onShowAreasChange} />}
     </>
   );
 }

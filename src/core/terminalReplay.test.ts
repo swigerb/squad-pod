@@ -41,6 +41,17 @@ function delayedSource(history: TerminalHistory) {
 }
 
 describe('terminal replay and reconnect', () => {
+  it('explicitly resyncs live and reconnecting viewers after native output failure', async () => {
+    const { history, sink, events } = fixture();
+    const attachment = attachTerminal(history, 0, sink);
+    await attachment.ready;
+    history.fail();
+    expect(events.at(-1)).toMatchObject({ type: 'resync', reason: 'source-error' });
+    expect(() => history.append('cannot mask lost output')).toThrow('failed');
+    const reconnect = fixture();
+    await attachTerminal(history, 0, reconnect.sink).ready;
+    expect(reconnect.events.at(-1)).toMatchObject({ type: 'resync', reason: 'source-error' });
+  });
   it('subscribes before taking a snapshot and serializes replay before interleaved live output', async () => {
     const { history, events, sink } = fixture();
     history.append('before');
@@ -372,6 +383,49 @@ describe('bounded retained history and per-connection replay/live queues', () =>
 });
 
 describe('terminal receiver continuity', () => {
+  it('acknowledges async output only after application and rejects concurrent acceptance', async () => {
+    const receiver = new TerminalReceiver(id);
+    await receiver.apply({ ...base, type: 'replayStart', cursor: 0, through: 1 }, vi.fn());
+    const written = deferred<void>();
+    const write = vi.fn(() => written.promise);
+    const pending = receiver.apply(output(1, 'é中🚀'), write);
+    expect(write).toHaveBeenCalledExactlyOnceWith('é中🚀');
+    expect(receiver.cursor).toBe(0);
+    expect(() => receiver.accept(output(1))).toThrow('in progress');
+    await expect(receiver.apply(output(1), write)).rejects.toThrow('in progress');
+    written.resolve();
+    expect(await pending).toBe('output');
+    expect(receiver.cursor).toBe(1);
+    expect(await receiver.apply(output(1), write)).toBe('duplicate');
+    expect(write).toHaveBeenCalledOnce();
+    await receiver.apply({ ...base, type: 'replayEnd', through: 1 }, write);
+    expect(await receiver.apply(output(3), write)).toBe('resync');
+    expect(receiver.cursor).toBe(1);
+    expect(write).toHaveBeenCalledOnce();
+  });
+
+  it('does not acknowledge failed application and requires explicit resync', async () => {
+    const receiver = new TerminalReceiver(id);
+    await receiver.apply({ ...base, type: 'replayStart', cursor: 0, through: 1 }, vi.fn());
+    await expect(receiver.apply(output(1), async () => { throw new Error('render failed'); }))
+      .rejects.toThrow('render failed');
+    expect(receiver.cursor).toBe(0);
+    await expect(receiver.apply(output(1), vi.fn())).rejects.toThrow('requires resync');
+  });
+
+  it('does not acknowledge a late renderer callback from an invalidated screen', async () => {
+    const receiver = new TerminalReceiver(id);
+    receiver.accept({ ...base, type: 'replayStart', cursor: 0, through: 1 });
+    const write = deferred<void>();
+    let active = true;
+    const pending = receiver.apply(output(1), () => write.promise, () => active);
+    active = false;
+    write.resolve();
+    await expect(pending).rejects.toThrow('invalidated');
+    expect(receiver.cursor).toBe(0);
+    expect(() => receiver.accept(output(1))).toThrow('requires resync');
+  });
+
   it('suppresses duplicates and returns explicit resync on a gap without advancing the cursor', () => {
     const receiver = new TerminalReceiver(id, 1);
     expect(receiver.accept({ ...base, type: 'replayStart', cursor: 1, through: 2 })).toBe('boundary');

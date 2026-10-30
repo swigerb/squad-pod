@@ -13,6 +13,7 @@ export interface TerminalSource {
   readonly runId: RunId;
   subscribe(listener: (frame: OutputFrame) => void): () => void;
   snapshot(cursor: number): Promise<ReplaySnapshot>;
+  subscribeFailure?(listener: () => void): () => void;
 }
 
 /** UTF-8 chunks are supplied by the eventual process adapter after streaming decoding. */
@@ -21,10 +22,13 @@ export class TerminalHistory implements TerminalSource {
   private bytes = 0;
   private sequence = 0;
   private listeners = new Set<(frame: OutputFrame) => void>();
+  private failures = new Set<() => void>();
+  private failed = false;
 
   constructor(readonly runId: RunId) {}
 
   append(data: string): OutputFrame {
+    if (this.failed) { throw new Error('Terminal output source failed'); }
     if (this.sequence === Number.MAX_SAFE_INTEGER) { throw new Error('Terminal sequence exhausted'); }
     const frame: OutputFrame = {
       version: 1, type: 'output', runId: this.runId, seq: this.sequence + 1, data,
@@ -48,11 +52,23 @@ export class TerminalHistory implements TerminalSource {
   }
 
   snapshot(cursor: number): Promise<ReplaySnapshot> {
+    if (this.failed) { return Promise.reject(new Error('Terminal output source failed; continuity is unavailable.')); }
     return Promise.resolve({
       earliest: this.frames[0]?.seq ?? this.sequence + 1,
       through: this.sequence,
       frames: this.frames.filter(frame => frame.seq > cursor),
     });
+  }
+
+  fail(): void {
+    this.failed = true;
+    for (const listener of this.failures) { listener(); }
+  }
+
+  subscribeFailure(listener: () => void): () => void {
+    this.failures.add(listener);
+    if (this.failed) { listener(); }
+    return () => { this.failures.delete(listener); };
   }
 }
 
@@ -75,7 +91,7 @@ export function attachTerminal(source: TerminalSource, cursor: number, sink: Ter
   let bytes = 0;
   let latest = 0;
   let earliest = 1;
-  const subscription: { unsubscribe?: () => void } = {};
+  const subscription: { unsubscribe?: () => void; failure?: () => void } = {};
   const dispose = () => {
     stopped = true;
     pending = [];
@@ -83,6 +99,7 @@ export function attachTerminal(source: TerminalSource, cursor: number, sink: Ter
     inFlight = undefined;
     bytes = 0;
     subscription.unsubscribe?.();
+    subscription.failure?.();
   };
   const fail = (reason: ResyncReason) => {
     if (stopped) { return; }
@@ -144,6 +161,8 @@ export function attachTerminal(source: TerminalSource, cursor: number, sink: Ter
     }
   });
   if (stopped) { subscription.unsubscribe(); }
+  subscription.failure = source.subscribeFailure?.(() => fail('source-error'));
+  if (stopped) { subscription.failure?.(); }
   const ready = (async () => {
     try {
       if (stopped) { return; }
@@ -196,6 +215,7 @@ export class TerminalReceiver {
   private phase: 'awaiting' | 'replay' | 'live' | 'resync' = 'awaiting';
   private through = 0;
   private applied: number;
+  private applying = false;
   constructor(readonly runId: RunId, cursor = 0) {
     if (!Number.isSafeInteger(cursor) || cursor < 0) { throw new Error('Invalid reconnect cursor'); }
     this.applied = cursor;
@@ -206,6 +226,33 @@ export class TerminalReceiver {
   }
 
   accept(frame: TerminalEvent): 'output' | 'duplicate' | 'boundary' | 'resync' {
+    if (this.applying) { throw new Error('Terminal application already in progress'); }
+    const result = this.inspect(frame);
+    if (result === 'output' && frame.type === 'output') { this.applied = frame.seq; }
+    return result;
+  }
+
+  /** Call serially. A cursor acknowledges rendered output, never merely received bytes. */
+  async apply(frame: TerminalEvent, write: (data: string) => Promise<void>, isCurrent = () => true) {
+    if (this.applying) { throw new Error('Terminal application already in progress'); }
+    this.applying = true;
+    try {
+      const result = this.inspect(frame);
+      if (result === 'output' && frame.type === 'output') {
+        await write(frame.data);
+        if (!isCurrent()) { throw new Error('Terminal application invalidated'); }
+        this.applied = frame.seq;
+      }
+      return result;
+    } catch (error) {
+      this.phase = 'resync';
+      throw error;
+    } finally {
+      this.applying = false;
+    }
+  }
+
+  private inspect(frame: TerminalEvent): 'output' | 'duplicate' | 'boundary' | 'resync' {
     encodeTerminalFrame(frame);
     if (frame.runId !== this.runId) { throw new Error('Wrong terminal run'); }
     if (this.phase === 'resync') { throw new Error('Terminal requires resync'); }
@@ -233,7 +280,6 @@ export class TerminalReceiver {
       this.phase = 'resync';
       return 'resync';
     }
-    this.applied = frame.seq;
     return 'output';
   }
 }

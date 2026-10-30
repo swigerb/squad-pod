@@ -45,8 +45,10 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
   let deliver: (message: OutboundMessage) => void;
   let hold: boolean;
   let held: OutboundMessage[];
+  let received: OutboundMessage[];
   const requests = () => fixture.sent.filter((m) => m.type === 'requestAgentDetail');
   const card = () => host.querySelector<HTMLElement>('[role="dialog"]');
+  const memberDetail = () => host.querySelector<HTMLElement>('[id^="agent-detail-"]');
   const frame = () => {
     const callbacks = [...frames.values()];
     frames.clear();
@@ -62,7 +64,7 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
 
   beforeEach(() => {
     vi.useFakeTimers();
-    frames = new Map(); next = 0; hold = false; held = [];
+    frames = new Map(); next = 0; hold = false; held = []; received = [];
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frames.set(++next, callback); return next; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
@@ -77,6 +79,7 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
       subscribe: (listener) => {
         deliver = listener;
         const unsubscribe = fixture.subscribe((message) => {
+          received.push(message);
           if (hold && message.type === 'agentDetailLoaded') held.push(message);
           else listener(message);
         });
@@ -105,7 +108,10 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
   function assertCard(agent: Agent, action: () => void) {
     const before = requests().length;
     action();
-    expect(requests().slice(before)).toEqual([{ type: 'requestAgentDetail', agentId: agent.id }]);
+    const requested = requests().slice(before);
+    expect(requested).toHaveLength(1);
+    expect(requested[0]).toMatchObject({ type: 'requestAgentDetail', agentId: agent.id });
+    expect(requested[0].requestId).toEqual(expect.any(String));
     for (const text of [agent.name, agent.role, 'idle', agent.summary, agent.activity]) expect(card()?.textContent).toContain(text);
     const other = agents.find((a) => a.id !== agent.id)!;
     expect(card()?.textContent).not.toContain(other.summary);
@@ -133,9 +139,10 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     expect(office.selectedAgentId).toBe('ada');
     canvasClick(160, 350);
     expect(office.selectedAgentId).toBe('ada');
-    expect(requests()).toEqual([
+    expect(requests().map(({ type, agentId }) => ({ type, agentId }))).toEqual([
       { type: 'requestAgentDetail', agentId: 'ada' }, { type: 'requestAgentDetail', agentId: 'ada' },
     ]);
+    expect(new Set(requests().map((request) => request.requestId)).size).toBe(2);
   });
 
   it('clears A while B loads, rejects delayed A after B, and hides a removed card and its stale replies', () => {
@@ -181,10 +188,101 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     act(() => deliver({
       type: 'agentDetailLoaded',
       detail: { id: 'unknown', name: 'Unknown', role: 'Unknown', status: 'idle',
-        currentTask: null, charterSummary: 'Must not appear', recentActivity: [], lastActiveAt: 0 },
+        workspaceRoot: fixture.workspaceRoot, currentTask: null, charterSummary: 'Must not appear',
+        charterContent: null, charterStatus: 'available', expertise: null, responsibilities: null,
+        boundaries: null, recentActivity: [], lastActiveAt: 0 },
     }));
     expect(card()?.textContent).toContain(agents[0].summary);
     expect(host.textContent).not.toContain('Must not appear');
+  });
+
+  it('expands each authoritative roster ID independently and opens only that member charter', () => {
+    click('Squad Info');
+    expect(card()?.textContent).toContain('Ada');
+    expect(card()?.textContent).toContain('Grace');
+
+    click('Show details for Ada');
+    expect(requests().at(-1)).toMatchObject({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(requests().at(-1)?.requestId).toEqual(expect.any(String));
+    expect(memberDetail()?.textContent).toContain('Ada builds precise interaction contracts.');
+    expect(memberDetail()?.textContent).toContain('Ada expertise');
+    expect(memberDetail()?.textContent).toContain('Ada responsibilities');
+    expect(memberDetail()?.textContent).toContain('Ada boundaries');
+    expect(memberDetail()?.textContent).not.toContain('Grace builds');
+    const before = fixture.calls.documents.length;
+    click('Open charter');
+    expect(fixture.calls.documents.slice(before)).toEqual([
+      path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'charter.md'),
+    ]);
+
+    click('Show details for Grace');
+    expect(requests().at(-1)).toMatchObject({ type: 'requestAgentDetail', agentId: 'grace' });
+    expect(requests().at(-1)?.requestId).toEqual(expect.any(String));
+    expect(memberDetail()?.textContent).toContain('Grace reviews the complete user transaction.');
+    expect(memberDetail()?.textContent).not.toContain('Ada builds');
+    expect(card()?.querySelector('[aria-label="Show details for Scribe"]')).toBeNull();
+    fixture.noFocus();
+  });
+
+  it('shows missing charter state and rejects a delayed detail from a prior workspace', () => {
+    click('Squad Info');
+    const adaCharter = path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'charter.md');
+    fs.unlinkSync(adaCharter);
+    click('Show details for Ada');
+    expect(memberDetail()?.textContent).toContain('Charter content is missing.');
+
+    hold = true;
+    click('Show details for Grace');
+    const stale = held.at(-1);
+    expect(stale?.type).toBe('agentDetailLoaded');
+    const nextRoot = path.join(fixture.workspaceRoot, 'next-workspace');
+    const source = received.find(message => message.type === 'sourceStatus');
+    const info = received.filter(message => message.type === 'squadInfoLoaded').at(-1);
+    if (source?.type !== 'sourceStatus' || info?.type !== 'squadInfoLoaded') throw new Error('Fixture did not emit workspace context.');
+    act(() => deliver({ ...source, status: { ...source.status, workspaceRoot: nextRoot } }));
+    act(() => deliver({ ...info, info: { ...info.info, workspaceRoot: nextRoot } }));
+    hold = false;
+    click('Show details for Ada');
+    if (stale?.type === 'agentDetailLoaded') act(() => deliver(stale));
+    expect(memberDetail()?.textContent ?? '').not.toContain('Grace reviews');
+    expect(memberDetail()?.textContent ?? '').not.toContain('Charter content is missing');
+    expect(memberDetail()?.textContent).toContain('Loading observed details');
+    hold = false;
+  });
+
+  it('clears expanded details when the roster removes that agent', () => {
+    click('Squad Info');
+    click('Show details for Ada');
+    expect(memberDetail()?.textContent).toContain('Ada builds precise interaction contracts.');
+    fixture.removeAgent('ada');
+    act(() => vi.advanceTimersByTime(2000));
+    expect(card()?.textContent).not.toContain('Ada builds precise interaction contracts.');
+  });
+
+  it('refreshes the same agent charter and activity on re-expansion and ignores its older reply', () => {
+    hold = true;
+    click('Squad Info');
+    click('Show details for Ada');
+    expect(held).toHaveLength(1);
+    click('Hide details for Ada');
+
+    const charter = path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'charter.md');
+    const activity = path.join(fixture.workspaceRoot, '.squad', 'log', '2026-10-29-ada.md');
+    fs.writeFileSync(charter, '# Ada\n\nAda now verifies refreshed charter details.');
+    fs.writeFileSync(activity, '# Activity\nAda confirmed refreshed activity.');
+
+    click('Show details for Ada');
+    expect(held).toHaveLength(2);
+    expect(held[0].type).toBe('agentDetailLoaded');
+    expect(held[1].type).toBe('agentDetailLoaded');
+    act(() => deliver(held[0]));
+    expect(memberDetail()?.textContent).toContain('Loading observed details');
+    act(() => deliver(held[1]));
+    expect(memberDetail()?.textContent).toContain('Ada now verifies refreshed charter details.');
+    expect(memberDetail()?.textContent).toContain('Ada confirmed refreshed activity.');
+    expect(memberDetail()?.textContent).not.toContain('Ada builds precise interaction contracts.');
+    expect(memberDetail()?.textContent).not.toContain('Ada verified character navigation.');
+    hold = false;
   });
 
   it('clamps the measured border-box card rather than an estimated content size at 360x640', () => {
