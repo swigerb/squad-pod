@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from '../App.js';
 import { createBrowserClient, type BrowserHostClient } from './browserClient.js';
+import { OwnedTerminalPanel } from './OwnedTerminalPanel.js';
 import './standalone.css';
 
 function Observer() {
@@ -35,7 +36,7 @@ function Observer() {
       <span role="status">{status}</span>
       {client && <button onClick={() => { client.dispose(); setClient(null); setStatus('Authentication required'); }}>Authenticate again</button>}
     </header>
-    <p className="observer-scope">Read-only local office. No layout/seat/settings writes, directory management, external assets, private live logs, or terminals. Activity is approximate file observation; usage is recorded ledger data only.</p>
+    <p className="observer-scope">Read-only local office. No layout/seat/settings writes, directory management, external assets, or private live logs. Terminals below require separate authority. Activity is approximate file observation; usage is recorded ledger data only.</p>
     {client ? <main><App client={client} readOnly /></main> : <form onSubmit={event => void authenticate(event)}>
       <h1>Authenticate this viewer</h1>
       <label htmlFor="credential">Runtime credential from the observer console</label>
@@ -43,6 +44,7 @@ function Observer() {
       <button disabled={pending} type="submit">{pending ? 'Authenticating...' : 'Connect read-only office'}</button>
       <p>Credentials stay in memory, not URLs or browser storage. Type <code>rotate</code> in the server console to revoke viewers and get a new credential. A server restart also revokes all credentials.</p>
     </form>}
+    <OwnedTerminalPanel />
   </div>;
 }
 

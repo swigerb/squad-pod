@@ -5,7 +5,8 @@
 **Local browser observer:** [Build/run and security instructions](standalone/README.md)
 for the private, authenticated, loopback-only read-only office. It uses the same
 production renderer, observes only an explicitly selected project, and has no
-terminal/process launcher or workspace writes. This is separate from the VSIX.
+workspace writes. Optional owned terminals use separate authentication and
+`copilot --agent squad`; observation stays read-only. This is separate from the VSIX.
 
 **Your Squad AI team, but make it pixel art.**
 
@@ -119,7 +120,8 @@ Add a local asset directory in **Settings** for furniture, pets, and character s
 
 **Supported:** Squad roster discovery, file-observed activity, opt-in live tool labels and context gauges, the animated office, layout editing, directional furniture groups, pets, local furniture assets, and explicit Squad CLI launches.
 
-**Not yet supported:** a supported Squad event API, a standalone browser runtime, and an embedded terminal.
+**Not yet supported:** a supported Squad event API, general browser office mutations,
+remote access, and full mobile terminal parity.
 
 ## How we built this
 
