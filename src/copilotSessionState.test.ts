@@ -2,7 +2,7 @@ import fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { listCopilotSessions, readSessionCwd, resolveCopilotHome } from './copilotSessionState.js';
+import { findCopilotSession, listCopilotSessions, readSessionCwd, resolveCopilotHome } from './copilotSessionState.js';
 import { SquadDirectorySuggestions } from './directories.js';
 
 describe('read-only Copilot session metadata (synthetic homes only)', () => {
@@ -36,6 +36,29 @@ describe('read-only Copilot session metadata (synthetic homes only)', () => {
     }
   });
 
+  it('finds only safe exact generated UUIDs without scanning other sessions or opening their content', () => {
+    const id = '12345678-1234-4234-8234-123456789abc';
+    const missing = '22345678-1234-4234-8234-123456789abc';
+    const dir = session(id, 'synthetic cwd metadata');
+    const list = vi.spyOn(fs, 'opendirSync');
+    const read = vi.spyOn(fs, 'openSync');
+    expect(findCopilotSession(root, id)).toMatchObject({ id, dir });
+    expect(findCopilotSession(root, missing)).toBeUndefined();
+    expect(() => findCopilotSession(root, '../../escape')).toThrow('Invalid generated');
+    fs.symlinkSync(dir, path.join(root, 'session-state', missing), 'junction');
+    expect(() => findCopilotSession(root, missing)).toThrow('Unsupported exact');
+    expect(list).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('rejects a linked exact-session root instead of following it for generated-ID lookup', () => {
+    const id = '12345678-1234-4234-8234-123456789abc';
+    const target = path.join(root, 'target');
+    fs.mkdirSync(target);
+    fs.symlinkSync(target, path.join(root, 'session-state'), 'junction');
+    expect(() => findCopilotSession(root, id)).toThrow('Unsupported Copilot session root');
+  });
+
   it('returns empty/null for missing or non-directory session roots and missing metadata', () => {
     expect(listCopilotSessions(root)).toEqual([]);
     expect(readSessionCwd(root)).toBeNull();
@@ -59,10 +82,19 @@ describe('read-only Copilot session metadata (synthetic homes only)', () => {
   });
 
   it('examines at most 500 entries even when a larger result is requested', () => {
-    for (let index = 0; index < 510; index++) { session(String(index), ''); }
+    session('fixture', '');
+    const sessionRoot = path.join(root, 'session-state');
+    const entry = fs.readdirSync(sessionRoot, { withFileTypes: true })[0];
+    const directory = fs.opendirSync(sessionRoot);
+    let supplied = 0;
+    const read = vi.spyOn(directory, 'readSync').mockImplementation(() => supplied++ < 510 ? entry : null);
+    const close = vi.spyOn(directory, 'closeSync');
+    vi.spyOn(fs, 'opendirSync').mockReturnValue(directory);
     const stat = vi.spyOn(fs, 'statSync');
     expect(listCopilotSessions(root, { limit: 1000 })).toHaveLength(500);
+    expect(read).toHaveBeenCalledTimes(500);
     expect(stat).toHaveBeenCalledTimes(500);
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it.each(['plain', 'single', 'double'] as const)('reads a %s top-level cwd, ignoring all other keys', (format) => {

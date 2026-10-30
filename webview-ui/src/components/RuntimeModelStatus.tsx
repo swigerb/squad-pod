@@ -1,15 +1,24 @@
-import type { LiveSourceStatus, RuntimeModelObservation } from '../../../src/types.js';
+import type { LiveModelSnapshot, LiveSourceStatus, RuntimeModelObservation } from '../../../src/types.js';
+
+export function memberRuntimeModel(
+  snapshot: LiveModelSnapshot | null | undefined,
+  memberId: string,
+): RuntimeModelObservation | null {
+  return snapshot && Object.hasOwn(snapshot.members, memberId) ? snapshot.members[memberId] : null;
+}
 
 export function liveModelUnavailableReason(
   status: LiveSourceStatus | undefined,
   readOnly = false,
 ): string {
-  if (readOnly) {return 'Live model observation is unavailable in the read-only observer.';}
+  if (!status) {return 'Live source status is unavailable; no runtime model observation is available.';}
   switch (status?.state ?? 'off') {
-    case 'off': return 'Live Activity is off; enable it to observe runtime model events.';
+    case 'off': return readOnly
+      ? 'Live Activity is off; approve the session-log scope and restart the local CLI with --live-activity. It cannot be enabled from the browser.'
+      : 'Live Activity is off; enable it to observe runtime model events.';
     case 'searching': return 'No matching Copilot CLI session is currently being followed.';
     case 'error': return 'The selected Copilot CLI session could not be read.';
-    case 'following': return 'No current runtime model observation is available for this session or member.';
+    case 'following': return 'The runtime has not emitted a supported current model observation for this session or member.';
   }
 }
 

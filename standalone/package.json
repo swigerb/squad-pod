@@ -13,6 +13,7 @@
     "test": "vitest run",
     "acceptance": "node scripts/acceptance.mjs",
     "acceptance:office": "node scripts/office-acceptance.mjs",
+    "acceptance:live": "node scripts/live-acceptance.mjs",
     "acceptance:terminals": "node scripts/terminal-acceptance.mjs"
   },
   "dependencies": {

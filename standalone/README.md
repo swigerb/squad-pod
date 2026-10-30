@@ -8,11 +8,10 @@ The shared renderer can display ephemeral subtask characters from explicit
 same-session parent/instance snapshots, but this default observer does not read
 private live logs or produce those snapshots. It does not infer a durable team
 hierarchy or promote task names into roster members. See the
-[team identity contract](../docs/team-hierarchy.md); separately consented live-log
-observation is a distinct integration, not enabled by office-control or terminals.
-The standalone build does not currently ingest Copilot CLI event logs, so
-current-session and member runtime model observations are unavailable there;
-declared model preferences are not used as substitutes.
+[team identity contract](../docs/team-hierarchy.md). Explicit local `--live-activity`
+consent enables the bounded live-log adapter, including emitted current-session
+and member runtime models with source timestamps. Office-control or terminals
+alone never enable those reads; declared model preferences are not substitutes.
 Its build copies the canonical repository LICENSE and THIRD_PARTY_NOTICES.md
 into the package root; bundled asset provenance and runtime dependency licenses
 remain intact in the installed distribution.
@@ -104,8 +103,82 @@ Authoritative standalone snapshots reconcile existing characters' complete seat 
 appearance maps before subsequent gestures, without recreating identities or changing
 native VS Code roster-refresh behavior.
 Native dialogs/charters, cross-project directories, external asset registration and
-private-home/live-log consent stay explicitly unavailable. VS Code recovery and
+browser-granted private-home/live-log consent stay explicitly unavailable. VS Code recovery and
 settings remain unchanged. Narrow screenshots do not claim touch-editor parity.
+
+## Optional live activity
+
+```powershell
+node standalone\dist\cli.mjs "C:\absolute\selected project" --port 0 --live-activity
+```
+
+**Off by default.** Adding this local CLI flag consents to bounded Copilot session
+metadata/event reads; the CLI prints the resolved read root and scope before any
+live reads. It uses an absolute `COPILOT_HOME`, otherwise the user's `.copilot`
+directory. For synthetic acceptance, set `COPILOT_HOME` to an isolated fixture home.
+The installed Copilot CLI 1.0.105 documents `COPILOT_HOME` in `copilot help environment`;
+verify the actual producer and read root separately before a real run.
+
+The same host-neutral adapter as VS Code examines at most 500 session directory
+entries and considers the newest 32 by directory mtime. It reads at most 8 KiB of
+`workspace.yaml` per candidate, requires canonical cwd equality with the selected
+project, and checks for a root `subagent.selected` Squad marker in bounded head/tail
+scans (64 KiB each) of matching-project `events.jsonl` files. It follows **one newest
+matching Squad session**, not every session in the project. Symlinked session roots,
+session directories, metadata and event files are rejected. Event reads are at most
+2 MiB per poll with 64 KiB lines/carry and bounded task/tool tracking; older or
+oversized data can be omitted. This is best-effort reading of an undocumented
+format, not a supported event producer or a hostile-filesystem sandbox.
+
+Only projected task names/types/modes/short descriptions, tool names, file basenames,
+shell executable names, explicit call/parent/instance IDs, selected-agent identity,
+context counts and emitted runtime model/source timestamps reach the office.
+Prompts, command arguments/scripts, outputs and credentials are never displayed or
+retained by the observer. Exact visible roster slugs on general-purpose task calls
+can animate members, as can an authoritative custom-agent selection joined through
+the explicit instance ID. Other task calls stay unattributed; eligible child calls
+can render temporary characters without roster promotion. Runtime models come only
+from supported emitted fields, not launch flags, task hints or configured metadata.
+Live tasks override file hints until completion, source loss or five minutes without
+new bytes. Ending a live run clears tools/context and does not resurrect ignored
+file hints. New file changes can supply hints again. Discovery is every five
+seconds; polling is every second while viewers are connected. All viewers leaving
+stops reads and clears in-memory live state; reconnect restores only current
+in-flight calls, not completed history. Source status, tools, context gauges,
+runtime models and transient tasks are visible to observation-only viewers without browser consent controls.
+Restart without the flag to turn live reads off.
+
+`--live-activity` grants **no** launch, attach, input, termination, settings or
+filesystem-write authority. `/office` remains read-only. With no active owned
+terminal, diagnostics label the source **matching-project**, not exact ownership.
+
+When combined with `--terminals`, new real owned runs can instead use the
+source-backed fixed argv `copilot --agent squad --session-id <server-generated UUID>`.
+Installed CLI 1.0.105 documents `--session-id` as setting a new UUID or resuming an
+existing session. The host generates a fresh v4 UUID, rejects existing session
+directories/collisions/unsafe paths, and privately retains the run/session binding;
+clients cannot supply IDs, commands, arguments or resume targets. No binding is
+added to terminal wire inventory. The default launch without live opt-in is unchanged.
+Allocation checks are bounded to eight attempts, with at most 2048 issued identities
+per observer lifetime; exceeding this requires an explicit observer restart.
+
+The newest active owned run takes selection precedence. Until its **exact** session
+has matching canonical cwd, a root Squad marker and fresh event bytes, the office
+shows waiting/unavailable rather than following another same-project session.
+Discovery of an exact generated ID does not depend on being among the newest 32.
+Exit/close switches to another active owned run, or explicitly labeled project
+fallback when none remain; all issued IDs remain excluded from fallback so killed
+sessions cannot resurrect old tools. Rotation revokes exact bindings without
+terminating existing terminals; while such a run stays active, observation remains
+unavailable until it is closed or a new run is deliberately launched. Shutdown
+clears the in-memory bindings.
+
+The sanitized child environment is unchanged and **does not forward `COPILOT_HOME`**.
+If the observer's override resolves to a different home than the child would use,
+the host retains default launch argv and reports exact correlation unavailable;
+it never reads another home or silently changes the environment. Synthetic
+`--fixture` terminals also cannot claim an exact Copilot session. File-only and
+matching-project observation still work without terminal authority.
 
 ## Optional owned terminals
 
@@ -121,7 +194,8 @@ cookies, detaches viewers synchronously and cancels launches still waiting for t
 broker; it does not terminate an already-owned process. Reauthenticate after rotation.
 Credentials stay runtime-only, never in URLs, files or browser storage.
 
-**Launch selected project** runs only `copilot --agent squad`, with normal Copilot
+**Launch selected project** runs only `copilot --agent squad` (with the fixed
+server-generated `--session-id` addition only for compatible live opt-in above), with normal Copilot
 permission prompts. The browser cannot supply a directory, executable, arguments or
 environment. Only absolute PATH entries are searched, never cwd or PATHEXT. Windows
 requires a canonical real `copilot.exe` with an executable header; `.cmd`, PowerShell
@@ -142,7 +216,7 @@ forwarded. Environments requiring those inherited network settings must resolve
 that limitation before real-session acceptance; no network compatibility is assumed.
 Normal Copilot permissions
 and authentication through its normal user configuration still apply; observation
-itself never reads private home logs.
+without `--live-activity` never reads private home logs.
 
 Each run gets an opaque random runId, independent of the roster. Select a run to
 view/input/resize, **Reconnect** to recover the same process, or **Close run...**
@@ -231,7 +305,7 @@ or terminal license directory is included in the VSIX.
 
 ## What is observed
 
-Only the selected project: `.squad/team.md` (legacy `.ai-team` fallback),
+By default, only the selected project: `.squad/team.md` (legacy `.ai-team` fallback),
 `.squad-pod/layout.json`, local Squad `sessions/*.json`, `log/*.md`,
 `orchestration-log/*.md`, and `log/usage.jsonl`. Existing roster, layout, activity,
 and recorded-usage parsers are reused. The bundled starter layout and built-in
@@ -242,8 +316,9 @@ File changes are polled every second **while viewers are connected**. A new or e
 recognized session/log source marks the named roster agent active for approximately
 30 seconds; unchanged reads do not extend that window. Initial connection and
 resuming after all viewers disconnect baseline existing files without animating
-historical changes. An old file is not evidence of a currently running tool. There are no
-live context counters. Usage is the recorded ledger only, not billing or live
+historical changes. An old file is not evidence of a currently running tool.
+Without `--live-activity` there are no live tools, context counters or transient tasks.
+Usage is the recorded ledger only, not billing or live
 session telemetry. Missing/malformed/bounded sources are explained; invalid saved
 layouts show the bundled starter, without overwriting the source.
 The Telemetry **Copilot CLI usage export** section explicitly reports import unavailable
@@ -313,6 +388,7 @@ npm test --prefix standalone
 npm run build --prefix standalone
 node standalone\scripts\acceptance.mjs
 npm run acceptance:office --prefix standalone
+npm run acceptance:live --prefix standalone
 npm run acceptance:terminals --prefix standalone
 npm run verify
 npm run package
@@ -332,6 +408,18 @@ is captured as `observer-unavailable-activity-card.png`. A saved-project Floor10
 probe checks exact installed source-sheet canvas pixels and legacy VOID8 transparency.
 `EDGE_PATH` optionally
 selects an installed Edge executable; it installs no browsers.
+
+The live helper requires `PLAYWRIGHT_MODULE` pointing to an approved installed
+Playwright **ESM entry** (`index.mjs`), optionally `EDGE_PATH`, and `LIVE_ARTIFACTS`
+for its report/screenshots. It installs the tarball and already-restored dependencies
+offline into a fresh path with spaces. It starts only an observer with a synthetic
+`COPILOT_HOME`, compares installed/build bytes, checks default-off and exact-cwd/
+Squad-marker filtering, then drives installed Edge tools/context/inventory,
+read-only authority, reload, completion and stale-source clearing. It polls via
+`evaluate`, not CSP-blocked `waitForFunction`. No AI or real private logs are used.
+The separate synthetic-broker tests cover exact generated owned-session binding,
+collision/path rejection, active-run waiting, source precedence, home mismatch,
+revocation and exit/close fallback; this is wiring evidence, not a REAL launch.
 
 The office-control helper requires `PLAYWRIGHT_MODULE` and uses the same optional
 `EDGE_PATH`. It installs the tarball offline, starts only the opted-in office host
