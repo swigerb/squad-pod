@@ -212,10 +212,9 @@ export function useExtensionMessages(
         setAgentDetails((previous) => Object.fromEntries(
           Object.entries(previous).filter(([id]) => ids.includes(id)),
         ));
-        const statuses: Record<string, string> = {};
-        for (const a of snapshot) {
-          if (a.status) statuses[a.id] = a.status;
-        }
+        const statuses: Record<string, string> = Object.fromEntries(
+          snapshot.flatMap(agent => agent.status ? [[agent.id, agent.status]] : []),
+        );
         statusesRef.current = statuses;
         setAgentStatuses(statuses);
         setAgentTasks(Object.fromEntries(snapshot.map((agent) => [agent.id, {

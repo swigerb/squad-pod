@@ -5,22 +5,30 @@ import { createObserver } from './observer.js';
 import { startTransport } from './transport.js';
 import { OwnedRuns } from './ownedRuns.js';
 import { createOfficeControl } from './officeControl.js';
+import { resolveCopilotHome } from '../../src/copilotSessionState.js';
 
 async function main() {
   const raw = process.argv.slice(2);
   const enabled = raw.includes('--terminals') || raw.includes('--fixture');
   const fixture = raw.includes('--fixture');
   const control = raw.includes('--office-control');
-  const args = raw.filter(arg => arg !== '--terminals' && arg !== '--fixture' && arg !== '--office-control');
+  const liveActivity = raw.includes('--live-activity');
+  const args = raw.filter(arg => !['--terminals', '--fixture', '--office-control', '--live-activity'].includes(arg));
   if (args.length < 1 || args.length > 3 || (args.length > 1 && args[1] !== '--port')) {
-    throw new Error('Usage: squad-pod-observer <absolute-project-path> [--port <0..65535>] [--terminals | --fixture] [--office-control]');
+    throw new Error('Usage: squad-pod-observer <absolute-project-path> [--port <0..65535>] [--terminals | --fixture] [--office-control] [--live-activity]');
   }
   const port = args.length === 1 ? 3210 : Number(args[2]);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Port must be an integer from 0 to 65535.');
   const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const observer = createObserver(args[0], path.join(packageRoot, 'dist', 'assets'));
+  if (liveActivity) {
+    console.log(`Live activity opted in: bounded session-state directory metadata and workspace.yaml cwd reads under ${resolveCopilotHome()}; events.jsonl head/tail checks only for exact selected-project candidates, then follows one matching Squad session.`);
+    console.log('Displays whitelisted task/tool/context fields and emitted runtime model/source timestamps only, never prompts or outputs. With --terminals, new owned launches use a server-generated --session-id UUID when child/observer homes match; otherwise exact observation is unavailable. With no active owned run, selects the newest matching-project Squad session (not an owned-terminal correlation).');
+  }
   const terminals = new OwnedRuns({ project: args[0], enabled,
-    fixture: fixture ? path.join(packageRoot, 'dist', 'fixture.mjs') : undefined });
+    fixture: fixture ? path.join(packageRoot, 'dist', 'fixture.mjs') : undefined, liveActivity });
+  const observer = createObserver(args[0], path.join(packageRoot, 'dist', 'assets'), 1000, {
+    liveActivity, sessionSelection: () => terminals.observationSelection(),
+  });
   let server: Awaited<ReturnType<typeof startTransport>>;
   try {
     server = await startTransport({

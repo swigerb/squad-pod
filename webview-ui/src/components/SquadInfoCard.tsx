@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useState } from 'react';
 import type { AgentDetailInfo } from './AgentCard.js';
 import type { CurrentTaskSource, LiveModelSnapshot, LiveSourceStatus } from '../../../src/types.js';
-import { liveModelUnavailableReason, RuntimeModelStatus } from './RuntimeModelStatus.js';
+import { liveModelUnavailableReason, memberRuntimeModel, RuntimeModelStatus } from './RuntimeModelStatus.js';
 
 export interface SquadInfoData {
   teamName: string | null;
@@ -292,7 +292,7 @@ export function SquadInfoCard({
                         <section aria-label="Model metadata" style={{ marginTop: '8px', overflowWrap: 'anywhere' }}>
                           <RuntimeModelStatus
                             label="Member runtime model"
-                            observation={liveModels?.members[m.id]}
+                            observation={memberRuntimeModel(liveModels, m.id)}
                             unavailableReason={liveModelUnavailableReason(liveActivity, readOnly)}
                           />
                           <div>Historical model reports remain historical. Runtime selection, emitted assistant models, and declared metadata are separate sources.</div>

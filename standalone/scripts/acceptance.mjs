@@ -5,7 +5,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { once } from 'node:events';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -143,7 +143,9 @@ try {
   check('forged production mutations rejected without project or synthetic-home writes');
 
   if (process.env.PLAYWRIGHT_MODULE) {
-    const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE);
+    const playwright = await import(pathToFileURL(createRequire(import.meta.url).resolve(process.env.PLAYWRIGHT_MODULE)).href);
+    const chromium = playwright.chromium ?? playwright.default?.chromium;
+    if (!chromium?.launch) throw new Error('PLAYWRIGHT_MODULE must export chromium.launch.');
     browser = await chromium.launch({ headless: true, ...(process.env.EDGE_PATH ? { executablePath: process.env.EDGE_PATH } : {}) });
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
     const tab = await context.newPage();
@@ -211,7 +213,7 @@ try {
     }), 'rendered office canvas');
     await tab.getByRole('button', { name: 'Telemetry', exact: false }).click();
     await tab.getByRole('heading', { name: /Recorded usage \/ model history/ }).waitFor();
-    await tab.getByText('Settings and live-log consent are unavailable in this read-only observer.', { exact: false }).waitFor();
+    await tab.getByText('Browser settings cannot grant live-log consent.', { exact: false }).waitFor();
     assert.equal(await tab.getByRole('button', { name: 'Observation settings and consent', exact: true }).count(), 0);
     await tab.getByText(/Recent historical reports \(/).click();
     await tab.getByText(/Reported model: synthetic-model;/).waitFor();

@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { accessSync, closeSync, constants, openSync, readSync, realpathSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
@@ -7,6 +7,9 @@ import { TerminalHistory } from '../../src/core/terminalReplay.js';
 import type { OwnedRun } from '../../src/core/ownedTerminalProtocol.js';
 import { launchOwnedPty } from './ownedPtyProcess.js';
 import { fileURLToPath } from 'node:url';
+import { findCopilotSession, resolveCopilotHome } from '../../src/copilotSessionState.js';
+import { sameDirectoryPath } from '../../src/directories.js';
+import type { LiveSessionSelection } from '../../src/copilotSessionActivity.js';
 
 export const ENVIRONMENT_KEYS = [
   'PATH', 'SystemRoot', 'WINDIR', 'HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA',
@@ -69,6 +72,8 @@ interface Entry {
   pty: Awaited<ReturnType<typeof launchOwnedPty>>;
   identity: { kind: 'owned'; runId: RunId };
   inputBytes: number;
+  liveSessionId?: string;
+  liveReason?: string;
 }
 
 export interface OwnedRunsOptions {
@@ -77,6 +82,7 @@ export interface OwnedRunsOptions {
   /** CLI-only, fixed synthetic profile. Never populated from network data. */
   fixture?: string;
   broker?: string;
+  liveActivity?: boolean;
 }
 
 export class OwnedRuns {
@@ -88,10 +94,13 @@ export class OwnedRuns {
   private launchCompletion: Promise<void> = Promise.resolve();
   private disposed = false;
   private disposal?: Promise<void>;
+  private readonly observationHome: string;
+  private readonly issuedSessionIds = new Set<string>();
   readonly reason: string | null;
   readonly available: boolean;
 
   constructor(private readonly options: OwnedRunsOptions) {
+    this.observationHome = resolveCopilotHome();
     this.root = realpathSync(options.project);
     const stat = statSync(this.root);
     if (!path.isAbsolute(options.project) || !stat.isDirectory()) throw new Error('Selected project must be an absolute directory.');
@@ -122,6 +131,33 @@ export class OwnedRuns {
 
   private changed() { for (const listener of this.listeners) listener(); }
 
+  observationSelection(): LiveSessionSelection {
+    const excludedIds = [...this.issuedSessionIds];
+    if (this.launching) return { preferredId: null, excludedIds, reason: 'Waiting for an owned launch to finish.' };
+    const active = [...this.entries.values()].reverse().find(entry => entry.info.state === 'running');
+    if (!active) return { preferredId: undefined, excludedIds };
+    return { preferredId: active.liveSessionId ?? null, excludedIds,
+      reason: active.liveReason ?? 'Waiting for fresh exact owned-session data with matching cwd and Squad marker; no project-session fallback.' };
+  }
+
+  revokeObservation(): void {
+    for (const entry of this.entries.values()) {
+      entry.liveSessionId = undefined;
+      entry.liveReason = 'Owned-session observation revoked. Existing terminals remain owned; launch a new run to bind a new session.';
+    }
+  }
+
+  private newSessionId(): string {
+    if (this.issuedSessionIds.size >= 2048) throw new Error('Live session identity limit reached (2048); restart the observer before another correlated launch.');
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const id = randomUUID();
+      if (this.issuedSessionIds.has(id) || findCopilotSession(this.observationHome, id)) continue;
+      this.issuedSessionIds.add(id);
+      return id;
+    }
+    throw new Error('Could not allocate a fresh Copilot session UUID; no session was resumed or launched.');
+  }
+
   async launch(authorized: () => boolean = () => true): Promise<OwnedRun> {
     if (this.disposed || !this.available) throw new Error(this.reason ?? 'Owned runtime stopped.');
     if (this.launching) throw new Error('Owned native launch in progress; launch was not queued.');
@@ -137,6 +173,18 @@ export class OwnedRuns {
     const launch = this.options.fixture
       ? { file: realpathSync(process.execPath), args: [this.options.fixture, 'argument with spaces', 'literal"quote', 'trailing\\'] }
       : resolveCopilot(env);
+    let liveSessionId: string | undefined;
+    let liveReason: string | undefined;
+    if (this.options.liveActivity) {
+      if (this.options.fixture) {
+        liveReason = 'Synthetic terminals do not emit Copilot sessions; exact observation is unavailable.';
+      } else if (!sameDirectoryPath(this.observationHome, resolveCopilotHome(env))) {
+        liveReason = 'Observer and sanitized owned child resolve different Copilot homes; exact observation is unavailable. Child environment was not changed.';
+      } else {
+        liveSessionId = this.newSessionId();
+        launch.args.push('--session-id', liveSessionId);
+      }
+    }
     const id = runId(randomBytes(24).toString('base64url'));
     const info: OwnedRun = { runId: id, pid: 0, state: 'running', exitCode: null };
     const history = new TerminalHistory(id);
@@ -180,7 +228,7 @@ export class OwnedRuns {
         }, this.rootIdentity);
       info.pid = pty.pid;
       this.entries.set(id, { info, history, pty, identity: { kind: 'owned', runId: id },
-        inputBytes: 0 });
+        inputBytes: 0, liveSessionId, liveReason });
       this.changed();
       return { ...info };
     } finally { this.launching = false; completed(); }

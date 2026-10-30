@@ -107,6 +107,70 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     ]);
   });
 
+  it.each(['ordinary', 'constructor', 'toString', '__proto__'])(
+    'renders only own emitted member models in both detail surfaces for %s', async id => {
+      act(() => root.unmount());
+      client = createHostClientFixture();
+      root = createRoot(host);
+      act(() => root.render(<App client={client} readOnly standalone />));
+      snapshot(imported, 'observer');
+      send({ type: 'sourceStatus', status: {
+        workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad', teamFound: true,
+        observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'following', sessionId: 'fixture' },
+      } });
+      send({ type: 'existingAgents', agents: [{
+        id, name: 'TestBot', role: 'Developer', paletteIndex: 0,
+        seatId: null, status: 'idle', currentTask: null,
+      }] });
+      const observation = { model: 'fixture-member-model', kind: 'assistant-message' as const,
+        source: 'assistant.message.model' as const, timestamp: '2026-10-30T12:00:00Z' };
+      const publish = (emitted: boolean) => send({ type: 'liveModels', snapshot: {
+        sessionId: 'fixture', session: null,
+        members: emitted ? Object.fromEntries([[id, observation]]) : {},
+      } });
+      const respond = () => {
+        const request = vi.mocked(client.send).mock.calls.map(([message]) => message)
+          .filter(message => message.type === 'requestAgentDetail').at(-1);
+        expect(request?.agentId).toBe(id);
+        send({ type: 'agentDetailLoaded', requestId: request?.requestId, detail: {
+          id, name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
+          status: 'idle', currentTask: null, charterSummary: null, charterContent: null,
+          charterStatus: 'unavailable', expertise: null, responsibilities: null, boundaries: null,
+          recentActivity: [], lastActiveAt: 0,
+        } });
+      };
+      function expectModels() {
+        const card = host.querySelector('[role="dialog"]');
+        expect(card?.textContent).toContain('Member runtime model: unavailable');
+        expect(card?.textContent).toContain('runtime has not emitted');
+        publish(true);
+        expect(card?.textContent).toContain('Member runtime model: fixture-member-model');
+        expect(card?.textContent).toContain('assistant.message.model');
+        expect(card?.textContent).toContain(observation.timestamp);
+        publish(false);
+        expect(card?.textContent).toContain('Member runtime model: unavailable');
+        expect(card?.textContent).toContain('runtime has not emitted');
+        expect(card?.textContent).not.toContain('fixture-member-model');
+      }
+      publish(false);
+      await nextFrame();
+      const label = host.querySelector<HTMLButtonElement>(`[data-agent-label="${id}"]`);
+      expect(label).not.toBeNull();
+      act(() => label!.click());
+      respond();
+      expectModels();
+      const close = host.querySelector<HTMLButtonElement>('[aria-label="Close agent details"]');
+      act(() => close!.click());
+      click('Squad Info');
+      const toggle = host.querySelector<HTMLButtonElement>('[aria-label="Show details for TestBot"]');
+      expect(toggle).not.toBeNull();
+      act(() => toggle!.click());
+      respond();
+      expectModels();
+    },
+  );
+
   it('disables standalone mutations without optimistic settings or seat persistence', async () => {
     act(() => root.unmount());
     client = createHostClientFixture();
@@ -194,7 +258,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       'webviewReady', 'requestAgentDetail', 'requestAgentDetail',
     ]);
     click('Telemetry');
-    expect(host.textContent).toContain('Live transient tasks are unavailable in the read-only observer.');
+    expect(host.textContent).toContain('Live source status is unavailable. No task state is available.');
     expect(host.textContent).not.toContain('Enable it in Settings');
   });
 

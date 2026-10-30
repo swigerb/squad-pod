@@ -268,6 +268,8 @@ export interface SourceStatus {
 export interface LiveSourceStatus {
   state: 'off' | 'searching' | 'following' | 'error';
   sessionId: string | null;
+  selection?: 'owned-session' | 'matching-project' | 'unavailable';
+  reason?: string;
 }
 
 export interface RuntimeModelObservation {

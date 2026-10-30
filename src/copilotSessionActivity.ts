@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { TASK_DESCRIPTION_DISPLAY_MAX_LENGTH } from './constants.js';
 import { sameDirectoryPath } from './directories.js';
-import { listCopilotSessions, readSessionCwd, resolveCopilotHome } from './copilotSessionState.js';
+import { findCopilotSession, listCopilotSessions, readSessionCwd, resolveCopilotHome } from './copilotSessionState.js';
 import type {
   LiveModelSnapshot, LiveSourceStatus, OutboundMessage, RuntimeModelObservation, RuntimeModelSource,
 } from './types.js';
@@ -234,6 +234,13 @@ function isSquadSession(file: string): boolean {
   } finally { fs.closeSync(fd); }
 }
 
+export interface LiveSessionSelection {
+  /** undefined: project discovery; null: explicitly unavailable, never fall back. */
+  preferredId: string | null | undefined;
+  excludedIds: readonly string[];
+  reason?: string;
+}
+
 interface ActivityOptions {
   workspaceRoot: string;
   copilotHome?: string;
@@ -242,6 +249,7 @@ interface ActivityOptions {
   lifecycle: (agentId: string, active: boolean, task: string | null) => void;
   status: (status: LiveSourceStatus) => void;
   now?: () => number;
+  sessionSelection?: () => LiveSessionSelection;
 }
 
 export class CopilotSessionActivity {
@@ -267,15 +275,17 @@ export class CopilotSessionActivity {
   private counter = 0;
   private seeding = false;
   private observedTasks = new ObservedTasks();
+  private preferredId: string | null | undefined;
 
   constructor(private options: ActivityOptions) {}
 
-  start(): void {
+  /** Hosts with their own snapshot clock can drive poll/replay without a second timer. */
+  start(pollAutomatically = true): void {
     if (this.enabled) {return;}
     this.enabled = true;
     this.home = this.options.copilotHome ?? resolveCopilotHome();
     this.poll();
-    this.timer = setInterval(() => this.poll(), 1000);
+    if (pollAutomatically) { this.timer = setInterval(() => this.poll(), 1000); }
   }
 
   stop(): void {
@@ -286,6 +296,7 @@ export class CopilotSessionActivity {
     this.session = undefined;
     this.discoveryAt = -Infinity;
     this.stale = false;
+    this.preferredId = undefined;
     this.setSource('off');
   }
 
@@ -312,10 +323,23 @@ export class CopilotSessionActivity {
     if (!this.enabled) {return;}
     const now = (this.options.now ?? Date.now)();
     try {
+      const selection = this.options.sessionSelection?.();
+      if (selection?.preferredId !== this.preferredId) {
+        this.preferredId = selection?.preferredId;
+        this.clear();
+        this.session = undefined;
+        this.discoveryAt = -Infinity;
+      }
+      if (selection?.preferredId === null) {
+        this.setSource('searching');
+        return;
+      }
       if (now - this.discoveryAt >= 5000) {
         this.discoveryAt = now;
-        const sessions = listCopilotSessions(this.home, { limit: 32 });
+        const exact = selection?.preferredId ? findCopilotSession(this.home, selection.preferredId) : undefined;
+        const sessions = selection?.preferredId ? exact ? [exact] : [] : listCopilotSessions(this.home, { limit: 32 });
         const match = sessions.find(session => {
+          if (!selection?.preferredId && selection?.excludedIds.includes(session.id)) {return false;}
           const cwd = readSessionCwd(session.dir);
           if (!cwd || !sameDirectoryPath(cwd, this.options.workspaceRoot)) {return false;}
           try { return isSquadSession(path.join(session.dir, 'events.jsonl')); }

@@ -501,6 +501,7 @@ export async function startTransport(options: TransportOptions): Promise<{
     get controlToken() { return options.officeControl ? controlToken : null; },
     rotate: () => {
       generation++;
+      options.terminals?.revokeObservation();
       token = credential();
       session = credential();
       terminalToken = credential();

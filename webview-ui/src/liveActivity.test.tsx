@@ -134,6 +134,42 @@ describe('live tools and context through the App boundary', () => {
     expect(client.send).toHaveBeenCalledWith({ type: 'setLiveActivity', enabled: false });
   });
 
+  it('renders CLI-opted-in live tools/context/tasks in a read-only standalone office without offering browser consent', async () => {
+    act(() => root.render(<App client={client} readOnly standalone />));
+    source('following');
+    send({ type: 'existingAgents', agents: [{
+      id: 'ada', name: 'Ada', role: 'Developer', status: 'active', currentTask: 'Fixture live task',
+      currentTaskSource: 'live', paletteIndex: 0, seatId: null,
+    }] });
+    send({ type: 'agentToolStart', agentId: 'ada', toolId: 'live-read', tool: 'view', status: 'Reading fixture.ts' });
+    send({ type: 'agentContextUsage', agentId: 'ada', contextTokens: 800, maxContextTokens: 1000 });
+    send({ type: 'observedTasks', snapshot: { sessionId: 'session', limited: false,
+      tasks: [row('live-task', { name: 'ada', agentType: 'general-purpose', agentId: 'ada' })] } });
+    act(() => [...host.querySelectorAll('button')].find(item => item.textContent?.startsWith('Telemetry'))!.click());
+    await frame();
+    expect(host.querySelector('[data-agent-tools="ada"]')?.textContent).toContain('Reading fixture.ts');
+    expect(host.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('80');
+    expect(host.querySelector('[data-observed-task="live-task"]')?.textContent).toContain('Roster match: ada');
+    expect(host.textContent).toContain('Live CLI observer: following (session)');
+    expect(host.textContent).toContain('not an owned-terminal correlation');
+    expect(host.textContent).toContain('Browser settings cannot grant live-log consent');
+    expect(host.querySelector('#squad-pod-live-activity')).toBeNull();
+    expect(client.send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'setLiveActivity' }));
+    send({ type: 'existingAgents', agents: [{
+      id: 'ada', name: 'Ada', role: 'Developer', status: 'idle', currentTask: null,
+      currentTaskSource: null, paletteIndex: 0, seatId: null,
+    }] });
+    send({ type: 'agentToolsClear', agentId: 'ada' });
+    send({ type: 'agentContextUsage', agentId: 'ada', contextTokens: null, maxContextTokens: null });
+    source('searching');
+    send({ type: 'observedTasks', snapshot: { sessionId: null, limited: false, tasks: [] } });
+    await frame();
+    expect(host.querySelector('[data-agent-tools]')).toBeNull();
+    expect(host.querySelector('[role="progressbar"]')).toBeNull();
+    expect(host.querySelector('[data-observed-task]')).toBeNull();
+    expect(host.textContent).toContain('Searching for a current session');
+  });
+
   it('renders distinct unattributed calls, explicit parents, metadata limits and coverage separately from usage', async () => {
     source('following');
     send({ type: 'observedTasks', snapshot: {

@@ -117,9 +117,9 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
             {sourceStatus?.liveActivity?.sessionId ? ` (${sourceStatus.liveActivity.sessionId})` : ''}.
             {' '}Reads local Copilot CLI session metadata for this workspace after confirmation.
           </p></>}
-          <SourceStatusView status={sourceStatus} />
+          <SourceStatusView status={sourceStatus} readOnly={standalone} />
           {!standalone && <AssetDirectories status={assetStatus} />}
-          {standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and private/live log consent are unavailable. Import selects a browser file; export downloads validated JSON. Neither grants filesystem or terminal access.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
+          {standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and browser-granted private/live log consent are unavailable. Live observation requires local CLI --live-activity opt-in. Import selects a browser file; export downloads validated JSON. Neither grants filesystem or terminal access.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
             Automatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code&apos;s normal terminal and Copilot permission prompts.
             Live tools and context use an undocumented, best-effort Copilot CLI session format.
           </p>}
