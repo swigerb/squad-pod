@@ -474,18 +474,20 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     fs.writeFileSync(path.join(squad, 'config.json'), JSON.stringify({
       defaultModel: 'synthetic-default', agentModelOverrides: { Ada: 'synthetic-override', ada: 'not-the-name' },
     }));
-    deliver({ type: 'sourceStatus', status: {
-      workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
-      teamFound: true, observer: 'watching', nativeWatch: false, error: null,
-      liveActivity: { state: 'following', sessionId: 'session' },
-    } });
-    deliver({ type: 'liveModels', snapshot: {
-      sessionId: 'session',
-      session: { model: 'session-selection', kind: 'session-selection',
-        source: 'session.start.selectedModel', timestamp },
-      members: { ada: { model: 'member-observation', kind: 'assistant-message',
-        source: 'assistant.message.model', timestamp } },
-    } });
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'following', sessionId: 'session' },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'session',
+        session: { model: 'session-selection', kind: 'session-selection',
+          source: 'session.start.selectedModel', timestamp },
+        members: { ada: { model: 'member-observation', kind: 'assistant-message',
+          source: 'assistant.message.model', timestamp } },
+      } });
+    });
     click('Squad Info');
     click('Show details for Ada');
     const text = memberDetail()?.textContent;
@@ -496,37 +498,41 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
       'not effective runtime selection']) expect(text).toContain(expected);
     expect(card()?.textContent).toContain('Current-session model: session-selection');
     expect(text).not.toContain('not-the-name');
-    deliver({ type: 'sourceStatus', status: {
-      workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
-      teamFound: true, observer: 'watching', nativeWatch: false, error: null,
-      liveActivity: { state: 'searching', sessionId: null },
-    } });
-    deliver({ type: 'liveModels', snapshot: {
-      sessionId: 'session',
-      session: { model: 'stale-model', kind: 'session-selection',
-        source: 'session.start.selectedModel', timestamp },
-      members: {},
-    } });
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'searching', sessionId: null },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'session',
+        session: { model: 'stale-model', kind: 'session-selection',
+          source: 'session.start.selectedModel', timestamp },
+        members: {},
+      } });
+    });
     expect(card()?.textContent).toContain('Current-session model: unavailable');
     expect(memberDetail()?.textContent).toContain('Member runtime model: unavailable');
-    deliver({ type: 'sourceStatus', status: {
-      workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
-      teamFound: true, observer: 'watching', nativeWatch: false, error: null,
-      liveActivity: { state: 'following', sessionId: 'new-session' },
-    } });
-    deliver({ type: 'liveModels', snapshot: {
-      sessionId: 'session',
-      session: { model: 'old-session-model', kind: 'assistant-message',
-        source: 'assistant.message.model', timestamp },
-      members: {},
-    } });
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'following', sessionId: 'new-session' },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'session',
+        session: { model: 'old-session-model', kind: 'assistant-message',
+          source: 'assistant.message.model', timestamp },
+        members: {},
+      } });
+    });
     expect(card()?.textContent).toContain('Current-session model: unavailable');
-    deliver({ type: 'liveModels', snapshot: {
+    act(() => deliver({ type: 'liveModels', snapshot: {
       sessionId: 'new-session',
       session: { model: 'new-session-model', kind: 'session-selection',
         source: 'session.start.selectedModel', timestamp },
       members: {},
-    } });
+    } }));
     expect(card()?.textContent).toContain('Current-session model: new-session-model');
     hold = true;
     click('Show details for Grace');

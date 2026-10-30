@@ -97,7 +97,7 @@ export function parseLiveEvent(line: string): LiveEvent | null {
     event.context = { contextTokens: current, maxContextTokens: limit };
   }
   if (envelope.ephemeral !== true) {
-    const modelField: Record<string, {
+    const modelFields: Record<string, {
       key: string; kind: RuntimeModelObservation['kind']; source: RuntimeModelSource;
     }> = {
       'session.start': { key: 'selectedModel', kind: 'session-selection', source: 'session.start.selectedModel' },
@@ -107,7 +107,8 @@ export function parseLiveEvent(line: string): LiveEvent | null {
       'subagent.started': { key: 'model', kind: 'subagent-model', source: 'subagent.started.model' },
       'subagent.configured': { key: 'model', kind: 'subagent-model', source: 'subagent.configured.model' },
       'tool.execution_complete': { key: 'model', kind: 'tool-call', source: 'tool.execution_complete.model' },
-    }[type];
+    };
+    const modelField = modelFields[type];
     if (modelField) {
       const model = data[modelField.key];
       const timestamp = text(envelope.timestamp, 40);

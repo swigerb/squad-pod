@@ -380,7 +380,7 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     session('new-session', marked(''));
     reader.poll();
     expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot).toEqual({
-      sessionId: 'new-session', session: null, members: {},
+      sessionId: 'new-sess', session: null, members: {},
     });
     expect(file).toContain('old-session');
     reader.stop();
