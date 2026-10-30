@@ -137,7 +137,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
           id, name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
           status: 'idle', currentTask: null, charterSummary: null, charterContent: null,
           charterStatus: 'unavailable', expertise: null, responsibilities: null, boundaries: null,
-          recentActivity: [], lastActiveAt: 0,
+          recentActivity: [], lastActiveAt: 0, lastActiveAtStatus: 'unobserved',
         } });
       };
       function expectModels() {
@@ -211,7 +211,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
       status: 'active', currentTask: 'Approximate observed activity', charterSummary: null,
       charterContent: null, charterStatus: 'unavailable', expertise: null,
-      responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+      responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0, lastActiveAtStatus: 'unobserved',
       } });
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Charter content is unavailable.');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Declared model metadata is unavailable in the read-only observer.');
@@ -240,7 +240,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
         id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
         status: 'active', currentTask: 'Stale observed activity', charterSummary: null,
         charterContent: null, charterStatus: 'unavailable', expertise: null,
-        responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+        responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0, lastActiveAtStatus: 'unobserved',
       } });
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Loading observed details');
     send({ type: 'agentDetailLoaded',
@@ -249,7 +249,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
         id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
         status: 'waiting', currentTask: 'Refreshed observed activity', charterSummary: null,
         charterContent: null, charterStatus: 'unavailable', expertise: null,
-        responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+        responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0, lastActiveAtStatus: 'unobserved',
       } });
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed status: waiting');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed activity: Refreshed observed activity');
@@ -363,7 +363,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
       status: 'idle', currentTask: null, charterSummary: null, charterContent: null,
       charterStatus: 'unavailable', expertise: null, responsibilities: null, boundaries: null,
-      recentActivity: [], lastActiveAt: 0,
+      recentActivity: [], lastActiveAt: 0, lastActiveAtStatus: 'unobserved',
     } });
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Charter content is unavailable.');
     const open = [...host.querySelectorAll('button')].find(button => button.textContent === 'Open charter');

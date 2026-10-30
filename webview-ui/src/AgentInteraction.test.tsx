@@ -272,7 +272,7 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
       detail: { id: 'unknown', name: 'Unknown', role: 'Unknown', status: 'idle',
         workspaceRoot: fixture.workspaceRoot, currentTask: null, charterSummary: 'Must not appear',
         charterContent: null, charterStatus: 'available', expertise: null, responsibilities: null,
-        boundaries: null, recentActivity: [], lastActiveAt: 0 },
+        boundaries: null, recentActivity: [], lastActiveAt: 0, lastActiveAtStatus: 'unobserved' },
     }));
     expect(card()?.textContent).toContain(agents[0].summary);
     expect(host.textContent).not.toContain('Must not appear');

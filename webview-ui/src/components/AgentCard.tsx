@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react';
-import type { LiveSourceStatus, RuntimeModelObservation } from '../../../src/types.js';
+import type { ActivityTimeStatus, LiveSourceStatus, RuntimeModelObservation } from '../../../src/types.js';
 import { liveModelUnavailableReason, RuntimeModelStatus } from './RuntimeModelStatus.js';
 
 /** Agent detail info received from the extension */
@@ -19,7 +19,8 @@ export interface AgentDetailInfo {
   responsibilities: string | null;
   boundaries: string | null;
   recentActivity: string[];
-  lastActiveAt: number;
+  lastActiveAt: number | null;
+  lastActiveAtStatus?: ActivityTimeStatus;
 }
 
 interface AgentCardProps {
@@ -32,18 +33,33 @@ interface AgentCardProps {
   readOnly?: boolean;
 }
 
-function formatRelativeTime(timestamp: number): string {
-  if (!Number.isFinite(timestamp) || timestamp <= 0) return 'Activity time unavailable';
-
+export function formatRelativeTime(
+  timestamp: number | null,
+  timestampStatus: ActivityTimeStatus = timestamp === null ? 'unobserved' : 'available',
+): string {
   const now = Date.now();
+  if (timestamp === null) {
+    if (timestampStatus === 'clock-skew') {return 'Activity time unavailable (source clock ahead)';}
+    return timestampStatus === 'unobserved'
+      ? 'No attributable activity observed' : 'Activity time unavailable';
+  }
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return 'Activity time unavailable';
+  if (timestamp > now) return 'Activity time unavailable (source clock ahead)';
+  if (timestampStatus === 'clock-skew') {
+    return `${formatAge(timestamp, now)} (future source activity ignored due to clock skew)`;
+  }
+  return formatAge(timestamp, now);
+}
+
+function formatAge(timestamp: number, now: number): string {
   const diff = now - timestamp;
   const seconds = Math.floor(diff / 1000);
-  
+
   if (seconds < 60) return 'just now';
-  
+
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes} min ago`;
-  
+
   const hours = Math.floor(minutes / 60);
   return `${hours} hour${hours > 1 ? 's' : ''} ago`;
 }
@@ -176,8 +192,8 @@ export function AgentCard({
             background: statusColor,
           }} />
           <span style={{ color: '#ccc' }}>{detail.status}</span>
-          <span style={{ marginLeft: 'auto', color: '#888' }}>
-            {formatRelativeTime(detail.lastActiveAt)}
+          <span aria-label="Last attributable live activity" style={{ marginLeft: 'auto', color: '#888' }}>
+            {formatRelativeTime(detail.lastActiveAt, detail.lastActiveAtStatus)}
           </span>
         </div>
       </div>
