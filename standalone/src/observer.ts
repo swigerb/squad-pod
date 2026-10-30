@@ -11,11 +11,13 @@ import { parseLogEntry, parseSessionFile, detectAgentFromFilename } from '../../
 import type { OutboundMessage, WebviewMessage, ExistingAgentsMessage } from '../../src/types.js';
 import { ProjectFiles } from './projectFiles.js';
 import { isObserverLayout } from './events.js';
+import { OfficeStore } from './officeStore.js';
 
 const settings = { type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: false } as const;
 
 export function createObserver(project: string, bundledAssetsRoot: string, pollMs = 1000) {
   const files = new ProjectFiles(project);
+  const office = new OfficeStore(project);
   const assets: OutboundMessage = {
     type: 'manifestAssetsLoaded',
     snapshot: loadAssetSnapshot(bundledAssetsRoot),
@@ -96,20 +98,24 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
       }
     }
     for (const key of activity.keys()) if (!seen.has(key)) activity.delete(key);
+    let preferences: ReturnType<OfficeStore['readPreferences']>['value'] = null;
+    try { preferences = office.readPreferences().value; }
+    catch (error) { errors.push(`Office preferences: ${String(error)}`); }
     latestAgents = roster.map(member => ({
       id: member.slug, name: member.name, role: member.role,
-      paletteIndex: createHash('sha256').update(member.slug).digest()[0] % 6, seatId: null,
+      paletteIndex: preferences?.agents[member.slug]?.palette ?? createHash('sha256').update(member.slug).digest()[0] % 6,
+      seatId: preferences?.agents[member.slug]?.seatId ?? null,
       status: active.has(member.slug) ? 'active' : 'idle',
       currentTask: active.has(member.slug) ? 'Approximate local file activity (not live tool execution)' : null,
     }));
     return [
-      settings,
+      { ...settings, ...preferences?.settings },
       { type: 'sourceStatus', status: {
         workspaceRoot: files.root, squadDir: path.join(files.root, squad), teamFound: team !== null,
         observer: 'watching', nativeWatch: false, liveActivity: { state: 'off', sessionId: null },
         error: errors.length ? errors.slice(0, 8).join('\n').slice(0, 4096) : null,
       } },
-      { type: 'layoutLoaded', layout, revision: null, workspaceRoot: files.root },
+      { type: 'layoutLoaded', layout, revision: saved === null ? null : createHash('sha256').update(saved).digest('hex'), workspaceRoot: files.root },
       { type: 'existingAgents', agents: latestAgents },
       { type: 'recordedUsage', snapshot: usage },
     ];
@@ -142,7 +148,7 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
     };
   }
   async function onRead(message: WebviewMessage): Promise<OutboundMessage[]> {
-    if (message.type === 'getSettings') return [settings];
+    if (message.type === 'getSettings') return [{ ...settings, ...office.readPreferences().value?.settings }];
     if (message.type !== 'requestAgentDetail') return [];
     const agent = latestAgents.find(a => a.id === message.agentId);
     if (!agent) throw new Error('Unknown observed agent.');
