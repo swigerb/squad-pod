@@ -200,6 +200,7 @@ export interface TelemetryEvent {
 }
 
 export type WebviewMessage =
+  | { type: 'setLiveActivity'; enabled: boolean }
   | { type: 'addAssetDirectory' }
   | { type: 'removeAssetDirectory'; directory: string }
   | { type: 'getDirectories' | 'addDirectory' }
@@ -237,12 +238,18 @@ export interface DirectoryCatalog {
 }
 
 export interface SourceStatus {
+  liveActivity?: LiveSourceStatus;
   workspaceRoot: string | null;
   squadDir: string | null;
   teamFound: boolean;
   observer: 'watching' | 'stopped';
   nativeWatch: boolean;
   error: string | null;
+}
+
+export interface LiveSourceStatus {
+  state: 'off' | 'searching' | 'following' | 'error';
+  sessionId: string | null;
 }
 
 export interface AgentCreatedMessage {
@@ -311,6 +318,7 @@ export interface SquadInfoData {
 }
 
 export type OutboundMessage =
+  | { type: 'agentContextUsage'; agentId: string; contextTokens: number | null; maxContextTokens: number | null }
   | { type: 'recordedUsage'; snapshot: import('./recordedUsage.js').RecordedUsageSnapshot }
   | AgentCreatedMessage
   | AgentStatusMessage

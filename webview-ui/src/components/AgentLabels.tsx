@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
+import { getContextUsage, contextGauge } from '../office/toolUtils.js';
 
 interface AgentLabelsProps {
   officeState: OfficeState;
@@ -20,6 +21,7 @@ interface LabelPosition {
   tool: string | undefined;
   bubbleType: string;
   isSelected: boolean;
+  gauge?: ReturnType<typeof contextGauge> & { x: number; y: number };
 }
 
 interface LabelBox {
@@ -92,6 +94,12 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
         pos.toolX = box.left;
         pos.toolY = box.top;
       }
+      for (const pos of positions) {
+        const usage = getContextUsage(officeState, pos.agentId);
+        if (!usage || !pos.isActive) continue;
+        const box = placeOverlay(pos.labelX, pos.labelY + 32, 40, 4, width, height, occupied);
+        pos.gauge = { ...contextGauge(usage), x: box.left, y: box.top };
+      }
       setLabelPositions(positions);
       rafRef.current = requestAnimationFrame(updatePositions);
     };
@@ -121,6 +129,13 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
 
         return (
           <div key={pos.agentId}>
+            {pos.gauge && <span data-agent-context={pos.agentId} role="progressbar"
+              aria-label={pos.gauge.label} title={pos.gauge.label}
+              aria-valuenow={pos.gauge.percent} aria-valuemin={0} aria-valuemax={100}
+              style={{ position: 'absolute', left: pos.gauge.x, top: pos.gauge.y,
+                width: 40, height: 4, background: '#333', pointerEvents: 'auto', boxShadow: '0 0 0 1px #111' }}>
+              <span style={{ display: 'block', height: '100%', width: `${pos.gauge.percent}%`, background: pos.gauge.color }} />
+            </span>}
             {/* Tool bubble */}
             {pos.isActive && pos.tool && (
               <div data-agent-tool-bubble={pos.agentId} style={{

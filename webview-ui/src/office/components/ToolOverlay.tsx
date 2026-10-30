@@ -27,7 +27,7 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
       const container = containerRef.current;
       const origin = container?.getBoundingClientRect();
       const occupied = [...(container?.parentElement?.querySelectorAll<HTMLElement>(
-        '[data-agent-label], [data-agent-tool-bubble]') ?? [])].map((element) => {
+        '[data-agent-label], [data-agent-tool-bubble], [data-agent-context]') ?? [])].map((element) => {
         const rect = element.getBoundingClientRect();
         return { left: rect.left - (origin?.left ?? 0), top: rect.top - (origin?.top ?? 0),
           width: rect.width, height: rect.height };

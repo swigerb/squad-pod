@@ -4,6 +4,8 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+- Added consent-gated, opt-in live Squad member tool labels and context gauges from local Copilot CLI sessions, with strict metadata filtering and file-observation fallback.
+
 - Furniture groups now support directional rotation and mirrored views, with one palette entry per group, preserved tint and seat assignments, and one undo step per turn.
 
 ### Changed

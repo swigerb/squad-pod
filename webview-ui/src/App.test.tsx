@@ -946,14 +946,14 @@ describe('settings and source UI with simulated host messages', () => {
     expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: true });
     act(() => showAreas.click());
     expect(client.send).toHaveBeenCalledWith({ type: 'setShowAreas', enabled: true });
-    expect(host.textContent).toContain('Authoritative tool/context data is unavailable');
+    expect(host.textContent).toContain('opt-in live member lifecycle, tools and context');
     act(() => root.unmount());
     root = createRoot(host);
     act(() => root.render(<App client={client} />));
     send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: true, showAreas: true });
     load();
     expect(isSoundEnabled()).toBe(false);
-    expect(host.textContent).toContain('Authoritative tool/context data is unavailable');
+    expect(host.textContent).toContain('opt-in live member lifecycle, tools and context');
     click('Close');
     expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: false });
     click('Settings');

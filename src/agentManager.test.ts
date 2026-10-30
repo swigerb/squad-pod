@@ -24,6 +24,7 @@ import {
   disposeAgentManager,
   getAgents,
   resolveAgentId,
+  setLiveAgentStatus,
 } from './agentManager.js';
 
 const mockReadTeamRoster = readTeamRoster as ReturnType<typeof vi.fn>;
@@ -98,6 +99,23 @@ describe('agentManager', () => {
   });
 
   describe('updateAgentStatus', () => {
+    it('never lets file activity or an already queued idle timer overwrite a live run', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('Ada', 'ada')]);
+      initializeAgents('/workspace', context, webview);
+      updateAgentStatus('ada', 'active', 'file task', webview);
+      const callback = vi.mocked(resetActivityTimer).mock.calls.at(-1)![2];
+      setLiveAgentStatus('ada', true, 'live task', webview);
+      webview.postMessage.mockClear();
+      callback();
+      updateAgentStatus('ada', 'idle', null, webview);
+      updateAgentStatus('ada', 'active', 'file overwrite', webview);
+      expect(getAgents().get('ada')).toMatchObject({ status: 'active', currentTask: 'live task' });
+      expect(webview.postMessage).not.toHaveBeenCalled();
+      setLiveAgentStatus('ada', false, null, webview);
+      expect(getAgents().get('ada')).toMatchObject({ status: 'idle', currentTask: null });
+      updateAgentStatus('ada', 'active', 'file fallback', webview);
+      expect(getAgents().get('ada')?.currentTask).toBe('file fallback');
+    });
     it('sends agentStatus and agentToolStart when going active', () => {
       mockReadTeamRoster.mockReturnValue([makeMember('Homer', 'homer')]);
       initializeAgents('/workspace', context, webview);

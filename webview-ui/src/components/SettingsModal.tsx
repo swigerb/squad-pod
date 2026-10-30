@@ -44,7 +44,8 @@ export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onTog
           border: '1px solid var(--vscode-panel-border)',
           borderRadius: '8px',
           padding: '24px',
-          minWidth: '320px',
+          width: 'calc(100vw - 32px)',
+          boxSizing: 'border-box',
           maxWidth: '500px',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -104,11 +105,22 @@ export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onTog
             </div>
           )}
 
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label htmlFor="squad-pod-live-activity" style={{ fontSize: '13px' }}>Live Activity (opt-in)</label>
+            <input id="squad-pod-live-activity" type="checkbox"
+              checked={!!sourceStatus?.liveActivity && sourceStatus.liveActivity.state !== 'off'}
+              onChange={(event) => client.send({ type: 'setLiveActivity', enabled: event.target.checked })} />
+          </div>
+          <p role="status" style={{ fontSize: '12px', margin: 0 }}>
+            Live source: {sourceStatus?.liveActivity?.state ?? 'off'}
+            {sourceStatus?.liveActivity?.sessionId ? ` (${sourceStatus.liveActivity.sessionId})` : ''}.
+            {' '}Reads local Copilot CLI session metadata for this workspace after confirmation.
+          </p>
           <SourceStatusView status={sourceStatus} />
           <AssetDirectories status={assetStatus} />
           <p style={{ fontSize: '12px', margin: 0 }}>
             Automatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code&apos;s normal terminal and Copilot permission prompts.
-            Authoritative tool events and context usage are unavailable without a supported Squad producer.
+            Live tools and context use an undocumented, best-effort Copilot CLI session format.
           </p>
 
           <div style={{ borderTop: '1px solid var(--vscode-panel-border)', paddingTop: '16px' }}>
