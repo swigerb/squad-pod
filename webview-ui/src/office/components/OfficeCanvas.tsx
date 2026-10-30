@@ -169,6 +169,10 @@ export function OfficeCanvas({
         for (const char of officeState.characters.values()) {
           updateCharacter(char, deltaTime, officeState.walkableTiles, officeState.seats, officeState.tileMap, officeState.blockedTiles);
         }
+        officeState.positionSubagents();
+        for (const { character } of officeState.subagents.values()) {
+          updateCharacter(character, deltaTime, officeState.walkableTiles, [], officeState.tileMap, officeState.blockedTiles);
+        }
         for (const pet of officeState.pets) {
           updatePet(pet, deltaTime, officeState.walkableTileList, officeState.characters, officeState.tileMap, officeState.blockedTiles);
         }
@@ -220,7 +224,7 @@ export function OfficeCanvas({
         ctx.imageSmoothingEnabled = false;
 
         const tileColorsMap = officeState.layout.tileColors ? new Map(Object.entries(officeState.layout.tileColors)) : undefined;
-        const chars = Array.from(officeState.characters.values());
+        const chars = [...officeState.characters.values(), ...[...officeState.subagents.values()].map(entry => entry.character)];
         renderFrame(
           ctx,
           cw,
@@ -248,6 +252,20 @@ export function OfficeCanvas({
           showAreas || (isEditMode && editorState.tool === EditTool.AREA_PAINT),
           editorState.selectedAreaLabel,
         );
+        if (officeState.subagents.size) {
+          ctx.save();
+          ctx.strokeStyle = '#93c5fd';
+          ctx.setLineDash([2 * zoom, 2 * zoom]);
+          for (const { character, parentAgentId } of officeState.subagents.values()) {
+            const parent = officeState.characters.get(parentAgentId);
+            if (!parent) continue;
+            ctx.beginPath();
+            ctx.moveTo(parent.x * zoom + panRef.current!.x, parent.y * zoom + panRef.current!.y);
+            ctx.lineTo(character.x * zoom + panRef.current!.x, character.y * zoom + panRef.current!.y);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
         const preview = dragPreviewRef.current;
         if (isEditMode && preview) {
           ctx.save();

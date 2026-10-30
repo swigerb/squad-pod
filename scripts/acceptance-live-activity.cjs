@@ -446,7 +446,8 @@ async function browserAcceptance(out) {
       assert.match(await inventory.locator('[data-observed-task="unknown-two"]').innerText(), /Unattributed.*research.*Parent: unknown/s);
       assert.match(await inventory.locator('[data-observed-task="unknown-two"]').innerText(), /metadata truncated or omitted/);
       assert.match(await inventory.locator('[data-observed-task="exact-name-other-type"]').innerText(), /Unattributed.*explore/s);
-      assert.equal(await page.locator('[data-agent-label]').count(), 1, 'transient tasks must not create characters');
+      assert.equal(await page.locator('[data-agent-label]').count(), 1, 'transient tasks must not create roster members');
+      assert.equal(await page.locator('[data-subagent-label]').count(), 1, 'only the running explicit-parent call gets a temporary character');
       await inventory.scrollIntoViewIfNeeded();
       const inventoryBounds = await inventory.boundingBox();
       assert.ok(inventoryBounds.x >= 0 && inventoryBounds.x + inventoryBounds.width <= viewport.width

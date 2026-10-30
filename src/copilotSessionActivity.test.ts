@@ -131,6 +131,27 @@ describe('read-only Copilot live activity with synthetic homes', () => {
       .toMatchObject({ contextTokens: null, maxContextTokens: null });
   });
 
+  it('links custom selection to a running instance, never its display name, and routes lifecycle to the existing roster', () => {
+    const file = session('session', marked(spawnLines()));
+    reader.start();
+    lifecycle.mockClear();
+    fs.appendFileSync(file, taskCall('child', 'grace', 'explore', 'run')
+      + line('subagent.started', { toolCallId: 'child', agentName: 'explore' }, { agentId: 'instance' }));
+    reader.poll();
+    expect(inventory().tasks.find(row => row.toolCallId === 'child')?.agentId).toBeNull();
+    expect(lifecycle).not.toHaveBeenCalled();
+    fs.appendFileSync(file, line('subagent.selected', { agentName: 'grace', agentDisplayName: 'Ada' }, { agentId: 'instance' }));
+    reader.poll();
+    expect(inventory().tasks.find(row => row.toolCallId === 'child')).toMatchObject({
+      instanceId: 'instance', selectedAgentName: 'grace', agentId: 'grace',
+    });
+    expect(lifecycle.mock.calls).toEqual([['grace', true, 'Inspect fixture']]);
+    fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'child', cancelled: true }, { agentId: 'instance' }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual(['grace', false, null]);
+    expect(inventory().tasks.find(row => row.toolCallId === 'child')?.state).toBe('aborted');
+  });
+
   it('silently seeds only in-flight state, never replaying completed history on enable, reload or rotation', () => {
     const completed = spawnLines('grace', 'past') + line('subagent.completed', { toolCallId: 'past' });
     const file = session('session', marked(completed + spawnLines()) + toolStart() + done());

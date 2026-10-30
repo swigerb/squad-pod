@@ -22,6 +22,8 @@ export interface LiveEvent {
   parentToolCallId: string;
   toolName: string;
   squad: boolean;
+  instanceId?: string;
+  selectedAgentName?: string;
   identityOmitted?: boolean;
   task?: { name: string; agent_type: string; mode: string; description: string; fieldsTruncated?: boolean };
   file?: string;
@@ -43,8 +45,15 @@ export function parseLiveEvent(line: string): LiveEvent | null {
     type, toolName, toolCallId: taskIdentity(data.toolCallId), parentToolCallId: taskIdentity(data.parentToolCallId),
     squad: type === 'subagent.selected' && !envelope.agentId && data.agentName === 'Squad',
   };
-  event.identityOmitted = type !== 'subagent.selected' && (!event.toolCallId
-    || (data.parentToolCallId !== undefined && data.parentToolCallId !== null && !event.parentToolCallId));
+  event.instanceId = taskIdentity(envelope.agentId) || undefined;
+  if (type === 'subagent.selected' && event.instanceId) {
+    event.selectedAgentName = taskIdentity(data.agentName) || undefined;
+  }
+  if (type === 'subagent.completed' && data.cancelled === true) { event.type = 'subagent.aborted'; }
+  event.identityOmitted = (type !== 'subagent.selected' && (!event.toolCallId
+    || (data.parentToolCallId !== undefined && data.parentToolCallId !== null && !event.parentToolCallId)))
+    || (envelope.agentId !== undefined && envelope.agentId !== null && !event.instanceId)
+    || (type === 'subagent.selected' && !!event.instanceId && !event.selectedAgentName);
   if (type === 'tool.execution_start') {
     const args = object(data.arguments);
     if (toolName === 'task') {
@@ -349,9 +358,25 @@ export class CopilotSessionActivity {
 
   private accept(event: LiveEvent): void {
     const duplicateTask = !!event.task && this.observedTasks.has(event.toolCallId);
-    const attribution = event.task?.agent_type === 'general-purpose'
-      ? exactLiveAgent(event.task.name, this.options.roster()) : null;
+    const attribution = event.selectedAgentName
+      ? exactLiveAgent(event.selectedAgentName, this.options.roster())
+      : event.task?.agent_type === 'general-purpose'
+        ? exactLiveAgent(event.task.name, this.options.roster()) : null;
     if (this.session) { this.observedTasks.accept(event, this.session.id, attribution); }
+    if (event.selectedAgentName && event.instanceId) {
+      for (const observed of this.observedTasks.snapshot(this.session?.id ?? null).tasks) {
+        if (observed.instanceId !== event.instanceId || observed.state !== 'running') { continue; }
+        const previous = this.tasks.get(observed.toolCallId);
+        if (previous && previous.agentId !== observed.agentId) {
+          if (this.runs.get(previous.agentId) === observed.toolCallId) { this.finish(previous.agentId); }
+          this.tasks.delete(observed.toolCallId);
+        }
+        if (observed.agentId) {
+          this.tasks.set(observed.toolCallId, { agentId: observed.agentId, description: observed.description });
+          this.startRun(observed.agentId, observed.toolCallId, observed.description);
+        }
+      }
+    }
     if (!event.toolCallId || duplicateTask) {return;}
     if (event.type === 'tool.execution_start' && event.task?.agent_type === 'general-purpose') {
       const agentId = attribution;
@@ -359,13 +384,16 @@ export class CopilotSessionActivity {
         this.tasks.set(event.toolCallId, { agentId, description: event.task.description });
       }
     }
+    if (event.type === 'subagent.started' && !this.tasks.has(event.toolCallId)) {
+      const observed = this.observedTasks.snapshot(this.session?.id ?? null).tasks
+        .find(row => row.toolCallId === event.toolCallId);
+      if (observed?.agentId && observed.state === 'running') {
+        this.tasks.set(event.toolCallId, { agentId: observed.agentId, description: observed.description });
+      }
+    }
     const task = this.tasks.get(event.toolCallId);
     if (event.type === 'subagent.started' && task) {
-      if (this.runs.get(task.agentId) === event.toolCallId) {return;}
-      if (this.runs.has(task.agentId)) {this.clearDisplays(task.agentId);}
-      this.runs.set(task.agentId, event.toolCallId);
-      this.lifecycle(task.agentId, true, task.description);
-      this.telemetry(task.agentId, 'Live member started');
+      this.startRun(task.agentId, event.toolCallId, task.description);
     } else if (['subagent.completed', 'subagent.failed', 'subagent.aborted'].includes(event.type)) {
       if (task && this.runs.get(task.agentId) === event.toolCallId) {this.finish(task.agentId);}
       this.tasks.delete(event.toolCallId);
@@ -386,6 +414,14 @@ export class CopilotSessionActivity {
       }
       this.tools.delete(event.toolCallId);
     }
+  }
+
+  private startRun(agentId: string, toolCallId: string, description: string): void {
+    if (this.runs.get(agentId) === toolCallId) { return; }
+    if (this.runs.has(agentId)) { this.clearDisplays(agentId); }
+    this.runs.set(agentId, toolCallId);
+    this.lifecycle(agentId, true, description);
+    this.telemetry(agentId, 'Live member started');
   }
 
   private finish(agentId: string): void {
