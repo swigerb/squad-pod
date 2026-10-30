@@ -274,11 +274,22 @@ try {
     await tab.keyboard.type('NARROW');
     await until(() => inputs().includes('NARROW'), 'narrow browser input applied');
     const terminalPanel = tab.locator('.owned-terminal');
-    assert.ok((await terminalPanel.boundingBox()).width <= 390);
+    await until(async () => {
+      const bounds = await terminalPanel.boundingBox();
+      return bounds && Math.abs(bounds.x) <= 1;
+    }, 'narrow terminal page settles horizontally in the viewport');
+    const narrowBounds = await terminalPanel.boundingBox();
+    report.narrowBounds = { viewport: tab.viewportSize(), terminal: narrowBounds,
+      layout: await tab.evaluate(() => ({
+        innerWidth, screenWidth: screen.width, mobile: matchMedia('(max-width: 700px), (pointer: coarse)').matches,
+        trackWidth: document.querySelector('.observer-pages-track').getBoundingClientRect().width,
+      })) };
     if (artifacts) {
       await terminalPanel.screenshot({ path: path.join(artifacts, 'terminal-narrow.png') });
       report.screenshots.push('terminal-narrow.png');
     }
+    assert.ok(narrowBounds.width <= 391 && narrowBounds.x + narrowBounds.width <= 391,
+      `Narrow terminal exceeded viewport: ${JSON.stringify(report.narrowBounds)}`);
     await tab.setViewportSize({ width: 1440, height: 960 });
     await until(desktopBounds, 'returning from narrow to desktop resets the mobile page transform');
     await tab.getByRole('button', { name: 'Squad Info', exact: true }).click();
