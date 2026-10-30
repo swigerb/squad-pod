@@ -2,12 +2,12 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OwnedTerminalPanel } from './OwnedTerminalPanel.js';
-import type { TerminalClientCallbacks, TerminalDisplay } from './terminalClient.js';
+import type { TerminalClientCallbacks, TerminalDisplay, TerminalInputDelivery } from './terminalClient.js';
 import { runId } from '../../../src/core/terminalFrames.js';
 
 const mocks = vi.hoisted(() => ({
   client: { select: vi.fn(), launch: vi.fn(), terminate: vi.fn(), reconnect: vi.fn(),
-    resize: vi.fn(), input: vi.fn(), resync: vi.fn(), dispose: vi.fn() },
+    resize: vi.fn(), input: vi.fn((_data: string): TerminalInputDelivery => ({ status: 'queued' })), resync: vi.fn(), dispose: vi.fn() },
   terminal: { options: { disableStdin: true }, cols: 80, rows: 24,
     loadAddon: vi.fn(), open: vi.fn(), reset: vi.fn(), write: vi.fn(), dispose: vi.fn(),
     selectAll: vi.fn(), getSelection: vi.fn(() => 'selected output'), hasSelection: vi.fn(() => false),
@@ -177,6 +177,95 @@ describe('owned terminal separate authority UI', () => {
     await act(async () => manual.dispatchEvent(new Event('input', { bubbles: true })));
     await act(async () => button('Send pasted text').click());
     expect(mocks.client.input).toHaveBeenCalledWith('manual command');
+  });
+
+  it.each(['run-switch', 'disconnect'] as const)(
+    'retains unsent clipboard text when the terminal %s during the read', async change => {
+      let finishRead!: (text: string) => void;
+      const readText = vi.fn(() => new Promise<string>(resolve => { finishRead = resolve; }));
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
+      Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+      await act(async () => root.render(<OwnedTerminalPanel mobile />));
+      await authenticate();
+      const callbacks = mocks.connect.mock.calls[0][1];
+      await act(async () => {
+        callbacks.connected?.(true);
+        callbacks.runs([
+          { runId: fixtureRunId, pid: 7, state: 'running', exitCode: null },
+          { runId: runId('other-owned-run'), pid: 8, state: 'running', exitCode: null },
+        ], true, null);
+        callbacks.ready(true);
+      });
+      await act(async () => button('Paste').click());
+      if (change === 'run-switch') {
+        await act(async () => callbacks.runs([
+          { runId: runId('other-owned-run'), pid: 8, state: 'running', exitCode: null },
+        ], true, null));
+      } else {
+        await act(async () => callbacks.connected?.(false));
+      }
+      await act(async () => finishRead('delayed clipboard command'));
+      expect(mocks.client.input).not.toHaveBeenCalled();
+      expect(host.querySelector<HTMLTextAreaElement>('#manual-terminal-paste')?.value)
+        .toBe('delayed clipboard command');
+      expect(host.textContent).toContain('kept for review; nothing was sent');
+  });
+
+  it('reports blocked and partial paste truthfully and preserves only the unsent remainder', async () => {
+    const readText = vi.fn(async () => 'clipboard command');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText } });
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    await act(async () => root.render(<OwnedTerminalPanel mobile />));
+    await authenticate();
+    const callbacks = mocks.connect.mock.calls[0][1];
+    await act(async () => {
+      callbacks.connected?.(true);
+      callbacks.runs([{ runId: fixtureRunId, pid: 7, state: 'running', exitCode: null }], true, null);
+      callbacks.ready(true);
+    });
+    mocks.client.input.mockReturnValueOnce({ status: 'not-sent' });
+    await act(async () => button('Paste').click());
+    expect(host.querySelector<HTMLTextAreaElement>('#manual-terminal-paste')?.value).toBe('clipboard command');
+    expect(host.textContent).toContain('input was not sent');
+    mocks.client.input.mockReturnValueOnce({ status: 'partial', sentCodeUnits: 10 });
+    await act(async () => button('Send pasted text').click());
+    expect(host.querySelector<HTMLTextAreaElement>('#manual-terminal-paste')?.value).toBe('command');
+    expect(host.textContent).toContain('Some manual paste input may have been applied');
+    expect(host.textContent).toContain('unsent remainder is kept');
+  });
+
+  it('accepts manual paste above the old 65536-character ceiling and explicitly rejects above 256 KiB', async () => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      readText: vi.fn(async () => { throw new Error('denied'); }),
+    } });
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    await act(async () => root.render(<OwnedTerminalPanel mobile />));
+    await authenticate();
+    const callbacks = mocks.connect.mock.calls[0][1];
+    await act(async () => {
+      callbacks.connected?.(true);
+      callbacks.runs([{ runId: fixtureRunId, pid: 7, state: 'running', exitCode: null }], true, null);
+      callbacks.ready(true);
+    });
+    await act(async () => button('Paste').click());
+    const manual = host.querySelector<HTMLTextAreaElement>('#manual-terminal-paste')!;
+    const large = 'a'.repeat(70_000);
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!;
+    valueSetter.call(manual, large);
+    await act(async () => manual.dispatchEvent(new Event('input', { bubbles: true })));
+    expect(manual.value).toHaveLength(70_000);
+    await act(async () => button('Send pasted text').click());
+    expect(mocks.client.input).toHaveBeenCalledWith(large);
+
+    await act(async () => button('Paste').click());
+    const nextManual = host.querySelector<HTMLTextAreaElement>('#manual-terminal-paste')!;
+    const overLimit = 'b'.repeat(256 * 1024 + 1);
+    valueSetter.call(nextManual, overLimit);
+    await act(async () => nextManual.dispatchEvent(new Event('input', { bubbles: true })));
+    expect(nextManual.value).toHaveLength(overLimit.length);
+    expect(nextManual.maxLength).toBe(-1);
+    await act(async () => button('Send pasted text').click());
+    expect(host.textContent).toContain('Paste text exceeds 256 KiB');
   });
 
   it('opens only safe terminal links on a short, unmoved touch without active selection', async () => {

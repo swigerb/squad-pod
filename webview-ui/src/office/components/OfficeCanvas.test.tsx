@@ -1,4 +1,4 @@
-import { act } from 'react';
+import { act, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -167,16 +167,22 @@ it('lets a canvas click toggle the persisted pet heart interaction', () => {
   }
 });
 
-it('wires one-finger office panning and two-finger pinch without breaking follow on pinch alone', () => {
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+it.each([2, 3])('keeps canvas touch pan and pinch anchors in CSS pixels at DPR %i', dpr => {
+  vi.stubGlobal('devicePixelRatio', dpr);
+  const ctx = { setTransform: vi.fn(), imageSmoothingEnabled: false };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
     x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600, toJSON: () => ({}),
   });
+  vi.spyOn(gameLoop, 'startGameLoop').mockImplementation((_canvas, callbacks) => {
+    callbacks.render(ctx as unknown as CanvasRenderingContext2D);
+    return () => {};
+  });
+  vi.spyOn(renderer, 'renderFrame').mockImplementation(() => {});
   const office = new OfficeState({
     version: 2, cols: 50, rows: 40, tiles: Array(2000).fill(TileType.FLOOR_1), furniture: [],
   });
   const pan = { current: { x: 0, y: 0 } };
-  const zoom = vi.fn();
   const manualPan = vi.fn();
   const host = document.createElement('div');
   const root = createRoot(host);
@@ -189,32 +195,48 @@ it('wires one-finger office panning and two-finger pinch without breaking follow
     act(() => host.querySelector('canvas')!.dispatchEvent(event));
     return event;
   };
+  function Harness() {
+    const [zoom, setZoom] = useState(2);
+    return <OfficeCanvas officeState={office} editorState={new EditorState()} isEditMode={false} editorTick={0}
+      zoom={zoom} onZoomChange={setZoom} panRef={pan} touchGestures onManualPan={manualPan} />;
+  }
   try {
-    act(() => root.render(withClient(<OfficeCanvas officeState={office} editorState={new EditorState()}
-      isEditMode={false} editorTick={0} zoom={2} onZoomChange={zoom} panRef={pan}
-      touchGestures onManualPan={manualPan} />)));
+    act(() => root.render(withClient(<Harness />)));
+    expect(ctx.setTransform).toHaveBeenCalledWith(dpr, 0, 0, dpr, 0, 0);
     const one = (identifier: number, x: number, y: number) => ({ identifier, clientX: x, clientY: y });
+    const initialPan = { ...pan.current };
     dispatch('touchstart', [one(1, 100, 100)]);
     const panMove = dispatch('touchmove', [one(1, 125, 100)]);
     expect(panMove.defaultPrevented).toBe(true);
-    expect(pan.current).toEqual({ x: 25, y: 0 });
+    expect(pan.current).toEqual({ x: initialPan.x + 25, y: initialPan.y });
     expect(manualPan).toHaveBeenCalledOnce();
     dispatch('touchend', []);
 
+    const pinchAnchor = { x: 150, y: 200 };
+    const worldAtPinch = {
+      x: (pinchAnchor.x - pan.current.x) / 2,
+      y: (pinchAnchor.y - pan.current.y) / 2,
+    };
     dispatch('touchstart', [one(2, 100, 200), one(3, 200, 200)]);
     const pinch = dispatch('touchmove', [one(2, 50, 200), one(3, 250, 200)]);
     expect(pinch.defaultPrevented).toBe(true);
-    expect(zoom).toHaveBeenCalledWith(4);
     expect(manualPan).toHaveBeenCalledOnce();
+    const worldAfterPinch = {
+      x: (pinchAnchor.x - pan.current.x) / 4,
+      y: (pinchAnchor.y - pan.current.y) / 4,
+    };
+    expect(worldAfterPinch.x).toBeCloseTo(worldAtPinch.x);
+    expect(worldAfterPinch.y).toBeCloseTo(worldAtPinch.y);
+
+    const beforeTwoFingerPan = { ...pan.current };
     dispatch('touchmove', [one(2, 70, 200), one(3, 270, 200)]);
+    expect(pan.current).toEqual({ x: beforeTwoFingerPan.x + 20, y: beforeTwoFingerPan.y });
     expect(manualPan).toHaveBeenCalledTimes(2);
-    expect(pan.current).toEqual({ x: 45, y: 0 });
-    dispatch('touchend', [one(3, 270, 200)]);
-    dispatch('touchmove', [one(3, 285, 200)]);
-    expect(manualPan).toHaveBeenCalledTimes(3);
+    dispatch('touchend', []);
   } finally {
     act(() => root.unmount());
     host.remove();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   }
 });

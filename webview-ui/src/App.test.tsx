@@ -51,6 +51,16 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     });
   }
+  function dispatchTouch(
+    target: Element, type: string, touches: Array<{ identifier: number; clientX: number; clientY: number }>,
+  ) {
+    const event = new Event(type, { bubbles: true, cancelable: true }) as TouchEvent;
+    Object.defineProperties(event, {
+      touches: { value: touches },
+      changedTouches: { value: touches },
+    });
+    target.dispatchEvent(event);
+  }
   function saves() {
     return vi.mocked(client.send).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout');
   }
@@ -208,6 +218,35 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect([...host.querySelectorAll('button')].map(button => button.textContent?.trim()))
       .toContain('Telemetry');
     expect(host.querySelector('[role="region"][aria-label="Layout editor"]')).toBeNull();
+    send({ type: 'existingAgents', agents: [{
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', paletteIndex: 0,
+      seatId: null, status: 'idle', currentTask: null,
+    }] });
+    await nextFrame();
+    const label = host.querySelector<HTMLButtonElement>('[data-agent-label="test-agent-1"]');
+    expect(label).not.toBeNull();
+    act(() => label?.click());
+    const officePanel = host.querySelector<HTMLElement>('.office-panel')!;
+    expect(officePanel.dataset.followingAgent).toBe('test-agent-1');
+    const canvas = host.querySelector('canvas')!;
+    act(() => {
+      dispatchTouch(canvas, 'touchstart', [
+        { identifier: 1, clientX: 100, clientY: 100 }, { identifier: 2, clientX: 200, clientY: 100 },
+      ]);
+      dispatchTouch(canvas, 'touchmove', [
+        { identifier: 1, clientX: 50, clientY: 100 }, { identifier: 2, clientX: 250, clientY: 100 },
+      ]);
+    });
+    expect(officePanel.dataset.followingAgent).toBe('test-agent-1');
+    act(() => {
+      dispatchTouch(canvas, 'touchstart', [
+        { identifier: 1, clientX: 100, clientY: 100 }, { identifier: 2, clientX: 200, clientY: 100 },
+      ]);
+      dispatchTouch(canvas, 'touchmove', [
+        { identifier: 1, clientX: 120, clientY: 120 }, { identifier: 2, clientX: 220, clientY: 120 },
+      ]);
+    });
+    expect(officePanel.dataset.followingAgent).toBe('');
   });
 
   it('keeps observed Squad Info and correlated details available with standalone control but no native charter action', async () => {

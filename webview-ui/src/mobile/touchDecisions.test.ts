@@ -49,16 +49,16 @@ describe('terminal taps and selection intent', () => {
   });
 });
 describe('office pinch versus manual pan', () => {
-  it('does not break follow for pure pinch or midpoint jitter, then breaks once beyond slop', () => {
+  it('keeps CSS-pixel deltas independent of device-pixel ratio and breaks follow only after slop', () => {
     const anchor = { point: { x: 100, y: 100 }, pan: { x: 4, y: 8 }, panned: false };
     expect(pinchZoom(100, 200, 2)).toBe(4);
-    const still = officePanStep(anchor, { x: 106, y: 108 }, 2);
+    const still = officePanStep(anchor, { x: 106, y: 108 });
     expect(still.breakFollow).toBe(false);
     expect(still.pan).toEqual({ x: 4, y: 8 });
-    const moved = officePanStep(anchor, { x: 111, y: 100 }, 2);
+    const moved = officePanStep(anchor, { x: 111, y: 100 });
     expect(moved.breakFollow).toBe(true);
-    expect(moved.pan).toEqual({ x: 26, y: 8 });
-    expect(officePanStep(moved.anchor, { x: 120, y: 100 }, 2).breakFollow).toBe(false);
+    expect(moved.pan).toEqual({ x: 15, y: 8 });
+    expect(officePanStep(moved.anchor, { x: 120, y: 100 }).breakFollow).toBe(false);
   });
   it('keeps integer zoom bounded and handles coincident fingers without NaN', () => {
     expect(pinchZoom(100, 1, 2)).toBe(1);

@@ -205,6 +205,15 @@ export function OfficeCanvas({
           hasCenteredRef.current = true;
         }
 
+        const followedAgent = touchGestures && officeState.cameraFollowId
+          ? officeState.characters.get(officeState.cameraFollowId) : undefined;
+        if (followedAgent) {
+          const bounds = getCharacterScreenBounds(followedAgent, zoom, panRef.current!);
+          panRef.current!.x += cw / 2 - (bounds.left + bounds.right) / 2;
+          panRef.current!.y += ch / 2 - (bounds.top + bounds.bottom) / 2;
+          clampPan();
+        }
+
         // DPR scaling — must come AFTER any canvas.width change (which
         // resets the context transform to identity).
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -261,7 +270,7 @@ export function OfficeCanvas({
     });
 
     return () => { cleanup(); };
-  }, [officeState, isEditMode, isDebugMode, editorState, zoom, panRef, clampPan, showAreas]);
+  }, [officeState, isEditMode, isDebugMode, editorState, zoom, panRef, clampPan, showAreas, touchGestures]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -603,16 +612,15 @@ export function OfficeCanvas({
       const current = touchOptions.current;
       if (!anchor || mode === 'idle') return;
       const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
       if (mode === 'pinch' && event.touches.length >= 2) {
         event.preventDefault();
         const mid = midpoint(event.touches[0], event.touches[1]);
-        const step = officePanStep(anchor, mid, dpr);
+        const step = officePanStep(anchor, mid);
         anchor = step.anchor;
         if (step.breakFollow) current.onManualPan?.();
         if (pinchLastMidpoint) {
-          current.panRef.current!.x += (mid.x - pinchLastMidpoint.x) * dpr;
-          current.panRef.current!.y += (mid.y - pinchLastMidpoint.y) * dpr;
+          current.panRef.current!.x += mid.x - pinchLastMidpoint.x;
+          current.panRef.current!.y += mid.y - pinchLastMidpoint.y;
         }
         pinchLastMidpoint = mid;
         const nextZoom = pinchZoom(pinchStartDistance, distance(event.touches[0], event.touches[1]), pinchStartZoom);
@@ -632,7 +640,7 @@ export function OfficeCanvas({
       }
       if (mode === 'pan') {
         event.preventDefault();
-        const step = officePanStep(anchor, finger, dpr);
+        const step = officePanStep(anchor, finger);
         anchor = step.anchor;
         if (step.breakFollow) current.onManualPan?.();
         current.panRef.current!.x = step.pan.x;

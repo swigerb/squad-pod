@@ -265,6 +265,34 @@ export function OwnedTerminalPanel({
     readText: typeof navigator.clipboard?.readText === 'function',
     writeText: typeof navigator.clipboard?.writeText === 'function',
   });
+  const isCurrentInputTarget = (targetClient: OwnedTerminalClient, runId: RunId) => {
+    const access = accessRef.current;
+    return client.current === targetClient && selectedRef.current === runId &&
+      access.authenticated && access.connected && access.available && access.ready && !access.resync &&
+      access.runs.some(entry => entry.runId === runId && entry.state === 'running');
+  };
+  const retainPaste = (text: string, message: string) => {
+    setManualPaste(text);
+    setShowManualPaste(true);
+    setClipboardNotice(message);
+  };
+  const sendPaste = (targetClient: OwnedTerminalClient, runId: RunId, text: string, source: string) => {
+    if (!isCurrentInputTarget(targetClient, runId)) {
+      retainPaste(text, `Terminal changed or disconnected. ${source} text was kept for review; nothing was sent.`);
+      return;
+    }
+    const delivery = targetClient.input(text);
+    if (delivery.status === 'queued') {
+      setManualPaste('');
+      setShowManualPaste(false);
+      setClipboardNotice(`${source} input queued for the selected terminal; process consumption is not acknowledged.`);
+    } else if (delivery.status === 'partial') {
+      retainPaste(text.slice(delivery.sentCodeUnits),
+        `Some ${source.toLowerCase()} input may have been applied. The unsent remainder is kept; review the terminal before retrying.`);
+    } else {
+      retainPaste(text, `${source} input was not sent. Text is kept for an explicit retry after the terminal reconnects.`);
+    }
+  };
   async function copySelection() {
     const text = terminalInstance.current?.getSelection() ?? '';
     if (!text) {
@@ -285,6 +313,12 @@ export function OwnedTerminalPanel({
     setClipboardNotice(clipboardFailure('copy').message);
   }
   async function pasteClipboard() {
+    const targetClient = client.current;
+    const targetRunId = selectedRef.current;
+    if (!targetClient || !targetRunId || !isCurrentInputTarget(targetClient, targetRunId)) {
+      setClipboardNotice('Select a connected, ready owned terminal before pasting.');
+      return;
+    }
     if (clipboardMethod('paste', clipboardCapabilities(), true) !== 'async-read') {
       setManualPaste('');
       setShowManualPaste(true);
@@ -299,9 +333,7 @@ export function OwnedTerminalPanel({
           setClipboardNotice('Clipboard text exceeds 256 KiB. Paste a smaller chunk or enter a shorter command.');
           return;
         }
-        client.current?.input(result.text);
-        setShowManualPaste(false);
-        setClipboardNotice('Clipboard text sent to the selected terminal.');
+        sendPaste(targetClient, targetRunId, result.text, 'Clipboard');
       } else setClipboardNotice(result.type === 'empty' ? 'Clipboard is empty.' : 'Paste cancelled.');
     } catch {
       setManualPaste('');
@@ -319,10 +351,13 @@ export function OwnedTerminalPanel({
       setClipboardNotice('Paste text exceeds 256 KiB. Send it in smaller chunks.');
       return;
     }
-    client.current?.input(result.text);
-    setManualPaste('');
-    setShowManualPaste(false);
-    setClipboardNotice('Manually entered text sent to the selected terminal.');
+    const targetClient = client.current;
+    const targetRunId = selectedRef.current;
+    if (!targetClient || !targetRunId) {
+      setClipboardNotice('Select a connected, ready owned terminal before sending pasted text.');
+      return;
+    }
+    sendPaste(targetClient, targetRunId, result.text, 'Manual paste');
   }
   const run = runs.find(entry => entry.runId === selected);
   const keyboardEnabled = authenticated && connected && available && ready && !resync && !!run && run.state === 'running';
@@ -395,7 +430,13 @@ export function OwnedTerminalPanel({
         <div className="terminal-manual-paste-wrap">
           <label htmlFor="manual-terminal-paste">Paste text manually</label>
           <textarea id="manual-terminal-paste" className="terminal-manual-paste" value={manualPaste}
-            maxLength={65_536} onChange={event => setManualPaste(event.target.value)} />
+            onChange={event => setManualPaste(event.target.value)}
+            onPaste={event => {
+              if (utf8Bytes(event.clipboardData.getData('text')) > MAX_MANUAL_PASTE_BYTES) {
+                event.preventDefault();
+                setClipboardNotice('Paste text exceeds 256 KiB. Send it in smaller chunks.');
+              }
+            }} />
           <button type="button" disabled={!keyboardEnabled || !manualPaste} onClick={sendManualPaste}>Send pasted text</button>
         </div>}
       <div ref={container} className="terminal-screen" aria-label="Owned run terminal" data-mobile-gesture-optout

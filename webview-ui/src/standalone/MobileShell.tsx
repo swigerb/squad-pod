@@ -32,6 +32,7 @@ export function MobileShell({ office, onKeyboardViewport }: MobileShellProps) {
   const launchRef = useRef<((id: string) => boolean) | null>(null);
   const shellRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const syntheticCancelRef = useRef(false);
 
   useEffect(() => {
     const query = typeof window.matchMedia === 'function'
@@ -76,6 +77,7 @@ export function MobileShell({ office, onKeyboardViewport }: MobileShellProps) {
     let current: EdgeSwipeState = { phase: 'idle' };
     let target: 'office' | 'terminal' | null = state.view === 'office' ? 'terminal' : 'office';
     const handle = (event: TouchEvent) => {
+      if (syntheticCancelRef.current && event.type === 'touchcancel') return;
       const rect = shell.getBoundingClientRect();
       if (event.type === 'touchstart') {
         const touch = event.changedTouches[0];
@@ -102,9 +104,15 @@ export function MobileShell({ office, onKeyboardViewport }: MobileShellProps) {
             if (effect.type === 'claim') {
               const original = event.target;
               if (original instanceof Element) {
-                try { original.dispatchEvent(new TouchEvent('touchcancel', {
-                  bubbles: true, changedTouches: [touch], touches: [], targetTouches: [],
-                })); } catch { /* The next gesture self-heals on browsers without TouchEvent construction. */ }
+                const cancel = new Event('touchcancel', { bubbles: true });
+                Object.defineProperties(cancel, {
+                  changedTouches: { value: [touch] },
+                  touches: { value: [] },
+                  targetTouches: { value: [] },
+                });
+                syntheticCancelRef.current = true;
+                try { original.dispatchEvent(cancel); }
+                finally { syntheticCancelRef.current = false; }
               }
             } else if (effect.type === 'consume') {
               event.stopImmediatePropagation();
@@ -149,10 +157,10 @@ export function MobileShell({ office, onKeyboardViewport }: MobileShellProps) {
   useEffect(() => {
     const track = trackRef.current;
     if (track) {
-      track.style.transition = 'transform 180ms ease-out';
-      track.style.transform = state.view === 'terminal' ? 'translateX(-50%)' : 'translateX(0)';
+      track.style.transition = mobile ? 'transform 180ms ease-out' : 'none';
+      track.style.transform = mobile && state.view === 'terminal' ? 'translateX(-50%)' : 'translateX(0)';
     }
-  }, [state.view]);
+  }, [mobile, state.view]);
 
   return <section ref={shellRef} className="observer-mobile-stage" data-mobile-view={state.view}>
     <div className="observer-pages-track" ref={trackRef}>

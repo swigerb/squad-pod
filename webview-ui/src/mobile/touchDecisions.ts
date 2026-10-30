@@ -66,14 +66,14 @@ export function terminalTapAction(
 }
 
 export interface OfficePanAnchor { point: Point; pan: Point; panned: boolean }
-export function officePanStep(anchor: OfficePanAnchor, point: Point, devicePixelRatio: number) {
+export function officePanStep(anchor: OfficePanAnchor, point: Point) {
   const dx = point.x - anchor.point.x;
   const dy = point.y - anchor.point.y;
   const moved = anchor.panned || !withinTapSlop(dx, dy);
   return {
     anchor: { ...anchor, panned: moved },
     breakFollow: moved && !anchor.panned,
-    pan: moved ? { x: anchor.pan.x + dx * devicePixelRatio, y: anchor.pan.y + dy * devicePixelRatio } : anchor.pan,
+    pan: moved ? { x: anchor.pan.x + dx, y: anchor.pan.y + dy } : anchor.pan,
   };
 }
 export function pinchZoom(startDistance: number, distance: number, startZoom: number): number {

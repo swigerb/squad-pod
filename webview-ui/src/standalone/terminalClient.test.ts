@@ -83,17 +83,17 @@ describe('production owned terminal client', () => {
     const { client, socket, sockets, display, callbacks } = await selected();
     expect(sockets[0].commands()).toEqual([{ version: 1, type: 'list' }]);
     expect(socket.commands()).toEqual([{ version: 1, type: 'list' }, { ...base, type: 'attach', cursor: 0 }]);
-    client.input('blocked before replay');
+    expect(client.input('blocked before replay')).toEqual({ status: 'not-sent' });
     socket.event(runs);
     socket.event(start(0, 1)); socket.event(output(1, '\u001b[31mé中🚀')); socket.event(end(1));
     await flush();
     expect(callbacks.runs).toHaveBeenCalledWith(runs.runs, true, null);
     expect(display.write).toHaveBeenCalledExactlyOnceWith('\u001b[31mé中🚀');
-    client.input('🚀'.repeat(5000));
+    expect(client.input('🚀'.repeat(5000))).toEqual({ status: 'queued' });
     const inputs = socket.commands().filter(command => command.type === 'input');
     expect(inputs.map(command => command.data).join('')).toBe('🚀'.repeat(5000));
     expect(inputs.every(command => utf8Bytes(command.data) <= TERMINAL_LIMITS.inputBytes)).toBe(true);
-    client.input('\0'.repeat(20_000));
+    expect(client.input('\0'.repeat(20_000))).toEqual({ status: 'queued' });
     const controls = socket.commands().filter(command => command.type === 'input' && command.data.includes('\0'));
     expect(controls.map(command => command.data).join('')).toBe('\0'.repeat(20_000));
     expect(controls.every(command => utf8Bytes(JSON.stringify(command)) <= TERMINAL_LIMITS.frameBytes)).toBe(true);
@@ -105,6 +105,19 @@ describe('production owned terminal client', () => {
     expect(client.launch('../bad')).toBe(false);
     client.dispose();
     expect(socket.commands().filter(command => command.type === 'terminate')).toHaveLength(1);
+  });
+
+  it('reports blocked and partial input without retrying already queued chunks', async () => {
+    const { client, socket, callbacks } = await selected();
+    socket.event(start(0, 0)); socket.event(end(0)); await flush();
+    const chunkBytes = Math.min(TERMINAL_LIMITS.inputBytes, Math.floor((TERMINAL_LIMITS.frameBytes - 512) / 6));
+    Object.defineProperty(socket, 'bufferedAmount', {
+      configurable: true, get: () => socket.send.mock.calls.length ? TERMINAL_LIMITS.pendingBytes + 1 : 0,
+    });
+    expect(client.input('x'.repeat(chunkBytes + 1))).toEqual({ status: 'partial', sentCodeUnits: chunkBytes });
+    expect(socket.commands().filter(command => command.type === 'input')).toHaveLength(1);
+    expect(callbacks.status).toHaveBeenCalledWith(expect.stringContaining('backpressured'));
+    client.dispose();
   });
 
   it('delivers ordered inventory then viewer-correlated success/failure results synchronously', async () => {

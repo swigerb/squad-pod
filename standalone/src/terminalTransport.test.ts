@@ -2,8 +2,9 @@ import { once } from 'node:events';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { request } from 'node:http';
-import { join } from 'node:path';
-import { afterEach, expect, it } from 'vitest';
+import { join, resolve } from 'node:path';
+import { build } from 'esbuild';
+import { afterEach, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
 import { OwnedRuns } from './ownedRuns.js';
 import { startTransport } from './transport.js';
@@ -16,13 +17,22 @@ afterEach(async () => {
   await Promise.all(transports.splice(0).map(server => server.dispose()));
   await Promise.all(folders.splice(0).map(folder => rm(folder, { recursive: true, force: true })));
 });
-async function fixture() {
+async function fixture(withTerminals = false) {
   const root = await mkdtemp(join(tmpdir(), 'terminal transport '));
   folders.push(root);
   const bundle = join(root, 'bundle');
   await mkdir(bundle);
   await writeFile(join(bundle, 'index.html'), 'synthetic');
-  const terminals = new OwnedRuns({ project: root, enabled: false });
+  let terminals: OwnedRuns;
+  if (withTerminals) {
+    const brokerFolder = join(root, 'broker');
+    await mkdir(brokerFolder);
+    const script = join(root, 'synthetic fixture.mjs');
+    const broker = join(brokerFolder, 'ptyHost.mjs');
+    await build({ entryPoints: [resolve('src/fixture.ts')], outfile: script, platform: 'node', bundle: true, format: 'esm' });
+    await build({ entryPoints: [resolve('src/ptyHost.ts')], outfile: broker, platform: 'node', bundle: true, packages: 'external', format: 'esm' });
+    terminals = new OwnedRuns({ project: root, enabled: true, fixture: script, broker });
+  } else terminals = new OwnedRuns({ project: root, enabled: false });
   const server = await startTransport({ staticRoot: bundle, terminals,
     snapshot: async () => [], subscribe: () => () => {} });
   transports.push(server);
@@ -40,7 +50,7 @@ async function fixture() {
       req.end(JSON.stringify({ token }));
     });
   };
-  return { server, origin, auth };
+  return { server, origin, auth, terminals };
 }
 function socket(origin: string, channel: string, cookie: string, extra = {}) {
   const ws = new WebSocket(`${origin.replace('http:', 'ws:')}/${channel}`, {
@@ -49,6 +59,23 @@ function socket(origin: string, channel: string, cookie: string, extra = {}) {
   clients.push(ws);
   ws.on('error', () => {});
   return ws;
+}
+function nextJson(ws: WebSocket, matches: (frame: Record<string, unknown>) => boolean) {
+  return new Promise<Record<string, unknown>>((resolveFrame, reject) => {
+    const onMessage = (data: WebSocket.RawData) => {
+      const frame = JSON.parse(String(data)) as Record<string, unknown>;
+      if (!matches(frame)) return;
+      ws.off('message', onMessage);
+      ws.off('close', onClose);
+      resolveFrame(frame);
+    };
+    const onClose = () => {
+      ws.off('message', onMessage);
+      reject(new Error('Terminal socket closed before the expected message.'));
+    };
+    ws.on('message', onMessage);
+    ws.once('close', onClose);
+  });
 }
 
 it('requires separate terminal credentials and Host/Origin checks on both channels', async () => {
@@ -123,4 +150,52 @@ it('closes command floods with an explicit input-loss/policy warning', async () 
   for (let count = 0; count < 65; count++) ws.send(JSON.stringify({ version: 1, type: 'list' }));
   expect((await closed)[0]).toBe(1008);
   expect(messages.some(message => message.type === 'error' && message.message?.includes('Some input'))).toBe(true);
+});
+
+it('correlates a busy launch rejection and allows a later deliberate launch', async () => {
+  const { server, origin, auth, terminals } = await fixture(true);
+  const terminal = await auth(true, server.terminalToken);
+  const ws = socket(origin, 'terminal', terminal.cookie);
+  const initialStatus = once(ws, 'message');
+  await once(ws, 'open');
+  expect(JSON.parse(String((await initialStatus)[0]))).toMatchObject({ type: 'runs', available: true, runs: [] });
+
+  const firstResult = nextJson(ws, frame => frame.type === 'launchResult' && frame.requestId === 'open-first');
+  ws.send(JSON.stringify({ version: 1, type: 'launch', requestId: 'open-first' }));
+  const first = await firstResult;
+  expect(first).toMatchObject({ result: { ok: true } });
+  const firstRunId = ((first.result as Record<string, unknown>).runId);
+  expect(typeof firstRunId).toBe('string');
+
+  let releaseClose!: () => void;
+  let markCloseStarted!: () => void;
+  const closeStarted = new Promise<void>(resolveStarted => { markCloseStarted = resolveStarted; });
+  const closeGate = new Promise<void>(resolveGate => { releaseClose = resolveGate; });
+  const originalClose = terminals.close.bind(terminals);
+  const closeSpy = vi.spyOn(terminals, 'close').mockImplementation(async id => {
+    markCloseStarted();
+    await closeGate;
+    await originalClose(id);
+  });
+  const closedInventory = nextJson(ws, frame => frame.type === 'runs' &&
+    Array.isArray(frame.runs) && !frame.runs.some(run =>
+      (run as { runId?: unknown }).runId === firstRunId));
+  try {
+    ws.send(JSON.stringify({ version: 1, type: 'terminate', runId: firstRunId }));
+    await closeStarted;
+    const busyResult = nextJson(ws, frame => frame.type === 'launchResult' && frame.requestId === 'during-close');
+    ws.send(JSON.stringify({ version: 1, type: 'launch', requestId: 'during-close' }));
+    expect(await busyResult).toMatchObject({
+      result: { ok: false, message: 'Owned action in progress.' },
+    });
+    releaseClose();
+    await closedInventory;
+    await new Promise(resolveTick => setTimeout(resolveTick, 0));
+  } finally {
+    releaseClose();
+    closeSpy.mockRestore();
+  }
+  const retryResult = nextJson(ws, frame => frame.type === 'launchResult' && frame.requestId === 'open-after-close');
+  ws.send(JSON.stringify({ version: 1, type: 'launch', requestId: 'open-after-close' }));
+  expect(await retryResult).toMatchObject({ result: { ok: true } });
 });

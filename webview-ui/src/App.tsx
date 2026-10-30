@@ -103,6 +103,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [touchMobile, setTouchMobile] = useState(false);
+  const [followedAgentId, setFollowedAgentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!standalone) { setTouchMobile(false); return; }
@@ -117,6 +118,13 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   useEffect(() => {
     if (touchMobile && editor.isEditMode) editor.handleToggleEditMode();
   }, [touchMobile, editor.isEditMode, editor.handleToggleEditMode]);
+
+  useEffect(() => {
+    if (!touchMobile || (followedAgentId && !agents.includes(followedAgentId))) {
+      getOfficeState().cameraFollowId = null;
+      if (followedAgentId) setFollowedAgentId(null);
+    } else getOfficeState().cameraFollowId = followedAgentId;
+  }, [agents, followedAgentId, touchMobile]);
 
   useEffect(() => {
     if (agentDetail && !agents.includes(agentDetail.id)) {
@@ -138,10 +146,14 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
 
   const handleDeskClick = useCallback((agentId: string, screenX: number, screenY: number) => {
     getOfficeState().selectedAgentId = agentId;
+    if (touchMobile) {
+      getOfficeState().cameraFollowId = agentId;
+      setFollowedAgentId(agentId);
+    }
     setAgentDetail(null);
     setCardPosition({ x: screenX, y: screenY });
     requestAgentDetail(agentId);
-  }, [requestAgentDetail, setAgentDetail]);
+  }, [requestAgentDetail, setAgentDetail, touchMobile]);
 
   const handleCloseCard = useCallback(() => {
     setAgentDetail(null);
@@ -281,7 +293,9 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   }
 
   return (
-    <div className="office-panel" data-edit-mode={editor.isEditMode} ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+    <div className="office-panel" data-edit-mode={editor.isEditMode}
+      data-following-agent={touchMobile ? followedAgentId ?? '' : undefined}
+      ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`@keyframes pixel-agents-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} } .pixel-agents-pulse{animation:pixel-agents-pulse ${PULSE_ANIMATION_DURATION_SEC}s ease-in-out infinite}`}</style>
 
       <OfficeCanvas
@@ -309,6 +323,10 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         panRef={editor.panRef}
         onDeskClick={handleDeskClick}
         touchGestures={touchMobile}
+        onManualPan={touchMobile ? () => {
+          getOfficeState().cameraFollowId = null;
+          setFollowedAgentId(null);
+        } : undefined}
       />
 
       {!touchMobile && <EditorToolbar

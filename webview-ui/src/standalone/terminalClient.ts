@@ -17,6 +17,10 @@ export interface TerminalClientCallbacks {
   ready(ready: boolean): void;
   connected?(connected: boolean): void;
 }
+export type TerminalInputDelivery =
+  | { status: 'queued' }
+  | { status: 'not-sent' }
+  | { status: 'partial'; sentCodeUnits: number };
 
 /** Memory-only connection state; a new page always reconstructs its terminal from cursor zero. */
 export function createTerminalClient(
@@ -210,22 +214,33 @@ export function createTerminalClient(
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(requestId)) return false;
       return !blocked && send({ version: 1, type: 'launch', requestId });
     },
-    input(data: string) {
-      if (!ready || !selected || blocked) return;
+    input(data: string): TerminalInputDelivery {
+      if (!ready || !selected || blocked) return { status: 'not-sent' };
       // Split by code point, never by UTF-16 code unit (paste can contain astral Unicode).
       let chunk = '';
       let size = 0;
+      let sentCodeUnits = 0;
       // JSON can expand each control byte to six bytes; reserve identity/envelope space too.
       const chunkBytes = Math.min(TERMINAL_LIMITS.inputBytes, Math.floor((TERMINAL_LIMITS.frameBytes - 512) / 6));
       for (const point of data) {
         const bytes = utf8Bytes(point);
         if (size + bytes > chunkBytes) {
-          if (!send({ version: 1, type: 'input', runId: selected, data: chunk })) return;
+          if (!send({ version: 1, type: 'input', runId: selected, data: chunk })) {
+            return sentCodeUnits
+              ? { status: 'partial', sentCodeUnits }
+              : { status: 'not-sent' };
+          }
+          sentCodeUnits += chunk.length;
           chunk = ''; size = 0;
         }
         chunk += point; size += bytes;
       }
-      if (chunk) send({ version: 1, type: 'input', runId: selected, data: chunk });
+      if (chunk && !send({ version: 1, type: 'input', runId: selected, data: chunk })) {
+        return sentCodeUnits
+          ? { status: 'partial', sentCodeUnits }
+          : { status: 'not-sent' };
+      }
+      return { status: 'queued' };
     },
     resize(cols: number, rows: number) {
       if (ready && selected && !blocked) send({

@@ -58,10 +58,21 @@ export function terminalSocket(ws: WebSocket, runs: OwnedRuns, current: () => bo
       timers.add(timer);
       return;
     }
-    if (busy) { send(JSON.stringify({ version: 1, type: 'error', message: 'Owned action in progress.' })); return; }
+    let command: ReturnType<typeof decodeOwnedTerminalCommand>;
+    try { command = decodeOwnedTerminalCommand(data.toString()); }
+    catch (error) {
+      send(JSON.stringify({ version: 1, type: 'error', message: String(error) }));
+      return;
+    }
+    if (busy) {
+      const message = 'Owned action in progress.';
+      if (command.type === 'launch') {
+        send(JSON.stringify({ version: 1, type: 'launchResult', requestId: command.requestId,
+          result: { ok: false, message } }));
+      } else send(JSON.stringify({ version: 1, type: 'error', message }));
+      return;
+    }
     try {
-      const json = data.toString();
-      const command = decodeOwnedTerminalCommand(json);
       if (command.type === 'list') { status(); return; }
       if (command.type === 'launch') {
         busy = true;
