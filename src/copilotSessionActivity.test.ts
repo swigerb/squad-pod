@@ -184,6 +184,11 @@ describe('read-only Copilot live activity with synthetic homes', () => {
       'ada', true, 'Inspect fixture', Date.parse(previousTimestamp), true,
     ]);
 
+    reader.replay();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(previousTimestamp), true,
+    ]);
+
     fs.appendFileSync(file, line('tool.execution_complete', {
       toolCallId: 'tool', parentToolCallId: 'run',
     }, { timestamp: validTimestamp }));

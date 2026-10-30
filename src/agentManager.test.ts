@@ -140,6 +140,10 @@ describe('agentManager', () => {
       const futureAt = Date.now() + 60 * 1000;
       const laterValidAt = Date.now() - 1000;
 
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview, futureAt);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
+      expect(getAgents().get('testbot')?.lastActiveAtStatus).toBe('clock-skew');
+
       setLiveAgentStatus('testbot', true, 'Actual live task', webview, previousAt);
       setLiveAgentStatus('testbot', true, 'Actual live task', webview, futureAt);
       expect(getAgents().get('testbot')?.lastActiveAt).toBe(previousAt);
