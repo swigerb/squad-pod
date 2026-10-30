@@ -110,11 +110,16 @@ describe('AgentCard activity time', () => {
   });
 
   it.each([
-    [undefined, false, 'Live Activity is off; enable it to observe runtime model events.'],
+    [undefined, false, 'Live source status is unavailable; no runtime model observation is available.'],
+    [undefined, true, 'Live source status is unavailable; no runtime model observation is available.'],
+    [{ state: 'off', sessionId: null }, false, 'Live Activity is off; enable it to observe runtime model events.'],
+    [{ state: 'off', sessionId: null }, true, 'Live Activity is off; approve the session-log scope and restart the local CLI with --live-activity. It cannot be enabled from the browser.'],
     [{ state: 'searching', sessionId: null }, false, 'No matching Copilot CLI session is currently being followed.'],
     [{ state: 'error', sessionId: null }, false, 'The selected Copilot CLI session could not be read.'],
-    [{ state: 'following', sessionId: 'session' }, false, 'No current runtime model observation is available for this session or member.'],
-    [{ state: 'following', sessionId: 'session' }, true, 'Live model observation is unavailable in the read-only observer.'],
+    [{ state: 'searching', sessionId: null }, true, 'No matching Copilot CLI session is currently being followed.'],
+    [{ state: 'error', sessionId: null }, true, 'The selected Copilot CLI session could not be read.'],
+    [{ state: 'following', sessionId: 'session' }, false, 'The runtime has not emitted a supported current model observation for this session or member.'],
+    [{ state: 'following', sessionId: 'session' }, true, 'The runtime has not emitted a supported current model observation for this session or member.'],
   ] as const)('explains unavailable model state %s', (liveActivity, readOnly, reason) => {
     expect(liveModelUnavailableReason(liveActivity, readOnly)).toBe(reason);
   });

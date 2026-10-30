@@ -64,7 +64,7 @@ function Observer() {
       <span role="status">{status}</span>
       {client && <button onClick={() => { client.dispose(); setClient(null); setStatus('Authentication required'); }}>Authenticate again</button>}
     </header>
-    <p className="observer-scope">{control && client ? 'Authenticated selected-project office control. Layout, seats and local settings only.' : 'Read-only local office by default.'} No directory management, external assets, native dialogs, or private live logs. Terminals below require separate authority. Activity is approximate file observation; usage is recorded ledger data only.</p>
+    <p className="observer-scope">{control && client ? 'Authenticated selected-project office control. Layout, seats and local settings only.' : 'Read-only local office by default.'} No directory management, external assets or native dialogs. Terminals below require separate authority. Activity is approximate file observation unless the local CLI explicitly opts in with --live-activity; Telemetry shows source and correlation coverage. Usage is recorded ledger data only.</p>
     {client && control && preferenceDraft && <details open>
       <summary>Unacknowledged settings/seat draft</summary>
       <p>Inspect before retrying: this change has not been acknowledged. Other preference changes are rejected until it is resolved. A recovered full seat map may replace current assignments; reconcile or export and discard it first.</p>

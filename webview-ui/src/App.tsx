@@ -8,6 +8,7 @@ import { BottomToolbar } from './components/BottomToolbar.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { DebugView } from './components/DebugView.js';
 import { AgentCard } from './components/AgentCard.js';
+import { memberRuntimeModel } from './components/RuntimeModelStatus.js';
 import { SquadInfoCard } from './components/SquadInfoCard.js';
 import { TelemetryDrawer } from './components/TelemetryDrawer.js';
 import { SettingsModal } from './components/SettingsModal.js';
@@ -475,7 +476,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         position={cardPosition}
         onClose={handleCloseCard}
         onViewCharter={readOnly || standalone ? undefined : handleViewCharter}
-        runtimeModel={agentDetail ? liveModels?.members[agentDetail.id] : null}
+        runtimeModel={agentDetail ? memberRuntimeModel(liveModels, agentDetail.id) : null}
         liveActivity={sourceStatus?.liveActivity}
         readOnly={readOnly || standalone}
       />
