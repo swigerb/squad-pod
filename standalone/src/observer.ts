@@ -227,7 +227,7 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
         charterSummary: null, recentActivity: [],
         charterContent: null, charterStatus: 'unavailable',
         expertise: null, responsibilities: null, boundaries: null,
-        lastActiveAt: 0,
+        lastActiveAt: 0, lastActiveAtStatus: 'unobserved',
       },
     }];
   }

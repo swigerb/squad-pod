@@ -257,6 +257,10 @@ async function checkSquadInfo(page, fixture, outputDir, viewport) {
   await page.keyboard.press('Enter');
   assert.equal(await ada.getAttribute('aria-expanded'), 'true', 'native Enter expands');
   const panel = page.locator('#agent-detail-ada');
+  await page.waitForFunction(() =>
+    document.querySelector('#agent-detail-ada')?.textContent.includes('Last attributable live activity:'));
+  assert.ok((await panel.innerText()).includes('No attributable activity observed'),
+    'expanded Squad Info keeps a roster member with no live observation explicitly unobserved');
   const requestsBefore = fixture.sent.length;
   const transitions = [];
   for (const [status, task] of [['active', 'Synthetic first task'], ['active', 'Synthetic changed task'], ['idle', null]]) {
@@ -382,9 +386,16 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
         page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
         const errors = [];
         page.on('pageerror', (error) => errors.push(error.message));
-        await page.exposeFunction('interactionHost', (message) => {
+        await page.exposeFunction('interactionHost', async (message) => {
           const before = fixture.messages.length;
           fixture.send(message);
+          if (message.type === 'requestAgentDetail') {
+            for (let attempt = 0; attempt < 100; attempt++) {
+              if (fixture.messages.some(response => response.type === 'agentDetailLoaded'
+                && response.requestId === message.requestId)) {break;}
+              await new Promise(resolve => setTimeout(resolve, 10));
+            }
+          }
           return fixture.messages.slice(before);
         });
         await page.goto(baseUrl, { waitUntil: 'networkidle' });
@@ -452,8 +463,11 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
               { type: 'requestAgentDetail', agentId: agent.id }, 'correct agent requested');
             assert.match(requested[0].requestId, /^\d+$/, 'request is correlated to its response');
             const card = page.getByRole('dialog', { name: `${agent.name} details` });
+            await card.getByText('No attributable activity observed', { exact: true }).waitFor();
             const text = await card.innerText();
             for (const expected of [agent.name, agent.role, 'idle', agent.summary, agent.activity]) assert.ok(text.includes(expected), expected);
+            assert.ok(text.includes('No attributable activity observed'),
+              'agent card keeps a roster member with no live observation explicitly unobserved');
             const other = agents.find((a) => a.id !== agent.id);
             assert.ok(!text.includes(other.summary) && !text.includes(other.activity), 'no previous agent data');
             const bounds = await card.boundingBox();
