@@ -15,6 +15,7 @@ const webRoot = path.join(root, 'dist', 'webview');
 const webviewBundle = path.join(webRoot, 'assets', 'index.js');
 const edgePath = process.env.EDGE_PATH
   || 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const defaultBaselineRef = '30038cb01a38f44fbb727bd87b1ae621fbcdf8aa';
 const outputDir = path.resolve(process.env.ACCEPTANCE_OUTPUT_DIR
   || path.join(os.tmpdir(), 'squad-pod-reading-acceptance'));
 const viewportSizes = [{ width: 1280, height: 900 }, { width: 360, height: 640 }];
@@ -36,10 +37,20 @@ function run(command, args, options = {}) {
 }
 
 function buildBaselineBundle() {
-  const baselineRef = execFileSync('git', ['merge-base', 'HEAD', 'origin/master'], {
-    cwd: root,
-    encoding: 'utf8',
-  }).trim();
+  const requestedBaselineRef = process.env.ACCEPTANCE_BASELINE_REF || defaultBaselineRef;
+  let baselineRef;
+  try {
+    baselineRef = execFileSync('git', ['rev-parse', '--verify', `${requestedBaselineRef}^{commit}`], {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    throw new Error(
+      `Unable to resolve acceptance baseline "${requestedBaselineRef}" as a local commit. ` +
+      'Fetch the commit into this repository or set ACCEPTANCE_BASELINE_REF to an available commit.',
+    );
+  }
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-reading-baseline-'));
   const archivePath = path.join(directory, 'source.tar');
   const archive = execFileSync('git', ['archive', '--format=tar', baselineRef], {
@@ -293,6 +304,13 @@ async function main() {
   const baseline = buildBaselineBundle();
   const baselineHash = sha256(baseline.bundlePath);
   const servedBundleHash = sha256(webviewBundle);
+  if (baselineHash === servedBundleHash) {
+    fs.rmSync(baseline.directory, { recursive: true, force: true });
+    throw new Error(
+      `Acceptance baseline ${baseline.baselineRef} is not a pre-reading revision: ` +
+      'its webview bundle is byte-identical to the current bundle.',
+    );
+  }
   const provider = createProviderFixture();
   let html = '';
   const server = http.createServer((request, response) => {
