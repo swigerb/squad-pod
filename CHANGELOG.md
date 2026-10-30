@@ -29,6 +29,7 @@ All notable changes to Squad Pod are documented here.
 - `LICENSE` and `THIRD_PARTY_NOTICES.md` with Pixel Agents, sprite and font attribution.
 
 ### Fixed
+- Notification audio now stays silent until the persisted preference loads; muting cancels already scheduled notes and prevents muted audio-unlock attempts from resuming playback. The host's enabled-by-default setting and existing two-note chime are unchanged.
 - Generic tile erase now removes all known intersecting furniture, including overlapping surface items, in the same stroke transaction; unknown geometry is retained, and carpet-only erase still preserves furniture.
 - Reserved a separate horizontal zoom strip above the layout editor so zoom and tool buttons remain independently clickable, including Select after Pets. Narrow editor panels fit the available width and retain vertical scrolling; the bottom toolbar scrolls horizontally instead of clipping actions or shifting the panel. Canvas bounds, zoom/pan anchoring and draft/undo state are unchanged (#33).
 - Bound per-frame carpet rendering to the visible region, cache masked junctions/palettes until inputs or artwork change, and precompose opaque sheets within a 4.13 MiB per-context cap. Retain direct draws for translucent art, fractional device scales or fractional device offsets (preserving GPU sprite-edge antialiasing) and unchanged saved data, editing and protected drafts (#28).

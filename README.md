@@ -26,7 +26,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Manifest furniture and live imports** — verified original Pixel Agents furniture/floors/walls; Settings can load local furniture manifests and pick up edits without restarting VS Code.
 - **Explicit directory launches** — manage named directories and open `copilot --agent squad` in a new terminal at the selected working directory; no automatic launch.
 - **Speech bubbles** — visual indicators when an agent needs your attention
-- **Sound notifications** — optional chime when a file-observed active member returns to idle (not proof of task completion; turn it off in Settings if you're in a meeting)
+- **Sound notifications** — optional two-note chime on an `active` → non-active status transition. The current file observer reports active/idle only; waiting is not a live producer event. Audio stays silent until the persisted preference loads, and muting cancels already scheduled notes. The chime is not proof of task completion; turn it off in Settings if you're in a meeting.
 - **Persistent layouts** — your office design is saved and shared across VS Code windows
 - **6 distinct characters** — two bundled character sheets, color-shifted into six looks (more members cycle through further hue shifts), no external assets required
 - **Desk-as-directory** — click any occupied desk to see the agent's charter summary, current task, and recent activity
