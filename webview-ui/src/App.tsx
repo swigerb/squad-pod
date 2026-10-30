@@ -86,7 +86,7 @@ function ConnectedApp({ readOnly, standalone }: { readOnly: boolean; standalone:
 function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryState: unknown; readOnly: boolean; standalone: boolean }) {
   const client = useHostClient();
   const editor = useEditorActions(getOfficeState, editorState, recoveryState, readOnly);
-  const { observedTasks, recordedUsage, cliUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, agentTasks, layoutReady, noWorkspace, agentDetail, setAgentDetail, agentDetails, requestAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { observedTasks, liveModels, recordedUsage, cliUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, agentTasks, layoutReady, noWorkspace, agentDetail, setAgentDetail, agentDetails, requestAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
@@ -466,10 +466,16 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         position={cardPosition}
         onClose={handleCloseCard}
         onViewCharter={readOnly || standalone ? undefined : handleViewCharter}
+        runtimeModel={agentDetail ? liveModels?.members[agentDetail.id] : null}
+        liveActivity={sourceStatus?.liveActivity}
+        readOnly={readOnly || standalone}
       />
 
       <SquadInfoCard
         info={visibleSquadInfo}
+        liveModels={liveModels}
+        liveActivity={sourceStatus?.liveActivity}
+        readOnly={readOnly || standalone}
         agentDetails={agentDetails}
         availableAgentIds={agents}
         onRequestAgentDetail={handleRequestSquadDetail}

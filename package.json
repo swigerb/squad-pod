@@ -18,7 +18,7 @@
           "type": "boolean",
           "default": false,
           "scope": "window",
-          "description": "Read local Copilot CLI session logs for the current workspace to show live member tools and context usage. Requires consent in Squad Pod."
+          "description": "Read local Copilot CLI session logs for the current workspace to show live member tools, runtime model observations and context usage. Requires consent in Squad Pod."
         },
         "squad-pod.directorySuggestions": {
           "type": "boolean",

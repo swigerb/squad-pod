@@ -11,6 +11,8 @@ import type { OutboundMessage, WebviewMessage } from '../../src/types.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { placeOverlay } from './components/AgentLabels.js';
 import { setSoundEnabled } from './notificationSound.js';
+import { parseCliUsage } from '../../src/cliUsage.js';
+import type { RecordedUsageSnapshot } from '../../src/recordedUsage.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const repo = path.resolve('..');
@@ -466,21 +468,139 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     hold = false;
   });
 
+  it('imports, replaces and forgets CLI history without changing live root/member models or Squad ledger', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const ledger: RecordedUsageSnapshot = {
+      state: 'ready', sourcePath: 'synthetic-ledger', diagnostic: null, checkedAt: timestamp,
+      lastRecordAt: timestamp, lastUsageAt: timestamp, invalidLines: 0, unsupportedLines: 0,
+      pendingFinalLine: false, usageRecords: 1, attemptedTurns: 0, coveredTurns: 0,
+      unlinkedUsageRecords: 1, normalizedValueRecords: 0,
+      totals: { inputTokens: 700, outputTokens: 80, estimatedCost: 0.02 },
+      history: [{ sessionId: 'ledger-session', turnId: null, agentName: null, rosterName: null,
+        attribution: 'unattributed', model: 'ledger-historical-model', inputTokens: 700, outputTokens: 80,
+        estimatedCost: 0.02, timestamp }],
+    };
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'following', sessionId: 'live-session' },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'live-session',
+        session: { model: 'live-root-model', kind: 'session-selection', source: 'session.start.selectedModel', timestamp },
+        members: { ada: { model: 'live-member-model', kind: 'assistant-message', source: 'assistant.message.model', timestamp } },
+      } });
+      deliver({ type: 'recordedUsage', snapshot: ledger });
+    });
+    click('Squad Info');
+    click('Show details for Ada');
+    click('Telemetry');
+    const ledgerSection = host.querySelector('[aria-label="Recorded Squad usage"]')!;
+    const baselineLedger = ledgerSection.textContent;
+    const baselineMembers = [...office.characters.keys()];
+    const assertIsolated = () => {
+      expect(card()?.textContent).toContain('Current-session model: live-root-model');
+      expect(memberDetail()?.textContent).toContain('Member runtime model: live-member-model');
+      expect(card()?.textContent).toContain('session.start.selectedModel');
+      expect(memberDetail()?.textContent).toContain('assistant.message.model');
+      expect(ledgerSection.textContent).toBe(baselineLedger);
+      expect([...office.characters.keys()]).toEqual(baselineMembers);
+      expect(host.textContent).not.toContain('raw-current-model-must-not-be-live');
+      expect(host.textContent).toContain('Activity events (0)');
+    };
+    const raw = JSON.parse(fs.readFileSync(path.join(repo, 'src', '__fixtures__', 'cli-usage-1.0.105.synthetic.json'), 'utf8'));
+    raw.currentModel = 'raw-current-model-must-not-be-live';
+    const imported = parseCliUsage(JSON.stringify(raw));
+    expect(imported.state).toBe('ready');
+    act(() => deliver({ type: 'cliUsage', snapshot: { ...imported, canRefresh: true, sourcePath: 'synthetic-export.json' } }));
+    const cliSection = host.querySelector('[aria-label="Imported CLI usage"]')!;
+    expect(cliSection.textContent).toContain('0.5 premium-request cost');
+    assertIsolated();
+    raw.totalPremiumRequestCost = 0.0001;
+    raw.modelMetrics['synthetic-model'].usage.inputTokens = 999;
+    act(() => deliver({ type: 'cliUsage', snapshot: { ...parseCliUsage(JSON.stringify(raw)),
+      canRefresh: true, sourcePath: 'synthetic-export.json' } }));
+    expect(cliSection.textContent).toContain('0.0001 premium-request cost');
+    expect(cliSection.textContent).toContain('999 input / 30 output');
+    assertIsolated();
+    // This action traverses the actual App -> compiled provider -> App clear path.
+    click('Forget export');
+    expect(received.filter(m => m.type === 'cliUsage').at(-1)).toMatchObject({
+      snapshot: { state: 'unselected', report: null },
+    });
+    expect(cliSection.textContent).not.toContain('999 input / 30 output');
+    assertIsolated();
+  });
+
   it('keeps auto, charter and JSON conflicts separate, refreshes on reopen, and withholds stale model replies', () => {
     const squad = path.join(fixture.workspaceRoot, '.squad');
     const charter = path.join(squad, 'agents', 'ada', 'charter.md');
+    const timestamp = '2026-10-30T12:34:56.000Z';
     fs.appendFileSync(charter, '\n## Model\n- **Preferred:** auto\n- **Rationale:** Synthetic policy\n- **Fallback:** synthetic-fallback\n');
     fs.writeFileSync(path.join(squad, 'config.json'), JSON.stringify({
       defaultModel: 'synthetic-default', agentModelOverrides: { Ada: 'synthetic-override', ada: 'not-the-name' },
     }));
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'following', sessionId: 'session' },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'session',
+        session: { model: 'session-selection', kind: 'session-selection',
+          source: 'session.start.selectedModel', timestamp },
+        members: { ada: { model: 'member-observation', kind: 'assistant-message',
+          source: 'assistant.message.model', timestamp } },
+      } });
+    });
     click('Squad Info');
     click('Show details for Ada');
     const text = memberDetail()?.textContent;
-    for (const expected of ['Current-session model: unavailable', 'Automatic selection (auto; not a concrete model)',
-      'Rationale: Synthetic policy', 'Fallback: synthetic-fallback', 'defaultModel: synthetic-default',
+    for (const expected of ['Member runtime model: member-observation', 'assistant.message.model', timestamp,
+      'Automatic selection (auto; not a concrete model)', 'Rationale: Synthetic policy',
+      'Fallback: synthetic-fallback', 'defaultModel: synthetic-default',
       'agentModelOverrides["Ada"]: synthetic-override', path.join(squad, 'config.json'),
       'not effective runtime selection']) expect(text).toContain(expected);
+    expect(card()?.textContent).toContain('Current-session model: session-selection');
     expect(text).not.toContain('not-the-name');
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'searching', sessionId: null },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'session',
+        session: { model: 'stale-model', kind: 'session-selection',
+          source: 'session.start.selectedModel', timestamp },
+        members: {},
+      } });
+    });
+    expect(card()?.textContent).toContain('Current-session model: unavailable');
+    expect(memberDetail()?.textContent).toContain('Member runtime model: unavailable');
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'following', sessionId: 'new-session' },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'session',
+        session: { model: 'old-session-model', kind: 'assistant-message',
+          source: 'assistant.message.model', timestamp },
+        members: {},
+      } });
+    });
+    expect(card()?.textContent).toContain('Current-session model: unavailable');
+    act(() => deliver({ type: 'liveModels', snapshot: {
+      sessionId: 'new-session',
+      session: { model: 'new-session-model', kind: 'session-selection',
+        source: 'session.start.selectedModel', timestamp },
+      members: {},
+    } }));
+    expect(card()?.textContent).toContain('Current-session model: new-session-model');
     hold = true;
     click('Show details for Grace');
     const stale = held.at(-1)!;
@@ -494,7 +614,7 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     expect(memberDetail()?.textContent).toContain('malformed');
     expect(memberDetail()?.textContent).not.toContain('synthetic-default');
     expect(memberDetail()?.textContent).not.toContain('synthetic-override');
-    expect(memberDetail()?.textContent).toContain('Current-session model: unavailable');
+    expect(memberDetail()?.textContent).toContain('Member runtime model: unavailable');
     hold = false;
   });
 

@@ -270,6 +270,28 @@ export interface LiveSourceStatus {
   sessionId: string | null;
 }
 
+export interface RuntimeModelObservation {
+  model: string;
+  kind: 'session-selection' | 'assistant-message' | 'tool-call' | 'subagent-model';
+  source: RuntimeModelSource;
+  timestamp: string;
+}
+
+export type RuntimeModelSource =
+  | 'session.start.selectedModel'
+  | 'session.resume.selectedModel'
+  | 'session.model_change.newModel'
+  | 'assistant.message.model'
+  | 'tool.execution_complete.model'
+  | 'subagent.started.model'
+  | 'subagent.configured.model';
+
+export interface LiveModelSnapshot {
+  sessionId: string | null;
+  session: RuntimeModelObservation | null;
+  members: Record<string, RuntimeModelObservation>;
+}
+
 export interface AgentCreatedMessage {
   type: 'agentCreated';
   agent: {
@@ -343,6 +365,7 @@ export interface SquadInfoData {
 
 export type OutboundMessage =
   | { type: 'observedTasks'; snapshot: import('./observedTasks.js').ObservedTaskSnapshot }
+  | { type: 'liveModels'; snapshot: LiveModelSnapshot }
   | { type: 'agentContextUsage'; agentId: string; contextTokens: number | null; maxContextTokens: number | null }
   | { type: 'recordedUsage'; snapshot: import('./recordedUsage.js').RecordedUsageSnapshot }
   | { type: 'cliUsage'; snapshot: import('./cliUsage.js').CliUsageSnapshot }

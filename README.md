@@ -62,7 +62,7 @@ Open the project in VS Code and press **F5** to launch the Extension Development
 
 Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command Palette. Team members are discovered from `.squad/team.md`; roster changes appear in the office. Click a character, its name (**Enter** or **Space** also works), or its occupied desk or chair to open the details card; select a character, then click another seat to move it. Choose **Squad Info** to expand a visible member's details by keyboard or mouse. **Open charter** opens that member's `charter.md`. In the read-only local observer, observed details remain available while charter contents and editor opening are unavailable. These actions never open a terminal.
 
-Squad Info also separates the charter's **Preferred**, **Rationale**, and **Fallback** declarations from JSON `defaultModel` and exact-name `agentModelOverrides` entries, with source paths, keys, and read states. `auto` means automatic selection, not a concrete model. Reads are local and bounded to 64 KiB per file; executable `squad.config.ts` is detected but never loaded. No precedence or effective model is inferred: **Current-session model** is unavailable, and historical usage reports stay historical. Re-expand a member to refresh; declared metadata is unavailable in the read-only observer.
+Squad Info keeps declared charter/JSON model metadata separate from opt-in **runtime model observations**. The latter use Copilot CLI's timestamped `session.start`/`session.resume`/`session.model_change` selection fields, or model identifiers emitted for assistant messages and tool calls. Root tool-call models are shown only when the observed call is positively identified as root-owned; member models appear only when a subagent or tool-call event links to one exact roster member. Each value shows its event field and producer timestamp. Ephemeral `assistant.usage` events, usage history, declarations, roles, and configuration guesses never fill a missing runtime value. Runtime observations clear when Live Activity is disabled, stale, switched to another session, or the subagent completes. Local reads remain bounded; executable `squad.config.ts` is never loaded. `auto` is shown as automatic selection, not a concrete model. Declared metadata is unavailable in the read-only observer.
 
 ### Edit the office
 
@@ -121,7 +121,7 @@ Descriptions inferred from those files are labeled **File activity hint**, not l
 
 ## Known limitations
 
-- File-observed activity is approximate. Opt-in live activity uses an undocumented, best-effort Copilot CLI session format, not a supported Squad event API. Unmatched members remain unattributed; stale or missing sessions fall back to file observations. Bounded scans may miss older in-flight members. Context gauges appear only when a live member's tool completion includes context metrics.
+- File-observed activity is approximate. Opt-in live activity reads best-effort local Copilot CLI session files, not a supported Squad Pod event API. The model projection is pinned to the shipped Copilot CLI 1.0.105 event declarations; this contract does not prove that a particular real session emitted a field. Unmatched members remain unattributed; stale or missing sessions fall back to file observations. Bounded scans may miss older in-flight members. Context gauges appear only when a live member's tool completion includes context metrics.
 - Directory launches do not switch the office's observed project.
 
 ## Acceptance testing

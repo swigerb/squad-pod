@@ -3,7 +3,9 @@ import * as path from 'node:path';
 import { TASK_DESCRIPTION_DISPLAY_MAX_LENGTH } from './constants.js';
 import { sameDirectoryPath } from './directories.js';
 import { listCopilotSessions, readSessionCwd, resolveCopilotHome } from './copilotSessionState.js';
-import type { LiveSourceStatus, OutboundMessage } from './types.js';
+import type {
+  LiveModelSnapshot, LiveSourceStatus, OutboundMessage, RuntimeModelObservation, RuntimeModelSource,
+} from './types.js';
 import { ObservedTasks, taskIdentity } from './observedTasks.js';
 
 export const LIVE_STALE_MS = 5 * 60_000;
@@ -22,8 +24,11 @@ export interface LiveEvent {
   parentToolCallId: string;
   toolName: string;
   squad: boolean;
+  agentScoped: boolean;
+  agentInstanceId: string;
   instanceId?: string;
   selectedAgentName?: string;
+  modelObservation?: RuntimeModelObservation;
   identityOmitted?: boolean;
   task?: { name: string; agent_type: string; mode: string; description: string; fieldsTruncated?: boolean };
   file?: string;
@@ -31,7 +36,7 @@ export interface LiveEvent {
   context?: { contextTokens: number; maxContextTokens: number };
 }
 
-/** Project the undocumented envelope immediately; raw records never leave this function. */
+/** Project supported runtime fields immediately; raw records never leave this function. */
 export function parseLiveEvent(line: string): LiveEvent | null {
   let value: unknown;
   try { value = JSON.parse(line); } catch { return null; }
@@ -39,18 +44,24 @@ export function parseLiveEvent(line: string): LiveEvent | null {
   const data = object(envelope.data);
   const type = text(envelope.type);
   if (!['subagent.selected', 'subagent.started', 'subagent.completed', 'subagent.failed',
-    'subagent.aborted', 'tool.execution_start', 'tool.execution_complete'].includes(type)) {return null;}
+    'subagent.aborted', 'subagent.configured', 'tool.execution_start', 'tool.execution_complete',
+    'assistant.message', 'session.start', 'session.resume', 'session.model_change',
+    'session.model_deselected', 'session.shutdown'].includes(type)) {return null;}
   const toolName = text(data.toolName, 80).replace(/[^a-zA-Z0-9_.-]/g, '');
   const event: LiveEvent = {
     type, toolName, toolCallId: taskIdentity(data.toolCallId), parentToolCallId: taskIdentity(data.parentToolCallId),
     squad: type === 'subagent.selected' && !envelope.agentId && data.agentName === 'Squad',
+    agentScoped: Object.hasOwn(envelope, 'agentId') && envelope.agentId !== null && envelope.agentId !== undefined,
+    agentInstanceId: taskIdentity(envelope.agentId),
   };
   event.instanceId = taskIdentity(envelope.agentId) || undefined;
   if (type === 'subagent.selected' && event.instanceId) {
     event.selectedAgentName = taskIdentity(data.agentName) || undefined;
   }
   if (type === 'subagent.completed' && data.cancelled === true) { event.type = 'subagent.aborted'; }
-  event.identityOmitted = (type !== 'subagent.selected' && (!event.toolCallId
+  const callBearing = ['subagent.started', 'subagent.completed', 'subagent.failed', 'subagent.aborted',
+    'tool.execution_start', 'tool.execution_complete'].includes(type);
+  event.identityOmitted = (callBearing && (!event.toolCallId
     || (data.parentToolCallId !== undefined && data.parentToolCallId !== null && !event.parentToolCallId)))
     || (envelope.agentId !== undefined && envelope.agentId !== null && !event.instanceId)
     || (type === 'subagent.selected' && !!event.instanceId && !event.selectedAgentName);
@@ -84,6 +95,32 @@ export function parseLiveEvent(line: string): LiveEvent | null {
   if (type === 'tool.execution_complete' && typeof current === 'number' && Number.isFinite(current)
     && current >= 0 && typeof limit === 'number' && Number.isFinite(limit) && limit > 0) {
     event.context = { contextTokens: current, maxContextTokens: limit };
+  }
+  if (envelope.ephemeral !== true) {
+    const modelFields: Record<string, {
+      key: string; kind: RuntimeModelObservation['kind']; source: RuntimeModelSource;
+    }> = {
+      'session.start': { key: 'selectedModel', kind: 'session-selection', source: 'session.start.selectedModel' },
+      'session.resume': { key: 'selectedModel', kind: 'session-selection', source: 'session.resume.selectedModel' },
+      'session.model_change': { key: 'newModel', kind: 'session-selection', source: 'session.model_change.newModel' },
+      'assistant.message': { key: 'model', kind: 'assistant-message', source: 'assistant.message.model' },
+      'subagent.started': { key: 'model', kind: 'subagent-model', source: 'subagent.started.model' },
+      'subagent.configured': { key: 'model', kind: 'subagent-model', source: 'subagent.configured.model' },
+      'tool.execution_complete': { key: 'model', kind: 'tool-call', source: 'tool.execution_complete.model' },
+    };
+    const modelField = modelFields[type];
+    if (modelField) {
+      const model = data[modelField.key];
+      const timestamp = text(envelope.timestamp, 40);
+      if (typeof model === 'string' && model.trim().length > 0 && model.length <= 160
+        && !/[\x00-\x1f\x7f]/.test(model)
+        && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp)
+        && Number.isFinite(Date.parse(timestamp))) {
+        event.modelObservation = {
+          model: model.trim(), kind: modelField.kind, source: modelField.source, timestamp,
+        };
+      }
+    }
   }
   return event;
 }
@@ -220,7 +257,12 @@ export class CopilotSessionActivity {
   private tasks = new Map<string, { agentId: string; description: string; instanceId?: string }>();
   private runs = new Map<string, string>();
   private tools = new Map<string, { agentId: string; toolName: string; label: string }>();
+  private toolOwners = new Map<string, string | null>();
   private gauge = new Map<string, NonNullable<LiveEvent['context']>>();
+  private sessionModel: RuntimeModelObservation | null = null;
+  private memberModels = new Map<string, RuntimeModelObservation>();
+  private modelAgentOwners = new Map<string, string>();
+  private unresolvedMemberModels = new Map<string, RuntimeModelObservation>();
   private source: LiveSourceStatus = { state: 'off', sessionId: null };
   private counter = 0;
   private seeding = false;
@@ -262,6 +304,7 @@ export class CopilotSessionActivity {
     }
     for (const [agentId, context] of this.gauge) {this.options.post({ type: 'agentContextUsage', agentId, ...context });}
     this.options.status(this.source);
+    this.options.post({ type: 'liveModels', snapshot: this.modelSnapshot() });
     this.publishTasks();
   }
 
@@ -287,6 +330,7 @@ export class CopilotSessionActivity {
           this.tail = new EventTail();
           this.lastSize = -1;
           this.stale = false;
+          if (match) {this.publishModels();}
         }
       }
       if (!this.session) { this.setSource('searching'); return; }
@@ -320,11 +364,11 @@ export class CopilotSessionActivity {
           if (!this.runs.has(id)) { this.finish(id); }
         }
         this.observedTasks.discardSeedCompletions();
-        this.replayCurrent();
       } else {
         for (const event of events) {this.accept(event);}
       }
       this.setSource('following');
+      if (this.tail.reset) {this.replayCurrent();}
       this.publishTasks();
     } catch (error) {
       this.clear();
@@ -375,10 +419,16 @@ export class CopilotSessionActivity {
           this.tasks.set(observed.toolCallId, { agentId: observed.agentId, description: observed.description,
             instanceId: observed.instanceId });
           this.startRun(observed.agentId, observed.toolCallId, observed.description);
+          this.rememberModelOwner(event.instanceId, observed.agentId);
+        } else {
+          this.clearInstanceModelOwner(event.instanceId);
         }
       }
     }
-    if (!event.toolCallId || duplicateTask) {return;}
+    if (!event.toolCallId || duplicateTask) {
+      this.acceptModelEvent(event, this.tasks.get(event.toolCallId));
+      return;
+    }
     if (event.type === 'tool.execution_start' && event.task?.agent_type === 'general-purpose') {
       const agentId = attribution;
       if (agentId && !this.tasks.has(event.toolCallId) && this.tasks.size < MAX_TRACKED) {
@@ -396,8 +446,9 @@ export class CopilotSessionActivity {
     const task = this.tasks.get(event.toolCallId);
     if (event.type === 'subagent.started' && task) {
       task.instanceId = this.observedTasks.snapshot(this.session?.id ?? null).tasks
-        .find(row => row.toolCallId === event.toolCallId)?.instanceId;
+        .find(row => row.toolCallId === event.toolCallId)?.instanceId ?? event.instanceId;
       this.startRun(task.agentId, event.toolCallId, task.description);
+      if (task.instanceId) {this.rememberModelOwner(task.instanceId, task.agentId);}
     } else if (['subagent.completed', 'subagent.failed', 'subagent.aborted'].includes(event.type)) {
       const instanceId = task?.instanceId ?? event.instanceId;
       for (const [id, ended] of this.tasks) {
@@ -407,21 +458,46 @@ export class CopilotSessionActivity {
       }
     } else if (event.type === 'tool.execution_start') {
       const parent = this.tasks.get(event.parentToolCallId);
-      if (!parent || this.runs.get(parent.agentId) !== event.parentToolCallId || this.tools.size >= MAX_TRACKED) {return;}
+      const scopedOwner = event.agentScoped ? this.modelAgentOwners.get(event.agentInstanceId) : undefined;
+      if (parent) {
+        this.rememberToolOwner(event.toolCallId, parent.agentId);
+      } else if (scopedOwner) {
+        this.rememberToolOwner(event.toolCallId, scopedOwner);
+      } else if (!event.parentToolCallId && !event.agentScoped) {
+        this.rememberToolOwner(event.toolCallId, null);
+      }
+      if (!parent || this.runs.get(parent.agentId) !== event.parentToolCallId
+        || this.tools.size >= MAX_TRACKED) {return;}
       const label = liveToolLabel(event);
       this.tools.set(event.toolCallId, { agentId: parent.agentId, toolName: event.toolName, label });
       this.post({ type: 'agentToolStart', agentId: parent.agentId, toolId: event.toolCallId, tool: event.toolName, status: label });
       this.telemetry(parent.agentId, label);
     } else if (event.type === 'tool.execution_complete') {
       const tool = this.tools.get(event.toolCallId);
-      if (!tool) {return;}
+      if (!tool) {
+        const parentTask = this.tasks.get(event.parentToolCallId);
+        const owner = this.toolOwners.get(event.toolCallId);
+        if (owner === null) {
+          if (parentTask) {return;}
+          this.acceptModelEvent(event, undefined, undefined, true);
+        } else if (owner !== undefined) {
+          if (parentTask && owner !== parentTask.agentId) {return;}
+          this.acceptModelEvent(event, parentTask, owner);
+        } else {
+          this.acceptModelEvent(event, parentTask, parentTask?.agentId);
+        }
+        return;
+      }
       this.post({ type: 'agentToolDone', agentId: tool.agentId, toolId: event.toolCallId, tool: tool.toolName });
       if (event.context) {
         this.gauge.set(tool.agentId, event.context);
         this.post({ type: 'agentContextUsage', agentId: tool.agentId, ...event.context });
       }
       this.tools.delete(event.toolCallId);
+      this.acceptModelEvent(event, task, tool.agentId);
+      return;
     }
+    this.acceptModelEvent(event, this.tasks.get(event.toolCallId));
   }
 
   private startRun(agentId: string, toolCallId: string, description: string): void {
@@ -439,13 +515,156 @@ export class CopilotSessionActivity {
     this.telemetry(agentId, 'Live member finished');
   }
 
+  private rememberToolOwner(toolCallId: string, agentId: string | null): void {
+    this.toolOwners.delete(toolCallId);
+    this.toolOwners.set(toolCallId, agentId);
+    if (this.toolOwners.size > MAX_TRACKED) {
+      const oldest = this.toolOwners.keys().next().value as string | undefined;
+      if (oldest) {this.toolOwners.delete(oldest);}
+    }
+  }
+
   private clearDisplays(agentId: string): void {
+    const removedModel = this.memberModels.delete(agentId);
+    for (const [instanceId, owner] of this.modelAgentOwners) {
+      if (owner === agentId) {
+        this.modelAgentOwners.delete(instanceId);
+        this.unresolvedMemberModels.delete(instanceId);
+      }
+    }
     this.gauge.delete(agentId);
     for (const [id, tool] of this.tools) {
       if (tool.agentId === agentId) { this.tools.delete(id); }
     }
     this.post({ type: 'agentToolsClear', agentId });
     this.post({ type: 'agentContextUsage', agentId, contextTokens: null, maxContextTokens: null });
+    if (removedModel) {this.publishModels();}
+  }
+
+  private modelSnapshot(): LiveModelSnapshot {
+    return {
+      sessionId: this.session?.id.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 8) || null,
+      session: this.sessionModel,
+      members: Object.fromEntries(this.memberModels),
+    };
+  }
+
+  private publishModels(): void {
+    this.post({ type: 'liveModels', snapshot: this.modelSnapshot() });
+  }
+
+  private rememberModelOwner(instanceId: string, agentId: string): void {
+    if (!instanceId) {return;}
+    const existing = this.modelAgentOwners.get(instanceId);
+    if (existing && existing !== agentId) {return;}
+    this.modelAgentOwners.delete(instanceId);
+    this.modelAgentOwners.set(instanceId, agentId);
+    const pending = this.unresolvedMemberModels.get(instanceId);
+    if (pending) {
+      this.unresolvedMemberModels.delete(instanceId);
+      this.memberModels.set(agentId, pending);
+      this.publishModels();
+    }
+    if (this.modelAgentOwners.size > MAX_TRACKED) {
+      const oldest = this.modelAgentOwners.keys().next().value as string | undefined;
+      if (oldest) {
+        const oldOwner = this.modelAgentOwners.get(oldest);
+        this.modelAgentOwners.delete(oldest);
+        this.unresolvedMemberModels.delete(oldest);
+        if (oldOwner && ![...this.modelAgentOwners.values()].includes(oldOwner)
+          && this.memberModels.delete(oldOwner)) {this.publishModels();}
+      }
+    }
+  }
+
+  private clearInstanceModelOwner(instanceId: string): void {
+    const owner = this.modelAgentOwners.get(instanceId);
+    this.modelAgentOwners.delete(instanceId);
+    this.unresolvedMemberModels.delete(instanceId);
+    if (owner && ![...this.modelAgentOwners.values()].includes(owner)
+      && this.memberModels.delete(owner)) {this.publishModels();}
+  }
+
+  private acceptModelEvent(
+    event: LiveEvent,
+    task: { agentId: string; description: string } | undefined,
+    knownOwnerId?: string,
+    knownRootOwner = false,
+  ): void {
+    if (event.type === 'subagent.started' && task && event.agentInstanceId) {
+      this.rememberModelOwner(event.agentInstanceId, task.agentId);
+    }
+    if (event.type === 'session.shutdown') {
+      if (event.agentScoped) {
+        this.clearInstanceModelOwner(event.agentInstanceId);
+      } else {
+        this.sessionModel = null;
+        this.memberModels.clear();
+        this.modelAgentOwners.clear();
+        this.unresolvedMemberModels.clear();
+        this.toolOwners.clear();
+        this.publishModels();
+      }
+      return;
+    }
+    if (['subagent.completed', 'subagent.failed', 'subagent.aborted'].includes(event.type)
+      && event.agentScoped) {
+      this.clearInstanceModelOwner(event.agentInstanceId);
+      return;
+    }
+    if (event.type === 'session.model_deselected') {
+      if (!event.agentScoped) {
+        this.sessionModel = null;
+        this.publishModels();
+      } else {
+        const owner = this.modelAgentOwners.get(event.agentInstanceId);
+        if (owner && this.memberModels.delete(owner)) {this.publishModels();}
+      }
+      return;
+    }
+    const observation = event.modelObservation;
+    if (!observation) {return;}
+    if (event.agentScoped) {
+      if (knownRootOwner) {return;}
+      const mappedOwner = event.type === 'subagent.started' ? task?.agentId
+        : this.modelAgentOwners.get(event.agentInstanceId);
+      if (mappedOwner && knownOwnerId && mappedOwner !== knownOwnerId) {return;}
+      const owner = mappedOwner ?? knownOwnerId;
+      if (owner && this.runs.has(owner)) {
+        this.memberModels.set(owner, observation);
+        this.publishModels();
+      } else if (event.agentInstanceId) {
+        this.unresolvedMemberModels.delete(event.agentInstanceId);
+        this.unresolvedMemberModels.set(event.agentInstanceId, observation);
+        if (this.unresolvedMemberModels.size > MAX_TRACKED) {
+          const oldest = this.unresolvedMemberModels.keys().next().value as string | undefined;
+          if (oldest) {this.unresolvedMemberModels.delete(oldest);}
+        }
+      }
+      return;
+    }
+    if (knownOwnerId) {
+      if (this.runs.has(knownOwnerId)) {
+        this.memberModels.set(knownOwnerId, observation);
+        this.publishModels();
+      }
+      return;
+    }
+    if (knownRootOwner) {
+      this.sessionModel = observation;
+      this.publishModels();
+      return;
+    }
+    if (event.type === 'tool.execution_complete') {return;}
+    if (event.type === 'subagent.started') {
+      if (task && this.runs.has(task.agentId)) {
+        this.memberModels.set(task.agentId, observation);
+        this.publishModels();
+      }
+      return;
+    }
+    this.sessionModel = observation;
+    this.publishModels();
   }
 
   private clear(): void {
@@ -453,8 +672,14 @@ export class CopilotSessionActivity {
     this.tasks.clear();
     this.tools.clear();
     this.gauge.clear();
+    this.sessionModel = null;
+    this.memberModels.clear();
+    this.modelAgentOwners.clear();
+    this.unresolvedMemberModels.clear();
+    this.toolOwners.clear();
     this.observedTasks.clear();
     this.post({ type: 'observedTasks', snapshot: { sessionId: null, tasks: [], limited: false } });
+    this.post({ type: 'liveModels', snapshot: { sessionId: null, session: null, members: {} } });
   }
 
   private publishTasks(): void {
