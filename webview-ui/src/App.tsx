@@ -4,6 +4,7 @@ import { OfficeState } from './office/engine/officeState.js';
 import { OfficeCanvas } from './office/components/OfficeCanvas.js';
 import { AgentLabels } from './components/AgentLabels.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
+import { taskBubble } from './taskBubbles.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { DebugView } from './components/DebugView.js';
 import { AgentCard } from './components/AgentCard.js';
@@ -98,6 +99,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   const isDebugMode = settings.debugEnabled;
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [taskBubblesEnabled, setTaskBubblesEnabled] = useState(true);
   const [telemetrySeenCount, setTelemetrySeenCount] = useState(0);
   const [isDirectoryModalOpen, setIsDirectoryModalOpen] = useState(false);
   const [isSquadInfoOpen, setIsSquadInfoOpen] = useState(false);
@@ -233,6 +235,15 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   }, [client]);
   const selectedFurnitureColor = getOfficeState().layout.furniture
     .find((furniture) => furniture.uid === editorState.selectedFurnitureUid)?.color ?? null;
+  const taskBubbles = Object.fromEntries(taskBubblesEnabled ? agents.flatMap(agentId => {
+    const summary = taskBubble({
+      agentId, active: agentStatuses[agentId] === 'active',
+      liveTask: agentTasks[agentId]?.currentTaskSource === 'live',
+      source: sourceStatus?.liveActivity, snapshot: observedTasks,
+      tool: agentTools[agentId]?.filter(tool => !tool.done).at(-1)?.toolName,
+    });
+    return summary ? [[agentId, summary]] : [];
+  }) : []);
 
   if (!layoutReady && !noWorkspace) {
     return (
@@ -403,6 +414,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       />
 
       <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef}
+        taskBubbles={taskBubbles}
         agentTools={agentTools} onAgentClick={handleDeskClick} onLocateAgent={requestCamera} />
 
       <MissingSquad status={sourceStatus} />
@@ -415,6 +427,8 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       <AssetWarnings status={assetStatus} furniture={getOfficeState().layout.furniture} />
 
       <BottomToolbar
+        taskBubblesEnabled={taskBubblesEnabled}
+        onTaskBubblesChange={setTaskBubblesEnabled}
         nativeUnavailable={standalone}
         onOpenSettings={() => setShowSettings(true)}
         readOnly={readOnly}

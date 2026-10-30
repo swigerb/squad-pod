@@ -261,6 +261,39 @@ describe('AgentLabels over canvas characters', () => {
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
       return this.dataset.agentAnnotation ? 80 : 0;
     });
+
+    it('measures task summaries inside member stacks and preserves separation after suppression changes', () => {
+      vi.stubGlobal('innerHeight', 1000);
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.dataset.agentAnnotation ? 180 : 0;
+      });
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.dataset.agentAnnotation ? (this.querySelector('[data-agent-task-bubble]') ? 90 : 30) : 0;
+      });
+      for (const id of ['homer', 'marge']) {
+        Object.assign(office.characters.get(id)!, { x: 80, y: 100 });
+        office.setAgentActive(id, true);
+      }
+      const show = (taskBubbles: Record<string, string>) => {
+        act(() => root.render(<AgentLabels officeState={office} zoom={2} panRef={panRef} taskBubbles={taskBubbles} />));
+        frame();
+        frame();
+        const annotations = [...host.querySelectorAll<HTMLElement>('[data-agent-annotation]')];
+        const [a, b] = annotations;
+        expect(parseFloat(a.style.top) + a.offsetHeight <= parseFloat(b.style.top)
+          || parseFloat(b.style.top) + b.offsetHeight <= parseFloat(a.style.top)).toBe(true);
+        for (const bubble of host.querySelectorAll('[data-agent-task-bubble]')) {
+          expect(bubble.closest('[data-agent-annotation]')?.getAttribute('data-agent-annotation'))
+            .toBe(`member:${bubble.getAttribute('data-agent-task-bubble')}`);
+        }
+      };
+      show({ homer: 'CLI task: Task in progress', marge: 'CLI tool: Reading a file' });
+      expect(host.querySelectorAll('[data-agent-task-bubble]')).toHaveLength(2);
+      show({});
+      expect(host.querySelector('[data-agent-task-bubble]')).toBeNull();
+      show({ homer: 'CLI task: Task in progress' });
+      expect(host.querySelectorAll('[data-agent-task-bubble]')).toHaveLength(1);
+    });
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
       return this.dataset.agentAnnotation?.startsWith('subtask:') ? taskHeight
         : this.dataset.agentAnnotation ? memberHeight : 0;

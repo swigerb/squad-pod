@@ -11,6 +11,7 @@ interface AgentLabelsProps {
   zoom: number;
   panRef: React.RefObject<{ x: number; y: number }>;
   agentTools?: Record<string, ToolActivity[]>;
+  taskBubbles?: Readonly<Record<string, string>>;
   onAgentClick?: (agentId: string, screenX: number, screenY: number) => void;
   onLocateAgent?: (agentId: string) => void;
 }
@@ -32,12 +33,13 @@ interface LabelPosition {
   isActive: boolean;
   tool: string | undefined;
   tools: ToolActivity[];
+  taskBubble?: string;
   bubbleType: string;
   isSelected: boolean;
   gauge?: ReturnType<typeof contextGauge>;
 }
 
-export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, onAgentClick, onLocateAgent }: AgentLabelsProps) {
+export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, taskBubbles = {}, onAgentClick, onLocateAgent }: AgentLabelsProps) {
   const [frame, setFrame] = useState<{ positions: LabelPosition[]; docked: boolean }>({ positions: [], docked: false });
   const [collapsed, setCollapsed] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -46,6 +48,8 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, onAgen
   const refreshRef = useRef<(() => void) | null>(null);
   const toolsRef = useRef(agentTools);
   toolsRef.current = agentTools;
+  const bubblesRef = useRef(taskBubbles);
+  bubblesRef.current = taskBubbles;
 
   useEffect(() => {
     let raf = 0;
@@ -76,6 +80,7 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, onAgen
           width: element?.offsetWidth ?? 0, height: element?.offsetHeight ?? 0,
           measured: !!element, isActive: char.active, tool: char.tool,
           tools: !parent && Object.hasOwn(toolsRef.current, agentId) ? toolsRef.current[agentId] : [],
+          taskBubble: !parent && Object.hasOwn(bubblesRef.current, agentId) ? bubblesRef.current[agentId] : undefined,
           bubbleType: char.bubbleState.type, isSelected: officeState.selectedAgentId === agentId,
           offscreen: [
             bounds.right < 0 ? 'left' : bounds.left > width ? 'right' : '',
@@ -203,6 +208,10 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, onAgen
                 style={{ pointerEvents: 'auto', cursor: 'pointer' }}>Locate character</button>}
               {pos.isActive && pos.tool && <div data-agent-tool-bubble={pos.agentId}
                 style={{ color: '#60a5fa', fontSize: 9, fontWeight: 600, maxWidth: '100%' }}>{pos.tool}</div>}
+              {pos.taskBubble && <div data-agent-task-bubble={pos.agentId} role="note"
+                aria-label={`${pos.name}: ${pos.taskBubble}`}
+                style={{ color: '#bfdbfe', fontSize: 10, padding: '2px 5px',
+                  maxWidth: '100%', boxSizing: 'border-box' }}>{pos.taskBubble}</div>}
               {pos.gauge && <span data-agent-context={pos.agentId} role="progressbar"
                 aria-label={pos.gauge.label} title={pos.gauge.label}
                 aria-valuenow={pos.gauge.percent} aria-valuemin={0} aria-valuemax={100}
