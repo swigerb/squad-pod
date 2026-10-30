@@ -223,7 +223,8 @@ export function applyFurniturePlace(
   type: string,
   col: number,
   row: number,
-  rotation: number = 0
+  rotation: number = 0,
+  color: FloorColor | null = null,
 ): OfficeLayout {
   const newLayout = cloneLayout(layout);
   const uid = `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -233,7 +234,8 @@ export function applyFurniturePlace(
     type,
     col,
     row,
-    rotation
+    rotation,
+    ...(color ? { color: { ...color } } : {}),
   };
   const entry = getCatalogEntry(type);
   if (entry && /^(pa_|local_)/.test(type)) {
@@ -245,6 +247,40 @@ export function applyFurniturePlace(
   
   newLayout.furniture.push(furniture);
   return newLayout;
+}
+
+export function setFurnitureColor(
+  layout: OfficeLayout,
+  uid: string,
+  color: FloorColor | null,
+): OfficeLayout {
+  const furniture = layout.furniture.find((item) => item.uid === uid);
+  if (!furniture) return layout;
+  const hasColor = Object.prototype.hasOwnProperty.call(furniture, 'color');
+  if (color === null && !hasColor) return layout;
+  if (color !== null && hasColor && JSON.stringify(furniture.color) === JSON.stringify(color)) return layout;
+
+  return {
+    ...layout,
+    furniture: layout.furniture.map((item) => {
+      if (item.uid !== uid) return item;
+      const updated = { ...item };
+      if (color === null) delete updated.color;
+      else updated.color = { ...color };
+      return updated;
+    }),
+  };
+}
+
+export function getFurnitureAt(layout: OfficeLayout, col: number, row: number): PlacedFurniture | null {
+  const hitOrder = [...layout.furniture].reverse().sort((a, b) =>
+    Number(!!getCatalogEntry(b.type)?.canPlaceOnSurfaces) - Number(!!getCatalogEntry(a.type)?.canPlaceOnSurfaces));
+  for (const item of hitOrder) {
+    const footprint = getFurnitureFootprint(item);
+    if (footprint && col >= item.col && col < item.col + footprint.width
+      && row >= item.row && row < item.row + footprint.height) return item;
+  }
+  return null;
 }
 
 export function applyFurnitureDelete(

@@ -3,7 +3,7 @@ import type { OfficeState } from '../office/engine/officeState.js';
 import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, OfficeLayout } from '../office/types.js';
-import { applyTilePaint, applyErase, applyFurniturePlace, planFurnitureMove, planFurnitureRotate, commitFurniturePlan, applyCarpetPaint, applyCarpetErase, pickCarpet } from '../office/editor/editorActions.js';
+import { applyTilePaint, applyErase, applyFurniturePlace, planFurnitureMove, planFurnitureRotate, commitFurniturePlan, applyCarpetPaint, applyCarpetErase, pickCarpet, getFurnitureAt, setFurnitureColor } from '../office/editor/editorActions.js';
 import { hasCarpetVariant } from '../office/sprites/carpetTiles.js';
 import { CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR } from '../constants.js';
 import { UndoHistory } from '../office/editor/undoHistory.js';
@@ -22,12 +22,15 @@ import {
 } from '../office/editor/areaEditor.js';
 import { MAX_LAYOUT_PETS } from '../../../src/layoutValidation.js';
 import { getPetSprites } from '../office/sprites/petSpriteData.js';
+import { clearColorizeCache } from '../office/colorize.js';
 
 export function useEditorActions(getOfficeState: () => OfficeState, editorState: EditorState, recoveryState: unknown) {
   const client = useHostClient();
   const [isEditMode, setIsEditMode] = useState(false);
   const [editorTick, setEditorTick] = useState(0);
   const [zoom, setZoom] = useState(Math.floor(ZOOM_DEFAULT_DPR_FACTOR * (window.devicePixelRatio || 1)));
+  const [furniturePaletteColor, setFurniturePaletteColor] = useState<FloorColor | null>(null);
+  const [furnitureColorPickTarget, setFurnitureColorPickTarget] = useState<'selected' | 'palette' | null>(null);
   const panRef = useRef({ x: 0, y: 0 });
   const historyRef = useRef(new UndoHistory());
   const initializedRef = useRef(false);
@@ -197,6 +200,32 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     setEditorTick((t) => t + 1);
   }, [getOfficeState, editorState, pushUndo]);
 
+  const sampleFurnitureColor = useCallback((
+    layout: OfficeLayout,
+    col: number,
+    row: number,
+    target: 'selected' | 'palette' | null,
+  ): boolean => {
+    const source = getFurnitureAt(layout, col, row);
+    if (!source) return false;
+    const officeState = getOfficeState();
+    const color = source.color ? { ...source.color } : null;
+    const selectedUid = editorState.selectedFurnitureUid;
+    const destination = target ?? (selectedUid ? 'selected' : 'palette');
+    if (destination === 'selected' && selectedUid) {
+      const next = setFurnitureColor(layout, selectedUid, color);
+      if (next !== layout) {
+        historyRef.current.endGesture(layout);
+        historyRef.current.record(layout);
+        clearColorizeCache();
+        officeState.rebuildFromLayout(next);
+      }
+    } else if (destination === 'palette') {
+      setFurniturePaletteColor(color);
+    }
+    return true;
+  }, [getOfficeState, editorState]);
+
   const handleEyedropper = useCallback((col: number, row: number, sampleArea = false) => {
     const layout = getOfficeState().getLayout();
     if (sampleArea) {
@@ -204,6 +233,10 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
       if (!area) return;
       editorState.selectedAreaLabel = area.label;
       editorState.setTool(EditTool.AREA_PAINT);
+      setEditorTick((t) => t + 1);
+      return;
+    }
+    if (sampleFurnitureColor(layout, col, row, null)) {
       setEditorTick((t) => t + 1);
       return;
     }
@@ -225,7 +258,19 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
       }
     }
     setEditorTick((t) => t + 1);
-  }, [getOfficeState, editorState]);
+  }, [getOfficeState, editorState, sampleFurnitureColor]);
+
+  const handleFurnitureColorPickToggle = useCallback((target: 'selected' | 'palette') => {
+    setFurnitureColorPickTarget((current) => current === target ? null : target);
+    setEditorTick((t) => t + 1);
+  }, []);
+
+  const handleFurnitureColorPick = useCallback((col: number, row: number) => {
+    const layout = getOfficeState().getLayout();
+    sampleFurnitureColor(layout, col, row, furnitureColorPickTarget);
+    setFurnitureColorPickTarget(null);
+    setEditorTick((t) => t + 1);
+  }, [getOfficeState, editorState, furnitureColorPickTarget, sampleFurnitureColor]);
 
   const handleEditorTileAction = useCallback(
     (col: number, row: number) => {
@@ -285,7 +330,8 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
           editorState.furnitureType,
           col,
           row,
-          0
+          0,
+          furniturePaletteColor,
         );
         editorState.transformError = newLayout === currentLayout
           ? 'Cannot place furniture: check grid bounds, collisions and unavailable assets.' : null;
@@ -296,7 +342,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
       }
       setEditorTick((t) => t + 1);
     },
-    [getOfficeState, editorState, pushUndo]
+    [getOfficeState, editorState, furniturePaletteColor, pushUndo]
   );
 
   const handleEditorEraseAction = useCallback(
@@ -508,20 +554,25 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
   }, []);
 
   const handleSelectedFurnitureColorChange = useCallback(
-    (color: FloorColor) => {
+    (color: FloorColor | null) => {
       if (!editorState.selectedFurnitureUid) return;
-      pushUndo();
       const officeState = getOfficeState();
       const layout = officeState.getLayout();
-      const furniture = layout.furniture.find((f) => f.uid === editorState.selectedFurnitureUid);
-      if (furniture) {
-        furniture.color = color;
-        officeState.rebuildFromLayout(layout);
+      const next = setFurnitureColor(layout, editorState.selectedFurnitureUid, color);
+      if (next !== layout) {
+        pushUndo();
+        clearColorizeCache();
+        officeState.rebuildFromLayout(next);
         setEditorTick((t) => t + 1);
       }
     },
     [editorState, getOfficeState, pushUndo]
   );
+
+  const handleFurniturePaletteColorChange = useCallback((color: FloorColor | null) => {
+    setFurniturePaletteColor(color ? { ...color } : null);
+    setEditorTick((t) => t + 1);
+  }, []);
 
   const receiveLayout = useCallback((layout: OfficeLayout, source: 'external' | 'import', revision: string | null, workspaceRoot?: string) => {
     if (protection.state.draft && initializedRef.current) protection.capture(getOfficeState().getLayout());
@@ -571,6 +622,8 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     editorTick,
     zoom,
     panRef,
+    furniturePaletteColor,
+    furnitureColorPickTarget,
     canUndo: historyRef.current.canUndo,
     canRedo: historyRef.current.canRedo,
     handleGestureStart,
@@ -591,6 +644,9 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
     handleAreaSelect,
     handlePetToggle,
     handleEyedropper,
+    handleFurnitureColorPickToggle,
+    handleFurnitureColorPick,
+    handleFurniturePaletteColorChange,
     handleEditorTileAction,
     handleEditorEraseAction,
     handleEditorSelectionChange,

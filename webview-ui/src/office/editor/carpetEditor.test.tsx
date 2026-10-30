@@ -48,12 +48,18 @@ describe('carpets through real canvas/editor transactions', () => {
       return <>
         <OfficeCanvas officeState={office} editorState={state} isEditMode={actions.isEditMode}
           editorTick={actions.editorTick} zoom={1} panRef={panRef}
+          furnitureColorPickTarget={actions.furnitureColorPickTarget}
           onEditorTileAction={actions.handleEditorTileAction} onEditorEraseAction={actions.handleEditorEraseAction}
           onEditorEyedropper={actions.handleEyedropper}
           onGestureStart={actions.handleGestureStart} onGestureEnd={actions.handleGestureEnd} />
         <EditorToolbar editorState={state} {...actions} onToolChange={actions.handleToolChange}
           onTileTypeChange={actions.handleTileTypeChange} onFloorColorChange={actions.handleFloorColorChange}
           onWallColorChange={actions.handleWallColorChange} onFurnitureTypeChange={actions.handleFurnitureTypeChange}
+          selectedFurnitureColor={office.layout.furniture.find((item) => item.uid === state.selectedFurnitureUid)?.color ?? null}
+          onFurniturePaletteColorChange={actions.handleFurniturePaletteColorChange}
+          onSelectedFurnitureColorChange={actions.handleSelectedFurnitureColorChange}
+          onFurnitureColorPickToggle={actions.handleFurnitureColorPickToggle}
+          onColorGestureStart={actions.handleGestureStart} onColorGestureEnd={actions.handleGestureEnd}
           activePetTypes={office.getActivePetTypes()} onPetToggle={actions.handlePetToggle}
           onCarpetVariantChange={actions.handleCarpetVariantChange} onCarpetColorChange={actions.handleCarpetColorChange}
           areas={office.layout.areas ?? []} areaMappings={office.layout.areaMappings} directories={[]}

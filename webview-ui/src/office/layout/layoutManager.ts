@@ -14,6 +14,45 @@ import { getItemById } from '../sprites/assetLoader.js';
 import { defaultFurniture } from '../../../../src/defaultFurniture.js';
 import { isValidCarpetLayer } from '../../../../src/carpetValidation.js';
 import { isValidLayout } from '../../../../src/layoutValidation.js';
+import { getColorizedSprite } from '../colorize.js';
+
+const spriteIds = new WeakMap<SpriteData, number>();
+let nextSpriteId = 1;
+
+function validFurnitureColor(color: unknown): color is NonNullable<PlacedFurniture['color']> {
+  if (!color || typeof color !== 'object' || Array.isArray(color)) return false;
+  const value = color as Record<string, unknown>;
+  return ['h', 's', 'b', 'c'].every((key) => typeof value[key] === 'number' && Number.isFinite(value[key]))
+    && (value.colorize === undefined || typeof value.colorize === 'boolean');
+}
+
+function furnitureColorKey(
+  type: string,
+  sprite: SpriteData,
+  placeholder: boolean,
+  color: NonNullable<PlacedFurniture['color']>,
+): string {
+  let spriteId = spriteIds.get(sprite);
+  if (spriteId === undefined) {
+    spriteId = nextSpriteId++;
+    spriteIds.set(sprite, spriteId);
+  }
+  const baseKey = placeholder
+    ? `${type}-placeholder-${sprite[0]?.length ?? 0}x${sprite.length}`
+    : `${type}-catalog-${sprite[0]?.length ?? 0}x${sprite.length}-${spriteId}`;
+  return `furn-${baseKey}-${color.h}-${color.s}-${color.b}-${color.c}-${color.colorize ? 1 : 0}`;
+}
+
+function colorizableSprite(sprite: SpriteData): SpriteData {
+  const hasShortHex = sprite.some((row) => row.some((pixel) => /^#[\da-f]{3,4}$/i.test(pixel)));
+  if (!hasShortHex) return sprite;
+  return sprite.map((row) => row.map((pixel) => {
+    const match = /^#([\da-f])([\da-f])([\da-f])([\da-f])?$/i.exec(pixel);
+    if (!match) return pixel;
+    const [, red, green, blue, alpha] = match;
+    return `#${red}${red}${green}${green}${blue}${blue}${alpha ? `${alpha}${alpha}` : ''}`;
+  }));
+}
 
 export function createDefaultLayout(): OfficeLayout {
   const tiles: number[] = [];
@@ -87,10 +126,20 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
     const entry = getCatalogEntry(furn.type);
     if (entry) {
       const saved = getFurnitureFootprint(furn) ? furn.assetFootprint : undefined;
-      let sprite = saved && (saved.width !== entry.width || saved.height !== entry.height)
+      const footprintMismatch = !!saved && (saved.width !== entry.width || saved.height !== entry.height);
+      let sprite = footprintMismatch
         ? createPlaceholderSprite(saved.width * TILE_SIZE, saved.height * TILE_SIZE) : entry.sprite;
       const { width, height } = getFurnitureFootprint(furn) ?? { width: 1, height: 1 };
-      if (!getFurnitureFootprint(furn)) sprite = createPlaceholderSprite(TILE_SIZE, TILE_SIZE);
+      const invalidFootprint = !getFurnitureFootprint(furn);
+      if (invalidFootprint) sprite = createPlaceholderSprite(TILE_SIZE, TILE_SIZE);
+      const color = validFurnitureColor(furn.color) ? { ...furn.color } : undefined;
+      if (color) {
+        sprite = getColorizedSprite(
+          furnitureColorKey(furn.type, sprite, footprintMismatch || invalidFootprint, color),
+          colorizableSprite(sprite),
+          color,
+        );
+      }
 
       if (furn.rotation === 90 || furn.rotation === 270) {
         sprite = rotateSprite(sprite, furn.rotation);
@@ -106,7 +155,8 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
         width,
         height,
         sprite,
-        rotation: furn.rotation
+        rotation: furn.rotation,
+        ...(color ? { color } : {}),
       });
     } else {
       // Tileset metadata item — look up bounds from the asset loader
@@ -115,7 +165,11 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
         const pixelW = metaItem.bounds.width;
         const pixelH = metaItem.bounds.height;
         const { width, height } = getFurnitureFootprint(furn)!;
-        const sprite = createPlaceholderSprite(pixelW, pixelH);
+        const baseSprite = createPlaceholderSprite(pixelW, pixelH);
+        const color = validFurnitureColor(furn.color) ? { ...furn.color } : undefined;
+        const sprite = color
+          ? getColorizedSprite(furnitureColorKey(furn.type, baseSprite, true, color), colorizableSprite(baseSprite), color)
+          : baseSprite;
 
         instances.push({
           uid: furn.uid,
@@ -125,13 +179,21 @@ export function layoutToFurnitureInstances(furniture: PlacedFurniture[]): Furnit
           width,
           height,
           sprite,
-          rotation: furn.rotation
+          rotation: furn.rotation,
+          ...(color ? { color } : {}),
         });
       } else {
         const { width, height } = getFurnitureFootprint(furn) ?? { width: 1, height: 1 };
+        const baseSprite = createPlaceholderSprite(width * TILE_SIZE, height * TILE_SIZE);
+        const color = validFurnitureColor(furn.color) ? { ...furn.color } : undefined;
+        const sprite = color
+          ? getColorizedSprite(furnitureColorKey(furn.type, baseSprite, true, color), colorizableSprite(baseSprite), color)
+          : baseSprite;
         instances.push({
-          ...furn, width, height,
-          sprite: createPlaceholderSprite(width * TILE_SIZE, height * TILE_SIZE),
+          uid: furn.uid, type: furn.type, col: furn.col, row: furn.row, width, height,
+          sprite, rotation: furn.rotation,
+          ...(color ? { color } : {}),
+          ...(furn.state === undefined ? {} : { state: furn.state }),
         });
       }
     }

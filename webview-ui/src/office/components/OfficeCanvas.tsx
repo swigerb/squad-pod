@@ -23,6 +23,8 @@ interface OfficeCanvasProps {
   onEditorTileAction?: (col: number, row: number) => void;
   onEditorEraseAction?: (col: number, row: number) => void;
   onEditorEyedropper?: (col: number, row: number, sampleArea?: boolean) => void;
+  onEditorFurnitureColorPick?: (col: number, row: number) => void;
+  furnitureColorPickTarget?: 'selected' | 'palette' | null;
   onEditorSelectionChange?: (uid: string | null) => void;
   onDeleteSelected?: () => void;
   onRotateSelected?: () => void;
@@ -47,6 +49,8 @@ export function OfficeCanvas({
   onEditorTileAction,
   onEditorEraseAction,
   onEditorEyedropper,
+  onEditorFurnitureColorPick,
+  furnitureColorPickTarget = null,
   onEditorSelectionChange,
   onDragMove,
   onExpandGrid,
@@ -254,6 +258,11 @@ export function OfficeCanvas({
       const { col, row } = screenToWorld(screenX, screenY);
 
       if (isEditMode) {
+        if (furnitureColorPickTarget !== null) {
+          onEditorFurnitureColorPick?.(col, row);
+          return;
+        }
+
         // Ghost border click → expand grid
         const { cols: lCols, rows: lRows } = officeState.layout;
         if (onExpandGrid && !carpetErase && !areaErase && (col < 0 || col >= lCols || row < 0 || row >= lRows)) {
@@ -380,6 +389,8 @@ export function OfficeCanvas({
       onEditorTileAction,
       onEditorEraseAction,
       onEditorEyedropper,
+      onEditorFurnitureColorPick,
+      furnitureColorPickTarget,
       onEditorSelectionChange,
       onExpandGrid,
       onGestureStart,

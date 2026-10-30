@@ -143,6 +143,8 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
     setIsDirectoryModalOpen(true);
     client.send({ type: 'getDirectories' });
   }, [client]);
+  const selectedFurnitureColor = getOfficeState().layout.furniture
+    .find((furniture) => furniture.uid === editorState.selectedFurnitureUid)?.color ?? null;
 
   if (!layoutReady && !noWorkspace) {
     return (
@@ -222,9 +224,11 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
         isEditMode={editor.isEditMode}
         showAreas={settings.showAreas}
         editorState={editorState}
+        furnitureColorPickTarget={editor.furnitureColorPickTarget}
         onEditorTileAction={editor.handleEditorTileAction}
         onEditorEraseAction={editor.handleEditorEraseAction}
         onEditorEyedropper={editor.handleEyedropper}
+        onEditorFurnitureColorPick={editor.handleFurnitureColorPick}
         onEditorSelectionChange={editor.handleEditorSelectionChange}
         onDeleteSelected={editor.handleDeleteSelected}
         onRotateSelected={editor.handleRotateSelected}
@@ -247,6 +251,14 @@ function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
         onFloorColorChange={editor.handleFloorColorChange}
         onWallColorChange={editor.handleWallColorChange}
         onFurnitureTypeChange={editor.handleFurnitureTypeChange}
+        furniturePaletteColor={editor.furniturePaletteColor}
+        selectedFurnitureColor={selectedFurnitureColor}
+        onFurniturePaletteColorChange={editor.handleFurniturePaletteColorChange}
+        onSelectedFurnitureColorChange={editor.handleSelectedFurnitureColorChange}
+        onFurnitureColorPickToggle={editor.handleFurnitureColorPickToggle}
+        furnitureColorPickTarget={editor.furnitureColorPickTarget}
+        onColorGestureStart={editor.handleGestureStart}
+        onColorGestureEnd={editor.handleGestureEnd}
         activePetTypes={getOfficeState().getActivePetTypes()}
         onPetToggle={editor.handlePetToggle}
         onCarpetVariantChange={editor.handleCarpetVariantChange}

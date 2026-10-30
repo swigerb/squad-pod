@@ -58,6 +58,7 @@ export interface FurnitureInstance {
   height: number;
   sprite: SpriteData;
   rotation: number;
+  color?: FloorColor;
   state?: string;
 }
 
