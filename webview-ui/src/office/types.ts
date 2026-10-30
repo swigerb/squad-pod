@@ -1,4 +1,5 @@
 import type { AreaDefinition, CarpetTile, PlacedPet } from '../../../src/types.js';
+import type { FurnitureGroupMetadata } from '../../../src/manifestAssets.js';
 export type { AreaDefinition, CarpetTile } from '../../../src/types.js';
 
 export const TILE_SIZE = 16;
@@ -95,7 +96,7 @@ export const EditTool = {
 } as const;
 export type EditTool = (typeof EditTool)[keyof typeof EditTool];
 
-export interface FurnitureCatalogEntry {
+export interface FurnitureCatalogEntry extends FurnitureGroupMetadata {
   type: string;
   label: string;
   name?: string;
@@ -104,7 +105,6 @@ export interface FurnitureCatalogEntry {
   sprite: SpriteData;
   isDesk: boolean;
   category?: string;
-  orientation?: string;
   dynamicState?: boolean;
   canPlaceOnSurfaces?: boolean;
   backgroundTiles?: number;

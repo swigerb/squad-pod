@@ -22,6 +22,18 @@ function legacy(type: string, width: number, height: number, isDesk = false): Fu
 }
 
 let dynamicCatalog: FurnitureCatalogEntry[] = [];
+let paletteCatalog: FurnitureCatalogEntry[] = [];
+const rotationGroups = new Map<string, string[]>();
+
+export function getRotatedType(type: string, direction: 'cw' | 'ccw' = 'cw'): string | null {
+  const group = rotationGroups.get(type);
+  if (!group) return null;
+  return group[(group.indexOf(type) + (direction === 'cw' ? 1 : -1) + group.length) % group.length];
+}
+
+export function isRotatable(type: string): boolean {
+  return rotationGroups.has(type);
+}
 
 export function getCatalogEntry(type: string): FurnitureCatalogEntry | undefined {
   return FURNITURE_CATALOG.find((entry) => entry.type === type)
@@ -31,9 +43,42 @@ export function getCatalogEntry(type: string): FurnitureCatalogEntry | undefined
 export function buildDynamicCatalog(assets?: ManifestFurniture[]): FurnitureCatalogEntry[] {
   if (assets) {
     dynamicCatalog = assets.map((asset) => ({ ...asset }));
+    rotationGroups.clear();
+    const groups = new Map<string, Map<string, string>>();
+    for (const asset of assets) {
+      if (asset.groupId && asset.mirrorSide && asset.orientation === 'side') {
+        dynamicCatalog.push({
+          ...asset, type: `${asset.type}:left`, orientation: 'left',
+          sprite: asset.sprite.map((row) => [...row].reverse()),
+        });
+      }
+      if (!asset.groupId || !asset.orientation || (asset.state && asset.state !== 'off')) continue;
+      const members = groups.get(asset.groupId) ?? new Map<string, string>();
+      groups.set(asset.groupId, members);
+      members.set(asset.orientation === 'side' ? 'right' : asset.orientation, asset.type);
+      if (asset.orientation === 'side' && asset.mirrorSide) members.set('left', `${asset.type}:left`);
+    }
+    const hidden = new Set<string>();
+    for (const [id, members] of groups) {
+      const scheme = assets.find((asset) => asset.groupId === id && asset.rotationScheme)?.rotationScheme;
+      const order = scheme === '2-way' ? ['front', 'right'] : ['front', 'right', 'back', 'left'];
+      const types = order.flatMap((orientation) => members.has(orientation) ? [members.get(orientation)!] : []);
+      if (types.length < 2) continue;
+      for (const type of types) rotationGroups.set(type, types);
+      // Hide all variants, even those excluded by the scheme; keep every leaf addressable.
+      const representative = members.get('front') ?? types[0];
+      for (const entry of dynamicCatalog) {
+        if (entry.groupId === id && entry.type !== representative) hidden.add(entry.type);
+      }
+    }
+    paletteCatalog = dynamicCatalog.filter((entry) => !hidden.has(entry.type)).map((entry) =>
+      isRotatable(entry.type) ? {
+        ...entry,
+        label: entry.label.replace(/ - Front - Off$/, '').replace(/ - Front$/, '').replace(/ - Off$/, ''),
+      } : entry);
     window.dispatchEvent(new Event('officeAssetsChanged'));
   }
-  return [...dynamicCatalog];
+  return [...paletteCatalog];
 }
 
 export function createPlaceholderSprite(pixelW: number, pixelH: number): SpriteData {
