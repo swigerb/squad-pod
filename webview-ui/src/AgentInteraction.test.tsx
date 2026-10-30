@@ -74,7 +74,8 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
       office = this;
       return originalAdd.apply(this, args);
     });
-    fixture = createProviderFixture({ artifactRoot: repo, extensionCode });
+    // Lifecycle tests advance 30s of polling; bundled asset bytes have separate acceptance coverage.
+    fixture = createProviderFixture({ artifactRoot: path.join(repo, 'src', '__fixtures__'), extensionCode });
     const client: HostClient = {
       send: (message) => fixture.send(message),
       subscribe: (listener) => {
