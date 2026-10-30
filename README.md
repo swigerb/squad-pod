@@ -73,6 +73,8 @@ In the office's **Settings**, sound notifications play a short chime when an act
 
 Enable **Live Activity** in Settings and accept the VS Code confirmation to turn on `squad-pod.liveActivity` (off by default). It reads local Copilot CLI session metadata and `events.jsonl` for the newest Squad session matching the observed workspace. Only exact roster members animate. Short task descriptions, tool names, file basenames, command names and context counts are used; prompts, other arguments and outputs are never displayed or stored. Turning it off stops reading and clears live displays. Settings shows whether the source is off, searching, following or unavailable.
 
+**Telemetry → Observed transient tasks** lists task calls from that same consented session, separately from recorded usage. Names, types, modes and bounded descriptions are display metadata, not identities or durable membership. Only explicit same-session parent calls are linked; missing or cyclic parents are unknown. Unknown, ambiguous and non-general-purpose calls stay unattributed and never create office members. The in-memory list retains at most 64 tasks (16 recent completions), flags omitted data/shortened fields, and restores only in-flight calls on startup. Switching sessions, stale/lost sources and disabling Live Activity clear the list.
+
 ### Launch Squad in a directory
 
 Open **Directories** to launch Squad in a workspace folder or a saved directory. Squad Pod opens a new VS Code terminal at that folder and runs `copilot --agent squad` only after you click **Launch**. Workspace trust and the Copilot CLI on `PATH` are required. Squad Pod does not launch automatically.
