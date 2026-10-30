@@ -3,7 +3,17 @@ import * as path from 'path';
 import { createHash } from 'crypto';
 import { PNG } from 'pngjs';
 
-export interface ManifestFurniture {
+export interface FurnitureGroupMetadata {
+  groupId?: string;
+  groupType?: 'rotation' | 'state' | 'animation';
+  rotationScheme?: '2-way' | '3-way-mirror' | '4-way';
+  orientation?: 'front' | 'back' | 'side' | 'left' | 'right';
+  state?: 'on' | 'off';
+  frame?: number;
+  mirrorSide?: boolean;
+}
+
+export interface ManifestFurniture extends FurnitureGroupMetadata {
   type: string;
   label: string;
   width: number;
@@ -11,7 +21,6 @@ export interface ManifestFurniture {
   sprite: string[][];
   isDesk: boolean;
   category: string;
-  orientation?: string;
   canPlaceOnSurfaces: boolean;
   canPlaceOnWalls: boolean;
 }
@@ -184,17 +193,16 @@ function decode(buffer: Buffer, width: number, height: number, allowPetPadding =
   }));
 }
 
-interface Leaf {
+interface Leaf extends FurnitureGroupMetadata {
   id: string;
   file: string;
   width: number;
   height: number;
   footprintW: number;
   footprintH: number;
-  orientation?: string;
 }
 
-export function validateManifest(value: unknown): { root: Record<string, unknown>; leaves: Leaf[] } {
+export function validateManifest(value: unknown): { root: Record<string, unknown>; leaves: Leaf[]; diagnostics: string[] } {
   const root = record(value);
   text(root.id, 'id', ID);
   text(root.name, 'name');
@@ -204,14 +212,25 @@ export function validateManifest(value: unknown): { root: Record<string, unknown
   integer(root.backgroundTiles, 'backgroundTiles', 16, 0);
   const leaves: Leaf[] = [];
   const ids = new Set<string>();
+  const diagnostics: string[] = [];
   let nodes = 0;
-  const visit = (value: unknown, depth: number, orientation?: string): void => {
-    if (++nodes > 128 || depth >= 8) { throw new Error('Manifest tree exceeds node/depth limit'); }
+  class TreeLimitError extends Error {}
+  const visit = (value: unknown, depth: number, inherited: FurnitureGroupMetadata = {}): void => {
+    if (++nodes > 128 || depth >= 8) { throw new TreeLimitError('Manifest tree exceeds node/depth limit'); }
     const node = record(value);
-    if (node.orientation !== undefined) { orientation = text(node.orientation, 'orientation', ID); }
-    if (node.state !== undefined) { text(node.state, 'state', ID); }
-    if (node.frame !== undefined) { integer(node.frame, 'frame', 63, 0); }
-    if (node.mirrorSide !== undefined) { flag(node.mirrorSide, 'mirrorSide'); }
+    const metadata = { ...inherited };
+    if (node.orientation !== undefined) {
+      if (!['front', 'back', 'side', 'left', 'right'].includes(String(node.orientation))) {
+        throw new Error('Invalid orientation');
+      }
+      metadata.orientation = node.orientation as FurnitureGroupMetadata['orientation'];
+    }
+    if (node.state !== undefined) {
+      if (node.state !== 'on' && node.state !== 'off') { throw new Error('Invalid state'); }
+      metadata.state = node.state;
+    }
+    if (node.frame !== undefined) { metadata.frame = integer(node.frame, 'frame', 63, 0); }
+    if (node.mirrorSide !== undefined) { metadata.mirrorSide = flag(node.mirrorSide, 'mirrorSide'); }
     if (node.type === 'group') {
       if (!['rotation', 'state', 'animation'].includes(String(node.groupType))
         || !Array.isArray(node.members) || !node.members.length || node.members.length > 64) {
@@ -221,8 +240,22 @@ export function validateManifest(value: unknown): { root: Record<string, unknown
         if (!['2-way', '3-way-mirror', '4-way'].includes(String(node.rotationScheme))) {
           throw new Error('Invalid rotationScheme');
         }
+        metadata.rotationScheme = node.rotationScheme as FurnitureGroupMetadata['rotationScheme'];
       }
-      for (const member of node.members) { visit(member, depth + 1, orientation); }
+      metadata.groupId = String(root.id);
+      metadata.groupType = node.groupType as FurnitureGroupMetadata['groupType'];
+      for (const [index, member] of node.members.entries()) {
+        const start = leaves.length;
+        const previousIds = new Set(ids);
+        try { visit(member, depth + 1, metadata); } catch (error) {
+          // A bad subtree must not remove independent siblings. Global work limits remain fatal.
+          if (error instanceof TreeLimitError || record(member).type !== 'group') { throw error; }
+          leaves.splice(start);
+          ids.clear();
+          for (const id of previousIds) { ids.add(id); }
+          diagnostics.push(`Group member ${index}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
     } else if (node.type === 'asset') {
       const id = text(node.id, 'asset id', ID);
       if (ids.has(id)) { throw new Error(`Duplicate asset id: ${id}`); }
@@ -236,20 +269,20 @@ export function validateManifest(value: unknown): { root: Record<string, unknown
       }
       leaves.push({
         id, file: text(node.file ?? `${id}.png`, 'PNG filename', PNG_FILE),
-        width, height, footprintW, footprintH, orientation,
+        width, height, footprintW, footprintH, ...metadata,
       });
     } else {
       throw new Error('Manifest type must be asset or group');
     }
   };
   visit(root, 0);
-  return { root, leaves };
+  return { root, leaves, diagnostics };
 }
 
 function readManifest(
   root: string, folder: string, budget: RootBudget,
   observe: (name: string, bytes: Buffer) => void = () => {},
-): { root: Record<string, unknown>; leaves: Leaf[]; buffers: Map<string, Buffer> } {
+): { root: Record<string, unknown>; leaves: Leaf[]; diagnostics: string[]; buffers: Map<string, Buffer> } {
   entries(safePath(root, [folder]), budget);
   const manifest = readBounded(safePath(root, [folder, 'manifest.json']), MAX_MANIFEST_BYTES, budget);
   observe('manifest.json', manifest);
@@ -344,7 +377,7 @@ function directories(root: string, budget: RootBudget): string[] {
   return entries(root, budget).filter((e) => e.isDirectory() || e.isSymbolicLink()).map((e) => e.name).sort();
 }
 
-/** Manifests are atomic; independent root budgets protect other roots and the bundled catalog. */
+/** Independent root budgets protect other roots and the bundled catalog. */
 export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] = []): AssetSnapshot {
   const snapshot: AssetSnapshot = { furniture: [], floors: [], walls: [], carpets: [], pets: [], directories: externalRoots, diagnostics: [] };
   const ids = new Set<string>();
@@ -365,15 +398,19 @@ export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] =
       for (const folder of directories(furnitureRoot, budget)) {
         if (index !== 0 && folder === 'pets') { continue; }
         attempt(`${root} / ${folder}`, () => {
-          const { root: meta, leaves, buffers } = readManifest(furnitureRoot, folder, budget);
+          const { root: meta, leaves, buffers, diagnostics } = readManifest(furnitureRoot, folder, budget);
+          snapshot.diagnostics.push(...diagnostics.map((message) => `${root} / ${folder}: ${message}`));
           const loaded = leaves.map((leaf): ManifestFurniture => {
             // Separate namespaces protect old layout IDs and the verified bundled assets.
             const type = index === 0 ? `pa_${leaf.id}` : `local_${text(meta.id, 'id', ID)}_${leaf.id}`;
             if (ids.has(type)) { throw new Error(`Duplicate asset id: ${type}`); }
             return {
-              type, label: `${meta.name} (${leaf.id})`, width: leaf.footprintW, height: leaf.footprintH,
+              type, label: leaf.groupId ? String(meta.name) : `${meta.name} (${leaf.id})`, width: leaf.footprintW, height: leaf.footprintH,
               sprite: decode(buffers.get(leaf.file)!, leaf.width, leaf.height),
-              isDesk: meta.category === 'desks', category: String(meta.category), orientation: leaf.orientation,
+              isDesk: meta.category === 'desks', category: String(meta.category),
+              groupId: leaf.groupId ? (index === 0 ? `pa_${leaf.groupId}` : `local_${meta.id}_${leaf.groupId}`) : undefined,
+              groupType: leaf.groupType, rotationScheme: leaf.rotationScheme, orientation: leaf.orientation,
+              state: leaf.state, frame: leaf.frame, mirrorSide: leaf.mirrorSide,
               canPlaceOnSurfaces: meta.canPlaceOnSurfaces === true, canPlaceOnWalls: meta.canPlaceOnWalls === true,
             };
           });

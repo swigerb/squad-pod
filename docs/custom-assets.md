@@ -32,7 +32,33 @@ The manifest describes one or more furniture sprites. For a single sprite, use:
 }
 ```
 
-`file` is optional and defaults to `<id>.png`. `width` and `height` are image pixels; the sprite must exactly match its footprint at 16 pixels per tile. The manifest `type` may also be a `group` containing `asset` leaves. Group leaves are loaded as separate static variants; animation is not supported.
+`file` is optional and defaults to `<id>.png`. `width` and `height` are image pixels; the sprite must exactly match its footprint at 16 pixels per tile.
+
+### Directional rotation groups
+
+Use a `group` with `groupType: "rotation"` to offer directional sprites as one furniture item. Each `asset` member needs its own `id`, image dimensions, footprint, and `orientation`. For example:
+
+```json
+{
+  "id": "chair-pack",
+  "name": "Chair pack",
+  "category": "chairs",
+  "type": "group",
+  "groupType": "rotation",
+  "rotationScheme": "4-way",
+  "canPlaceOnWalls": false,
+  "canPlaceOnSurfaces": false,
+  "backgroundTiles": 0,
+  "members": [
+    { "type": "asset", "id": "chair-front", "orientation": "front", "width": 16, "height": 16, "footprintW": 1, "footprintH": 1 },
+    { "type": "asset", "id": "chair-right", "orientation": "right", "width": 16, "height": 16, "footprintW": 1, "footprintH": 1 },
+    { "type": "asset", "id": "chair-back", "orientation": "back", "width": 16, "height": 16, "footprintW": 1, "footprintH": 1 },
+    { "type": "asset", "id": "chair-left", "orientation": "left", "width": 16, "height": 16, "footprintW": 1, "footprintH": 1 }
+  ]
+}
+```
+
+Orientations are `front`, `right`, `back`, `left`, or `side`; `side` is treated as `right`. Set `mirrorSide: true` on a `side` member to provide a mirrored left-facing sprite. `rotationScheme` accepts `2-way`, `3-way-mirror`, and `4-way`; a `2-way` group cycles between front and right. When a group has at least two usable orientations, it appears as one palette item, and **R** or **Rotate** cycles through the available views. Ungrouped items rotate geometrically. State switching and animation playback are not supported.
 
 Use local, non-interlaced PNG files. Files must be named directly in the manifest, not referenced by URLs or nested paths. Duplicate asset IDs are rejected. External packs support furniture only; floor, wall, and character packs are not loaded.
 

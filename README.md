@@ -58,7 +58,7 @@ Choose **Layout** in the toolbar to edit the office:
 - Paint decorative carpets with a style and main/accent colors.
 - Create named Areas, paint their tiles, and map launch directories to Areas to prefer those seats for observed agents. Turn the Area overlay on or off in Settings.
 - Add or remove Claudio and Gitcat; pets wander around the office and react when clicked.
-- Select and drag furniture to move it. Hold **Alt** when releasing to copy; press **R** to rotate selected furniture. A desk moves or rotates with overlapping computers and lamps.
+- Select and drag furniture to move it. Hold **Alt** when releasing to copy; press **R** to rotate. Ungrouped furniture rotates geometrically; grouped directional furniture cycles through available views. A desk moves or rotates with overlapping computers and lamps.
 - Use **Undo** and **Redo** for editor changes. A paint stroke is one step.
 - Export a layout or import a JSON layout from Settings. An import is a draft until you save it. If an incoming layout conflicts with an unsaved draft, review the versions and choose which one to keep before saving.
 
@@ -97,7 +97,7 @@ Add a local furniture directory in **Settings**. Custom pet sheets can be placed
 
 ## Compared with Pixel Agents
 
-**Supported:** Squad roster discovery, file-observed activity, the animated office, layout editing, pets, local furniture assets, and explicit Squad CLI launches.
+**Supported:** Squad roster discovery, file-observed activity, the animated office, layout editing, directional furniture groups, pets, local furniture assets, and explicit Squad CLI launches.
 
 **Not yet supported:** live tool and context events, a standalone browser runtime, and an embedded terminal.
 
