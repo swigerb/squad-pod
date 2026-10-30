@@ -68,6 +68,11 @@ async function main() {
         ]) assert.ok((await section.textContent()).includes(expected), expected);
         assert.equal(await section.evaluate(element => element.scrollWidth > element.clientWidth), false, 'usage content must wrap in narrow panels');
         await section.locator('h3').evaluate(element => element.scrollIntoView({ block: 'start' }));
+        await poll(page, () => {
+          const heading = document.querySelector('[aria-label="Recorded Squad usage"] h3').getBoundingClientRect();
+          const content = document.querySelector('[aria-label="Telemetry content"]').getBoundingClientRect();
+          return Math.abs(heading.top - content.top) < 20;
+        });
         if (output) await page.screenshot({ path: path.join(output, `usage-${theme}-${viewport.width}.png`) });
         const color = await section.evaluate(element => getComputedStyle(element).color);
         assert.equal(color, theme === 'dark' ? 'rgb(204, 204, 204)' : 'rgb(51, 51, 51)', 'recorded history must use the theme foreground');

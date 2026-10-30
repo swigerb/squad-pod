@@ -113,6 +113,17 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
     expect(host.textContent).toContain('Live CLI observer: Unavailable');
   });
 
+  it('allows scrolling empty activity to read usage and diagnostics', () => {
+    send(empty);
+    const content = host.querySelector<HTMLElement>('[aria-label="Telemetry content"]')!;
+    Object.defineProperties(content, { scrollHeight: { value: 1000 }, clientHeight: { value: 200 } });
+    act(() => {
+      content.scrollTop = 120;
+      content.dispatchEvent(new Event('scroll'));
+    });
+    expect(content.scrollTop).toBe(120);
+  });
+
   it('counts a newly observed fixture event and clears only activity, retaining a valid historical report', () => {
     const historical: RecordedUsageSnapshot = {
       ...empty, state: 'ready', usageRecords: 1,

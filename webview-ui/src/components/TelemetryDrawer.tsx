@@ -48,11 +48,17 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, obser
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
+  useEffect(() => {
+    if (!events.length && listRef.current) {
+      listRef.current.scrollTop = 0;
+      setAutoScroll(true);
+    }
+  }, [events.length]);
+
   // Auto-scroll to bottom when new events arrive
   useEffect(() => {
-    if (listRef.current && (autoScroll || !events.length)) {
-      listRef.current.scrollTop = events.length ? listRef.current.scrollHeight : 0;
-      if (!events.length) { setAutoScroll(true); }
+    if (events.length && autoScroll && listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [events.length, autoScroll]);
 
@@ -132,6 +138,8 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, obser
 
       {/* Event list */}
       <div
+        role="region"
+        aria-label="Telemetry content"
         ref={listRef}
         onScroll={handleScroll}
         style={{
