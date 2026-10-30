@@ -208,9 +208,7 @@ function mutations(out) {
     { name: 'fuzzy-attribution', file: 'copilotSessionActivity.ts',
       from: 'member.id.toLowerCase() === key', to: 'key.startsWith(member.id.toLowerCase())' },
     { name: 'member-model-owner-bypass', file: 'copilotSessionActivity.ts',
-      from: `const mappedOwner = event.type === 'subagent.started' ? task?.agentId
-        : this.modelAgentOwners.get(event.agentInstanceId);`,
-      to: 'const mappedOwner = event.type === \'subagent.started\' ? task?.agentId : undefined;' },
+      from: ': this.modelAgentOwners.get(event.agentInstanceId);', to: ': undefined;' },
     { name: 'prompt-leak', file: 'copilotSessionActivity.ts',
       from: 'description: text(args.description, TASK_DESCRIPTION_DISPLAY_MAX_LENGTH)',
       to: 'description: text(args.prompt, TASK_DESCRIPTION_DISPLAY_MAX_LENGTH)' },
