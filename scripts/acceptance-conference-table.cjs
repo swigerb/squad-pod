@@ -21,7 +21,7 @@ const layout = createDefaultOfficeLayout();
 const snapshot = loadAssetSnapshot(path.join(bundleRoot, 'webview-ui', 'public', 'assets'));
 assert.deepEqual(snapshot.diagnostics, []);
 const fixtures = JSON.stringify([
-  { type: 'settingsLoaded', settings: { soundEnabled: false, debugEnabled: false, showAreas: false } },
+  { type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: false },
   { type: 'manifestAssetsLoaded', snapshot },
   { type: 'layoutLoaded', layout, revision: 'conference-fixture', source: 'external' },
   { type: 'existingAgents', agents: [] },
@@ -55,7 +55,7 @@ async function main() {
     source: baseline ? '134f1d82f94cdae1a8181e76610075ba790cfdda'
       : execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
     bundleSha256: crypto.createHash('sha256').update(fs.readFileSync(bundle)).digest('hex'),
-    boundary: 'Actual Vite production webview, bundled manifest pixels, synthetic host boundary and no agents; not native VS Code or real Squad acceptance',
+    boundary: 'Vite production-bundle Edge fixture with bundled manifest pixels, mocked VS Code bridge/save acknowledgment, no compiled provider, installed Pod package, disk persistence or live agents; not native VS Code or real Squad acceptance',
     pageErrors: [], pcs: [],
   };
   const server = http.createServer((request, response) => {
