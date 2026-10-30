@@ -96,8 +96,8 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
     const ledger = read(path.join(squad, 'log', 'usage.jsonl'), MAX_USAGE_BYTES);
     const usage = ledger === null
       ? { ...unavailableUsage(errorsBeforeLedger === errors.length
-        ? 'No local usage ledger. No home/private logs are read.'
-        : 'Cannot read local usage ledger; see source diagnostics. No home/private logs are read.'),
+        ? 'No local usage ledger. Live observation does not create recorded usage.'
+        : 'Cannot read local usage ledger; see source diagnostics. Live observation does not create recorded usage.'),
       state: errorsBeforeLedger === errors.length ? 'missing' as const : 'error' as const }
       : parseRecordedUsage(ledger, parseAllMembers(team ?? ''));
     usage.sourcePath = path.join(files.root, squad, 'log', 'usage.jsonl');
