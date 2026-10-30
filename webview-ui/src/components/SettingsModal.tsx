@@ -112,7 +112,7 @@ export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onTog
               onChange={(event) => client.send({ type: 'setLiveActivity', enabled: event.target.checked })} />
           </div>
           <p role="status" style={{ fontSize: '12px', margin: 0 }}>
-            Live source: {sourceStatus?.liveActivity?.state ?? 'off'}
+            Live source: {sourceStatus?.liveActivity?.state ?? 'unavailable'}
             {sourceStatus?.liveActivity?.sessionId ? ` (${sourceStatus.liveActivity.sessionId})` : ''}.
             {' '}Reads local Copilot CLI session metadata for this workspace after confirmation.
           </p>

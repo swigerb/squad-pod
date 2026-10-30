@@ -10,6 +10,7 @@ import { DebugView } from './components/DebugView.js';
 import { AgentCard } from './components/AgentCard.js';
 import { SquadInfoCard } from './components/SquadInfoCard.js';
 import { TelemetryDrawer } from './components/TelemetryDrawer.js';
+import { SettingsModal } from './components/SettingsModal.js';
 import { MissingSquad } from './components/MissingSquad.js';
 import { EditorToolbar } from './components/EditorToolbar.js';
 import { EditorState } from './office/editor/editorState.js';
@@ -90,6 +91,7 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
   );
   const isDebugMode = settings.debugEnabled;
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [telemetrySeenCount, setTelemetrySeenCount] = useState(0);
   const [isDirectoryModalOpen, setIsDirectoryModalOpen] = useState(false);
   const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
@@ -330,12 +332,8 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
       <AssetWarnings status={assetStatus} furniture={getOfficeState().layout.furniture} />
 
       <BottomToolbar
+        onOpenSettings={() => setShowSettings(true)}
         readOnly={readOnly}
-        settings={settings}
-        sourceStatus={sourceStatus}
-        assetStatus={assetStatus}
-        onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
-        onShowAreasChange={(enabled) => updateSetting('showAreas', enabled)}
         isEditMode={editor.isEditMode}
         onToggleEditMode={editor.handleToggleEditMode}
         onOpenSquadInfo={handleOpenSquadInfo}
@@ -343,11 +341,11 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
         onToggleTelemetry={handleToggleTelemetry}
         onOpenDirectories={handleOpenDirectories}
         telemetryCount={telemetryEvents.length - telemetrySeenCount}
-        isDebugMode={isDebugMode}
-        onToggleDebugMode={() => updateSetting('debugEnabled', !isDebugMode)}
       />
 
       <TelemetryDrawer
+        sourceStatus={sourceStatus}
+        onOpenSettings={() => setShowSettings(true)}
         readOnly={readOnly}
         observedTasks={observedTasks}
         liveSource={sourceStatus?.liveActivity}
@@ -357,6 +355,11 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
         onToggle={handleToggleTelemetry}
         onClear={handleClearTelemetry}
       />
+      {showSettings && !readOnly && <SettingsModal onClose={() => setShowSettings(false)} isDebugMode={isDebugMode}
+        onToggleDebugMode={() => updateSetting('debugEnabled', !isDebugMode)}
+        settings={settings} sourceStatus={sourceStatus} assetStatus={assetStatus}
+        onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
+        onShowAreasChange={(enabled) => updateSetting('showAreas', enabled)} />}
 
       <ToolOverlay
         officeState={getOfficeState()}

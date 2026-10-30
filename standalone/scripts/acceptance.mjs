@@ -179,7 +179,9 @@ try {
       return colors.size > 20;
     }), true);
     await tab.getByRole('button', { name: 'Telemetry', exact: false }).click();
-    await tab.getByText('Recorded usage / model history', { exact: true }).click();
+    await tab.getByRole('heading', { name: /Recorded usage \/ model history/ }).waitFor();
+    await tab.getByText('Settings and live-log consent are unavailable in this read-only observer.', { exact: false }).waitFor();
+    assert.equal(await tab.getByRole('button', { name: 'Observation settings and consent', exact: true }).count(), 0);
     await tab.getByText(/Recent historical reports \(/).click();
     await tab.getByText(/Reported model: synthetic-model;/).waitFor();
     if (artifacts) {
