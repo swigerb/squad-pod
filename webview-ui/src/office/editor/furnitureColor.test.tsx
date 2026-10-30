@@ -11,6 +11,12 @@ import { EditorState } from './editorState.js';
 import { EditTool, TileType, type FloorColor } from '../types.js';
 import { buildDynamicCatalog } from '../layout/furnitureCatalog.js';
 import type { ManifestFurniture } from '../../../../src/manifestAssets.js';
+import { clearColorizeCache } from '../colorize.js';
+
+vi.mock('../colorize.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../colorize.js')>();
+  return { ...actual, clearColorizeCache: vi.fn(actual.clearColorizeCache) };
+});
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -156,6 +162,36 @@ describe('furniture color controls and eyedrop', () => {
       input!.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
+
+  it('clears the shared color cache before every selected-color slider rebuild', () => {
+    selectFurniture(2, 2);
+    const rebuild = vi.spyOn(office, 'rebuildFromLayout');
+    vi.mocked(clearColorizeCache).mockClear();
+    rangeChange('Selected Furniture Color hue', 75);
+    rangeChange('Selected Furniture Color hue', 95);
+
+    expect(clearColorizeCache).toHaveBeenCalledTimes(2);
+    expect(rebuild).toHaveBeenCalledTimes(2);
+    for (let index = 0; index < 2; index++) {
+      expect(vi.mocked(clearColorizeCache).mock.invocationCallOrder[index])
+        .toBeLessThan(rebuild.mock.invocationCallOrder[index]);
+    }
+    expect(office.layout.furniture[0].color).toEqual({ ...deskColor, h: 95 });
+  });
+
+  it('clears the shared color cache before rebuilding the eyedropped selection', () => {
+    selectFurniture(2, 2);
+    const rebuild = vi.spyOn(office, 'rebuildFromLayout');
+    vi.mocked(clearColorizeCache).mockClear();
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="furniture-color-pick-selected"]')!.click());
+    mouse('mousedown', 3, 2);
+
+    expect(clearColorizeCache).toHaveBeenCalledTimes(1);
+    expect(rebuild).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(clearColorizeCache).mock.invocationCallOrder[0])
+      .toBeLessThan(rebuild.mock.invocationCallOrder[0]);
+    expect(office.layout.furniture[0].color).toEqual(pcColor);
+  });
 
   it('applies one undo step per selected-color slider gesture and removes color keys exactly', () => {
     selectFurniture(2, 2);

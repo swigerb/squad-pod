@@ -36,6 +36,15 @@ function changedPixelCount(actual, expected) {
   return count;
 }
 
+async function waitForReadiness(page, predicate, argument, description, timeout = 30000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (await page.evaluate(predicate, argument)) return;
+    await page.waitForTimeout(50);
+  }
+  throw new Error(`Timed out after ${timeout} ms waiting for ${description}`);
+}
+
 async function main() {
   assert.ok(fs.existsSync(webviewScript), 'production webview bundle must exist');
   if (output) fs.mkdirSync(output, { recursive: true });
@@ -50,8 +59,8 @@ async function main() {
       results.cases.push(record);
       try {
         await page.goto(url);
-        await page.waitForFunction(() => window.__petAcceptance?.replayed
-          && document.querySelector('canvas')?.width > 0);
+        await waitForReadiness(page, () => window.__petAcceptance?.replayed
+          && document.querySelector('canvas')?.width > 0, undefined, 'host replay and sized canvas');
         await page.evaluate(() => {
           for (const [name, value] of Object.entries({
             'editor-background': '#1e1e1e', foreground: '#cccccc',
@@ -81,7 +90,8 @@ async function main() {
         assert.equal(fixture.furniture[2].color, undefined);
         assert.deepEqual(fixture.deskSprite && [fixture.deskSprite.width, fixture.deskSprite.height], [48, 32]);
         record.fixture = 'Compiled provider served synthetic layout with manifest desk, overlapping PC, and colorless chair';
-        record.cacheSweep = {
+        record.cacheSweepStaticAccounting = {
+          evidence: 'Accounting by construction, not a browser cache measurement; cache clearing on slider and eyedrop paths is covered by hook tests.',
           hueValues: 360,
           cumulativeFurnitureVariantsGenerated: 360,
           maximumRetainedFurnitureColorEntries: 1,
@@ -93,11 +103,11 @@ async function main() {
         const editor = page.getByRole('region', { name: 'Layout editor' });
         await page.getByRole('button', { name: 'Edit Layout', exact: true }).click();
         await editor.waitFor();
-        await page.waitForFunction(() => {
+        await waitForReadiness(page, () => {
           const c = document.querySelector('canvas');
           const ctx = c?.getContext('2d');
           return !!ctx && c.width > 0 && c.height > 0;
-        });
+        }, undefined, 'sized canvas with 2D context');
 
         const geometry = await page.evaluate(({ cols, rows }) => {
           const c = document.querySelector('canvas');
@@ -168,8 +178,9 @@ async function main() {
             element.dispatchEvent(new Event('input', { bubbles: true }));
           }, value);
           await hue.dispatchEvent('pointerup', { bubbles: true });
-          await page.waitForFunction((expected) =>
-            document.querySelector('[aria-label="Selected Furniture Color hue"]')?.value === String(expected), value);
+          await waitForReadiness(page, (expected) =>
+            document.querySelector('[aria-label="Selected Furniture Color hue"]')?.value === String(expected),
+          value, `selected furniture hue ${value}`);
         };
         await editColor(120);
         await page.waitForTimeout(100);
@@ -193,8 +204,9 @@ async function main() {
 
         await page.getByTestId('furniture-color-pick-selected').click();
         await clickTile(7, 2);
-        await page.waitForFunction(() =>
-          document.querySelector('[aria-label="Selected Furniture Color hue"]')?.value === '205');
+        await waitForReadiness(page, () =>
+          document.querySelector('[aria-label="Selected Furniture Color hue"]')?.value === '205',
+        undefined, 'eyedropped furniture hue 205');
         const copiedDesk = await sample(6, 2, 3, 2);
         const eyedropChangedPixels = changedPixelCount(copiedDesk, beforeDesk);
         assert.ok(eyedropChangedPixels > 0, 'surface-item eyedrop must render copied furniture color on the desk');
