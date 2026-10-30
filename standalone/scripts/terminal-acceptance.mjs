@@ -394,12 +394,24 @@ try {
     const swipe = async (direction) => {
       const startX = direction === 'left' ? 385 : 5;
       const endX = direction === 'left' ? 160 : 230;
+      const currentPage = mobileTab.locator(direction === 'left' ? '.observer-office-page' : '.observer-terminal-page');
+      await until(async () => {
+        const bounds = await currentPage.boundingBox();
+        return bounds && Math.abs(bounds.x) <= 1;
+      }, 'current page settles before the next edge swipe');
+      const surface = direction === 'left' ? canvas : mobileTab.locator('.owned-terminal > header');
+      const bounds = await surface.boundingBox();
+      assert.ok(bounds, 'edge swipe requires a visible non-control surface');
+      const y = bounds.y + bounds.height / 2;
+      assert.equal(await mobileTab.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest(
+        'button, input, select, textarea, a, [role="button"], [contenteditable="true"], [data-mobile-gesture-optout]',
+      ), { x: startX, y }), false, 'edge navigation must not start on an opted-out terminal or control');
       await cdp.send('Input.dispatchTouchEvent', {
-        type: 'touchStart', touchPoints: [{ x: startX, y: 430, id: 1, radiusX: 2, radiusY: 2, force: 1 }],
+        type: 'touchStart', touchPoints: [{ x: startX, y, id: 1, radiusX: 2, radiusY: 2, force: 1 }],
       });
       for (const x of direction === 'left' ? [330, 260, endX] : [70, 145, endX]) {
         await cdp.send('Input.dispatchTouchEvent', {
-          type: 'touchMove', touchPoints: [{ x, y: 430, id: 1, radiusX: 2, radiusY: 2, force: 1 }],
+          type: 'touchMove', touchPoints: [{ x, y, id: 1, radiusX: 2, radiusY: 2, force: 1 }],
         });
       }
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });

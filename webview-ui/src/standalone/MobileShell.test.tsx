@@ -170,6 +170,49 @@ describe('standalone mobile shell', () => {
     expect(stage.dataset.mobileView).toBe('office');
   });
 
+  it('leaves controls, terminal selection surfaces and vertical scrolling out of edge navigation', async () => {
+    await act(async () => root.render(<MobileShell office={<div>
+      <button data-testid="control">Control</button>
+      <textarea data-testid="selection" data-mobile-gesture-optout />
+      <div data-testid="scroll">Scroll surface</div>
+    </div>} />));
+    const stage = host.querySelector<HTMLElement>('.observer-mobile-stage')!;
+    vi.spyOn(stage, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 844, width: 390, height: 844, toJSON: () => ({}),
+    } as DOMRect);
+    for (const id of ['control', 'selection', 'scroll']) {
+      const target = host.querySelector(`[data-testid="${id}"]`)!;
+      const start = touch(1, 385, 200);
+      const end = touch(1, id === 'scroll' ? 380 : 160, id === 'scroll' ? 300 : 200);
+      await act(async () => {
+        dispatchTouch(target, 'touchstart', [start], [start], 10);
+        dispatchTouch(target, 'touchmove', [end], [end], 30);
+        dispatchTouch(target, 'touchend', [end], [], 50);
+      });
+      expect(stage.dataset.mobileView).toBe('office');
+      expect(host.querySelector<HTMLElement>('.observer-pages-track')?.style.transform).toBe('translateX(0)');
+    }
+  });
+
+  it('settles a genuine cancelled edge gesture without changing pages', async () => {
+    await act(async () => root.render(<MobileShell office={<div data-testid="office">office</div>} />));
+    const stage = host.querySelector<HTMLElement>('.observer-mobile-stage')!;
+    vi.spyOn(stage, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 844, width: 390, height: 844, toJSON: () => ({}),
+    } as DOMRect);
+    const target = host.querySelector('[data-testid="office"]')!;
+    const start = touch(1, 385, 200);
+    const end = touch(1, 160, 200);
+    await act(async () => {
+      dispatchTouch(target, 'touchstart', [start], [start], 10);
+      dispatchTouch(target, 'touchmove', [end], [end], 30);
+      dispatchTouch(target, 'touchcancel', [end], [], 50);
+      dispatchTouch(target, 'touchend', [end], [], 60);
+    });
+    expect(stage.dataset.mobileView).toBe('office');
+    expect(host.querySelector<HTMLElement>('.observer-pages-track')?.style.transform).toBe('translateX(0)');
+  });
+
   it('resets the page track on desktop and restores it when returning to mobile', async () => {
     mobileMatches = false;
     Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 0 });
