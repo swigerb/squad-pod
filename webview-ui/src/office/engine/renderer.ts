@@ -51,6 +51,7 @@ import type { CharacterAnimation } from '../sprites/characterSheetRenderer.js';
 import { getPetSpriteData } from './petEntity.js';
 import { getPetSprites } from '../sprites/petSpriteData.js';
 import { PET_HEART_BUBBLE } from '../sprites/petBubble.js';
+import { getSurfaceOwners } from '../layout/furnitureSurfaces.js';
 
 interface Drawable {
   sprite: SpriteData;
@@ -65,6 +66,7 @@ interface Drawable {
   /** Furniture footprint in pixels at current zoom (for tileset rendering). */
   furnitureDestW?: number;
   furnitureDestH?: number;
+  surfaceRiders?: Drawable[];
   /** Character reference for PNG sprite sheet rendering. */
   character?: Character;
   animation?: CharacterAnimation;
@@ -166,18 +168,29 @@ export function renderScene(
 ): void {
   const drawables: Drawable[] = [];
   const tilesetReady = areTilesetAssetsReady();
+  const furnitureDrawables = new Map<string, Drawable>();
 
   for (const furn of furniture) {
     const sprite = furn.sprite;
     const x = offsetX + furn.col * TILE_SIZE * zoom;
     const y = offsetY + furn.row * TILE_SIZE * zoom;
     const bottomY = y + sprite.length * zoom;
-    drawables.push({
+    const drawable: Drawable = {
       sprite, x, y, z: bottomY, type: 'furniture',
       furnitureType: furn.type,
       furnitureDestW: sprite[0].length * zoom,
       furnitureDestH: sprite.length * zoom,
-    });
+    };
+    furnitureDrawables.set(furn.uid, drawable);
+  }
+
+  // A tabletop and its riders share world depth, not sprite-bottom depth.
+  // Keep the composite in the ordinary scene sort so foreground actors still occlude it.
+  const owners = getSurfaceOwners(furniture);
+  for (const [uid, drawable] of furnitureDrawables) {
+    const surface = furnitureDrawables.get(owners.get(uid) ?? '');
+    if (surface) (surface.surfaceRiders ??= []).push(drawable);
+    else drawables.push(drawable);
   }
 
   for (const ch of characters) {
@@ -227,7 +240,8 @@ export function renderScene(
 
   drawables.sort((a, b) => a.z - b.z);
 
-  for (const drawable of drawables) {
+  for (const drawable of drawables.flatMap((item) =>
+    [item, ...(item.surfaceRiders?.sort((a, b) => a.z - b.z) ?? [])])) {
     if (drawable.type === 'character') {
       const ch = drawable.character;
       const pngDrawn = ch !== undefined && drawCharacterFromSheet(

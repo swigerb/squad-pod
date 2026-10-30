@@ -3,6 +3,7 @@ import { EditorState, UndoEntry } from './editorState.js';
 import { UNDO_STACK_MAX_SIZE } from '../../constants.js';
 import { getAssetProblem, getCatalogEntry, getRotatedType, getOnStateType, isRotatable } from '../layout/furnitureCatalog.js';
 import { getFurnitureFootprint } from '../layout/layoutManager.js';
+import { getSurfaceOwners } from '../layout/furnitureSurfaces.js';
 import { isValidCarpetTile } from '../../../../src/carpetValidation.js';
 
 function inGrid(layout: OfficeLayout, col: number, row: number): boolean {
@@ -46,21 +47,10 @@ function overlapArea(a: PlacedFurniture, b: PlacedFurniture): number {
 // Ownership is geometric, so existing saved offices need no group-ID migration.
 // A rider straddling desks belongs to the largest overlap, then layout order.
 export function getSurfaceRiders(layout: OfficeLayout, uid: string): PlacedFurniture[] {
-  const desks = layout.furniture.filter((f) => getCatalogEntry(f.type)?.isDesk);
-  if (!desks.some((f) => f.uid === uid)) return [];
-  return layout.furniture.filter((item) => {
-    if (!getCatalogEntry(item.type)?.canPlaceOnSurfaces) return false;
-    let owner: string | null = null;
-    let area = 0;
-    for (const desk of desks) {
-      const overlap = overlapArea(item, desk);
-      if (overlap > area) {
-        area = overlap;
-        owner = desk.uid;
-      }
-    }
-    return owner === uid;
-  });
+  const owners = getSurfaceOwners(layout.furniture.map((item) => ({
+    ...item, ...(getFurnitureFootprint(item) ?? { width: 0, height: 0 }),
+  })));
+  return layout.furniture.filter((item) => owners.get(item.uid) === uid);
 }
 
 export interface FurnitureTransformPlan {
