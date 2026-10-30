@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { OfficeState } from './officeState.js';
+import { updateCharacter } from './characters.js';
 import { TileType, CharacterState } from '../types.js';
 import type { OfficeLayout } from '../types.js';
 import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
@@ -408,6 +409,55 @@ describe('OfficeState', () => {
 
       expect(character.active).toBe(true);
       expect(character.state).toBe(CharacterState.TYPE);
+    });
+
+    it('keeps a walking character in motion and redirects it to its assigned seat on activation', () => {
+      officeState.addAgent('homer-simpson', 'Homer Simpson', 'Lead');
+      const character = officeState.characters.get('homer-simpson')!;
+      character.col = 3;
+      character.row = 1;
+      character.x = 56;
+      character.y = 24;
+      character.path = [{ col: 3, row: 2 }, { col: 3, row: 3 }];
+      character.moveProgress = 0.5;
+      character.state = CharacterState.WALK;
+
+      officeState.setAgentActive('homer-simpson', true);
+      expect(character.state).toBe(CharacterState.WALK);
+      expect(character.moveProgress).toBe(0.5);
+
+      updateCharacter(
+        character, 0, officeState.walkableTiles, officeState.seats,
+        officeState.tileMap, officeState.blockedTiles,
+      );
+
+      expect(character.state).toBe(CharacterState.WALK);
+      expect(character.path[0]).toEqual({ col: 3, row: 2 });
+      expect(character.path.at(-1)).toEqual({ col: 2, row: 2 });
+      expect(officeState.walkableTiles.has('2,2')).toBe(false);
+    });
+
+    it('does not start seated work when an assigned seat is unreachable or missing', () => {
+      officeState.addAgent('homer-simpson', 'Homer Simpson', 'Lead');
+      const character = officeState.characters.get('homer-simpson')!;
+      character.col = 1;
+      character.row = 1;
+      character.x = 24;
+      character.y = 24;
+      officeState.tileMap[2][1] = TileType.WALL;
+      officeState.tileMap[2][3] = TileType.WALL;
+      officeState.tileMap[3][2] = TileType.WALL;
+      officeState.tileMap[1][2] = TileType.WALL;
+
+      officeState.setAgentActive('homer-simpson', true);
+      expect(character.state).toBe(CharacterState.IDLE);
+      expect(character.path).toEqual([]);
+
+      character.active = false;
+      character.seatId = 'missing-seat';
+      officeState.setAgentActive('homer-simpson', true);
+      expect(character.state).toBe(CharacterState.IDLE);
+      expect(character.path).toEqual([]);
     });
 
     it('sets agent inactive and changes state to IDLE', () => {

@@ -1,4 +1,4 @@
-import { CharacterState, Direction } from '../types.js';
+import { CharacterState, Direction, TILE_SIZE } from '../types.js';
 import type { OfficeLayout, Character, Seat, FurnitureInstance, Pet } from '../types.js';
 import { createCharacter } from './characters.js';
 import {
@@ -9,7 +9,7 @@ import {
   layoutToFurnitureInstances,
 } from '../layout/layoutManager.js';
 import { getWalkableTiles } from './pathfinding.js';
-import { findPath } from './pathfinding.js';
+import { findPath, findPathToSeat } from './pathfinding.js';
 import { createPet, getPetSpriteData, togglePetHeart } from './petEntity.js';
 import { getPetName, getPetSprites } from '../sprites/petSpriteData.js';
 import { FURNITURE_ANIM_INTERVAL_SEC, PET_HIT_HALF_WIDTH, PET_HIT_HEIGHT } from '../../constants.js';
@@ -291,7 +291,30 @@ export class OfficeState {
     }
     if (char.active === active) return;
     char.active = active;
-    char.state = active ? CharacterState.TYPE : CharacterState.IDLE;
+    if (!active) {
+      char.state = CharacterState.IDLE;
+    } else if (!char.seatId) {
+      char.state = CharacterState.TYPE;
+    } else {
+      const seat = this.seats.find((candidate) => candidate.id === char.seatId);
+      if (!seat) {
+        char.state = CharacterState.IDLE;
+        char.path = [];
+        char.moveProgress = 0;
+        char.x = char.col * TILE_SIZE + TILE_SIZE / 2;
+        char.y = char.row * TILE_SIZE + TILE_SIZE / 2;
+      } else if (char.state !== CharacterState.WALK) {
+        if (char.col === seat.col && char.row === seat.row && char.path.length === 0 && char.moveProgress === 0) {
+          char.state = CharacterState.TYPE;
+          char.direction = seat.direction;
+          char.frameIndex = 0;
+          char.frameTimer = 0;
+        } else {
+          char.state = CharacterState.IDLE;
+          this.sendToSeat(id);
+        }
+      }
+    }
     this.rebuildFurnitureInstances();
   }
 
@@ -379,7 +402,20 @@ export class OfficeState {
     if (!char || !char.seatId) return;
     const seat = this.seats.find(s => s.id === char.seatId);
     if (!seat) return;
-    this.walkToTile(agentId, seat.col, seat.row);
+    const path = findPathToSeat(char.col, char.row, seat.col, seat.row, this.tileMap, this.blockedTiles);
+    const routed = path.length > 0;
+    if (routed) {
+      char.path = path;
+      char.moveProgress = 0;
+      char.state = CharacterState.WALK;
+    }
+    if (!routed && char.active && (char.col !== seat.col || char.row !== seat.row)) {
+      char.state = CharacterState.IDLE;
+      char.path = [];
+      char.moveProgress = 0;
+      char.x = char.col * TILE_SIZE + TILE_SIZE / 2;
+      char.y = char.row * TILE_SIZE + TILE_SIZE / 2;
+    }
   }
 
   walkToTile(agentId: string, col: number, row: number): boolean {

@@ -17,7 +17,7 @@ import {
   SEAT_REST_MIN_SEC,
   SEAT_REST_MAX_SEC
 } from '../../constants.js';
-import { findPath } from './pathfinding.js';
+import { findPath, findPathToSeat } from './pathfinding.js';
 
 export function isReadingTool(tool: string | undefined): boolean {
   if (!tool) return false;
@@ -128,6 +128,24 @@ export function updateCharacter(
 
   switch (ch.state) {
     case CharacterState.TYPE: {
+      if (ch.active && ch.seatId) {
+        if (!mySeat) {
+          ch.state = CharacterState.IDLE;
+          ch.frameIndex = 0;
+          break;
+        }
+        if (ch.col !== mySeat.col || ch.row !== mySeat.row) {
+          const path = findPathToSeat(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
+          if (path.length > 0) {
+            startWalking(ch, path);
+          } else {
+            ch.state = CharacterState.IDLE;
+            ch.frameIndex = 0;
+          }
+          break;
+        }
+      }
+
       advanceAnimation(ch, dt, TYPE_FRAME_DURATION_SEC, 2);
 
       if (!ch.active) {
@@ -142,18 +160,22 @@ export function updateCharacter(
     }
 
     case CharacterState.IDLE: {
-      if (ch.active && mySeat) {
-        const atSeat = ch.col === mySeat.col && ch.row === mySeat.row;
-        if (!atSeat) {
-          const path = findPath(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
-          if (path.length > 0) {
-            startWalking(ch, path);
-          }
-        } else {
+      if (ch.active) {
+        if (!ch.seatId) {
           ch.state = CharacterState.TYPE;
-          ch.direction = mySeat.direction;
-          ch.frameIndex = 0;
-          ch.frameTimer = 0;
+        } else if (mySeat) {
+          const atSeat = ch.col === mySeat.col && ch.row === mySeat.row;
+          if (!atSeat) {
+            const path = findPathToSeat(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
+            if (path.length > 0) {
+              startWalking(ch, path);
+            }
+          } else {
+            ch.state = CharacterState.TYPE;
+            ch.direction = mySeat.direction;
+            ch.frameIndex = 0;
+            ch.frameTimer = 0;
+          }
         }
       } else {
         ch.wanderTimer -= dt;
@@ -226,7 +248,7 @@ export function updateCharacter(
               ch.wanderCount = 0;
               ch.wanderLimit = randomInt(WANDER_MOVES_BEFORE_REST_MIN, WANDER_MOVES_BEFORE_REST_MAX);
             } else {
-              const path = findPath(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
+              const path = findPathToSeat(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
               if (path.length > 0) {
                 startWalking(ch, path);
               } else {
@@ -247,7 +269,7 @@ export function updateCharacter(
         if (destCol !== mySeat.col || destRow !== mySeat.row) {
           const inFlightStep = ch.moveProgress > 0 ? ch.path[0] : undefined;
           const routeFrom = inFlightStep ?? { col: ch.col, row: ch.row };
-          const newPath = findPath(routeFrom.col, routeFrom.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
+          const newPath = findPathToSeat(routeFrom.col, routeFrom.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
           if (newPath.length > 0) {
             ch.path = inFlightStep ? [inFlightStep, ...newPath] : newPath;
           }
