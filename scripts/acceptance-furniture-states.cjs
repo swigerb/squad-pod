@@ -338,7 +338,7 @@ async function main() {
         file: officeFile,
         pattern: /^        return \{ \.\.\.item, type: frames\[this\.furnitureAnimFrame % frames\.length\] \};$/m,
         replacement: '        item.type = frames[this.furnitureAnimFrame % frames.length];\n        return item;',
-        killedBy: /turns on only for the facing geometry/,
+        killedBy: /reassigns occupied seats|updates independent workstations/,
       },
       {
         name: 'undo-without-pair',
