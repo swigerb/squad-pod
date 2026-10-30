@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react';
 
 /** Agent detail info received from the extension */
 export interface AgentDetailInfo {
@@ -35,6 +35,18 @@ function formatRelativeTime(timestamp: number): string {
 
 export function AgentCard({ detail, position, onClose, onViewCharter }: AgentCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [bounds, setBounds] = useState({ width: window.innerWidth, height: window.innerHeight, cardHeight: 0 });
+
+  useLayoutEffect(() => {
+    const measure = () => setBounds({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      cardHeight: cardRef.current?.getBoundingClientRect().height ?? 0,
+    });
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [detail, position]);
 
   const handleClickOutside = useCallback((e: MouseEvent) => {
     if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
@@ -64,22 +76,9 @@ export function AgentCard({ detail, position, onClose, onViewCharter }: AgentCar
   if (!detail || !position) return null;
 
   // Clamp position to viewport bounds
-  const maxWidth = 320;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const cardHeight = 400; // estimated max height
-  
-  let x = position.x;
-  let y = position.y;
-  
-  if (x + maxWidth > viewportWidth) {
-    x = viewportWidth - maxWidth - 10;
-  }
-  if (y + cardHeight > viewportHeight) {
-    y = viewportHeight - cardHeight - 10;
-  }
-  if (x < 10) x = 10;
-  if (y < 10) y = 10;
+  const maxWidth = Math.min(320, bounds.width - 20);
+  const x = Math.max(10, Math.min(position.x, bounds.width - maxWidth - 10));
+  const y = Math.max(10, Math.min(position.y, bounds.height - bounds.cardHeight - 10));
 
   const statusColor = 
     detail.status === 'active' ? '#4a9eff' :
@@ -89,11 +88,20 @@ export function AgentCard({ detail, position, onClose, onViewCharter }: AgentCar
   return (
     <div
       ref={cardRef}
+      role="dialog"
+      aria-label={`${detail.name} details`}
+      onKeyDown={(e) => {
+        if (e.key === ' ') e.stopPropagation();
+      }}
       style={{
         position: 'fixed',
         left: `${x}px`,
         top: `${y}px`,
-        maxWidth: `${maxWidth}px`,
+        width: `${maxWidth}px`,
+        boxSizing: 'border-box',
+        maxHeight: 'calc(100vh - 20px)',
+        overflowY: 'auto',
+        overflowWrap: 'anywhere',
         background: 'rgba(26, 26, 46, 0.95)',
         border: `2px solid ${statusColor}`,
         borderRadius: '8px',
@@ -108,6 +116,8 @@ export function AgentCard({ detail, position, onClose, onViewCharter }: AgentCar
     >
       {/* Close button */}
       <button
+        type="button"
+        aria-label="Close agent details"
         onClick={onClose}
         style={{
           position: 'absolute',

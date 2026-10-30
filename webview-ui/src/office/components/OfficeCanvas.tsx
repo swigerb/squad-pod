@@ -373,7 +373,7 @@ export function OfficeCanvas({
         }
         
         if (clickedAgentId) {
-          officeState.selectedAgentId = officeState.selectedAgentId === clickedAgentId ? null : clickedAgentId;
+          officeState.selectedAgentId = clickedAgentId;
         } else {
           officeState.selectedAgentId = null;
         }

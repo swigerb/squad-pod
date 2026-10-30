@@ -22,26 +22,59 @@ interface LabelPosition {
   isSelected: boolean;
 }
 
+interface LabelBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** Place measured overlays in stable lanes, without shortening their text. */
+export function placeOverlay(x: number, y: number, width: number, height: number,
+  viewportWidth: number, viewportHeight: number, occupied: LabelBox[]): LabelBox {
+  const left = width > 0 ? Math.max(4, Math.min(x - width / 2, viewportWidth - width - 4)) : x;
+  const top = height > 0 ? Math.max(4, Math.min(y, viewportHeight - height - 4)) : y;
+  const overlaps = (candidate: number) => occupied.some((box) =>
+    left < box.left + box.width + 4 && left + width + 4 > box.left
+    && candidate < box.top + box.height + 4 && candidate + height + 4 > box.top);
+  const candidates = [top, ...occupied.map((box) => box.top - height - 4).sort((a, b) => b - a),
+    ...occupied.map((box) => box.top + box.height + 4).sort((a, b) => a - b)];
+  const placed = candidates.find((candidate) => candidate >= 4
+    && candidate + height <= viewportHeight - 4 && !overlaps(candidate));
+  const box = { left, top: placed ?? top, width, height };
+  occupied.push(box);
+  return box;
+}
+
 export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLabelsProps) {
   const [labelPositions, setLabelPositions] = useState<LabelPosition[]>([]);
   const rafRef = useRef<number>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const updatePositions = () => {
       const positions: LabelPosition[] = [];
-      for (const [agentId, char] of officeState.characters) {
+      const occupied: LabelBox[] = [];
+      const container = containerRef.current;
+      const width = container?.clientWidth || window.innerWidth;
+      const height = container?.clientHeight || window.innerHeight;
+      for (const [agentId, char] of [...officeState.characters].sort(([a], [b]) => a.localeCompare(b))) {
         // Use char.x/y for smooth movement tracking
         const px = panRef.current!.x;
         const py = panRef.current!.y;
         const labelX = char.x * zoom + px;
         const characterTop = char.y * zoom + py - 20 * zoom;
         const labelY = characterTop - 14;
+        const label = [...(container?.querySelectorAll<HTMLElement>('[data-agent-label]') ?? [])]
+          .find((element) => element.dataset.agentLabel === agentId);
+        const box = placeOverlay(labelX, labelY, label?.offsetWidth ?? 0, label?.offsetHeight ?? 0,
+          width, height, occupied);
         positions.push({
           agentId,
           name: char.name || agentId,
           role: char.role || '',
-          labelX,
-          labelY,
+          labelX: box.left + box.width / 2,
+          labelY: box.top,
           toolX: labelX + 8 * zoom + 4,
           toolY: characterTop - 2,
           isActive: char.active,
@@ -49,6 +82,15 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
           bubbleType: char.bubbleState.type,
           isSelected: officeState.selectedAgentId === agentId,
         });
+      }
+      for (const pos of positions) {
+        if (!pos.isActive || !pos.tool) continue;
+        const bubble = [...(container?.querySelectorAll<HTMLElement>('[data-agent-tool-bubble]') ?? [])]
+          .find((element) => element.dataset.agentToolBubble === pos.agentId);
+        const box = placeOverlay(pos.toolX, pos.toolY, bubble?.offsetWidth ?? 0, bubble?.offsetHeight ?? 0,
+          width, height, occupied);
+        pos.toolX = box.left;
+        pos.toolY = box.top;
       }
       setLabelPositions(positions);
       rafRef.current = requestAnimationFrame(updatePositions);
@@ -60,7 +102,7 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
   }, [officeState, zoom, panRef]);
 
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 20 }}>
+    <div ref={containerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 20 }}>
       {labelPositions.map((pos) => {
         let dotColor = 'transparent';
         let dotClass = '';
@@ -81,7 +123,7 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
           <div key={pos.agentId}>
             {/* Tool bubble */}
             {pos.isActive && pos.tool && (
-              <div style={{
+              <div data-agent-tool-bubble={pos.agentId} style={{
                 position: 'absolute',
                 left: pos.toolX,
                 top: pos.toolY,
@@ -91,7 +133,8 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
                 fontWeight: 600,
                 padding: '2px 5px',
                 borderRadius: '4px',
-                whiteSpace: 'nowrap',
+                maxWidth: 'min(200px, calc(100vw - 8px))',
+                overflowWrap: 'anywhere',
                 pointerEvents: 'none',
               }}>
                 {pos.tool}
@@ -101,6 +144,10 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
             {/* Name label (clickable) */}
             <button
               type="button"
+              data-agent-label={pos.agentId}
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.key === 'Enter') e.stopPropagation();
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 if (e.detail === 0) {
@@ -129,6 +176,7 @@ export function AgentLabels({ officeState, zoom, panRef, onAgentClick }: AgentLa
                 background: 'transparent',
                 border: 0,
                 padding: 0,
+                maxWidth: 'calc(100vw - 8px)',
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
