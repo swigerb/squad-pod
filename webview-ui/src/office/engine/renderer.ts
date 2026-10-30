@@ -96,13 +96,13 @@ export function renderTileGrid(
     console.log('[renderer] First tile render snapshot', getAssetLoadSnapshot());
   }
 
-   if (tilesetReady && !_loggedPngReady) {
-     _loggedPngReady = true;
-     console.log('[renderer] ✅ Tileset PNG path ready — using metadata tiles', getAssetLoadSnapshot());
-   } else if (!tilesetReady && !_loggedTilesetWaiting) {
-     _loggedTilesetWaiting = true;
-     console.log('[renderer] ⏳ Tileset PNG path not ready yet — using fallback tiles', getAssetLoadSnapshot());
-   }
+  if (tilesetReady && !_loggedPngReady) {
+    _loggedPngReady = true;
+    console.log('[renderer] ✅ Tileset PNG path ready — metadata fallback available', getAssetLoadSnapshot());
+  } else if (!tilesetReady && !_loggedTilesetWaiting) {
+    _loggedTilesetWaiting = true;
+    console.log('[renderer] ⏳ Tileset PNG path not ready yet — using bundled/color fallbacks', getAssetLoadSnapshot());
+  }
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -114,14 +114,14 @@ export function renderTileGrid(
 
       // Prefer the bundled Pixel Agents floor/wall atlases over the generic metadata tiles.
       const hasBundledTileArt = tile === TileType.WALL ? hasWallSprites() : hasFloorSprites();
-      if (!hasBundledTileArt && tilesetReady && drawTilesetTile(ctx, tile, x, y, zoom)) {
-        continue;
-      }
-
-      // One-time diagnostic if PNG path is ready but drawTilesetTile returned false
-      if (tilesetReady && !_loggedPngFallback) {
-        _loggedPngFallback = true;
-        console.warn('[renderer] ⚠️ Tileset PNG path is ready but drawTilesetTile returned false for tile type', tile, getAssetLoadSnapshot());
+      if (!hasBundledTileArt && tilesetReady) {
+        if (drawTilesetTile(ctx, tile, x, y, zoom)) {
+          continue;
+        }
+        if (!_loggedPngFallback) {
+          _loggedPngFallback = true;
+          console.warn('[renderer] ⚠️ Tileset PNG path is ready but drawTilesetTile returned false for tile type', tile, getAssetLoadSnapshot());
+        }
       }
 
       // Fall back to colored rendering
