@@ -30,24 +30,35 @@ let telemetryCounter = 0;
 const liveRuns = new Set<string>();
 
 /** Live lifecycle owns status until completion or the session reader falls back. */
-export function setLiveAgentStatus(agentId: string, active: boolean, task: string | null, webview: vscode.Webview): void {
+export function setLiveAgentStatus(
+  agentId: string,
+  active: boolean,
+  task: string | null,
+  webview: vscode.Webview,
+  activityAt?: number,
+): void {
   if (!active) {liveRuns.delete(agentId);}
   const agent = agents.get(agentId);
   if (!agent) {return;}
   cancelActivityTimer(agentId);
   if (active) {
+    const alreadyLive = liveRuns.has(agentId);
+    const taskChanged = agent.currentTask !== task || agent.currentTaskSource !== (task ? 'live' : null);
     liveRuns.add(agentId);
     agent.status = 'active';
     agent.currentTask = task;
     agent.currentTaskSource = task ? 'live' : null;
-    agent.lastActiveAt = Date.now();
-    postToWebview(webview, { type: 'agentToolsClear', agentId });
+    recordLiveActivity(agent, activityAt);
+    if (!alreadyLive || taskChanged) {
+      postToWebview(webview, { type: 'agentToolsClear', agentId });
+    }
     postToWebview(webview, {
       type: 'agentStatus', agentId, status: 'active',
       currentTask: agent.currentTask, currentTaskSource: agent.currentTaskSource,
     });
   } else {
     liveRuns.delete(agentId);
+    recordLiveActivity(agent, activityAt);
     updateAgentStatus(agentId, 'idle', null, webview);
   }
 }
@@ -211,7 +222,6 @@ export function updateAgentStatus(
   const prevTask = agent.currentTask;
   const prevSource = agent.currentTaskSource;
   agent.status = status;
-  agent.lastActiveAt = Date.now();
   agent.currentTask = status !== 'idle' && task ? truncateTask(task) || null : null;
   agent.currentTaskSource = agent.currentTask ? 'file' : null;
   const statusChanged = prevStatus !== status;
@@ -369,8 +379,13 @@ function memberToState(
     status: 'idle',
     currentTask: null,
     currentTaskSource: null,
-    lastActiveAt: Date.now(),
+    lastActiveAt: null,
   };
+}
+
+function recordLiveActivity(agent: SquadAgentState, activityAt: number | undefined): void {
+  if (typeof activityAt !== 'number' || !Number.isFinite(activityAt) || activityAt <= 0) {return;}
+  agent.lastActiveAt = Math.max(agent.lastActiveAt ?? 0, activityAt);
 }
 
 function loadPersistedMeta(context: vscode.ExtensionContext): PersistedAgentMeta {

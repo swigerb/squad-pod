@@ -19,7 +19,7 @@ export interface AgentDetailInfo {
   responsibilities: string | null;
   boundaries: string | null;
   recentActivity: string[];
-  lastActiveAt: number;
+  lastActiveAt: number | null;
 }
 
 interface AgentCardProps {
@@ -32,7 +32,8 @@ interface AgentCardProps {
   readOnly?: boolean;
 }
 
-function formatRelativeTime(timestamp: number): string {
+export function formatRelativeTime(timestamp: number | null): string {
+  if (timestamp === null) return 'No attributable activity observed';
   if (!Number.isFinite(timestamp) || timestamp <= 0) return 'Activity time unavailable';
 
   const now = Date.now();
@@ -176,7 +177,7 @@ export function AgentCard({
             background: statusColor,
           }} />
           <span style={{ color: '#ccc' }}>{detail.status}</span>
-          <span style={{ marginLeft: 'auto', color: '#888' }}>
+          <span aria-label="Last attributable live activity" style={{ marginLeft: 'auto', color: '#888' }}>
             {formatRelativeTime(detail.lastActiveAt)}
           </span>
         </div>

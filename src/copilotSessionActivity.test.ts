@@ -102,6 +102,30 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(messages).toContainEqual({ type: 'agentContextUsage', agentId: 'ada', contextTokens: 800, maxContextTokens: 1000 });
   });
 
+  it('restores a live activity timestamp from its source event without advancing it on replay', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const file = session('dated', marked(
+      taskCall('run', 'Ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run' }, { agentId: 'internal-run', timestamp }),
+    ));
+    reader.start();
+    expect(lifecycle.mock.calls).toEqual([['ada', true, 'Inspect fixture', Date.parse(timestamp)]]);
+
+    reader.replay();
+    expect(lifecycle.mock.calls).toEqual([
+      ['ada', true, 'Inspect fixture', Date.parse(timestamp)],
+      ['ada', true, 'Inspect fixture', Date.parse(timestamp)],
+    ]);
+
+    fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'run' }, {
+      agentId: 'internal-run', timestamp: '2026-10-30T12:35:10.000Z',
+    }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', false, null, Date.parse('2026-10-30T12:35:10.000Z'),
+    ]);
+  });
+
   it('projects only authoritative model fields and excludes ephemeral or message content', () => {
     const timestamp = '2026-10-30T12:34:56.000Z';
     expect(parseLiveEvent(line('session.start', { selectedModel: 'selected-model' }, { timestamp })))

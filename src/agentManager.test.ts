@@ -95,6 +95,33 @@ describe('agentManager', () => {
       const homer = agents.get('homer');
       expect(homer?.status).toBe('idle');
       expect(homer?.currentTask).toBeNull();
+      expect(homer?.lastActiveAt).toBeNull();
+    });
+
+    it('does not turn file hints, idle bookkeeping, or roster reloads into activity timestamps', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('TestBot', 'testbot')]);
+      initializeAgents('/workspace', context, webview);
+      setLiveAgentStatus('testbot', true, 'Live task without a source timestamp', webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
+      setLiveAgentStatus('testbot', false, null, webview);
+      updateAgentStatus('testbot', 'active', 'File activity hint', webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
+
+      const observedAt = Date.parse('2026-10-30T12:34:56.000Z');
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview, observedAt);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(observedAt);
+
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview, observedAt);
+      updateAgentStatus('testbot', 'active', 'Later file hint', webview);
+      setLiveAgentStatus('testbot', false, null, webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(observedAt);
+
+      updateAgentStatus('testbot', 'idle', null, webview);
+      refreshAgents('/workspace', context, webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(observedAt);
+
+      initializeAgents('/workspace', context, webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
     });
 
     it('does not carry expired source hints into a newly initialized workspace with the same member', () => {

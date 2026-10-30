@@ -17,7 +17,7 @@ export interface SquadAgentState {
   status: 'active' | 'idle' | 'waiting'; // current activity
   currentTask: string | null;    // source-observed description, not necessarily live work
   currentTaskSource?: CurrentTaskSource | null;
-  lastActiveAt: number;          // timestamp of last activity
+  lastActiveAt: number | null;    // timestamp of the last attributable live activity
 }
 
 export interface SquadSession {
@@ -48,7 +48,7 @@ export interface AgentDetailInfo {
   responsibilities: string | null;
   boundaries: string | null;
   recentActivity: string[];        // last 3-5 log entries mentioning this agent
-  lastActiveAt: number;
+  lastActiveAt: number | null;
 }
 
 export interface PersistedAgentMeta {

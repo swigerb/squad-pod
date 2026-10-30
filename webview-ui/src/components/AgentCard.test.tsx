@@ -38,7 +38,7 @@ describe('AgentCard activity time', () => {
     host.remove();
   });
 
-  function render(lastActiveAt: number) {
+  function render(lastActiveAt: number | null) {
     act(() => root.render(
       <AgentCard
         detail={{ ...detail, lastActiveAt }}
@@ -54,6 +54,12 @@ describe('AgentCard activity time', () => {
 
     expect(card.textContent).toContain('Activity time unavailable');
     expect(card.textContent).not.toMatch(/\d+ hours? ago/);
+  });
+
+  it('explicitly represents an agent with no attributable live observation', () => {
+    const card = render(null);
+
+    expect(card.textContent).toContain('No attributable activity observed');
   });
 
   it('preserves relative-time formatting for a valid timestamp', () => {

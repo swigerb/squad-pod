@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useState } from 'react';
-import type { AgentDetailInfo } from './AgentCard.js';
+import { formatRelativeTime, type AgentDetailInfo } from './AgentCard.js';
 import type { CurrentTaskSource, LiveModelSnapshot, LiveSourceStatus } from '../../../src/types.js';
 import { liveModelUnavailableReason, RuntimeModelStatus } from './RuntimeModelStatus.js';
 
@@ -283,6 +283,7 @@ export function SquadInfoCard({
                     <div><strong>Observed status:</strong> {m.status === 'unknown' ? 'unavailable' : m.status}</div>
                     <div><strong>{m.currentTaskSource === 'file' ? 'File activity hint'
                       : m.currentTaskSource === 'live' ? 'Live task' : 'Observed activity'}:</strong> {m.currentTask || 'No current task observed.'}</div>
+                    {detail && <div><strong>Last attributable live activity:</strong> {formatRelativeTime(detail.lastActiveAt)}</div>}
                     {!availableAgentIds.includes(m.id) ? (
                       <div role="status">This agent is no longer available in the current workspace.</div>
                     ) : !detail ? (
