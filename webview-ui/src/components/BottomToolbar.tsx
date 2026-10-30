@@ -3,6 +3,7 @@ import { useHostClient } from '../HostClientContext.js';
 interface BottomToolbarProps {
   readOnly?: boolean;
   nativeUnavailable?: boolean;
+  hideEditor?: boolean;
   isEditMode: boolean;
   onToggleEditMode: () => void;
   onOpenSquadInfo?: () => void;
@@ -13,7 +14,7 @@ interface BottomToolbarProps {
   telemetryCount: number;
 }
 
-export function BottomToolbar({ readOnly = false, nativeUnavailable = false, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, onOpenSettings, isTelemetryOpen, onToggleTelemetry, telemetryCount }: BottomToolbarProps) {
+export function BottomToolbar({ readOnly = false, nativeUnavailable = false, hideEditor = false, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, onOpenSettings, isTelemetryOpen, onToggleTelemetry, telemetryCount }: BottomToolbarProps) {
   const client = useHostClient();
 
   const handleSquadInfo = () => {
@@ -98,7 +99,7 @@ export function BottomToolbar({ readOnly = false, nativeUnavailable = false, isE
             </span>
           )}
         </button>
-        <button
+        {!hideEditor && <button
           disabled={readOnly}
           title={readOnly ? 'Layout and appearance changes are disabled in the read-only observer.' : undefined}
           onClick={onToggleEditMode}
@@ -114,7 +115,7 @@ export function BottomToolbar({ readOnly = false, nativeUnavailable = false, isE
           }}
         >
           {isEditMode ? 'Exit Layout Editor' : 'Edit Layout'}
-        </button>
+        </button>}
         <button
           disabled={readOnly || nativeUnavailable}
           title={readOnly || nativeUnavailable ? 'Only the explicitly selected project is available. Directory management is unavailable.' : undefined}

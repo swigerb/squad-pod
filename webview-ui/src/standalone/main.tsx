@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from '../App.js';
 import { createBrowserClient, type BrowserHostClient } from './browserClient.js';
-import { OwnedTerminalPanel } from './OwnedTerminalPanel.js';
+import { MobileShell } from './MobileShell.js';
 import type { PreferenceMutation } from '../../../standalone/src/officePreferences.js';
 import './standalone.css';
 
@@ -12,7 +12,11 @@ function Observer() {
   const [pending, setPending] = useState(false);
   const [control, setControl] = useState(false);
   const [preferenceDraft, setPreferenceDraft] = useState<PreferenceMutation | null>(null);
+  const [keyboardClamp, setKeyboardClamp] = useState<number | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const onKeyboardViewport = useCallback((viewport: { clampHeight: number | null }) => {
+    setKeyboardClamp(viewport.clampHeight);
+  }, []);
   useEffect(() => () => client?.dispose(), [client]);
 
   async function authenticate(event: FormEvent) {
@@ -42,7 +46,19 @@ function Observer() {
     } finally { setPending(false); }
   }
 
-  return <div className="observer-shell">
+  const office = client
+    ? <main><App key={control ? 'control' : 'observer'} client={client} readOnly={!control} standalone /></main>
+    : <form onSubmit={event => void authenticate(event)}>
+      <h1>Authenticate this viewer</h1>
+      <label htmlFor="credential">Runtime credential from the observer console</label>
+      <input ref={input} id="credential" type="password" autoComplete="off" maxLength={256} required />
+      <label><input type="checkbox" checked={control} disabled={pending} onChange={event => setControl(event.target.checked)} />Use separate office-control authority (requires server --office-control opt-in)</label>
+      <button disabled={pending} type="submit">{pending ? 'Authenticating...' : control ? 'Connect office control' : 'Connect read-only office'}</button>
+      <p>Credentials stay in memory, not URLs or browser storage. Type <code>rotate</code> in the server console to revoke viewers and get a new credential. A server restart also revokes all credentials.</p>
+    </form>;
+  return <div className="observer-shell" style={keyboardClamp === null ? undefined : {
+    height: `${keyboardClamp}px`, minHeight: 0,
+  }}>
     <header>
       <strong>Squad Pod observer</strong>
       <span role="status">{status}</span>
@@ -61,15 +77,7 @@ function Observer() {
       }}>Export preference draft</button>
       <button onClick={() => client.discardPreferenceDraft()}>Discard preference draft</button>
     </details>}
-    {client ? <main><App key={control ? 'control' : 'observer'} client={client} readOnly={!control} standalone /></main> : <form onSubmit={event => void authenticate(event)}>
-      <h1>Authenticate this viewer</h1>
-      <label htmlFor="credential">Runtime credential from the observer console</label>
-      <input ref={input} id="credential" type="password" autoComplete="off" maxLength={256} required />
-      <label><input type="checkbox" checked={control} disabled={pending} onChange={event => setControl(event.target.checked)} />Use separate office-control authority (requires server --office-control opt-in)</label>
-      <button disabled={pending} type="submit">{pending ? 'Authenticating...' : control ? 'Connect office control' : 'Connect read-only office'}</button>
-      <p>Credentials stay in memory, not URLs or browser storage. Type <code>rotate</code> in the server console to revoke viewers and get a new credential. A server restart also revokes all credentials.</p>
-    </form>}
-    <OwnedTerminalPanel />
+    <MobileShell office={office} onKeyboardViewport={onKeyboardViewport} />
   </div>;
 }
 

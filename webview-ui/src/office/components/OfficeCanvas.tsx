@@ -10,6 +10,7 @@ import { getCatalogEntry } from '../layout/furnitureCatalog.js';
 import { startGameLoop } from '../engine/gameLoop.js';
 import { renderFrame } from '../engine/renderer.js';
 import { clampPanOffset, zoomPanAroundAnchor } from '../engine/viewport.js';
+import { officePanStep, pinchZoom, type OfficePanAnchor, type Point } from '../../mobile/touchDecisions.js';
 import {
   updateCharacter,
 } from '../engine/characters.js';
@@ -47,6 +48,8 @@ interface OfficeCanvasProps {
   showAreas?: boolean;
   panRef: React.RefObject<{ x: number; y: number }>;
   onDeskClick?: (agentId: string, screenX: number, screenY: number) => void;
+  touchGestures?: boolean;
+  onManualPan?: () => void;
 }
 
 export function getCharacterHitBounds(
@@ -79,6 +82,8 @@ export function OfficeCanvas({
   showAreas = false,
   panRef,
   onDeskClick,
+  touchGestures = false,
+  onManualPan,
 }: OfficeCanvasProps) {
   const client = useHostClient();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -94,7 +99,6 @@ export function OfficeCanvas({
   const gestureOpenRef = useRef(false);
   const hasCenteredRef = useRef(false);
   const frameCountRef = useRef(0);
-
   const screenToWorld = useCallback(
     (screenX: number, screenY: number): { col: number; row: number } => {
       const worldX = (screenX - panRef.current!.x) / zoom;
@@ -117,6 +121,8 @@ export function OfficeCanvas({
     };
     Object.assign(panRef.current!, clampPanOffset(panRef.current!, rect, map, PAN_MARGIN_FRACTION));
   }, [officeState.layout.cols, officeState.layout.rows, zoom, panRef]);
+  const touchOptions = useRef({ zoom, onZoomChange, panRef, clampPan, onManualPan });
+  touchOptions.current = { zoom, onZoomChange, panRef, clampPan, onManualPan };
 
   // Zoom from any source (buttons, wheel) keeps the world point under the
   // anchor fixed, then re-clamps against the new map size. Runs before the
@@ -564,6 +570,96 @@ export function OfficeCanvas({
     };
   }, [officeState]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !touchGestures) return;
+    type TouchMode = 'idle' | 'pending' | 'pan' | 'pinch';
+    let mode: TouchMode = 'idle';
+    let anchor: OfficePanAnchor | null = null;
+    let pinchStartDistance = 0;
+    let pinchStartZoom = 1;
+    let pinchLastMidpoint: Point | null = null;
+    const point = (touch: Touch): Point => ({ x: touch.clientX, y: touch.clientY });
+    const midpoint = (a: Touch, b: Touch): Point => ({
+      x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2,
+    });
+    const distance = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const reset = () => { mode = 'idle'; anchor = null; };
+    const onStart = (event: TouchEvent) => {
+      if (event.touches.length === 1) {
+        mode = 'pending';
+        anchor = { point: point(event.touches[0]), pan: { ...touchOptions.current.panRef.current! }, panned: false };
+      } else if (event.touches.length === 2) {
+        event.preventDefault();
+        mode = 'pinch';
+        anchor = { point: midpoint(event.touches[0], event.touches[1]),
+          pan: { ...touchOptions.current.panRef.current! }, panned: false };
+        pinchLastMidpoint = anchor.point;
+        pinchStartDistance = distance(event.touches[0], event.touches[1]);
+        pinchStartZoom = touchOptions.current.zoom;
+      } else if (event.touches.length > 2) reset();
+    };
+    const onMove = (event: TouchEvent) => {
+      const current = touchOptions.current;
+      if (!anchor || mode === 'idle') return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      if (mode === 'pinch' && event.touches.length >= 2) {
+        event.preventDefault();
+        const mid = midpoint(event.touches[0], event.touches[1]);
+        const step = officePanStep(anchor, mid, dpr);
+        anchor = step.anchor;
+        if (step.breakFollow) current.onManualPan?.();
+        if (pinchLastMidpoint) {
+          current.panRef.current!.x += (mid.x - pinchLastMidpoint.x) * dpr;
+          current.panRef.current!.y += (mid.y - pinchLastMidpoint.y) * dpr;
+        }
+        pinchLastMidpoint = mid;
+        const nextZoom = pinchZoom(pinchStartDistance, distance(event.touches[0], event.touches[1]), pinchStartZoom);
+        if (nextZoom !== current.zoom) {
+          zoomAnchorRef.current = { zoom: nextZoom, x: mid.x - rect.left, y: mid.y - rect.top };
+          current.onZoomChange?.(nextZoom);
+        } else current.clampPan();
+        return;
+      }
+      if (event.touches.length !== 1) return;
+      const finger = point(event.touches[0]);
+      if (mode === 'pending') {
+        const dx = finger.x - anchor.point.x;
+        const dy = finger.y - anchor.point.y;
+        if (Math.hypot(dx, dy) <= 10) return;
+        mode = 'pan';
+      }
+      if (mode === 'pan') {
+        event.preventDefault();
+        const step = officePanStep(anchor, finger, dpr);
+        anchor = step.anchor;
+        if (step.breakFollow) current.onManualPan?.();
+        current.panRef.current!.x = step.pan.x;
+        current.panRef.current!.y = step.pan.y;
+        current.clampPan();
+      }
+    };
+    const onEnd = (event: TouchEvent) => {
+      if (event.touches.length === 1 && mode === 'pinch') {
+        mode = 'pan';
+        anchor = { point: point(event.touches[0]), pan: { ...touchOptions.current.panRef.current! }, panned: false };
+        pinchLastMidpoint = null;
+      } else if (!event.touches.length) reset();
+    };
+    const onCancel = () => reset();
+    canvas.addEventListener('touchstart', onStart, { passive: false });
+    canvas.addEventListener('touchmove', onMove, { passive: false });
+    canvas.addEventListener('touchend', onEnd, { passive: false });
+    canvas.addEventListener('touchcancel', onCancel);
+    return () => {
+      canvas.removeEventListener('touchstart', onStart);
+      canvas.removeEventListener('touchmove', onMove);
+      canvas.removeEventListener('touchend', onEnd);
+      canvas.removeEventListener('touchcancel', onCancel);
+    };
+  }, [touchGestures]);
+
   return (
     <div
       ref={containerRef}
@@ -582,7 +678,7 @@ export function OfficeCanvas({
           if (isEditMode && (editorState.tool === EditTool.CARPET_PAINT || editorState.tool === EditTool.AREA_PAINT)) e.preventDefault();
         }}
         onWheel={handleWheel}
-        style={{ display: 'block' }}
+        style={{ display: 'block', touchAction: touchGestures ? 'none' : undefined }}
       />
       {isEditMode && editorState.tool === EditTool.SELECT && (
         <div style={{ position: 'absolute', right: 12, bottom: 60, color: '#ccc', background: '#252526', padding: 6, pointerEvents: 'none' }}>

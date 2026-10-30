@@ -92,6 +92,11 @@ it('reports explicit no-terminal mode, rejects browser launch arguments and obse
     ws.send(JSON.stringify(command));
     expect(JSON.parse(String((await reply)[0]))).toMatchObject({ type: 'error' });
   }
+  const launchResult = once(ws, 'message');
+  ws.send(JSON.stringify({ version: 1, type: 'launch', requestId: 'viewer-a-1' }));
+  expect(JSON.parse(String((await launchResult)[0]))).toMatchObject({
+    type: 'launchResult', requestId: 'viewer-a-1', result: { ok: false, message: expect.stringContaining('disabled') },
+  });
   const officeCookie = (await auth(false, server.token)).cookie;
   const office = socket(origin, 'office', officeCookie);
   await once(office, 'open');

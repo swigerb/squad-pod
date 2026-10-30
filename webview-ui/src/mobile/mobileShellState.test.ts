@@ -19,14 +19,15 @@ const launchedAccess: MobileTerminalAccess = {
 describe('mobile navigation without process lifecycle side effects', () => {
   it('starts on office with live runs and opens only an explicitly acknowledged launch', () => {
     const initial = reduceMobileShell(initialMobileShellState, { type: 'runsChanged' }, access);
-    expect(initial.state).toEqual(initialMobileShellState);
-    expect(initial.effects).toEqual([]);
+    expect(initial.state).toEqual({ ...initialMobileShellState, selectedRunId: first });
+    expect(initial.effects).toEqual([{ type: 'select', runId: first }]);
     const requested = reduceMobileShell(initial.state, launch, access);
     expect(requested.effects).toEqual([launch]);
     expect(requested.state.view).toBe('office');
     expect(reduceMobileShell(requested.state, launch, access).effects).toEqual([]);
     const unchanged = reduceMobileShell(requested.state, { type: 'runsChanged' }, access);
     expect(unchanged.state.pendingLaunch).toEqual({ requestId: launch.requestId, acknowledgedRunId: null });
+    expect(unchanged.effects).toEqual([]);
     const opened = reduceMobileShell(unchanged.state, {
       type: 'launchResult', requestId: launch.requestId, result: { ok: true, runId: second },
     }, launchedAccess);
@@ -35,9 +36,9 @@ describe('mobile navigation without process lifecycle side effects', () => {
     });
     expect(opened.effects).toEqual([{ type: 'select', runId: second }]);
   });
-  it('keeps card focus, repeat tap, toggle and swipe navigation on one selected owned run', () => {
+  it('opens the selected owned run from its card and keeps toggle navigation synchronized', () => {
     const focused = reduceMobileShell(initialMobileShellState, { type: 'card', card }, access);
-    expect(focused.state.view).toBe('office');
+    expect(focused.state.view).toBe('terminal');
     expect(focused.effects).toEqual([{ type: 'select', runId: first }]);
     const opened = reduceMobileShell(focused.state, { type: 'card', card }, access);
     expect(opened.state.view).toBe('terminal');
@@ -64,11 +65,13 @@ describe('mobile navigation without process lifecycle side effects', () => {
     const pending = reduceMobileShell(initialMobileShellState, launch, access).state;
     for (const event of [
       { type: 'disconnect' } as const,
-      { type: 'launchResult', requestId: launch.requestId, result: { ok: false } } as const,
+      { type: 'launchResult', requestId: launch.requestId, result: { ok: false, message: 'refused' } } as const,
     ]) {
       const cancelled = reduceMobileShell(pending, event, access);
       expect(cancelled.state.pendingLaunch).toBeNull();
-      expect(cancelled.effects).toEqual([]);
+      expect(cancelled.effects).toEqual(event.type === 'disconnect' ? [] : [
+        { type: 'launchUnavailable', message: 'Launch failed: refused' },
+      ]);
     }
   });
   it.each(['authenticated', 'connected', 'available'] as const)('blocks launch without %s', key => {
@@ -153,7 +156,8 @@ describe('mobile navigation without process lifecycle side effects', () => {
     }]);
     const retry = { type: 'launch', requestId: 'viewer-a-request-2' } as const;
     expect(reduceMobileShell(missing.state, retry, access).effects).toEqual([retry]);
-    expect(reduceMobileShell(missing.state, { type: 'runsChanged' }, launchedAccess).effects).toEqual([]);
+    expect(reduceMobileShell(missing.state, { type: 'runsChanged' }, launchedAccess).effects)
+      .toEqual([{ type: 'select', runId: first }]);
   });
   it('cleans a missing selected run while awaiting acknowledged inventory and on its cancellation', () => {
     const pending = reduceMobileShell({ ...initialMobileShellState, selectedRunId: first }, launch, access).state;
@@ -175,12 +179,16 @@ describe('mobile navigation without process lifecycle side effects', () => {
   it('failed launch cannot select an unrelated run, and stale results cannot complete a later intent', () => {
     const pending = reduceMobileShell(initialMobileShellState, launch, access).state;
     const failed = reduceMobileShell(pending, {
-      type: 'launchResult', requestId: launch.requestId, result: { ok: false },
+      type: 'launchResult', requestId: launch.requestId, result: { ok: false, message: 'fixture failure' },
     }, launchedAccess);
-    expect(failed).toEqual({ state: initialMobileShellState, effects: [] });
-    expect(reduceMobileShell(failed.state, { type: 'runsChanged' }, launchedAccess)).toEqual(failed);
+    expect(failed).toEqual({ state: initialMobileShellState,
+      effects: [{ type: 'launchUnavailable', message: 'Launch failed: fixture failure' }] });
+    const laterInventory = reduceMobileShell(failed.state, { type: 'runsChanged' }, launchedAccess);
+    expect(laterInventory.state.selectedRunId).toBe(first);
+    expect(laterInventory.state.view).toBe('office');
+    expect(laterInventory.effects).toEqual([{ type: 'select', runId: first }]);
     const retry = reduceMobileShell(failed.state, { type: 'launch', requestId: 'viewer-a-request-2' }, launchedAccess);
-    for (const result of [{ ok: true, runId: second }, { ok: false }] as const) {
+    for (const result of [{ ok: true, runId: second }, { ok: false, message: 'stale failure' }] as const) {
       expect(reduceMobileShell(retry.state, {
         type: 'launchResult', requestId: launch.requestId, result,
       }, launchedAccess)).toEqual({ state: retry.state, effects: [] });

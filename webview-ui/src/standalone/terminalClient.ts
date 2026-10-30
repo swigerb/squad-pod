@@ -12,6 +12,7 @@ export interface TerminalDisplay {
 export interface TerminalClientCallbacks {
   status(message: string): void;
   runs(runs: OwnedRun[], available: boolean, reason: string | null): void;
+  launchResult?(requestId: string, result: { ok: true; runId: RunId } | { ok: false; message: string }): void;
   resync(required: boolean): void;
   ready(ready: boolean): void;
   connected?(connected: boolean): void;
@@ -103,6 +104,8 @@ export function createTerminalClient(
           const event = decodeOwnedTerminalEvent(item.json);
           if (event.type === 'runs') {
             callbacks.runs(event.runs, event.available, event.reason);
+          } else if (event.type === 'launchResult') {
+            callbacks.launchResult?.(event.requestId, event.result);
           } else if (event.type === 'error') {
             callbacks.status(event.message);
           } else if (event.runId === selected && receiver) {
@@ -203,7 +206,10 @@ export function createTerminalClient(
       };
       reset();
     },
-    launch() { if (!blocked) send({ version: 1, type: 'launch' }); },
+    launch(requestId: string) {
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(requestId)) return false;
+      return !blocked && send({ version: 1, type: 'launch', requestId });
+    },
     input(data: string) {
       if (!ready || !selected || blocked) return;
       // Split by code point, never by UTF-16 code unit (paste can contain astral Unicode).

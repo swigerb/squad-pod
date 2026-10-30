@@ -44,6 +44,19 @@ export function safeTerminalUrl(text: string): string | null {
     return null;
   }
 }
+export interface TerminalLinkMatch { start: number; end: number; url: string }
+export function findSafeTerminalLinks(line: string): TerminalLinkMatch[] {
+  const matches: TerminalLinkMatch[] = [];
+  for (const match of line.matchAll(/https?:\/\/[^\s<>"'`]+/giu)) {
+    const raw = match[0];
+    const start = match.index ?? 0;
+    if (start > 0 && /[A-Za-z0-9+.-]/u.test(line[start - 1])) continue;
+    const candidate = raw.replace(/[.,!?;:)\]}]+$/u, '');
+    const url = safeTerminalUrl(candidate);
+    if (url) matches.push({ start, end: start + candidate.length, url });
+  }
+  return matches;
+}
 export function terminalTapAction(
   track: TapTrack, release: TouchSample, selectionActive: boolean, url: string | null,
 ): { type: 'none' } | { type: 'focus' } | { type: 'openUrl'; url: string } {

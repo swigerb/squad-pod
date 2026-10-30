@@ -167,6 +167,58 @@ it('lets a canvas click toggle the persisted pet heart interaction', () => {
   }
 });
 
+it('wires one-finger office panning and two-finger pinch without breaking follow on pinch alone', () => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600, toJSON: () => ({}),
+  });
+  const office = new OfficeState({
+    version: 2, cols: 50, rows: 40, tiles: Array(2000).fill(TileType.FLOOR_1), furniture: [],
+  });
+  const pan = { current: { x: 0, y: 0 } };
+  const zoom = vi.fn();
+  const manualPan = vi.fn();
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  const dispatch = (type: string, touches: Array<{ identifier: number; clientX: number; clientY: number }>) => {
+    const event = new Event(type, { bubbles: true, cancelable: true }) as TouchEvent;
+    Object.defineProperties(event, {
+      touches: { value: touches },
+      changedTouches: { value: touches },
+    });
+    act(() => host.querySelector('canvas')!.dispatchEvent(event));
+    return event;
+  };
+  try {
+    act(() => root.render(withClient(<OfficeCanvas officeState={office} editorState={new EditorState()}
+      isEditMode={false} editorTick={0} zoom={2} onZoomChange={zoom} panRef={pan}
+      touchGestures onManualPan={manualPan} />)));
+    const one = (identifier: number, x: number, y: number) => ({ identifier, clientX: x, clientY: y });
+    dispatch('touchstart', [one(1, 100, 100)]);
+    const panMove = dispatch('touchmove', [one(1, 125, 100)]);
+    expect(panMove.defaultPrevented).toBe(true);
+    expect(pan.current).toEqual({ x: 25, y: 0 });
+    expect(manualPan).toHaveBeenCalledOnce();
+    dispatch('touchend', []);
+
+    dispatch('touchstart', [one(2, 100, 200), one(3, 200, 200)]);
+    const pinch = dispatch('touchmove', [one(2, 50, 200), one(3, 250, 200)]);
+    expect(pinch.defaultPrevented).toBe(true);
+    expect(zoom).toHaveBeenCalledWith(4);
+    expect(manualPan).toHaveBeenCalledOnce();
+    dispatch('touchmove', [one(2, 70, 200), one(3, 270, 200)]);
+    expect(manualPan).toHaveBeenCalledTimes(2);
+    expect(pan.current).toEqual({ x: 45, y: 0 });
+    dispatch('touchend', [one(3, 270, 200)]);
+    dispatch('touchmove', [one(3, 285, 200)]);
+    expect(manualPan).toHaveBeenCalledTimes(3);
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+    vi.restoreAllMocks();
+  }
+});
+
 describe('real canvas gestures with editor actions and keyboard history', () => {
   let host: HTMLDivElement;
   let root: Root;

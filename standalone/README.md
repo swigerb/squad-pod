@@ -160,14 +160,28 @@ Sends/startup/cleanup have bounded timeouts. Nothing is silently
 dropped or retried as a process action.
 
 xterm renders escape sequences as terminal data, not HTML; output links cannot
-navigate the authenticated page. Input is disabled until replay finishes. The
+inject into or replace the authenticated page. Terminal output links open only
+validated HTTP(S) URLs in a separate tab; on touch they require a short,
+unmoved tap and never open during drag, long-press or active selection. Input is
+disabled until replay finishes. The
 cursor advances only after the terminal's write callback succeeds. An ordinary
 disconnect drains pending rendered output before reconnecting; reload authenticates
 again and rebuilds from cursor zero, not an orphaned persisted cursor. History
 eviction/slow-client overflow produces explicit resync. **Clear terminal and resync
 retained history** acknowledges that earlier output/terminal state is lost; it never
-quietly launches a replacement. Scrollback is capped at 2000 lines. Narrow controls
-are usable, but full mobile gestures/keyboard/clipboard parity is not claimed.
+quietly launches a replacement. Scrollback is capped at 2000 lines.
+
+On touch/mobile browsers the observer has synchronized office/terminal pages,
+owned-run cards, an explicit launch card and edge-swipe navigation. Selecting a run
+card opens that exact owned run; changing pages never launches or terminates a
+process. Office pinch zoom and one/two-finger panning remain available, and manual
+office panning is distinct from a pure pinch. The desktop layout editor is hidden on
+touch/mobile. The terminal includes a keyboard accessory, viewport/orientation
+resizing, explicit selection/copy/paste controls and a manual clipboard fallback.
+Clipboard reads happen only after the user presses Paste; plain HTTP and denied
+clipboard access use the manual fallback. Installed Edge touch emulation exercises
+these browser interactions against synthetic native PTYs; physical iOS/Android
+touch and software-keyboard behavior remains unverified.
 
 Without `--terminals`, without a supported executable, or without the optional native
 dependency, the office still works and terminal authentication shows an explicit

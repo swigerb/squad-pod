@@ -23,10 +23,11 @@ export type MobileShellEvent =
   | { type: 'card'; card: MobileCard }
   | { type: 'toggle' }
   | { type: 'showTerminal' }
+  | { type: 'clearSelection' }
   | { type: 'launch'; requestId: string }
   // The adapter must supply a result from this viewer's correlated command,
   // not synthesize success from the globally broadcast run inventory.
-  | { type: 'launchResult'; requestId: string; result: { ok: true; runId: RunId } | { ok: false } }
+  | { type: 'launchResult'; requestId: string; result: { ok: true; runId: RunId } | { ok: false; message: string } }
   | { type: 'runsChanged' }
   | { type: 'disconnect' };
 export interface MobileShellStep {
@@ -92,11 +93,17 @@ export function reduceMobileShell(
       };
     case 'launchResult':
       if (event.requestId !== state.pendingLaunch?.requestId) return { state, effects };
-      return acknowledge(event.result.ok
-        ? { requestId: event.requestId, acknowledgedRunId: event.result.runId } : null);
+      if (!event.result.ok) {
+        effects.push({ type: 'launchUnavailable', message: `Launch failed: ${event.result.message}` });
+        const selected = access.runs.some(run => run.runId === state.selectedRunId)
+          ? state.selectedRunId : undefined;
+        return { state: { ...state, selectedRunId: select(selected), pendingLaunch: null }, effects };
+      }
+      return acknowledge({ requestId: event.requestId, acknowledgedRunId: event.result.runId });
     case 'runsChanged': {
       if (state.pendingLaunch?.acknowledgedRunId) return acknowledge(state.pendingLaunch, true);
-      const selected = access.runs.some(run => run.runId === state.selectedRunId) ? state.selectedRunId : undefined;
+      const selected = access.runs.some(run => run.runId === state.selectedRunId)
+        ? state.selectedRunId : state.pendingLaunch ? undefined : access.runs[0]?.runId;
       return { state: { ...state, selectedRunId: select(selected),
         pendingLaunch: canLaunch ? state.pendingLaunch : null }, effects };
     }
@@ -105,9 +112,7 @@ export function reduceMobileShell(
     case 'card': {
       if (access.resync) return { state, effects };
       const runId = known(event.card);
-      const same = state.focused?.kind === 'owned' && state.focused.runId === runId;
-      const view = state.view === 'terminal' ? (runId ? 'terminal' : 'office')
-        : same && runId ? 'terminal' : 'office';
+      const view = event.card.kind === 'owned' && runId ? 'terminal' : 'office';
       return { state: { ...state, view, focused: event.card, selectedRunId: select(runId) }, effects };
     }
     case 'toggle':
@@ -115,5 +120,7 @@ export function reduceMobileShell(
       if (event.type === 'toggle' && state.view === 'terminal') return { state: { ...state, view: 'office' }, effects };
       return { state: { ...state, view: 'terminal',
         selectedRunId: state.focused && !access.resync ? select(known(state.focused)) : state.selectedRunId }, effects };
+    case 'clearSelection':
+      return { state: { ...state, selectedRunId: select(undefined) }, effects };
   }
 }

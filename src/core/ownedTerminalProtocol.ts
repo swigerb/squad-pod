@@ -4,15 +4,18 @@ import {
 } from './terminalFrames.js';
 
 export const OWNED_TERMINAL_LIMITS = { runs: 128, messageCharacters: 1024 } as const;
+export const OWNED_LAUNCH_REQUEST_ID = /^[A-Za-z0-9_-]{1,128}$/;
 export interface OwnedRun {
   runId: RunId;
   pid: number;
   state: 'running' | 'exited';
   exitCode: number | null;
 }
-export type OwnedTerminalCommand = TerminalCommand | { version: 1; type: 'list' | 'launch' };
+export type OwnedTerminalCommand = TerminalCommand | { version: 1; type: 'list' }
+  | { version: 1; type: 'launch'; requestId: string };
 export type OwnedTerminalEvent = TerminalEvent
   | { version: 1; type: 'runs'; available: boolean; reason: string | null; runs: OwnedRun[] }
+  | { version: 1; type: 'launchResult'; requestId: string; result: { ok: true; runId: RunId } | { ok: false; message: string } }
   | { version: 1; type: 'error'; message: string };
 
 function object(value: unknown): Record<string, unknown> {
@@ -37,8 +40,15 @@ function message(value: unknown): value is string {
 }
 export function decodeOwnedTerminalCommand(json: string): OwnedTerminalCommand {
   const value = parse(json);
-  if (value.type === 'list' || value.type === 'launch') {
+  if (value.type === 'list') {
     exact(value, ['version', 'type']);
+    return { version: 1, type: 'list' };
+  }
+  if (value.type === 'launch') {
+    exact(value, ['version', 'type', 'requestId']);
+    if (typeof value.requestId !== 'string' || !OWNED_LAUNCH_REQUEST_ID.test(value.requestId)) {
+      throw new Error('Invalid terminal launch request identity');
+    }
     return value as OwnedTerminalCommand;
   }
   return decodeTerminalCommand(json);
@@ -48,6 +58,22 @@ export function decodeOwnedTerminalEvent(json: string): OwnedTerminalEvent {
   if (value.type === 'error') {
     exact(value, ['version', 'type', 'message']);
     if (!message(value.message)) { throw new Error('Invalid terminal error'); }
+    return value as OwnedTerminalEvent;
+  }
+  if (value.type === 'launchResult') {
+    exact(value, ['version', 'type', 'requestId', 'result']);
+    const result = object(value.result);
+    if (typeof value.requestId !== 'string' || !OWNED_LAUNCH_REQUEST_ID.test(value.requestId)) {
+      throw new Error('Invalid terminal launch result identity');
+    }
+    if (result.ok === true) {
+      exact(result, ['ok', 'runId']);
+      if (typeof result.runId !== 'string') throw new Error('Invalid terminal launch result');
+      runId(result.runId);
+    } else if (result.ok === false) {
+      exact(result, ['ok', 'message']);
+      if (!message(result.message)) throw new Error('Invalid terminal launch failure');
+    } else throw new Error('Invalid terminal launch result');
     return value as OwnedTerminalEvent;
   }
   if (value.type === 'runs') {

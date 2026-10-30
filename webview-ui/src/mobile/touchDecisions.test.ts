@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canLongPress, isShortTap, moveTap, officePanStep, pinchZoom, safeTerminalUrl,
+  canLongPress, findSafeTerminalLinks, isShortTap, moveTap, officePanStep, pinchZoom, safeTerminalUrl,
   startTap, terminalTapAction, type TouchSample,
 } from './touchDecisions.js';
 const touch = (x = 0, y = 0, time = 0, id = 1): TouchSample => ({ x, y, time, id });
@@ -40,6 +40,12 @@ describe('terminal taps and selection intent', () => {
   });
   it.each(['http://localhost:3000/path?q=1#part', 'https://example.com/', 'HTTPS://example.com/'])('allows explicit HTTP(S) %s', url => {
     expect(safeTerminalUrl(url)).toBe(new URL(url).href);
+  });
+  it('finds only safe delimited terminal URLs and excludes sentence punctuation', () => {
+    expect(findSafeTerminalLinks('See https://example.com/path?q=1, or javascript:alert(1)')).toEqual([
+      { start: 4, end: 32, url: 'https://example.com/path?q=1' },
+    ]);
+    expect(findSafeTerminalLinks('joinedhttps://example.com and https://user:pass@example.com/')).toEqual([]);
   });
 });
 describe('office pinch versus manual pan', () => {

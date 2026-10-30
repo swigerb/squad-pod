@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
-import { decodeTerminalCommand, encodeTerminalFrame, TERMINAL_LIMITS } from '../../src/core/terminalFrames.js';
+import { encodeTerminalFrame, TERMINAL_LIMITS } from '../../src/core/terminalFrames.js';
 import { attachTerminal } from '../../src/core/terminalReplay.js';
+import { decodeOwnedTerminalCommand } from '../../src/core/ownedTerminalProtocol.js';
 import type { OwnedRuns } from './ownedRuns.js';
 
 /** Per-connection authority ends synchronously on rotation; there is no queued action chain. */
@@ -60,21 +61,19 @@ export function terminalSocket(ws: WebSocket, runs: OwnedRuns, current: () => bo
     if (busy) { send(JSON.stringify({ version: 1, type: 'error', message: 'Owned action in progress.' })); return; }
     try {
       const json = data.toString();
-      const value: unknown = JSON.parse(json);
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        const control = value as Record<string, unknown>;
-        if (control.version === 1 && Object.keys(control).length === 2) {
-          if (control.type === 'list') { status(); return; }
-          if (control.type === 'launch') {
-            busy = true;
-            void runs.launch(valid).catch(error => {
-              if (valid()) send(JSON.stringify({ version: 1, type: 'error', message: String(error).slice(0, 1024) }));
-            }).finally(() => { busy = false; });
-            return;
-          }
-        }
+      const command = decodeOwnedTerminalCommand(json);
+      if (command.type === 'list') { status(); return; }
+      if (command.type === 'launch') {
+        busy = true;
+        void runs.launch(valid).then(run => {
+          if (valid()) send(JSON.stringify({ version: 1, type: 'launchResult',
+            requestId: command.requestId, result: { ok: true, runId: run.runId } }));
+        }).catch(error => {
+          if (valid()) send(JSON.stringify({ version: 1, type: 'launchResult',
+            requestId: command.requestId, result: { ok: false, message: String(error).slice(0, 1024) } }));
+        }).finally(() => { busy = false; });
+        return;
       }
-      const command = decodeTerminalCommand(json);
       if (command.type === 'attach') {
         const source = runs.source(command.runId);
         attachment?.dispose();

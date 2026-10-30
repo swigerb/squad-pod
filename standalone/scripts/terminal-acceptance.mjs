@@ -18,6 +18,7 @@ const install = path.join(root, 'isolated install with spaces');
 const sockets = [];
 const processes = [];
 let browser;
+let mobileTab;
 const report = { platform: `${process.platform}-${process.arch}`, node: process.version,
   head: spawnSync('git', ['rev-parse', 'HEAD'], { cwd: packageRoot, encoding: 'utf8' }).stdout.trim(),
   sourceDirty: spawnSync('git', ['status', '--porcelain', '--untracked-files=no'], { cwd: packageRoot, encoding: 'utf8' }).stdout.trim(),
@@ -140,8 +141,10 @@ try {
   const cookie = await authenticate('terminal-auth', tokens[1]);
   const { WebSocket } = require('ws');
   let channel = await connect(WebSocket, origin, cookie);
-  channel.send({ type: 'launch' });
-  await until(() => channel.frames.some(frame => frame.type === 'runs' && frame.runs.length === 1), 'launch');
+  channel.send({ type: 'launch', requestId: 'native-acceptance-initial' });
+  await until(() => channel.frames.some(frame => frame.type === 'launchResult' &&
+    frame.requestId === 'native-acceptance-initial' && frame.result.ok), 'correlated initial launch result');
+  await until(() => channel.frames.some(frame => frame.type === 'runs' && frame.runs.length === 1), 'launch inventory');
   const run = channel.frames.filter(frame => frame.type === 'runs').at(-1).runs[0];
   report.run = { runId: run.runId, pid: run.pid };
   channel.send({ type: 'attach', runId: run.runId, cursor: 0 });
@@ -261,6 +264,132 @@ try {
       await terminalPanel.screenshot({ path: path.join(artifacts, 'terminal-narrow.png') });
       report.screenshots.push('terminal-narrow.png');
     }
+    mobileTab = await browser.newPage({
+      viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true,
+    });
+    const mobileErrors = [];
+    const mobileReceived = [];
+    const mobileSent = [];
+    await mobileTab.addInitScript(() => {
+      window.syntheticClipboard = { reads: 0, writes: [] };
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+        readText: async () => {
+          window.syntheticClipboard.reads++;
+          return 'synthetic mobile paste';
+        },
+        writeText: async text => {
+          window.syntheticClipboard.writes.push(text);
+        },
+      } });
+    });
+    mobileTab.on('pageerror', error => mobileErrors.push(error.message));
+    mobileTab.on('websocket', ws => {
+      ws.on('framereceived', event => {
+        try { mobileReceived.push(JSON.parse(String(event.payload))); }
+        catch { /* Invalid frames are asserted at the client/server boundaries. */ }
+      });
+      ws.on('framesent', event => {
+        try { mobileSent.push(JSON.parse(String(event.payload))); }
+        catch { /* Non-JSON frames have separate protocol coverage. */ }
+      });
+    });
+    await mobileTab.goto(origin);
+    await mobileTab.getByLabel('Runtime credential from the observer console', { exact: true }).fill(tokens[0]);
+    await mobileTab.getByRole('button', { name: 'Connect read-only office', exact: true }).click();
+    await mobileTab.locator('.office-panel canvas').waitFor();
+    for (const name of ['Edit Layout', 'Directories', 'Settings']) {
+      assert.equal(await mobileTab.getByRole('button', { name, exact: true }).count(), 0,
+        `mobile must hide desktop control ${name}`);
+    }
+    assert.ok(await mobileTab.getByRole('button', { name: 'Squad Info', exact: true }).count());
+    await mobileTab.getByRole('button', { name: 'Show terminal', exact: true }).click();
+    await mobileTab.locator('#terminal-credential').fill(tokens[1]);
+    await mobileTab.getByRole('button', { name: 'Authenticate terminals', exact: true }).click();
+    const firstRunCard = mobileTab.locator(`button[aria-label$="process ${browserRun.pid}"]`);
+    await firstRunCard.waitFor();
+    await firstRunCard.click();
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
+    await mobileTab.locator('.terminal-screen .xterm').waitFor();
+    await mobileTab.getByText('Terminal connected. Office remains read-only.', { exact: true }).waitFor();
+    assert.equal(await mobileTab.evaluate(() =>
+      window.syntheticClipboard.reads), 0,
+    'terminal must never read clipboard automatically');
+    await mobileTab.getByRole('button', { name: 'Select all', exact: true }).click();
+    await mobileTab.getByRole('button', { name: 'Copy selection', exact: true }).click();
+    await until(async () => await mobileTab.evaluate(() =>
+      window.syntheticClipboard.writes.length) > 0,
+    'explicit synthetic copy');
+    await mobileTab.getByRole('button', { name: 'Paste', exact: true }).click();
+    await until(async () => await mobileTab.evaluate(() =>
+      window.syntheticClipboard.reads) === 1,
+    'explicit synthetic clipboard read');
+    await until(() => mobileReceived.some(frame => frame.type === 'output' &&
+      frame.data.includes('synthetic mobile paste')), 'synthetic clipboard input reaches PTY');
+    await mobileTab.getByRole('button', { name: 'Ctrl+D', exact: true }).click();
+    await until(() => mobileReceived.some(frame => frame.type === 'output' &&
+      frame.data.includes('"input":"\\u0004"')), 'mobile keyboard accessory input reaches PTY');
+    await mobileTab.getByRole('button', { name: 'Show office', exact: true }).click();
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="office"]').waitFor();
+    const cdp = await mobileTab.context().newCDPSession(mobileTab);
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+    const swipe = async (direction) => {
+      const startX = direction === 'left' ? 385 : 5;
+      const endX = direction === 'left' ? 160 : 230;
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchStart', touchPoints: [{ x: startX, y: 430, id: 1, radiusX: 2, radiusY: 2, force: 1 }],
+      });
+      for (const x of direction === 'left' ? [330, 260, endX] : [70, 145, endX]) {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove', touchPoints: [{ x, y: 430, id: 1, radiusX: 2, radiusY: 2, force: 1 }],
+        });
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    };
+    await swipe('left');
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
+    await swipe('right');
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="office"]').waitFor();
+    await cdp.detach();
+    const mobileLaunchCount = mobileSent.filter(frame => frame.type === 'launch').length;
+    await mobileTab.getByRole('button', { name: 'Show terminal', exact: true }).click();
+    await mobileTab.getByRole('button', { name: 'Launch owned terminal', exact: true }).click();
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
+    const mobileLaunch = mobileSent.filter(frame => frame.type === 'launch').at(-1);
+    assert.ok(mobileLaunch?.requestId);
+    await until(() => mobileReceived.some(frame => frame.type === 'launchResult' &&
+      frame.requestId === mobileLaunch.requestId && frame.result.ok), 'correlated mobile launch');
+    const mobileLaunchResult = mobileReceived.find(frame => frame.type === 'launchResult' &&
+      frame.requestId === mobileLaunch.requestId && frame.result.ok);
+    await until(() => mobileTab.locator('button[aria-label^="Owned terminal"]').count().then(count => count === 3),
+      'launch card and two owned runs stay synchronized');
+    const launchesAfter = mobileSent.filter(frame => frame.type === 'launch').length;
+    assert.equal(launchesAfter, mobileLaunchCount + 1, 'mobile launch card sends exactly one launch');
+    const mobileRun = mobileReceived.filter(frame => frame.type === 'runs').at(-1).runs
+      .find(entry => entry.runId === mobileLaunchResult.result.runId);
+    assert.ok(mobileRun, 'correlated result must appear in owned run inventory');
+    await until(() => mobileReceived.some(frame => frame.type === 'output' && frame.runId === mobileRun.runId &&
+      frame.data.includes('"ready":true')), 'mobile launch opens its exact PTY');
+    const mobileRunCard = mobileTab.locator(`button[aria-label$="process ${mobileRun.pid}"]`);
+    await mobileTab.getByRole('button', { name: 'Show office', exact: true }).click();
+    await mobileRunCard.click();
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
+    assert.equal(mobileSent.filter(frame => frame.type === 'launch').length, launchesAfter,
+      'card and toggle navigation must not launch additional processes');
+    if (artifacts) {
+      await fs.mkdir(artifacts, { recursive: true });
+      await mobileTab.getByRole('button', { name: 'Show office', exact: true }).click();
+      await mobileTab.locator('.observer-mobile-stage[data-mobile-view="office"]').waitFor();
+      await mobileTab.screenshot({ path: path.join(artifacts, 'terminal-mobile-portrait.png'), fullPage: true });
+      await mobileTab.setViewportSize({ width: 844, height: 390 });
+      await mobileTab.screenshot({ path: path.join(artifacts, 'terminal-mobile-landscape.png'), fullPage: true });
+      report.screenshots.push('terminal-mobile-portrait.png', 'terminal-mobile-landscape.png');
+    }
+    assert.deepEqual(mobileErrors, []);
+    check('installed Edge touch emulation: mobile editor suppression, exact owned-run cards, correlated launch, edge swipes, explicit synthetic clipboard and keyboard input');
+    await mobileTab.context().close();
+    mobileTab = undefined;
+    channel.send({ type: 'terminate', runId: mobileRun.runId });
+    await until(() => !alive(mobileRun.pid), 'mobile acceptance PTY cleanup');
     await tab.reload();
     await tab.getByLabel('Runtime credential from the observer console', { exact: true }).fill(tokens[0]);
     await tab.getByRole('button', { name: 'Connect read-only office', exact: true }).click();
@@ -282,7 +411,9 @@ try {
   // One owned child survives viewer revocation, then shutdown reaps both.
   const registryStart = channel.frames.length;
   const previousRuns = new Set(channel.frames.filter(frame => frame.type === 'runs').at(-1)?.runs.map(run => run.runId));
-  channel.send({ type: 'launch' });
+  channel.send({ type: 'launch', requestId: 'native-acceptance-shutdown' });
+  await until(() => channel.frames.some(frame => frame.type === 'launchResult' &&
+    frame.requestId === 'native-acceptance-shutdown' && frame.result.ok), 'correlated shutdown launch result');
   await until(() => channel.frames.slice(registryStart).some(frame => frame.type === 'runs' &&
     frame.runs.some(run => !previousRuns.has(run.runId))), 'shutdown fixture');
   const shutdownRun = channel.frames.filter(frame => frame.type === 'runs').at(-1).runs.at(-1);
@@ -309,6 +440,7 @@ try {
   process.exitCode = 1;
   console.error(error);
 } finally {
+  await mobileTab?.context().close();
   await browser?.close();
   for (const ws of sockets) ws.terminate();
   for (const child of processes) {
