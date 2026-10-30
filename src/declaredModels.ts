@@ -77,26 +77,45 @@ function inside(root: string, candidate: string): boolean {
   return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
+function guardedPath(root: string, squadDir: string): string {
+  const candidate = path.join(root, path.basename(squadDir), 'config.json');
+  for (const entry of [path.dirname(candidate), candidate]) {
+    if (fs.lstatSync(entry).isSymbolicLink() || fs.realpathSync(entry) !== entry) {
+      throw new Error('Configuration symlinks/junctions are not observed.');
+    }
+  }
+  return candidate;
+}
+
+function sameFile(before: fs.BigIntStats, after: fs.BigIntStats): boolean {
+  // Windows lstat can report dev=0 before the file has been opened.
+  return before.ino === after.ino && (before.dev === after.dev || (process.platform === 'win32' && before.dev === 0n));
+}
+
 /** Bounded local read; legacy executable sources are inspected for presence only. */
 export function readModelConfig(workspaceRoot: string, agentName: string): ModelConfigSource[] {
   const squadDir = resolveSquadDir(workspaceRoot);
   const sourcePath = path.join(squadDir, 'config.json');
   const sources: ModelConfigSource[] = [];
   let fd: number | undefined;
+  let reading = false;
   try {
     const root = fs.realpathSync(workspaceRoot);
-    const realSquad = fs.realpathSync(squadDir);
-    if (!inside(root, realSquad)) {throw new Error('Squad directory escapes the selected workspace.');}
-    const realFile = fs.realpathSync(sourcePath);
-    if (!inside(realSquad, realFile)) {throw new Error('Configuration escapes the selected Squad directory.');}
-    if (!fs.statSync(realFile).isFile()) {throw new Error('Configuration is not a regular file.');}
-    fd = fs.openSync(realFile, 'r');
-    const stat = fs.fstatSync(fd);
-    if (!stat.isFile() || stat.size > MAX_MODEL_CONFIG_BYTES) {throw new Error('Configuration is not a regular file within the 64 KiB read limit.');}
-    const buffer = Buffer.alloc(stat.size + 1);
+    const realFile = guardedPath(root, squadDir);
+    const before = fs.lstatSync(realFile, { bigint: true });
+    if (!before.isFile() || before.size > BigInt(MAX_MODEL_CONFIG_BYTES)) {throw new Error('Configuration is not a regular file within the 64 KiB read limit.');}
+    fd = fs.openSync(realFile, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+    reading = true;
+    const stat = fs.fstatSync(fd, { bigint: true });
+    if (!sameFile(before, stat) || !stat.isFile() || stat.size > BigInt(MAX_MODEL_CONFIG_BYTES)) {
+      throw new Error('Configuration changed while opening; reopen to retry.');
+    }
+    const buffer = Buffer.alloc(Number(stat.size) + 1);
     const bytes = fs.readSync(fd, buffer, 0, buffer.length, 0);
-    const after = fs.fstatSync(fd);
-    if (bytes !== stat.size || after.size !== stat.size || after.mtimeMs !== stat.mtimeMs || after.ctimeMs !== stat.ctimeMs) {
+    const after = fs.fstatSync(fd, { bigint: true });
+    if (fs.realpathSync(workspaceRoot) !== root || guardedPath(root, squadDir) !== realFile
+      || !sameFile(fs.lstatSync(realFile, { bigint: true }), stat)
+      || BigInt(bytes) !== stat.size || after.size !== stat.size || after.mtimeNs !== stat.mtimeNs || after.ctimeNs !== stat.ctimeNs) {
       sources.push({ sourcePath, state: 'ambiguous', diagnostic: 'Configuration changed while reading; reopen to retry.', values: [] });
     } else {
       let content: string;
@@ -106,8 +125,9 @@ export function readModelConfig(workspaceRoot: string, agentName: string): Model
     }
   } catch (error) {
     const missing = (error as NodeJS.ErrnoException).code === 'ENOENT';
-    sources.push({ sourcePath, state: missing ? 'missing' : 'unreadable',
-      diagnostic: missing ? 'No JSON configuration file.' : `Cannot read configuration: ${String(error)}`, values: [] });
+    sources.push({ sourcePath, state: reading ? 'ambiguous' : missing ? 'missing' : 'unreadable',
+      diagnostic: reading ? `Configuration changed or became unreadable; reopen to retry: ${String(error)}`
+        : missing ? 'No JSON configuration file.' : `Cannot read configuration: ${String(error)}`, values: [] });
   } finally {
     if (fd !== undefined) {fs.closeSync(fd);}
   }

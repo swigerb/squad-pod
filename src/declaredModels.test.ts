@@ -59,7 +59,7 @@ describe('declared JSON model metadata', () => {
     const file = path.join(root, '.squad', 'config.json');
     expect(readModelConfig(root, 'Ada')[0].state).toBe('missing');
     fs.writeFileSync(file, '{"defaultModel":"first"}');
-    expect(readModelConfig(root, 'Ada')[0].values[0].value).toBe('first');
+    expect(readModelConfig(root, 'Ada')[0]).toMatchObject({ state: 'ready', values: [{ key: 'defaultModel', value: 'first' }] });
     fs.writeFileSync(file, '{');
     expect(readModelConfig(root, 'Ada')[0]).toMatchObject({ state: 'malformed', values: [] });
     fs.writeFileSync(file, Buffer.from([0xff]));
@@ -110,5 +110,46 @@ describe('declared JSON model metadata', () => {
     fs.truncateSync(file, MAX_MODEL_CONFIG_BYTES + 1);
     expect(readModelConfig(root, 'Ada')[0]).toMatchObject({ state: 'unreadable', values: [] });
     expect(read).not.toHaveBeenCalled();
+  });
+
+  it.each(['directory', 'file'])('withholds a %s substituted between resolution and open', target => {
+    const root = fixture('{"defaultModel":"inside"}');
+    const outside = fixture('{"defaultModel":"outside"}');
+    const originalOpen = fs.openSync;
+    vi.spyOn(fs, 'openSync').mockImplementationOnce((file, flags, mode) => {
+      if (target === 'directory') {
+        fs.renameSync(path.join(root, '.squad'), path.join(root, 'original-squad'));
+        fs.symlinkSync(path.join(outside, '.squad'), path.join(root, '.squad'), 'junction');
+      } else {
+        fs.renameSync(path.join(root, '.squad', 'config.json'), path.join(root, '.squad', 'original.json'));
+        fs.copyFileSync(path.join(outside, '.squad', 'config.json'), path.join(root, '.squad', 'config.json'));
+      }
+      return originalOpen(file, flags, mode);
+    });
+    syncBuiltinESMExports();
+    const result = readModelConfig(root, 'Ada')[0];
+    expect(result.state).not.toBe('ready');
+    expect(result.values).toEqual([]);
+  });
+
+  it.each(['directory', 'file'])('rechecks the selected %s identity after reading', target => {
+    const root = fixture('{"defaultModel":"inside"}');
+    const replacement = fixture('{"defaultModel":"replacement"}');
+    const originalRead = fs.readSync;
+    vi.spyOn(fs, 'readSync').mockImplementationOnce((fd, buffer, offset, length, position) => {
+      const bytes = originalRead(fd, buffer, offset, length, position);
+      if (target === 'directory') {
+        fs.renameSync(path.join(root, '.squad'), path.join(root, 'original-squad'));
+        fs.symlinkSync(path.join(replacement, '.squad'), path.join(root, '.squad'), 'junction');
+      } else {
+        fs.renameSync(path.join(root, '.squad', 'config.json'), path.join(root, '.squad', 'original.json'));
+        fs.copyFileSync(path.join(replacement, '.squad', 'config.json'), path.join(root, '.squad', 'config.json'));
+      }
+      return bytes;
+    });
+    syncBuiltinESMExports();
+    const result = readModelConfig(root, 'Ada')[0];
+    expect(result.state).not.toBe('ready');
+    expect(result.values).toEqual([]);
   });
 });
