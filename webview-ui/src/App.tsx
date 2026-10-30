@@ -81,7 +81,7 @@ function ConnectedApp({ readOnly }: { readOnly: boolean }) {
 function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; readOnly: boolean }) {
   const client = useHostClient();
   const editor = useEditorActions(getOfficeState, editorState, recoveryState, readOnly);
-  const { recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
@@ -348,6 +348,9 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
       />
 
       <TelemetryDrawer
+        readOnly={readOnly}
+        observedTasks={observedTasks}
+        liveSource={sourceStatus?.liveActivity}
         recordedUsage={recordedUsage}
         events={telemetryEvents}
         isOpen={isTelemetryOpen}

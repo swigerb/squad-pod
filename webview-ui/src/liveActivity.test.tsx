@@ -7,6 +7,7 @@ import { createHostClientFixture } from './__tests__/hostClientFixture.js';
 import type { HostClientFixture } from './__tests__/hostClientFixture.js';
 import type { OutboundMessage } from '../../src/types.js';
 import { setSoundEnabled } from './notificationSound.js';
+import type { ObservedTask } from '../../src/observedTasks.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -16,6 +17,17 @@ describe('live tools and context through the App boundary', () => {
   let client: HostClientFixture;
   const send = (message: OutboundMessage) => act(() => client.emit(message));
   const frame = async () => { await act(async () => { await new Promise<void>(resolve => requestAnimationFrame(() => resolve())); }); };
+  const source = (state: 'following' | 'off' | 'error' | 'searching') => send({
+    type: 'sourceStatus', status: {
+      workspaceRoot: 'fixture', squadDir: 'fixture', teamFound: true, observer: 'watching',
+      nativeWatch: false, error: null, liveActivity: { state, sessionId: 'session' },
+    },
+  });
+  const row = (toolCallId: string, extra: Partial<ObservedTask> = {}): ObservedTask => ({
+    sessionId: 'session', toolCallId, parentToolCallId: null, name: 'Same name',
+    agentType: 'explore', mode: 'background', description: 'Projected description',
+    state: 'running', agentId: null, fieldsTruncated: false, ...extra,
+  });
   beforeEach(() => {
     client = createHostClientFixture();
     setSoundEnabled(false);
@@ -120,6 +132,49 @@ describe('live tools and context through the App boundary', () => {
     expect(host.textContent).toContain('Live source: following (12345678)');
     act(() => checkbox.click());
     expect(client.send).toHaveBeenCalledWith({ type: 'setLiveActivity', enabled: false });
+  });
+
+  it('renders distinct unattributed calls, explicit parents, metadata limits and coverage separately from usage', async () => {
+    source('following');
+    send({ type: 'observedTasks', snapshot: {
+      sessionId: 'session', limited: true, tasks: [
+        row('one'), row('two', { parentToolCallId: 'one', fieldsTruncated: true, state: 'failed' }),
+        row('three', { agentType: 'general-purpose' }),
+      ],
+    } });
+    const button = [...host.querySelectorAll('button')].find(item => item.textContent?.startsWith('Telemetry'))!;
+    act(() => button.click());
+    await frame();
+    const section = host.querySelector('[aria-label="Observed transient tasks"]')!;
+    expect(section.querySelectorAll('[data-observed-task]')).toHaveLength(3);
+    expect(section.textContent?.match(/Unattributed/g)).toHaveLength(3);
+    expect(section.textContent).toContain('#1 Same name - running');
+    expect(section.textContent).toContain('#2 Same name - failed');
+    expect(section.textContent).toContain('Parent: task #1');
+    expect(section.textContent).toContain('Parent: unknown');
+    expect(section.textContent).toContain('Display metadata truncated or omitted');
+    expect(section.textContent).toContain('Partial coverage');
+    expect(section.textContent).toContain('not durable membership or recorded usage');
+    expect(host.querySelectorAll('[data-agent-label]')).toHaveLength(1);
+    expect(host.querySelector('[data-agent-tools]')).toBeNull();
+    act(() => [...host.querySelectorAll('button')].find(item => item.textContent === 'Clear')!.click());
+    expect(section.querySelectorAll('[data-observed-task]')).toHaveLength(3);
+  });
+
+  it.each(['off', 'searching', 'error'] as const)('clears task rows on %s and does not restore them on status alone', async state => {
+    source('following');
+    send({ type: 'observedTasks', snapshot: { sessionId: 'session', limited: false, tasks: [row('one')] } });
+    act(() => [...host.querySelectorAll('button')].find(item => item.textContent?.startsWith('Telemetry'))!.click());
+    await frame();
+    expect(host.querySelector('[data-observed-task]')).not.toBeNull();
+    source(state);
+    expect(host.querySelector('[data-observed-task]')).toBeNull();
+    expect(host.querySelector('[aria-label="Observed transient tasks"] [role="status"]')).not.toBeNull();
+    source('following');
+    expect(host.querySelector('[data-observed-task]')).toBeNull();
+    send({ type: 'observedTasks', snapshot: { sessionId: 'new-session', limited: false,
+      tasks: [row('one', { sessionId: 'new-session', name: 'New session' })] } });
+    expect(host.querySelector('[data-observed-task]')?.textContent).toContain('New session');
   });
 
   it.each([

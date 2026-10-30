@@ -16,6 +16,7 @@ import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
 import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
+import type { ObservedTaskSnapshot } from '../../../src/observedTasks.js';
 import type { OutboundMessage } from '../../../src/types.js';
 import { pruneCompletedTools, setContextUsage } from '../office/toolUtils.js';
 
@@ -64,6 +65,7 @@ function isAgentActivityMessage(message: OutboundMessage): message is AgentActiv
 }
 
 export interface ExtensionMessageState {
+  observedTasks: ObservedTaskSnapshot | null;
   recordedUsage: RecordedUsageSnapshot | null;
   assetStatus: Pick<AssetSnapshot, 'directories' | 'diagnostics'>;
   settings: PodSettings;
@@ -95,6 +97,7 @@ export function useExtensionMessages(
   readOnly = false,
 ): ExtensionMessageState {
   const client = useHostClient();
+  const [observedTasks, setObservedTasks] = useState<ObservedTaskSnapshot | null>(null);
   const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [legacyAssetDiagnostics, setLegacyAssetDiagnostics] = useState<Record<string, string>>({});
@@ -203,6 +206,9 @@ export function useExtensionMessages(
       };
 
       switch (message.type) {
+        case 'observedTasks':
+          setObservedTasks(message.snapshot);
+          break;
         case 'recordedUsage':
           setRecordedUsage(message.snapshot);
           break;
@@ -478,6 +484,7 @@ export function useExtensionMessages(
 
         case 'sourceStatus': {
           setSourceStatus(message.status);
+          if (message.status.liveActivity?.state !== 'following') { setObservedTasks(null); }
           setNoWorkspace(message.status.workspaceRoot === null);
           break;
         }
@@ -579,6 +586,7 @@ export function useExtensionMessages(
   }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly]);
 
   return {
+    observedTasks,
     recordedUsage,
     assetStatus: { ...assetStatus, diagnostics: [...assetStatus.diagnostics, ...Object.values(legacyAssetDiagnostics)] },
     settings,

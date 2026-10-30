@@ -2,10 +2,16 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import type { TelemetryEvent, TelemetryCategory } from '../office/types.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 import { RecordedUsage } from './RecordedUsage.js';
+import { ObservedTasks } from './ObservedTasks.js';
+import type { ObservedTaskSnapshot } from '../../../src/observedTasks.js';
+import type { LiveSourceStatus } from '../../../src/types.js';
 
 interface TelemetryDrawerProps {
+  readOnly?: boolean;
   events: TelemetryEvent[];
   recordedUsage: RecordedUsageSnapshot | null;
+  observedTasks?: ObservedTaskSnapshot | null;
+  liveSource?: LiveSourceStatus;
   isOpen: boolean;
   onToggle: () => void;
   onClear: () => void;
@@ -34,7 +40,7 @@ function formatTimestamp(ts: number): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function TelemetryDrawer({ events, recordedUsage, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
+export function TelemetryDrawer({ readOnly = false, events, recordedUsage, observedTasks = null, liveSource, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -111,7 +117,7 @@ export function TelemetryDrawer({ events, recordedUsage, isOpen, onToggle, onCle
               ↓ Latest
             </button>
           )}
-          <button onClick={onClear} title="Clear activity feed only; recorded usage is read-only" style={smallButtonStyle}>
+          <button onClick={onClear} title="Clear activity feed only; observed tasks and recorded usage are unchanged" style={smallButtonStyle}>
             Clear
           </button>
           <button onClick={onToggle} style={smallButtonStyle}>
@@ -119,6 +125,8 @@ export function TelemetryDrawer({ events, recordedUsage, isOpen, onToggle, onCle
           </button>
         </div>
       </div>
+
+      {isOpen && <ObservedTasks readOnly={readOnly} snapshot={observedTasks} source={liveSource} />}
 
       {/* Event list */}
       <div

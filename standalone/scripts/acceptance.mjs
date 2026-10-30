@@ -145,7 +145,7 @@ try {
     await tab.getByRole('button', { name: 'Connect read-only office' }).click();
     await tab.locator('.office-panel canvas').waitFor();
     await tab.getByRole('button', { name: /TestBot.*Developer/ }).waitFor();
-    assert.match(await tab.getByRole('status').innerText(), /Connected - read-only/);
+    assert.match(await tab.locator('header [role="status"]').innerText(), /Connected - read-only/);
     for (const label of ['Edit Layout', 'Directories', 'Settings', 'Squad Info']) {
       assert.equal(await tab.getByRole('button', { name: label, exact: true }).isDisabled(), true);
     }
@@ -178,8 +178,8 @@ try {
     check('production renderer receives actual filesystem roster/layout/usage changes, no injected renderer/global');
     // Close only the actual network connection, never inject a renderer/client global.
     await networkSockets[0].close({ code: 1012, reason: 'Synthetic transient network disconnect' });
-    await waitFor(async () => /Disconnected|Connection failed/.test(await tab.getByRole('status').innerText()), 'visible disconnect');
-    await waitFor(async () => /Connected - read-only/.test(await tab.getByRole('status').innerText()), 'browser observation reconnect', 25_000);
+    await waitFor(async () => /Disconnected|Connection failed/.test(await tab.locator('header [role="status"]').innerText()), 'visible disconnect');
+    await waitFor(async () => /Connected - read-only/.test(await tab.locator('header [role="status"]').innerText()), 'browser observation reconnect', 25_000);
     check('visible browser disconnect and authenticated observation-only reconnect');
     // Browser empty-state handling after genuine source removal/malformed edits.
     await fs.rm(teamPath);

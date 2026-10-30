@@ -110,6 +110,9 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(host.querySelector('[data-edit-mode="true"]')).toBeNull();
     expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
     expect(client.setState).not.toHaveBeenCalled();
+    click('Telemetry');
+    expect(host.textContent).toContain('Live transient tasks are unavailable in the read-only observer.');
+    expect(host.textContent).not.toContain('Enable it in Settings');
   });
 
   it('updates existing roster identity and restores only the observed task from snapshots', async () => {

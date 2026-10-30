@@ -8,6 +8,8 @@ import {
 } from './copilotSessionActivity.js';
 import type { LiveEvent } from './copilotSessionActivity.js';
 import type { LiveSourceStatus, OutboundMessage } from './types.js';
+import { MAX_OBSERVED_TASKS, MAX_RECENT_TASKS, TASK_ID_MAX_LENGTH } from './observedTasks.js';
+import { TASK_DESCRIPTION_DISPLAY_MAX_LENGTH } from './constants.js';
 
 vi.mock('node:fs', { spy: true });
 
@@ -47,6 +49,11 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     return path.join(dir, 'events.jsonl');
   }
   const marked = (body: string) => line('subagent.selected', { agentName: 'Squad' }) + body;
+  const inventory = () => messages.filter(message => message.type === 'observedTasks').at(-1)!.snapshot;
+  const taskCall = (id: unknown, name = 'unknown', agentType = 'explore', parent?: unknown) =>
+    line('tool.execution_start', { toolCallId: id, parentToolCallId: parent, toolName: 'task',
+      arguments: { name, agent_type: agentType, mode: 'background', description: 'Inspect fixture', prompt: secret },
+      output: secret, credentials: secret });
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -120,7 +127,8 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     reader.poll();
     expect(messages.filter(m => m.type === 'agentToolDone')).toHaveLength(2);
     expect(lifecycle.mock.calls).toEqual([['ada', true, 'Build tests'], ['ada', false, null]]);
-    expect(messages.at(-2)).toMatchObject({ type: 'agentContextUsage', contextTokens: null, maxContextTokens: null });
+    expect(messages.filter(m => m.type === 'agentContextUsage').at(-1))
+      .toMatchObject({ contextTokens: null, maxContextTokens: null });
   });
 
   it('silently seeds only in-flight state, never replaying completed history on enable, reload or rotation', () => {
@@ -199,17 +207,171 @@ describe('read-only Copilot live activity with synthetic homes', () => {
 
   it('keeps unknown, fuzzy, non-general-purpose and coordinator activity unattributed', () => {
     session('session', marked(spawnLines('ada-review') + spawnLines('a', 'other')
-      + spawnLines('unknown', 'unknown') + spawnLines().replace('general-purpose', 'explore')
+      + spawnLines('unknown', 'unknown') + spawnLines('ada', 'explore').replace('general-purpose', 'explore')
       + line('tool.execution_start', { toolCallId: 'root', toolName: 'view' }) + done('root')));
     reader.start();
     expect(lifecycle).not.toHaveBeenCalled();
-    expect(messages).toEqual([]);
+    expect(messages.filter(m => m.type !== 'observedTasks')).toEqual([]);
+    expect(inventory().tasks).toHaveLength(4);
+    expect(inventory().tasks.every(task => task.agentId === null)).toBe(true);
     expect(exactLiveAgent('ADA', roster)).toBe('ada');
     expect(exactLiveAgent('ada-review', roster)).toBeNull();
     expect(exactLiveAgent(' ada ', roster)).toBeNull();
     expect(exactLiveAgent('ada', [{ id: 'ada' }, { id: 'ADA' }])).toBeNull();
     expect(exactLiveAgent('folder', [{ id: 'member', folder: 'folder' }])).toBe('member');
     expect(exactLiveAgent('folder', [{ id: 'folder' }, { id: 'member', folder: 'folder' }])).toBeNull();
+  });
+
+  it('keeps same-name concurrent tasks distinct, including non-general-purpose exact names and ambiguous matches', () => {
+    const file = session('session', marked(''));
+    reader.start();
+    fs.appendFileSync(file, taskCall('one', 'ada') + taskCall('two', 'ada')
+      + taskCall('three', 'unknown', 'general-purpose')
+      + taskCall('four', 'ada-review', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'one' }));
+    reader.poll();
+    expect(inventory().tasks.map(task => [task.toolCallId, task.name, task.agentId, task.state])).toEqual([
+      ['one', 'ada', null, 'running'], ['two', 'ada', null, 'observed'],
+      ['three', 'unknown', null, 'observed'], ['four', 'ada-review', null, 'observed'],
+    ]);
+    expect(lifecycle).not.toHaveBeenCalled();
+    roster.push({ id: 'ADA' });
+    try {
+      fs.appendFileSync(file, taskCall('ambiguous', 'ada', 'general-purpose'));
+      reader.poll();
+      expect(inventory().tasks.at(-1)?.agentId).toBeNull();
+      expect(lifecycle).not.toHaveBeenCalled();
+    } finally { roster.pop(); }
+  });
+
+  it('rejects missing and oversized opaque IDs without aliasing, and repeated starts cannot change metadata', () => {
+    const file = session('session', marked(''));
+    reader.start();
+    const id = 'x'.repeat(TASK_ID_MAX_LENGTH);
+    fs.appendFileSync(file, taskCall(id, 'first') + taskCall(id, 'ada', 'general-purpose')
+      + taskCall(id + 'extra') + taskCall(undefined) + taskCall('') + taskCall(' padded ')
+      + taskCall('control\nid') + taskCall(123));
+    reader.poll();
+    expect(inventory().tasks).toHaveLength(1);
+    expect(inventory().tasks[0]).toMatchObject({ toolCallId: id, name: 'first', agentId: null });
+    expect(inventory().limited).toBe(true);
+    expect(lifecycle).not.toHaveBeenCalled();
+    expect(parseLiveEvent(taskCall(id + 'extra'))?.toolCallId).toBe('');
+  });
+
+  it('uses only explicit observed same-session parent IDs, rejects self/cyclic links and resolves late parents', () => {
+    const file = session('session', marked(''));
+    reader.start();
+    fs.appendFileSync(file, taskCall('child', 'unknown', 'explore', 'parent')
+      + taskCall('missing', 'parent', 'task', 'absent')
+      + taskCall('self', 'self', 'task', 'self')
+      + taskCall('a', 'a', 'task', 'b') + taskCall('b', 'b', 'task', 'a')
+      + taskCall('bad-parent', 'p', 'task', 'x'.repeat(TASK_ID_MAX_LENGTH + 1)));
+    reader.poll();
+    expect(inventory().tasks.every(task => task.parentToolCallId === null)).toBe(true);
+    fs.appendFileSync(file, taskCall('parent') + taskCall('grandchild', 'x', 'explore', 'child'));
+    reader.poll();
+    expect(inventory().tasks.find(task => task.toolCallId === 'child')?.parentToolCallId).toBe('parent');
+    expect(inventory().tasks.find(task => task.toolCallId === 'grandchild')?.parentToolCallId).toBe('child');
+  });
+
+  it.each(['completed', 'failed', 'aborted'] as const)('uses actual subagent.%s lifecycle, not task dispatch completion', state => {
+    const file = session('session', marked(''));
+    reader.start();
+    fs.appendFileSync(file, taskCall('task') + done('task'));
+    reader.poll();
+    expect(inventory().tasks[0].state).toBe('observed');
+    fs.appendFileSync(file, line('subagent.started', { toolCallId: 'task' }));
+    reader.poll();
+    expect(inventory().tasks[0].state).toBe('running');
+    fs.appendFileSync(file, line(`subagent.${state}`, { toolCallId: 'task', output: secret })
+      + line('subagent.started', { toolCallId: 'task' }) + taskCall('task', 'changed'));
+    reader.poll();
+    expect(inventory().tasks[0]).toMatchObject({ state, name: 'unknown' });
+    reader.replay();
+    expect(inventory().tasks[0].state).toBe(state);
+    expect(JSON.stringify(messages)).not.toContain(secret);
+  });
+
+  it('bounds active retention, completed history and projected display fields with explicit coverage', () => {
+    const file = session('session', marked(''));
+    reader.start();
+    fs.appendFileSync(file, Array.from({ length: MAX_OBSERVED_TASKS + 10 }, (_, i) => taskCall(`active-${i}`)).join(''));
+    reader.poll();
+    expect(inventory().tasks).toHaveLength(MAX_OBSERVED_TASKS);
+    expect(inventory().limited).toBe(true);
+    fs.appendFileSync(file, Array.from({ length: MAX_OBSERVED_TASKS }, (_, i) =>
+      line('subagent.completed', { toolCallId: `active-${i}` })).join(''));
+    reader.poll();
+    expect(inventory().tasks).toHaveLength(MAX_RECENT_TASKS);
+    fs.appendFileSync(file, line('tool.execution_start', { toolCallId: 'bounded', toolName: 'task',
+      arguments: { name: 'n'.repeat(161), agent_type: 't'.repeat(1000), mode: 'm'.repeat(1000),
+        description: 'd'.repeat(1000), prompt: secret, extra: secret } }));
+    reader.poll();
+    expect(inventory().tasks.at(-1)).toMatchObject({
+      name: '', agentType: 't'.repeat(160), mode: 'm'.repeat(160),
+      description: 'd'.repeat(TASK_DESCRIPTION_DISPLAY_MAX_LENGTH), fieldsTruncated: true, agentId: null,
+    });
+    expect(JSON.stringify(messages)).not.toContain(secret);
+  });
+
+  it('seeds only in-flight inventory and isolates reused IDs, parents, reset, reconnect, consent and disposal', () => {
+    const file = session('abcdefgh-old', marked(taskCall('parent') + taskCall('reuse', 'old')
+      + taskCall('past') + line('subagent.completed', { toolCallId: 'past' })));
+    reader.start();
+    expect(inventory().tasks.map(task => task.toolCallId)).toEqual(['parent', 'reuse']);
+    reader.replay();
+    expect(inventory().tasks.map(task => task.toolCallId)).toEqual(['parent', 'reuse']);
+    now += 6000;
+    const next = session('abcdefgh-new', marked(taskCall('reuse', 'new', 'explore', 'parent')));
+    reader.poll();
+    expect(statuses.at(-1)?.sessionId).toBe('abcdefgh');
+    expect(inventory().tasks).toHaveLength(1);
+    expect(inventory().tasks[0]).toMatchObject({ sessionId: 'abcdefgh-new', toolCallId: 'reuse', name: 'new', parentToolCallId: null });
+    fs.writeFileSync(next, marked(taskCall('reset')));
+    reader.replay();
+    expect(inventory().tasks.map(task => task.toolCallId)).toEqual(['reset']);
+    now += LIVE_STALE_MS + 1;
+    reader.replay();
+    expect(inventory().tasks).toEqual([]);
+    fs.appendFileSync(next, taskCall('resumed'));
+    fs.utimesSync(next, new Date(now), new Date(now));
+    reader.replay();
+    expect(inventory().tasks.map(task => task.toolCallId)).toEqual(['reset', 'resumed']);
+    fs.unlinkSync(next);
+    reader.replay();
+    expect(inventory().tasks).toEqual([]);
+    reader.stop();
+    expect(inventory()).toEqual({ sessionId: null, tasks: [], limited: false });
+    fs.unlinkSync(file);
+    reader.replay();
+    expect(inventory().tasks).toEqual([]);
+  });
+
+  it('reports partial source coverage for oversized lines and a bounded seed', () => {
+    session('session', marked('') + 'x'.repeat(SEED_BYTES + 100) + '\n' + taskCall('visible'));
+    reader.start();
+    expect(inventory()).toMatchObject({ limited: true, tasks: [expect.objectContaining({ toolCallId: 'visible' })] });
+  });
+
+  it('evicts completed history before in-flight calls at capacity and retains completions in completion order', () => {
+    const file = session('session', marked(''));
+    reader.start();
+    fs.appendFileSync(file, Array.from({ length: MAX_OBSERVED_TASKS }, (_, i) => taskCall(`call-${i}`)).join('')
+      + line('subagent.completed', { toolCallId: 'call-20' }));
+    reader.poll();
+    fs.appendFileSync(file, taskCall('new'));
+    reader.poll();
+    expect(inventory().tasks).toHaveLength(MAX_OBSERVED_TASKS);
+    expect(inventory().tasks.some(task => task.toolCallId === 'call-20')).toBe(false);
+    expect(inventory().tasks.some(task => task.toolCallId === 'call-0')).toBe(true);
+    expect(inventory().limited).toBe(true);
+    fs.appendFileSync(file, Array.from({ length: MAX_RECENT_TASKS }, (_, i) =>
+      line('subagent.completed', { toolCallId: `call-${i + 1}` })).join('')
+      + line('subagent.completed', { toolCallId: 'call-0' }));
+    reader.poll();
+    expect(inventory().tasks.find(task => task.toolCallId === 'call-0')?.state).toBe('completed');
+    expect(inventory().tasks.some(task => task.toolCallId === 'call-1')).toBe(false);
   });
 
   it.each(['subagent.completed', 'subagent.failed', 'subagent.aborted'])('clears only once for %s and on disabling', (type) => {
