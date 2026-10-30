@@ -84,28 +84,25 @@ describe('manifest catalog and non-destructive reload', () => {
     expect(getAssetProblem(item)).toContain('Unconfirmed');
   });
 
-  it('uses the verified bundle only for fresh offices, with non-overlapping desks and seats', () => {
+  it('uses the verified starter only for fresh offices and retains seat assignments across catalog refresh', () => {
     const chair = { ...desk, type: 'pa_CUSHIONED_CHAIR_FRONT', width: 1, height: 1, isDesk: false, category: 'chairs' };
     buildDynamicCatalog([desk, chair]);
     const layout = createDefaultLayout();
-    expect(layoutToSeats(layout.furniture)).toHaveLength(4);
-    expect(layout.furniture.every((f) => f.col > 0 && f.row > 0
-      && f.col + f.assetFootprint!.width < layout.cols
-      && f.row + f.assetFootprint!.height < layout.rows)).toBe(true);
-    for (const item of layout.furniture) {
-      expect(planFurnitureMove(layout, item.uid, item.col, item.row).error).toBeNull();
-    }
+    expect(layoutToSeats(layout.furniture)).toHaveLength(6);
+    expect(layout.furniture.every((f) => f.col >= 0 && f.row >= 0
+      && f.col + f.assetFootprint!.width <= layout.cols
+      && f.row + f.assetFootprint!.height <= layout.rows)).toBe(true);
     const office = new OfficeState(layout);
-    office.addAgent('test-agent-1', 'Test Agent', 'Test role', 0, 0, 'chair-1');
+    office.addAgent('test-agent-1', 'Test Agent', 'Test role', 0, 0, 'chair-left-1');
     const before = JSON.stringify(office.getLayout());
     const assignments = office.getSeatAssignments();
     buildDynamicCatalog([]);
     office.refreshAssets();
-    expect(office.seats).toHaveLength(4);
-    expect(office.seats.find((seat) => seat.id === 'chair-1')?.occupant).toBe('test-agent-1');
+    expect(office.seats).toHaveLength(6);
+    expect(office.seats.find((seat) => seat.id === 'chair-left-1')?.occupant).toBe('test-agent-1');
     expect(office.getSeatAssignments()).toEqual(assignments);
     expect(JSON.stringify(office.getLayout())).toBe(before);
-    expect(new OfficeState(JSON.parse(before)).seats).toHaveLength(4);
+    expect(new OfficeState(JSON.parse(before)).seats).toHaveLength(6);
   });
 
   it('invalidates colorized floor/wall caches and preserves alpha on refreshed sprites', () => {

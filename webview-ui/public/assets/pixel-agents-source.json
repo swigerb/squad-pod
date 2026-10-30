@@ -10,6 +10,13 @@
   "sha256": "2a7bc1bb5e851441723d04b0860b012c75d4ff43d12281667d57d6c3b1dc37d1",
   "hashFormat": "Sorted relative POSIX filename, NUL, then raw bytes for every file under the four directories",
   "verification": "All 48 furniture/floor/wall PNG blobs match originalAssetCommit (PR117). Only COFFEE and LARGE_PLANT manifests differ at the pin; later changes are metadata, not artwork. Carpets are a separate PR316 contribution verified below. Pet art is a separate contribution trail verified below.",
+  "starterLayout": {
+    "path": "webview-ui/public/assets/default-layout-1.json",
+    "sourceCommit": "b1bafd02896d90d83457266575a1e8e5011ce997",
+    "sourceUrl": "https://github.com/pixel-agents-hq/pixel-agents/blob/b1bafd02896d90d83457266575a1e8e5011ce997/webview-ui/public/assets/default-layout-1.json",
+    "license": "MIT",
+    "adaptation": "The office composition, bundled asset identities, tile colors and seating positions are adapted for Squad Pod's asset namespaces and saved-layout format. The empty upper margin is trimmed; legacy tile IDs remain unchanged."
+  },
   "carpets": {
     "introducingCommit": "7a1643fb5e7bab59e1e789fac06c0f9a2fd78d7c",
     "pullRequest": "https://github.com/pixel-agents-hq/pixel-agents/pull/316",

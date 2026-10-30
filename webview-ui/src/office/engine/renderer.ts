@@ -36,7 +36,7 @@ import {
 } from '../../constants.js';
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
-import { getColorizedFloorSprite } from '../floorTiles.js';
+import { getColorizedFloorSprite, hasFloorSprites } from '../floorTiles.js';
 import type { CarpetTile } from '../types.js';
 import { isReadingTool } from './characters.js';
 import { renderCarpetLayer } from '../sprites/carpetRenderer.js';
@@ -112,8 +112,9 @@ export function renderTileGrid(
       const x = offsetX + col * TILE_SIZE * zoom;
       const y = offsetY + row * TILE_SIZE * zoom;
 
-      // Prefer tileset PNG tiles when loaded
-      if (tilesetReady && drawTilesetTile(ctx, tile, x, y, zoom)) {
+      // Prefer the bundled Pixel Agents floor/wall atlases over the generic metadata tiles.
+      const hasBundledTileArt = tile === TileType.WALL ? hasWallSprites() : hasFloorSprites();
+      if (!hasBundledTileArt && tilesetReady && drawTilesetTile(ctx, tile, x, y, zoom)) {
         continue;
       }
 

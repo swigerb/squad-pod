@@ -116,6 +116,34 @@ describe('tile colors are optional rendering overrides', () => {
     expect(pixels).toEqual([]);
   });
 
+  it('prefers the bundled floor and wall sprites over generic metadata tiles', () => {
+    vi.mocked(assetLoader.areTilesetAssetsReady).mockReturnValue(true);
+    setFloorSprites(Array.from({ length: 9 }, (_, index) =>
+      Array.from({ length: 16 }, () => Array(16).fill(`#${index}${index}${index}`))));
+    setWallSprites(Array.from({ length: 16 }, () =>
+      Array.from({ length: 16 }, () => Array(16).fill('#222222'))));
+    const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(true);
+
+    renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0);
+
+    expect(draw).not.toHaveBeenCalled();
+    expect(pixels).toHaveLength(2);
+  });
+
+  it('renders floor id 9 from the ninth bundled sprite without treating it as void', () => {
+    vi.mocked(assetLoader.areTilesetAssetsReady).mockReturnValue(true);
+    setFloorSprites(Array.from({ length: 9 }, () =>
+      Array.from({ length: 16 }, () => Array(16).fill('#808080'))));
+    setWallSprites(Array.from({ length: 16 }, () =>
+      Array.from({ length: 16 }, () => Array(16).fill('#808080'))));
+    const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(true);
+
+    renderFrame(ctx, 48, 16, [[TileType.WALL, TileType.FLOOR_1, TileType.FLOOR_9]], [], [], 1, 0, 0);
+
+    expect(draw).not.toHaveBeenCalled();
+    expect(pixels).toHaveLength(3);
+  });
+
   it('uses the wall sprite fallback without any tile colors', () => {
     setWallSprites(Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => Array(16).fill('#808080'))));
     renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0);
