@@ -220,6 +220,12 @@ try {
     await tab.getByRole('button', { name: 'Authenticate terminals', exact: true }).click();
     await tab.getByRole('button', { name: 'Launch selected project', exact: true }).click();
     await until(() => received.some(frame => frame.type === 'output' && frame.data.includes('"ready":true')), 'browser native output');
+    const desktopBounds = async () => {
+      const bounds = await tab.locator('.observer-office-page').boundingBox();
+      const viewport = tab.viewportSize();
+      return bounds && bounds.width > 0 && bounds.x >= -1 && bounds.x + bounds.width <= viewport.width + 1;
+    };
+    await until(desktopBounds, 'desktop office remains horizontally in bounds after correlated launch');
     const browserRun = received.filter(frame => frame.type === 'runs').at(-1).runs[0];
     await tab.locator('.xterm-helper-textarea').focus();
     await tab.keyboard.type('OK');
@@ -252,20 +258,28 @@ try {
       await fs.mkdir(artifacts, { recursive: true });
       await tab.screenshot({ path: path.join(artifacts, 'terminal-desktop.png'), fullPage: true });
       report.screenshots.push('terminal-desktop.png');
-      const narrowStart = received.length;
-      await tab.setViewportSize({ width: 390, height: 844 });
-      await until(() => received.slice(narrowStart).some(frame => frame.type === 'output' && frame.data.includes('"resized":true')),
-        'narrow browser resize reaches native PTY');
-      await tab.locator('.xterm-helper-textarea').focus();
-      await tab.keyboard.type('NARROW');
-      await until(() => inputs().includes('NARROW'), 'narrow browser input applied');
-      const terminalPanel = tab.locator('.owned-terminal');
-      assert.ok((await terminalPanel.boundingBox()).width <= 390);
+    }
+    const narrowStart = received.length;
+    await tab.setViewportSize({ width: 390, height: 844 });
+    await until(() => received.slice(narrowStart).some(frame => frame.type === 'output' && frame.data.includes('"resized":true')),
+      'narrow browser resize reaches native PTY');
+    await tab.locator('.xterm-helper-textarea').focus();
+    await tab.keyboard.type('NARROW');
+    await until(() => inputs().includes('NARROW'), 'narrow browser input applied');
+    const terminalPanel = tab.locator('.owned-terminal');
+    assert.ok((await terminalPanel.boundingBox()).width <= 390);
+    if (artifacts) {
       await terminalPanel.screenshot({ path: path.join(artifacts, 'terminal-narrow.png') });
       report.screenshots.push('terminal-narrow.png');
     }
+    await tab.setViewportSize({ width: 1440, height: 960 });
+    await until(desktopBounds, 'returning from narrow to desktop resets the mobile page transform');
+    await tab.getByRole('button', { name: 'Squad Info', exact: true }).click();
+    await tab.getByRole('dialog', { name: 'Squad Info' }).waitFor();
+    await tab.getByRole('button', { name: 'Close Squad Info', exact: true }).click();
+    check('desktop office and controls stay in bounds after correlated launch and narrow-to-desktop transition');
     mobileTab = await browser.newPage({
-      viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true,
+      viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
     });
     const mobileErrors = [];
     const mobileReceived = [];
@@ -332,6 +346,51 @@ try {
     await mobileTab.locator('.observer-mobile-stage[data-mobile-view="office"]').waitFor();
     const cdp = await mobileTab.context().newCDPSession(mobileTab);
     await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+    const officePanel = mobileTab.locator('.office-panel');
+    const canvas = officePanel.locator('canvas');
+    await until(() => canvas.evaluate(element =>
+      Math.abs(element.width - element.getBoundingClientRect().width * 3) <= 1),
+    'mobile canvas uses DPR 3 backing store with CSS-sized viewport');
+    const followObservedAgent = async () => {
+      await mobileTab.locator('[data-agent-label="test-agent-1"]').click();
+      await mobileTab.getByRole('button', { name: 'Close agent details', exact: true }).click();
+      await until(async () => await officePanel.getAttribute('data-following-agent') === 'test-agent-1',
+        'observed-agent selection starts office camera follow without terminal authority');
+    };
+    const touchPoints = points => points.map(([x, y], id) => ({ x, y, id, radiusX: 2, radiusY: 2, force: 1 }));
+    const canvasBounds = await canvas.boundingBox();
+    assert.ok(canvasBounds);
+    const center = { x: canvasBounds.x + canvasBounds.width / 2, y: canvasBounds.y + canvasBounds.height / 2 };
+    await followObservedAgent();
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[center.x - 30, center.y], [center.x + 30, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: touchPoints([[center.x - 70, center.y], [center.x + 70, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    assert.equal(await officePanel.getAttribute('data-following-agent'), 'test-agent-1',
+      'pure pinch must preserve production camera follow');
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[center.x - 30, center.y], [center.x + 30, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: touchPoints([[center.x, center.y + 20], [center.x + 60, center.y + 20]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await until(async () => await officePanel.getAttribute('data-following-agent') === '',
+      'two-finger office translation breaks production camera follow');
+    await followObservedAgent();
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[center.x, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: touchPoints([[center.x + 30, center.y + 20]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await until(async () => await officePanel.getAttribute('data-following-agent') === '',
+      'one-finger office pan breaks production camera follow');
+    check('installed Edge DPR 3 touch: observed-agent camera follow survives pure pinch and ends on one/two-finger manual pan');
     const swipe = async (direction) => {
       const startX = direction === 'left' ? 385 : 5;
       const endX = direction === 'left' ? 160 : 230;
@@ -360,8 +419,9 @@ try {
       frame.requestId === mobileLaunch.requestId && frame.result.ok), 'correlated mobile launch');
     const mobileLaunchResult = mobileReceived.find(frame => frame.type === 'launchResult' &&
       frame.requestId === mobileLaunch.requestId && frame.result.ok);
-    await until(() => mobileTab.locator('button[aria-label^="Owned terminal"]').count().then(count => count === 3),
-      'launch card and two owned runs stay synchronized');
+    await until(() => mobileTab.locator('button[aria-label^="Owned terminal"]').count().then(count => count === 2),
+      'two owned-run cards match the registry after launch');
+    assert.equal(await mobileTab.getByRole('button', { name: 'Launch owned terminal', exact: true }).count(), 1);
     const launchesAfter = mobileSent.filter(frame => frame.type === 'launch').length;
     assert.equal(launchesAfter, mobileLaunchCount + 1, 'mobile launch card sends exactly one launch');
     const mobileRun = mobileReceived.filter(frame => frame.type === 'runs').at(-1).runs

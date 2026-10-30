@@ -2,7 +2,7 @@ import { act, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { OfficeCanvas } from './OfficeCanvas.js';
+import { getCharacterHitBounds, OfficeCanvas } from './OfficeCanvas.js';
 import { OfficeState } from '../engine/officeState.js';
 import { EditorState } from '../editor/editorState.js';
 import { useEditorActions } from '../../hooks/useEditorActions.js';
@@ -164,6 +164,74 @@ it('lets a canvas click toggle the persisted pet heart interaction', () => {
     act(() => root.unmount());
     host.remove();
     resetPetTemplates();
+  }
+});
+
+it('renders a moving followed character at the camera center until manual touch panning', () => {
+  const ctx = { setTransform: vi.fn(), imageSmoothingEnabled: false };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600, toJSON: () => ({}),
+  });
+  let drawFrame!: () => void;
+  vi.spyOn(gameLoop, 'startGameLoop').mockImplementation((_canvas, callbacks) => {
+    drawFrame = () => callbacks.render(ctx as unknown as CanvasRenderingContext2D);
+    return () => {};
+  });
+  const rendered = vi.spyOn(renderer, 'renderFrame').mockImplementation(() => {});
+  const office = new OfficeState({
+    version: 2, cols: 50, rows: 40, tiles: Array(2000).fill(TileType.FLOOR_1), furniture: [],
+  });
+  office.addAgent('followed', 'Followed', 'Developer');
+  const character = office.characters.get('followed')!;
+  character.x = 400;
+  character.y = 400;
+  office.cameraFollowId = character.id;
+  const pan = { current: { x: 0, y: 0 } };
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  const editorState = new EditorState();
+  const center = () => {
+    const bounds = getCharacterHitBounds(character, 2, pan.current);
+    return { x: (bounds.left + bounds.right) / 2, y: (bounds.top + bounds.bottom) / 2 };
+  };
+  try {
+    act(() => root.render(withClient(<OfficeCanvas officeState={office} editorState={editorState}
+      isEditMode={false} editorTick={0} zoom={2} panRef={pan} touchGestures
+      onManualPan={() => { office.cameraFollowId = null; }} />)));
+    drawFrame();
+    expect(center()).toEqual({ x: 400, y: 300 });
+    const firstPan = { ...pan.current };
+    character.x += 32;
+    drawFrame();
+    expect(pan.current.x).toBe(firstPan.x - 64);
+    expect(center()).toEqual({ x: 400, y: 300 });
+    expect(rendered.mock.lastCall?.slice(6, 9)).toEqual([2, pan.current.x, pan.current.y]);
+
+    const canvas = host.querySelector('canvas')!;
+    const dispatch = (type: string, points: number[]) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'touches', { value: points.map((x, identifier) =>
+        ({ identifier, clientX: x, clientY: 300 })) });
+      act(() => canvas.dispatchEvent(event));
+    };
+    dispatch('touchstart', [350, 450]);
+    dispatch('touchmove', [300, 500]);
+    expect(office.cameraFollowId).toBe(character.id);
+    character.x += 16;
+    drawFrame();
+    expect(center()).toEqual({ x: 400, y: 300 });
+    dispatch('touchmove', [330, 530]);
+    expect(office.cameraFollowId).toBeNull();
+    const manualPan = { ...pan.current };
+    character.x += 32;
+    drawFrame();
+    expect(pan.current).toEqual(manualPan);
+    expect(center().x).not.toBe(400);
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+    vi.restoreAllMocks();
   }
 });
 

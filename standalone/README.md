@@ -174,13 +174,21 @@ quietly launches a replacement. Scrollback is capped at 2000 lines.
 On touch/mobile browsers the observer has synchronized office/terminal pages,
 owned-run cards, an explicit launch card and edge-swipe navigation. Selecting a run
 card opens that exact owned run; changing pages never launches or terminates a
-process. Office pinch zoom and one/two-finger panning remain available, and manual
-office panning is distinct from a pure pinch. The desktop layout editor is hidden on
+process. Selecting an observed agent follows it with the office camera, not an
+owned terminal. Pure pinch zoom preserves follow; one/two-finger manual panning
+breaks follow. Pan distances use CSS pixels independently of screen density.
+The desktop layout editor is hidden on
 touch/mobile. The terminal includes a keyboard accessory, viewport/orientation
 resizing, explicit selection/copy/paste controls and a manual clipboard fallback.
 Clipboard reads happen only after the user presses Paste; plain HTTP and denied
 clipboard access use the manual fallback. Installed Edge touch emulation exercises
-these browser interactions against synthetic native PTYs; physical iOS/Android
+these browser interactions against synthetic native PTYs. Paste is bounded to
+256 KiB without silently truncating the manual field. A changed/disconnected
+terminal invalidates an in-progress clipboard read even if the original run
+reconnects before it finishes; text stays available for explicit review/retry.
+A newer Paste supersedes an older pending read. Queueing input does not confirm
+that the process consumed it; blocked/partial sends retain only unsent text and
+never replay it automatically. Physical iOS/Android
 touch and software-keyboard behavior remains unverified.
 
 Without `--terminals`, without a supported executable, or without the optional native
