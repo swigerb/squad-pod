@@ -25,6 +25,12 @@ export type AgentStatus = SquadAgentState['status'];
 let agents = new Map<string, SquadAgentState>();
 let disposed = false;
 let telemetryCounter = 0;
+let externalCharacterPalettes: number[] = [];
+
+/** Only future, unpersisted roster members use newly available sheets. */
+export function setExternalCharacterPalettes(palettes: number[]): void {
+  externalCharacterPalettes = [...palettes].sort((a, b) => a - b);
+}
 
 function directoryIdentityFields(directoryIds?: readonly string[]): {
   directoryId?: string;
@@ -330,6 +336,7 @@ export function disposeAgentManager(): void {
   disposed = true;
   cancelAllTimers();
   agents.clear();
+  externalCharacterPalettes = [];
 }
 
 // ─── Internal Helpers ───────────────────────────────────────────────
@@ -350,7 +357,7 @@ function memberToState(
   // shift (index / 6) from it, so every client renders the same look.
   let paletteIndex = savedMeta?.palette;
   if (paletteIndex === undefined || taken?.has(paletteIndex)) {
-    paletteIndex = taken ? 0 : rosterIndex;
+    paletteIndex = externalCharacterPalettes.find((palette) => !taken?.has(palette)) ?? (taken ? 0 : rosterIndex);
     while (taken?.has(paletteIndex)) {
       paletteIndex++;
     }

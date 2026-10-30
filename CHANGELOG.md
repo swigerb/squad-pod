@@ -4,10 +4,12 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+- Suggest recent Squad directories from local Copilot CLI working-directory metadata, with an opt-out setting and explicit save/launch actions.
 - Stateful furniture animates at active desks and supports manual on/off toggles.
 - Furniture groups now support directional rotation and mirrored views, with one palette entry per group, preserved tint and seat assignments, and one undo step per turn.
 
 ### Changed
+- Reserved `characters` and `pets` folders are excluded from furniture imports.
 - Explicit supported reading-tool metadata now selects supplied reading sprites instead of typing sprites. Bundled employee PNG sheets contain no reading art, so reading uses an inline sprite template instead of duplicated walk frames; the generated fallback shares typing art until dedicated reading frames are supplied, and the provider still emits no live tool metadata.
 - Replaced the unresolved office tileset and inline furniture art with the source-pinned original Pixel Agents furniture/floor/wall bundle (MIT, Pablo De Lucca). The historical screenshot is excluded from the VSIX. Legacy layout IDs/geometry remain intact as explicit missing-art markers; no automatic reset or remap occurs.
 - Toolchain modernized: Node 22.13+, VS Code 1.107+, React 19, Vite 8, Vitest 4, ESLint 10, esbuild 0.28; CI on Ubuntu and Windows.
@@ -15,6 +17,7 @@ All notable changes to Squad Pod are documented here.
 - Diagnostics moved to the **Squad Pod** output channel (no more workspace debug logs or popups).
 
 ### Added
+- Custom character sheets from local asset directories, with validation, live reload, saved appearances and a stable fallback when sheets are removed.
 - VS Code setting `squad-pod.autoShowPanel` (default `false`) optionally focuses the office once on extension activation, skipping an already-visible panel. Roster/history replay and visibility changes never trigger it; no Squad, terminal, process, server or bridge is launched (#52).
 - Reconnect snapshots now refresh existing roster names and roles and restore observed current-task text alongside status without changing saved appearance or seats.
 - A typed webview client seam for outbound requests, inbound subscriptions and protected recovery state, backed by the existing VS Code API. Missing hosts and recovery-read/write failures are surfaced without replacing protected drafts; this is foundation only, not standalone/browser support, and #8 remains open.

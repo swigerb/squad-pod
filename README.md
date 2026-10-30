@@ -14,8 +14,7 @@ Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradyga
 - Design the office with floors, walls, furniture, colors, carpets, named Areas, and pets.
 - Manage directories and explicitly launch Squad in a new VS Code terminal.
 - Browse activity and available recorded usage in the Telemetry drawer.
-- Add local furniture and pet assets with manifests.
-- Toggle stateful furniture manually; PCs animate at active agent desks.
+- Add local furniture, pets, and character sheets; stateful furniture animates at active desks and supports manual toggles.
 
 ## Requirements
 
@@ -73,6 +72,8 @@ In the office's **Settings**, sound notifications play a short chime when an act
 
 Open **Directories** to launch Squad in a workspace folder or a saved directory. Squad Pod opens a new VS Code terminal at that folder and runs `copilot --agent squad` only after you click **Launch**. Workspace trust and the Copilot CLI on `PATH` are required. Squad Pod does not launch automatically.
 
+**Recent Squad directories** fills the add-directory form from local Copilot CLI working-directory metadata without saving or launching; disable this read with `squad-pod.directorySuggestions`.
+
 ### Activity and recorded usage
 
 Open **Telemetry** in the toolbar to browse observed status changes, session activity, logs, orchestration events, and decisions. The drawer also displays historical usage from the local Squad usage ledger when available, including reported token and estimated-cost totals and recent model reports. These reports are historical source data, not live context utilization or billing records.
@@ -88,7 +89,7 @@ Squad Pod watches the selected project's `.squad/` files, including the roster, 
 
 ## Custom assets
 
-Add a local furniture directory in **Settings**. Custom pet sheets can be placed in the same directory. Manifests, folder layouts, supported images, reload behavior, and import limits are described in [Custom asset manifests](docs/custom-assets.md).
+Add a local asset directory in **Settings** for furniture, pets, and character sheets. Folder layouts, supported images, reload behavior, and import limits are described in [Custom asset manifests](docs/custom-assets.md).
 
 ## Architecture
 
@@ -120,7 +121,6 @@ The original [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by 
 ## Roadmap
 
 - Show live per-tool activity and context usage.
-- Support custom character skins.
 - Visualize team ceremonies in the office.
 
 ## Credits

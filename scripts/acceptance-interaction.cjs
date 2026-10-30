@@ -58,7 +58,7 @@ function createProviderFixture({ artifactRoot = root, extensionCode, baseUrl = '
     Uri: { file: uri, joinPath: (base, ...parts) => uri(path.join(base.fsPath, ...parts)) },
     workspace: {
       workspaceFolders: [{ uri: uri(workspaceRoot), name: 'Interaction fixture' }],
-      getConfiguration: () => ({ get: (_key, fallback) => fallback }),
+      getConfiguration: () => ({ get: (key, fallback) => key === 'directorySuggestions' ? false : fallback }),
       onDidChangeWorkspaceFolders: () => disposable,
     },
     window: {

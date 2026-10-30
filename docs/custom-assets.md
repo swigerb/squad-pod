@@ -1,6 +1,6 @@
 # Custom asset manifests
 
-Squad Pod can load local furniture and pet sheets from directories you add in **Settings → Add Asset Directory**. Asset files stay local. Changes are detected automatically; unloading a directory does not delete files or remove placed items from layouts.
+Squad Pod can load local furniture, pets, and character sheets from directories you add in **Settings → Add Asset Directory**. Asset files stay local. Changes are detected automatically; unloading a directory does not delete files or remove placed items from layouts.
 
 ## Furniture
 
@@ -60,7 +60,25 @@ Use a `group` with `groupType: "rotation"` to offer directional sprites as one f
 
 Orientations are `front`, `right`, `back`, `left`, or `side`; `side` is treated as `right`. Set `mirrorSide: true` on a `side` member to provide a mirrored left-facing sprite. `rotationScheme` accepts `2-way`, `3-way-mirror`, and `4-way`; a `2-way` group cycles between front and right. When a group has at least two usable orientations, it appears as one palette item, and **R** or **Rotate** cycles through the available views. Ungrouped items rotate geometrically. State switching and animation playback are not supported.
 
-Use local, non-interlaced PNG files. Files must be named directly in the manifest, not referenced by URLs or nested paths. Duplicate asset IDs are rejected. External packs support furniture only; floor, wall, and character packs are not loaded.
+Use local, non-interlaced PNG files. Files must be named directly in the manifest, not referenced by URLs or nested paths. Duplicate asset IDs are rejected. External floor, wall, and carpet packs are not supported.
+
+## Characters
+
+Put sheets directly in `characters/` without a manifest:
+
+```text
+my-assets/
+  characters/
+    char_artist.png
+```
+
+Use transparent, non-interlaced **224x128 PNGs**: seven 32x32 frames per row, with rows ordered **up, right, down, left**. Each frame renders at 16x16 game pixels. Filenames must be `char_NAME.png`; NAME allows 1-80 letters, digits, underscores or hyphens, beginning with a letter or digit. Duplicate filenames across directories and symlinks are rejected; Settings shows invalid-sheet warnings.
+
+Up to eight sheets per directory and 32 total are accepted, each at most 512 KiB. Character imports have separate per-directory allowances of 256 entries, 16 attempts and 2 MiB read per refresh. Adding, editing or removing sheets updates the office automatically.
+
+Existing agents keep their saved appearances. New members claim unused custom sheets, one member per sheet, then bundled styles. Keep folder paths and filenames unchanged to retain assignments; editing the art updates its appearance. A missing sheet uses a stable bundled fallback, and restoring the same path and filename restores its art.
+
+`characters` and `pets` are reserved folders; a furniture folder with either name is not imported.
 
 ## Pets
 
@@ -89,9 +107,9 @@ Pet sheets must be 96×96 pixel PNGs. Bundled pets use types `0` and `1`; custom
 ## Import limits
 
 - Up to eight asset directories can be registered.
-- Each directory and item folder can contain at most 128 entries. Each manifest is limited to 64 KiB, 128 nodes, and eight levels.
+- Furniture and pet imports allow at most 128 entries per directory and item folder. Each manifest is limited to 64 KiB, 128 nodes, and eight levels.
 - A furniture PNG can be at most 1 MiB and 256×256 pixels; its footprint can be at most 16×16 tiles.
-- Each added directory has a per-pass budget of 2 MiB read across 128 files and 48 decoded assets. Split larger packs across available directories.
+- Furniture and pet imports share a per-directory, per-pass budget of 2 MiB read across 128 files and 48 decoded assets. Split larger packs across available directories.
 - A pet PNG can be at most 512 KiB. Pet IDs and types must be unique across loaded pet manifests.
 
 Invalid manifests or images are skipped and reported in the asset warnings and Settings. A placed item whose art is unavailable remains in the layout and is shown with a missing-art marker.

@@ -1,4 +1,5 @@
 import { Direction, SpriteData } from '../types.js';
+import { EXTERNAL_CHARACTER_BASE, PALETTE_COUNT } from '../engine/agentSync.js';
 
 export interface CharacterSprites {
   walk: Record<Direction, SpriteData[]>;
@@ -249,6 +250,10 @@ function applyHueShift(sprite: SpriteData, hueShift: number): SpriteData {
 const generatedSpriteCache = new Map<string, CharacterSprites>();
 
 export function getCharacterSprites(palette: number, hueShift: number): CharacterSprites {
+  if (Number.isSafeInteger(palette) && palette >= EXTERNAL_CHARACTER_BASE) {
+    hueShift = (Math.floor(palette / PALETTE_COUNT) * 45) % 360;
+    palette %= PALETTE_COUNT;
+  }
   if (characterTemplates && characterTemplates[palette]) {
     const template = characterTemplates[palette];
     if (hueShift === 0) return template;
