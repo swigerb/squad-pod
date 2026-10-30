@@ -227,6 +227,13 @@ try {
   assert.match(await tab.locator('[aria-label="Squad source status"]').innerText(), /not an owned-terminal correlation/);
   assert.ok(!JSON.stringify(browserMessages).includes(secret));
   assert.ok(!(await tab.locator('body').innerText()).includes(secret));
+  await tab.getByRole('button', { name: /^Telemetry/ }).click();
+  await until(() => tab.evaluate(() => {
+    const gauge = document.querySelector('[role="progressbar"]')?.getBoundingClientRect();
+    const child = document.querySelector('[data-subagent-label]')?.getBoundingClientRect();
+    return gauge?.width > 0 && gauge.top >= 0 && gauge.bottom <= innerHeight
+      && child?.width > 0 && child.top >= 0 && child.bottom <= innerHeight;
+  }), 'unoccluded tool/context and temporary child evidence');
   if (artifacts) {
     await fs.mkdir(artifacts, { recursive: true });
     await tab.screenshot({ path: path.join(artifacts, 'standalone-live-tool-context.png') });
