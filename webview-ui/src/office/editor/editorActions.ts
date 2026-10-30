@@ -182,24 +182,39 @@ export function applyTilePaint(
   return newLayout;
 }
 
+function furnitureCoversTile(furniture: PlacedFurniture, col: number, row: number): boolean {
+  const footprint = getFurnitureFootprint(furniture);
+  if (!footprint || !Number.isInteger(furniture.col) || !Number.isInteger(furniture.row)) return false;
+  return col >= furniture.col && col < furniture.col + footprint.width
+    && row >= furniture.row && row < furniture.row + footprint.height;
+}
+
 export function applyErase(
   layout: OfficeLayout,
   col: number,
   row: number
 ): OfficeLayout {
   if (!inGrid(layout, col, row)) return layout;
-  const newLayout = cloneLayout(layout);
   const index = row * layout.cols + col;
-  
-  if (index >= 0 && index < newLayout.tiles.length) {
-    newLayout.tiles[index] = TileType.VOID;
-    if (newLayout.carpetTiles) newLayout.carpetTiles[index] = null;
-    if (newLayout.areaTiles) newLayout.areaTiles[index] = null;
-    if (newLayout.tileColors) {
-      delete newLayout.tileColors[`${col},${row}`];
-    }
-  }
-  
+  if (index < 0 || index >= layout.tiles.length) return layout;
+
+  const removesFurniture = layout.furniture.some((item) => furnitureCoversTile(item, col, row));
+  const colorKey = `${col},${row}`;
+  const hasColor = layout.tileColors !== undefined
+    && Object.prototype.hasOwnProperty.call(layout.tileColors, colorKey);
+  const changed = layout.tiles[index] !== TileType.VOID
+    || layout.carpetTiles?.[index] != null
+    || layout.areaTiles?.[index] != null
+    || hasColor
+    || removesFurniture;
+  if (!changed) return layout;
+
+  const newLayout = cloneLayout(layout);
+  newLayout.tiles[index] = TileType.VOID;
+  if (newLayout.carpetTiles) newLayout.carpetTiles[index] = null;
+  if (newLayout.areaTiles) newLayout.areaTiles[index] = null;
+  if (newLayout.tileColors) delete newLayout.tileColors[colorKey];
+  newLayout.furniture = newLayout.furniture.filter((item) => !furnitureCoversTile(item, col, row));
   return newLayout;
 }
 
