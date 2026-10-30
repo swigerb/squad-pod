@@ -1,7 +1,7 @@
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { PlacedFurniture } from '../office/types.js';
 import { getAssetProblem } from '../office/layout/furnitureCatalog.js';
-import { vscode } from '../vscodeApi.js';
+import { useHostClient } from '../HostClientContext.js';
 
 export type AssetStatusData = Pick<AssetSnapshot, 'directories' | 'diagnostics'>;
 
@@ -18,13 +18,14 @@ export function AssetWarnings({ status, furniture }: { status: AssetStatusData; 
 }
 
 export function AssetDirectories({ status }: { status?: AssetStatusData }) {
+  const client = useHostClient();
   return (
     <div>
       <strong>Local furniture assets</strong>
       <p>Changes reload automatically. Removing a directory does not delete files or layout items.</p>
-      <button onClick={() => vscode.postMessage({ type: 'addAssetDirectory' })}>Add Asset Directory</button>
+      <button onClick={() => client.send({ type: 'addAssetDirectory' })}>Add Asset Directory</button>
       {status?.directories.map((directory) => (
-        <p key={directory}>{directory} <button onClick={() => vscode.postMessage({ type: 'removeAssetDirectory', directory })}>Unload</button></p>
+        <p key={directory}>{directory} <button onClick={() => client.send({ type: 'removeAssetDirectory', directory })}>Unload</button></p>
       ))}
       {status?.diagnostics.map((message) => <p role="alert" key={message}>{message}</p>)}
     </div>

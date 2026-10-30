@@ -7,6 +7,8 @@ import { OfficeCanvas } from '../office/components/OfficeCanvas.js';
 import { OfficeState } from '../office/engine/officeState.js';
 import { EditorState } from '../office/editor/editorState.js';
 import { CharacterState, TileType } from '../office/types.js';
+import { HostClientProvider } from '../HostClientContext.js';
+import { createHostClientFixture } from '../__tests__/hostClientFixture.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -18,6 +20,7 @@ describe('AgentLabels over canvas characters', () => {
   let nextFrame: number;
   const panRef = { current: { x: 30, y: 40 } };
   const onAgentClick = vi.fn();
+  const client = createHostClientFixture();
 
   beforeEach(() => {
     frames = new Map();
@@ -58,12 +61,12 @@ describe('AgentLabels over canvas characters', () => {
   }
 
   function render(zoom = 2, withCanvas = false) {
-    act(() => root.render(<>
+    act(() => root.render(<HostClientProvider client={client}><>
       {withCanvas && <OfficeCanvas officeState={office} editorState={new EditorState()}
         isEditMode={false} editorTick={0} zoom={zoom} panRef={panRef}
         onDeskClick={onAgentClick} />}
       <AgentLabels officeState={office} zoom={zoom} panRef={panRef} onAgentClick={onAgentClick} />
-    </>));
+    </></HostClientProvider>));
     frame();
   }
 

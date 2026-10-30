@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SettingsModal } from './SettingsModal.js';
-import { vscode } from '../vscodeApi.js';
+import { useHostClient } from '../HostClientContext.js';
 import type { PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetStatusData } from './AssetStatus.js';
 
@@ -22,13 +22,14 @@ interface BottomToolbarProps {
 }
 
 export function BottomToolbar({ assetStatus, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, isTelemetryOpen, onToggleTelemetry, telemetryCount, isDebugMode = false, onToggleDebugMode, settings, sourceStatus, onSoundChange, onShowAreasChange }: BottomToolbarProps) {
+  const client = useHostClient();
   const [showSettings, setShowSettings] = useState(false);
 
   const handleSquadInfo = () => {
     if (onOpenSquadInfo) {
       onOpenSquadInfo();
     } else {
-      vscode.postMessage({ type: 'openSquadInfo' });
+      client.send({ type: 'openSquadInfo' });
     }
   };
 

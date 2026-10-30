@@ -36,6 +36,8 @@ async function main() {
       let expectedRetainedLayout;
       try {
         await page.goto(url);
+        assert.equal(await page.evaluate(() => window.__petAcceptance.acquireCount), 1,
+          'production webview must acquire the VS Code API once');
         await page.evaluate(() => {
           for (const [name, value] of Object.entries({
             'editor-background': '#1e1e1e', foreground: '#cccccc',
@@ -258,6 +260,39 @@ async function main() {
         await hitClick(page.getByRole('button', { name: /Save Layout/ }), 'Save retained draft after editor reopening');
         const reopened = await page.evaluate(() => window.__petAcceptance.outbound.filter((m) => m.type === 'saveLayout').at(-1)?.layout);
         assert.deepEqual(reopened, expectedRetainedLayout ?? saved);
+
+        if (viewport.width === 1280) {
+          await hitClick(page.getByTitle('Expand Right', { exact: true }), 'Create dirty local draft for conflict test');
+          const localDraft = await page.evaluate(() => structuredClone(window.__petAcceptance.state.draft));
+          const recovery = await page.evaluate(() => window.__petAcceptance.state);
+          assert.ok(recovery.revision, 'the save acknowledgement must persist the current disk revision');
+          const incoming = { ...recovery.baseline, externalMarker: 'browser-incoming-snapshot' };
+          await page.evaluate(({ layout, workspaceRoot }) => window.__sendHost({
+            type: 'layoutLoaded', layout, source: 'external',
+            revision: 'browser-external-revision', workspaceRoot,
+          }), { layout: incoming, workspaceRoot: recovery.workspaceRoot });
+          const conflict = page.getByRole('region', { name: 'Layout recovery' });
+          await conflict.waitFor({ state: 'visible' });
+          await page.getByRole('button', { name: /Keep local draft #/ }).click();
+          await page.waitForFunction(() => window.__petAcceptance.state.pending.length === 0);
+          const resolved = await page.evaluate(() => window.__petAcceptance.state);
+          assert.deepEqual(resolved.draft, localDraft, 'local conflict resolution must retain the dirty draft');
+          assert.equal(resolved.revision, 'browser-external-revision',
+            'local resolution must advance the expected revision to the incoming snapshot');
+          await hitClick(page.getByRole('button', { name: /Save Layout/ }), 'Save locally resolved draft');
+          await page.waitForFunction(() => window.__petAcceptance.outbound.some((message) =>
+            message.type === 'saveLayout' && message.expectedRevision === 'browser-external-revision'));
+          await page.waitForFunction(() => window.__petAcceptance.state.revision?.startsWith('browser-ack-'));
+          const resolvedSave = await page.evaluate(() => window.__petAcceptance.outbound
+            .filter((message) => message.type === 'saveLayout').at(-1));
+          assert.equal(resolvedSave.expectedRevision, 'browser-external-revision');
+          assert.deepEqual(resolvedSave.layout, localDraft);
+          record.conflictResolution = {
+            expectedRevision: resolvedSave.expectedRevision,
+            acknowledgedRevision: await page.evaluate(() => window.__petAcceptance.state.revision),
+            localDraftRetained: true,
+          };
+        }
         assert.deepEqual(errors, [], 'production page errors');
         record.passed = true;
       } finally {

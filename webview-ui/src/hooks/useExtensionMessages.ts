@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { OfficeLayout, ToolActivity, SquadTeamMember, TelemetryEvent } from '../office/types.js';
-import { vscode } from '../vscodeApi.js';
+import { useHostClient } from '../HostClientContext.js';
 import type { AgentDetailInfo } from '../components/AgentCard.js';
 import type { SquadInfoData } from '../components/SquadInfoCard.js';
 import {
@@ -15,12 +15,14 @@ import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
 import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
+import type { OutboundMessage } from '../../../src/types.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
 // e.g. setFloorSprites on the chunk's copy has NO effect on the renderer's
 // copy imported statically in renderer.ts.  Static imports guarantee a single
 // module instance shared across the entire bundle.
+import { isRendererCharacters, isRendererTiles } from '../legacySprites.js';
 import { setCharacterTemplates } from '../office/sprites/defaultCharacters.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
 import { setFloorSprites } from '../office/floorTiles.js';
@@ -68,8 +70,10 @@ export function useExtensionMessages(
   onLayoutSaved?: (layout: OfficeLayout, revision: string | null) => void,
   onLayoutError?: (error: string, source?: 'watcher') => void,
 ): ExtensionMessageState {
+  const client = useHostClient();
   const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
+  const [legacyAssetDiagnostics, setLegacyAssetDiagnostics] = useState<Record<string, string>>({});
   const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false, showAreas: false });
   const [sourceStatus, setSourceStatus] = useState<SourceStatus | null>(null);
   const [directoryCatalog, setDirectoryCatalog] = useState<DirectoryCatalog | null>(null);
@@ -103,20 +107,29 @@ export function useExtensionMessages(
     if (setting === 'soundEnabled') setSoundEnabled(enabled);
     const type = setting === 'soundEnabled' ? 'setSoundEnabled'
       : setting === 'debugEnabled' ? 'setDebugEnabled' : 'setShowAreas';
-    vscode.postMessage({ type, enabled });
-  }, []);
+    client.send({ type, enabled });
+  }, [client]);
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const message = event.data;
-      if (!message || typeof message.type !== 'string') return;
-
+    const rejectLegacySprites = (type: string) => {
+      const diagnostic = `${type}: unsupported legacy sprite format. Existing assets were retained. Reload supported assets from VS Code.`;
+      console.error(`[useExtensionMessages] ${diagnostic}`);
+      setLegacyAssetDiagnostics((previous) => ({ ...previous, [type]: diagnostic }));
+    };
+    const clearLegacyDiagnostic = (type: string) => {
+      setLegacyAssetDiagnostics((previous) => {
+        const next = { ...previous };
+        delete next[type];
+        return next;
+      });
+    };
+    const handleMessage = (message: OutboundMessage) => {
       const applySnapshot = (snapshot: AgentSnapshot[]) => {
         const officeState = getOfficeState();
         reconcileAgents(officeState, snapshot);
         const seats = officeState.getSeatAssignments();
         if (snapshot.some((a) => (a.seatId ?? undefined) !== seats[a.id])) {
-          vscode.postMessage({ type: 'saveAgentSeats', seats });
+          client.send({ type: 'saveAgentSeats', seats });
         }
         const ids = snapshot.map((a) => a.id);
         agentsRef.current = ids;
@@ -316,27 +329,31 @@ export function useExtensionMessages(
           break;
 
         case 'characterSpritesLoaded': {
-          const { sprites } = message;
-          setCharacterTemplates(sprites);
+          const sprites: unknown = message.sprites;
+          if (isRendererCharacters(sprites)) {
+            setCharacterTemplates(sprites);
+            clearLegacyDiagnostic(message.type);
+          } else rejectLegacySprites(message.type);
           break;
         }
 
-        case 'furnitureLoaded':
         case 'furnitureAssetsLoaded': {
           const { catalog: _catalog, sprites: _sprites } = message;
           buildDynamicCatalog();
           break;
         }
-
-        case 'floorTilesLoaded': {
-          const tiles = message.tiles ?? message.sprites;
-          setFloorSprites(tiles);
+        case 'furnitureLoaded':
+          buildDynamicCatalog();
           break;
-        }
 
+        case 'floorTilesLoaded':
         case 'wallTilesLoaded': {
-          const tiles = message.tiles ?? message.sprites;
-          setWallSprites(tiles);
+          const tiles: unknown = message.tiles ?? message.sprites;
+          if (isRendererTiles(tiles)) {
+            if (message.type === 'floorTilesLoaded') setFloorSprites(tiles);
+            else setWallSprites(tiles);
+            clearLegacyDiagnostic(message.type);
+          } else rejectLegacySprites(message.type);
           break;
         }
 
@@ -451,17 +468,17 @@ export function useExtensionMessages(
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    vscode.postMessage({ type: 'webviewReady' });
-    vscode.postMessage({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
+    const unsubscribe = client.subscribe(handleMessage);
+    client.send({ type: 'webviewReady' });
+    client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
 
-    return () => window.removeEventListener('message', handleMessage);
+    return unsubscribe;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError]);
+  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError]);
 
   return {
     recordedUsage,
-    assetStatus,
+    assetStatus: { ...assetStatus, diagnostics: [...assetStatus.diagnostics, ...Object.values(legacyAssetDiagnostics)] },
     settings,
     sourceStatus,
     directoryCatalog,

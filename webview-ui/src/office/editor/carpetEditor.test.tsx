@@ -11,7 +11,8 @@ import { setCarpetSprites } from '../sprites/carpetTiles.js';
 import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
 import { applyCarpetPaint, applyCarpetErase, applyTilePaint } from './editorActions.js';
 import { deserializeLayout, serializeLayout } from '../layout/layoutManager.js';
-import { vscode } from '../../vscodeApi.js';
+import { HostClientProvider } from '../../HostClientContext.js';
+import { createHostClientFixture } from '../../__tests__/hostClientFixture.js';
 import { renderCarpetLayer } from '../sprites/carpetRenderer.js';
 
 vi.mock('../sprites/spriteCache.js', () => ({ getCachedSprite: (sprite: SpriteData) => sprite }));
@@ -22,12 +23,13 @@ describe('carpets through real canvas/editor transactions', () => {
   let host: HTMLDivElement, root: Root, canvas: HTMLCanvasElement;
   let office: OfficeState, state: EditorState, actions: ReturnType<typeof useEditorActions>;
   let before: OfficeLayout;
+  const client = createHostClientFixture();
   const color = { h: 210, s: 80, b: -10, c: 0, colorize: true };
   const accentColor = { ...color, h: 40, b: 20 };
 
   beforeEach(() => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
-    vi.spyOn(vscode, 'postMessage').mockImplementation(() => {});
+    vi.mocked(client.send).mockClear();
     setCarpetSprites([0, 1, 2].map(() => Array.from({ length: 16 }, () => [['#111111', '#eeeeee']])));
     before = {
       version: 2, cols: 6, rows: 4, tiles: Array(24).fill(1),
@@ -42,7 +44,7 @@ describe('carpets through real canvas/editor transactions', () => {
     const getOffice = () => office;
     const panRef = { current: { x: 0, y: 0 } };
     function Harness() {
-      actions = useEditorActions(getOffice, state);
+      actions = useEditorActions(getOffice, state, undefined);
       return <>
         <OfficeCanvas officeState={office} editorState={state} isEditMode={actions.isEditMode}
           editorTick={actions.editorTick} zoom={1} panRef={panRef}
@@ -67,7 +69,7 @@ describe('carpets through real canvas/editor transactions', () => {
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
-    act(() => root.render(<Harness />));
+    act(() => root.render(<HostClientProvider client={client}><Harness /></HostClientProvider>));
     act(() => {
       actions.receiveLayout(office.layout, 'external', 'initial', 'C:\\carpet-fixture');
       actions.handleToggleEditMode();

@@ -158,6 +158,26 @@ It supplies Dark+ theme variables normally supplied by VS Code. This is a
 production-browser fixture with a mocked host boundary, **not** native VS Code
 or installed-VSIX acceptance; no terminal/CLI launch is executed.
 
+### Client transport foundation
+
+The webview now sends requests, receives host messages and reads/writes protected
+layout recovery state through one typed client boundary. Its production adapter
+uses the existing VS Code webview API; a missing or failing host and recovery
+state-read failures are shown explicitly, and failed recovery writes remain
+visible without discarding the live draft. This is only a prerequisite for
+future host adapters: standalone/browser transport and controls are not
+available outside the supported VS Code host.
+
+The remaining [#8](https://github.com/swigerb/squad-pod/issues/8) gates include
+authenticated host/origin and WebSocket mutation authorization with token
+rotation; a supported launch/lifecycle producer; separate office and terminal
+channels; replay/reconnect without duplicate processes; owned shutdown,
+external dismissal and no-terminal behavior; mobile keyboard, gesture,
+clipboard and link behavior with the desktop editor hidden; a Windows-native
+PTY; and installed-artifact checks with an isolated home and spaced paths.
+Browser fixtures and adapters do not establish native-host or real-process
+support.
+
 ### Source status and missing-team setup
 
 Settings reports whether `team.md` exists in the selected Squad directory and whether the file observer is running (native watch plus polling, or polling alone). Native-watch errors are shown with the polling fallback; EventBus / WebSocket is **not connected** because no producer is wired. These are file-observation hints, **not authoritative lifecycle, tool or context events**. The idle timeout is not proof that a task finished.
@@ -208,14 +228,18 @@ bus; the opt-in bridge is not automatic and supplies neither replay nor workspac
 identity. No bridge is started here. Charters, UI focus, directory launches and
 persistence flags do not establish hierarchy or membership.
 
-For production UI evidence, build, then run
-`node scripts/acceptance-pets.cjs --serve --usage` and, in another terminal,
-`node scripts/acceptance-usage.cjs`. Use existing Playwright via `PLAYWRIGHT_MODULE`
-and installed Microsoft Edge (no downloads); `ACCEPTANCE_OUTPUT_DIR` writes
-screenshots and a JSON report. The fixture obtains real snapshots from the
-compiled provider and exercises the production webview at 1280, 360 and 240 pixel
-widths. It is a **mocked VS Code boundary**, not native-host or real-Squad-session
-acceptance, and never launches a terminal/CLI.
+For recorded-usage evidence, build, run
+`node scripts/acceptance-pets.cjs --serve --usage`, then
+`node scripts/acceptance-usage.cjs` in another terminal. For UI controls, start
+`node scripts/acceptance-pets.cjs --serve` and run
+`node scripts/acceptance-controls.cjs` in another terminal. Use existing
+Playwright via `PLAYWRIGHT_MODULE` and installed Microsoft Edge (no downloads);
+`ACCEPTANCE_OUTPUT_DIR` writes screenshots and a JSON report. The fixture
+obtains real snapshots from the compiled provider and exercises the production
+webview at 1280, 360 and 240 pixel widths. The controls check verifies single
+API acquisition and the dirty-conflict/local-resolution/save-acknowledgement
+path through the mocked adapter. These are **mocked VS Code boundary** checks,
+not native-host or real-Squad-session acceptance, and never launch a terminal/CLI.
 
 ### Missing-team and directory behavior
 
@@ -605,6 +629,7 @@ Squad Pod tracks [Pixel Agents v1.5.0](https://github.com/pixel-agents-hq/pixel-
 | Squad-history directory suggestions | ❌ No supported launch-history producer |
 | Animated pets, stable saved pet types, validated local pet manifests | ✅ Browser/provider fixtures; VS Code host verification pending |
 | Other external pack kinds and furniture animation | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
+| Typed host-neutral webview client seam | ✅ VS Code adapter only; no standalone transport |
 | Standalone browser server, embedded terminal, mobile layout | ⏳ [#8](https://github.com/swigerb/squad-pod/issues/8) |
 | Per-tool overlays and context gauges | ❌ Needs a Squad event API |
 

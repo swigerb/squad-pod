@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { vscode } from '../vscodeApi.js';
+import { useHostClient } from '../HostClientContext.js';
 import type { DirectoryCatalog, DirectoryEntry } from '../../../src/types.js';
 
 interface DirectoryModalProps {
@@ -55,6 +55,7 @@ function DirectoryRow({
   onNameChange?: (name: string) => void;
   nameValue?: string;
 }) {
+  const client = useHostClient();
   return (
     <div
       style={{
@@ -93,29 +94,29 @@ function DirectoryRow({
           disabled={!entry.valid}
           title={entry.valid ? undefined : entry.error ?? 'This directory is invalid.'}
           ariaLabel={`Launch ${entry.name}`}
-          onClick={() => vscode.postMessage({ type: 'launchDirectory', id: entry.id, source })}
+          onClick={() => client.send({ type: 'launchDirectory', id: entry.id, source })}
         >
           Launch
         </ActionButton>
         {source === 'saved' && onNameChange && (
           <>
             <ActionButton
-              onClick={() => vscode.postMessage({
+              onClick={() => client.send({
                 type: 'updateDirectoryName', id: entry.id, name: nameValue ?? entry.name,
               })}
             >
               Save name
             </ActionButton>
-            <ActionButton onClick={() => vscode.postMessage({ type: 'changeDirectoryPath', id: entry.id })}>
+            <ActionButton onClick={() => client.send({ type: 'changeDirectoryPath', id: entry.id })}>
               Change folder
             </ActionButton>
-            <ActionButton onClick={() => vscode.postMessage({ type: 'removeDirectory', id: entry.id })}>
+            <ActionButton onClick={() => client.send({ type: 'removeDirectory', id: entry.id })}>
               Remove
             </ActionButton>
           </>
         )}
         {source === 'recent' && (
-          <ActionButton onClick={() => vscode.postMessage({ type: 'forgetDirectoryLaunch', id: entry.id })}>
+          <ActionButton onClick={() => client.send({ type: 'forgetDirectoryLaunch', id: entry.id })}>
             Forget
           </ActionButton>
         )}
@@ -125,6 +126,7 @@ function DirectoryRow({
 }
 
 export function DirectoryModal({ catalog, error, notice, onClose }: DirectoryModalProps) {
+  const client = useHostClient();
   const [names, setNames] = useState<Record<string, string>>({});
   const workspaceDirectories = catalog?.workspaceDirectories ?? [];
   const savedDirectories = catalog?.savedDirectories ?? [];
@@ -210,7 +212,7 @@ export function DirectoryModal({ catalog, error, notice, onClose }: DirectoryMod
         </div>
 
         <footer style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', paddingTop: '12px' }}>
-          <ActionButton onClick={() => vscode.postMessage({ type: 'addDirectory' })}>Add directory</ActionButton>
+          <ActionButton onClick={() => client.send({ type: 'addDirectory' })}>Add directory</ActionButton>
           <ActionButton onClick={onClose}>Close</ActionButton>
         </footer>
       </section>

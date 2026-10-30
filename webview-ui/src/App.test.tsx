@@ -2,13 +2,18 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
-import { vscode } from './vscodeApi.js';
 import { isSoundEnabled } from './notificationSound.js';
 import { resetPetTemplates } from './office/sprites/petSpriteData.js';
 import type { DirectoryCatalog, OutboundMessage, SourceStatus } from '../../src/types.js';
 import type { AssetSnapshot } from '../../src/manifestAssets.js';
 import type { LayoutRecovery } from './office/editor/layoutDraft.js';
 import type { OfficeLayout } from './office/types.js';
+import { createHostClientFixture } from './__tests__/hostClientFixture.js';
+import type { HostClientFixture } from './__tests__/hostClientFixture.js';
+import { getFloorSprite, setFloorSprites } from './office/floorTiles.js';
+import { getWallSprite, setWallSprites } from './office/wallTiles.js';
+import { getCharacterSprites, setCharacterTemplates } from './office/sprites/defaultCharacters.js';
+import { createVSCodeClient } from './hostClient.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -16,6 +21,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   let host: HTMLDivElement;
   let root: Root;
   let persisted: LayoutRecovery | undefined;
+  let client: HostClientFixture;
   const imported: OfficeLayout = {
     version: 2, cols: 20, rows: 15, tiles: Array(300).fill(1), furniture: [],
     tileColors: { '0,0': { h: 40, s: 20, b: -5, c: 10 } },
@@ -27,7 +33,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     })),
   };
   function send(message: OutboundMessage) {
-    act(() => window.dispatchEvent(new MessageEvent('message', { data: message })));
+    act(() => client.emit(message));
   }
   function click(text: string) {
     const button = [...host.querySelectorAll('button')].find((b) => b.textContent === text);
@@ -38,34 +44,132 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     send({ type: 'layoutLoaded', layout, revision, source, workspaceRoot: 'workspace-A' });
   }
   function saves() {
-    return vi.mocked(vscode.postMessage).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout');
+    return vi.mocked(client.send).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout');
   }
   function remount() {
     act(() => root.unmount());
     root = createRoot(host);
-    act(() => root.render(<App />));
+    act(() => root.render(<App client={client} />));
   }
   beforeEach(() => {
     resetPetTemplates();
     persisted = undefined;
+    client = createHostClientFixture();
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
-    vi.spyOn(vscode, 'postMessage').mockImplementation(() => {});
-    vi.spyOn(vscode, 'getState').mockImplementation(() => persisted);
-    vi.spyOn(vscode, 'setState').mockImplementation((value) => {
+    vi.mocked(client.getState).mockImplementation(() => persisted);
+    vi.spyOn(client, 'setState');
+    vi.mocked(client.setState).mockImplementation((value) => {
       persisted = JSON.parse(JSON.stringify(value)) as LayoutRecovery;
       return value;
     });
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
-    act(() => root.render(<App />));
+    act(() => root.render(<App client={client} />));
     snapshot(imported, 'disk-original');
   });
   afterEach(() => {
     act(() => root.unmount());
     host.remove();
     resetPetTemplates();
+    setFloorSprites([]);
+    setWallSprites([]);
+    setCharacterTemplates([]);
     vi.restoreAllMocks();
+  });
+
+  it('subscribes before the readiness handshake and sends the initial host messages in order', () => {
+    expect(client.subscribe).toHaveBeenCalledOnce();
+    expect(client.events.slice(0, 3)).toEqual([
+      'subscribe', 'send:webviewReady', 'send:diagnosticReport',
+    ]);
+  });
+
+  it('shows an actionable unsupported-host screen without functional office controls', () => {
+    act(() => root.unmount());
+    root = createRoot(host);
+    act(() => root.render(<App />));
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Squad Pod: Show Panel');
+    expect(host.querySelectorAll('button')).toHaveLength(0);
+    expect(host.textContent).not.toContain('Save Layout');
+    expect(host.textContent).not.toContain('Launch directory');
+  });
+
+  it('surfaces adapter acquisition failures alongside the host recovery action', () => {
+    act(() => root.unmount());
+    root = createRoot(host);
+    act(() => root.render(<App client={null} hostError="Error: API acquisition failed" />));
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('API acquisition failed');
+    expect(host.textContent).toContain('Squad Pod: Show Panel');
+  });
+
+  it('shows recovery-state read failures without replacing or saving state', () => {
+    click('Edit Layout');
+    click('→');
+    const previousRecovery = structuredClone(persisted);
+    vi.mocked(client.getState).mockImplementation(() => {
+      throw new Error('state unavailable');
+    });
+    vi.mocked(client.setState).mockClear();
+    vi.mocked(client.subscribe).mockClear();
+    vi.mocked(client.send).mockClear();
+    const previousEvents = [...client.events];
+    remount();
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('state unavailable');
+    expect(host.textContent).toContain('existing recovery data was not replaced');
+    expect(host.textContent).not.toContain('Save Layout');
+    expect(client.setState).not.toHaveBeenCalled();
+    expect(client.subscribe).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+    expect(persisted).toEqual(previousRecovery);
+    expect(client.events).toEqual(previousEvents);
+  });
+
+  it('guards legacy sprite payloads at the real adapter boundary without replacing valid assets', () => {
+    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});
+    act(() => root.unmount());
+    const adapter = createVSCodeClient(() => ({
+      postMessage: vi.fn(), getState: () => undefined, setState: (value) => value,
+    }), window);
+    root = createRoot(host);
+    act(() => root.render(<App client={adapter} />));
+    const dispatch = (message: unknown) => act(() => window.dispatchEvent(new MessageEvent('message', { data: message })));
+    dispatch({ type: 'layoutLoaded', layout: imported, revision: 'legacy-test' });
+    const tile = { width: 2, height: 1, pixels: [0xabcdef80, 0] };
+    const sprite = [['#abcdef80', '']];
+    const frames = { 0: [sprite], 1: [sprite], 2: [sprite], 3: [sprite] };
+    const character = { walk: frames, typing: frames, reading: frames };
+    dispatch({ type: 'characterSpritesLoaded', sprites: [character] });
+    expect(getCharacterSprites(0, 0)).toEqual(character);
+    dispatch({ type: 'floorTilesLoaded', tiles: [sprite] });
+    expect(getFloorSprite(0)).toEqual([['#abcdef80', '']]);
+    dispatch({ type: 'wallTilesLoaded', sprites: Array.from({ length: 16 }, () => sprite) });
+    expect(getWallSprite([0], 1, 1, 0, 0).sprite).toEqual([['#abcdef80', '']]);
+    const before = getCharacterSprites(0, 0);
+    dispatch({ type: 'characterSpritesLoaded', sprites: [{
+      paletteIndex: 0, directions: { down: { idle: [tile], walk: [tile] } },
+    }] });
+    expect(getCharacterSprites(0, 0)).toBe(before);
+    dispatch({ type: 'floorTilesLoaded', tiles: [sprite, tile] });
+    dispatch({ type: 'wallTilesLoaded' });
+    expect(getFloorSprite(0)).toEqual([['#abcdef80', '']]);
+    expect(getWallSprite([0], 1, 1, 0, 0).sprite).toEqual([['#abcdef80', '']]);
+    for (const type of ['characterSpritesLoaded', 'floorTilesLoaded', 'wallTilesLoaded']) {
+      expect(diagnostic).toHaveBeenCalledWith(expect.stringContaining(`${type}: unsupported legacy sprite format`));
+      expect(host.textContent).toContain(`${type}: unsupported legacy sprite format`);
+    }
+    dispatch({ type: 'manifestAssetsLoaded', snapshot: {
+      furniture: [], floors: [[['#123456']]], walls: Array.from({ length: 16 }, () => [['#654321']]),
+      carpets: [], pets: [], directories: [], diagnostics: ['Manifest warning retained'],
+    } });
+    expect(getFloorSprite(0)).toEqual([['#123456']]);
+    expect(getWallSprite([0], 1, 1, 0, 0).sprite).toEqual([['#654321']]);
+    expect(host.textContent).toContain('characterSpritesLoaded: unsupported legacy sprite format');
+    expect(host.textContent).toContain('Manifest warning retained');
+    dispatch({ type: 'floorTilesLoaded', tiles: [sprite] });
+    expect(host.textContent).not.toContain('floorTilesLoaded:');
+    expect(host.textContent).toContain('wallTilesLoaded:');
+    expect(host.textContent).toContain('Manifest warning retained');
   });
 
   it('keeps tool choice, dirty draft and undo history independent of zoom and editor control rearrangement', () => {
@@ -149,7 +253,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
     click('Save name');
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({
+    expect(client.send).toHaveBeenLastCalledWith({
       type: 'updateDirectoryName', id: 'saved-1', name: 'Native rename',
     });
     click('Close');
@@ -366,7 +470,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     click('● Save Layout');
     expect(saves()).toEqual([]);
     click('Export local draft');
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: local });
+    expect(client.send).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: local });
   });
 
   it.each(['workspace mismatch', 'malformed recovery', 'malformed acknowledgement', 'unclassified host error'])(
@@ -376,7 +480,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
         send({ type: 'layoutLoaded', layout: external, workspaceRoot: 'workspace-B', revision: 'other-disk' });
         expected = 'Workspace changed';
       } else if (failure === 'malformed recovery') {
-        vi.mocked(vscode.getState).mockReturnValue({ malformedRecovery: 'preserve me' });
+        vi.mocked(client.getState).mockReturnValue({ malformedRecovery: 'preserve me' });
         remount();
         expected = 'Layout recovery state is malformed';
       } else if (failure === 'malformed acknowledgement') {
@@ -525,9 +629,9 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(saves()).toEqual([]);
     const id = persisted!.pending[0].id;
     click('Export local draft');
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: local });
+    expect(client.send).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: local });
     click(`Export snapshot #${id}`);
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: incoming });
+    expect(client.send).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: incoming });
     remount();
     snapshot(incoming, 'carpet-external');
     expect(persisted!.draft).toEqual(local);
@@ -587,9 +691,9 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(saves()).toEqual([]);
     const id = persisted!.pending[0].id;
     click('Export local draft');
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: local });
+    expect(client.send).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: local });
     click(`Export snapshot #${id}`);
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: external });
+    expect(client.send).toHaveBeenLastCalledWith({ type: 'exportLayoutSnapshot', layout: external });
     remount();
     snapshot(external, 'disk-external');
     expect(persisted!.draft).toEqual(local);
@@ -674,14 +778,14 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   });
 
   it('keeps live draft/snapshot exports available when panel-state persistence fails', () => {
-    vi.mocked(vscode.setState).mockImplementation(() => { throw new Error('state quota'); });
+    vi.mocked(client.setState).mockImplementation(() => { throw new Error('state quota'); });
     click('Edit Layout');
     click('→');
     snapshot(external, 'disk-external');
     expect(host.textContent).toContain('Recovery persistence failed');
     expect(host.textContent).toContain('state quota');
     click('Export local draft');
-    const exported = vi.mocked(vscode.postMessage).mock.calls.map(([m]) => m).filter((m) => m.type === 'exportLayoutSnapshot').at(-1)!;
+    const exported = vi.mocked(client.send).mock.calls.map(([m]) => m).filter((m) => m.type === 'exportLayoutSnapshot').at(-1)!;
     expect(exported.layout.cols).toBe(21);
     expect(exported.layout.furniture).toEqual([]);
     // The failed storage operation never pretends that the stale persisted copy is current.
@@ -693,16 +797,16 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     click('Edit Layout');
     click('→');
     const before = JSON.parse(JSON.stringify(persisted));
-    act(() => window.dispatchEvent(new MessageEvent('message', { data: {
+    act(() => client.emit({
       type: 'layoutLoaded', layout: { ...external, tiles: [] }, revision: 'bad',
-    } })));
+    }));
     expect(persisted).toEqual(before);
     expect(host.textContent).toContain('Incoming layout is malformed');
-    vi.mocked(vscode.getState).mockReturnValue({ malformedRecovery: 'copy me' });
-    vi.mocked(vscode.setState).mockClear();
+    vi.mocked(client.getState).mockReturnValue({ malformedRecovery: 'copy me' });
+    vi.mocked(client.setState).mockClear();
     remount();
     snapshot(external, 'disk-external');
-    expect(vscode.setState).not.toHaveBeenCalled();
+    expect(client.setState).not.toHaveBeenCalled();
     expect(host.textContent).toContain('Layout recovery state is malformed');
     expect(host.textContent).toContain('copy me');
   });
@@ -728,12 +832,13 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
 describe('settings and source UI with simulated host messages', () => {
   let host: HTMLDivElement;
   let root: Root;
+  let client: HostClientFixture;
   const status: SourceStatus = {
     workspaceRoot: 'C:\\project', squadDir: 'C:\\project\\.squad',
     teamFound: true, observer: 'watching', nativeWatch: false, error: null,
   };
   function send(message: OutboundMessage) {
-    act(() => window.dispatchEvent(new MessageEvent('message', { data: message })));
+    act(() => client.emit(message));
   }
   function click(text: string) {
     const button = [...host.querySelectorAll('button')].find(b => b.textContent === text);
@@ -745,12 +850,12 @@ describe('settings and source UI with simulated host messages', () => {
     send({ type: 'sourceStatus', status });
   }
   beforeEach(() => {
+    client = createHostClientFixture();
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
-    vi.spyOn(vscode, 'postMessage').mockImplementation(() => {});
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
-    act(() => root.render(<App />));
+    act(() => root.render(<App client={client} />));
   });
   afterEach(() => {
     act(() => root.unmount());
@@ -771,21 +876,21 @@ describe('settings and source UI with simulated host messages', () => {
     expect(showAreas.checked).toBe(false);
     act(() => sound.click());
     expect(isSoundEnabled()).toBe(true);
-    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'setSoundEnabled', enabled: true });
+    expect(client.send).toHaveBeenCalledWith({ type: 'setSoundEnabled', enabled: true });
     act(() => debug.click());
-    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: true });
+    expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: true });
     act(() => showAreas.click());
-    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'setShowAreas', enabled: true });
+    expect(client.send).toHaveBeenCalledWith({ type: 'setShowAreas', enabled: true });
     expect(host.textContent).toContain('Authoritative tool/context data is unavailable');
     act(() => root.unmount());
     root = createRoot(host);
-    act(() => root.render(<App />));
+    act(() => root.render(<App client={client} />));
     send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: true, showAreas: true });
     load();
     expect(isSoundEnabled()).toBe(false);
     expect(host.textContent).toContain('Authoritative tool/context data is unavailable');
     click('Close');
-    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: false });
+    expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: false });
     click('Settings');
     expect(host.querySelector<HTMLInputElement>('#squad-pod-debug-view')!.checked).toBe(false);
     expect(host.querySelector<HTMLInputElement>('#squad-pod-show-areas')!.checked).toBe(true);
@@ -809,12 +914,12 @@ describe('settings and source UI with simulated host messages', () => {
     expect(host.querySelector('[aria-label="Set up Squad"]')?.textContent).toContain('No Squad team found');
     expect(host.textContent).toContain('Your saved office is kept');
     expect(host.querySelector('a')?.href).toBe('https://github.com/bradygaster/squad#readme');
-    const before = vi.mocked(vscode.postMessage).mock.calls.length;
+    const before = vi.mocked(client.send).mock.calls.length;
     act(() => {
       window.dispatchEvent(new Event('focus'));
       window.dispatchEvent(new Event('focus'));
     });
-    expect(vscode.postMessage).toHaveBeenCalledTimes(before);
+    expect(client.send).toHaveBeenCalledTimes(before);
     send({ type: 'sourceStatus', status });
     expect(host.querySelector('[aria-label="Set up Squad"]')).toBeNull();
     expect(host.textContent).toContain('Squad Info');
@@ -852,7 +957,7 @@ describe('settings and source UI with simulated host messages', () => {
     };
     send({ type: 'directoryCatalog', catalog });
     click('Directories');
-    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'getDirectories' });
+    expect(client.send).toHaveBeenCalledWith({ type: 'getDirectories' });
     expect(host.textContent).toContain('Squad history suggestions are unavailable');
     expect(host.textContent).toContain('Recent launch requests below are recorded by Squad Pod');
     expect(host.textContent).toContain('Workspace & Repo');
@@ -863,7 +968,7 @@ describe('settings and source UI with simulated host messages', () => {
     expect(list.style.overflowY).toBe('auto');
     const launch = host.querySelector<HTMLButtonElement>('[aria-label="Launch Workspace & Repo"]')!;
     act(() => launch.click());
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({
+    expect(client.send).toHaveBeenLastCalledWith({
       type: 'launchDirectory', id: 'workspace:project', source: 'workspace',
     });
 
@@ -891,20 +996,20 @@ describe('settings and source UI with simulated host messages', () => {
     const buttons = [...host.querySelectorAll('button')];
     const saveName = buttons.find((button) => button.textContent === 'Save name')!;
     act(() => saveName.click());
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({
+    expect(client.send).toHaveBeenLastCalledWith({
       type: 'updateDirectoryName', id: 'saved-1', name: 'Renamed',
     });
     const changeFolder = buttons.find((button) => button.textContent === 'Change folder')!;
     act(() => changeFolder.click());
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'changeDirectoryPath', id: 'saved-1' });
+    expect(client.send).toHaveBeenLastCalledWith({ type: 'changeDirectoryPath', id: 'saved-1' });
     const remove = buttons.find((button) => button.textContent === 'Remove')!;
     act(() => remove.click());
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'removeDirectory', id: 'saved-1' });
+    expect(client.send).toHaveBeenLastCalledWith({ type: 'removeDirectory', id: 'saved-1' });
     const forget = buttons.find((button) => button.textContent === 'Forget')!;
     act(() => forget.click());
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'forgetDirectoryLaunch', id: 'recent-1' });
+    expect(client.send).toHaveBeenLastCalledWith({ type: 'forgetDirectoryLaunch', id: 'recent-1' });
     click('Add directory');
-    expect(vscode.postMessage).toHaveBeenLastCalledWith({ type: 'addDirectory' });
+    expect(client.send).toHaveBeenLastCalledWith({ type: 'addDirectory' });
   });
 
   it('reacts to later layout messages alone to show and clear missing-art warnings after ready', () => {
@@ -923,7 +1028,7 @@ describe('settings and source UI with simulated host messages', () => {
     expect(JSON.stringify(layout)).toBe(original);
     send({ type: 'layoutLoaded', layout: { ...layout, furniture: [] } });
     expect(host.textContent).not.toContain('Asset warnings');
-    expect(vi.mocked(vscode.postMessage).mock.calls.filter(([m]) => m.type === 'saveLayout')).toEqual([]);
+    expect(vi.mocked(client.send).mock.calls.filter(([m]) => m.type === 'saveLayout')).toEqual([]);
   });
 
   it('keeps unsaved editor work and undo history when asset diagnostics refresh', () => {
@@ -936,17 +1041,17 @@ describe('settings and source UI with simulated host messages', () => {
     } });
     expect(host.textContent).toContain('Root read budget exceeded');
     expect(host.textContent).toContain('● Save Layout');
-    expect(vi.mocked(vscode.postMessage).mock.calls.filter(([m]) => m.type === 'saveLayout')).toEqual([]);
+    expect(vi.mocked(client.send).mock.calls.filter(([m]) => m.type === 'saveLayout')).toEqual([]);
     click('● Save Layout');
-    expect(vscode.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+    expect(client.send).toHaveBeenCalledWith(expect.objectContaining({
       type: 'saveLayout', layout: expect.objectContaining({ cols: 7, rows: 6, furniture: [] }),
     }));
-    const saved = vi.mocked(vscode.postMessage).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout').at(-1)!;
+    const saved = vi.mocked(client.send).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout').at(-1)!;
     if (saved.type !== 'saveLayout') throw new Error('Expected save');
     send({ type: 'layoutSaved', layout: saved.layout, revision: JSON.stringify(saved.layout) });
     click('Undo');
     click('● Save Layout');
-    expect(vscode.postMessage).toHaveBeenLastCalledWith(expect.objectContaining({
+    expect(client.send).toHaveBeenLastCalledWith(expect.objectContaining({
       type: 'saveLayout', layout: expect.objectContaining({ cols: 6, rows: 6, furniture: [] }),
     }));
   });
@@ -970,13 +1075,13 @@ describe('settings and source UI with simulated host messages', () => {
     expect(host.textContent).toContain('Bad fixture manifest rejected');
     click('Settings');
     click('Add Asset Directory');
-    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'addAssetDirectory' });
+    expect(client.send).toHaveBeenCalledWith({ type: 'addAssetDirectory' });
     click('Unload');
-    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'removeAssetDirectory', directory: 'C:\\fixture-assets' });
+    expect(client.send).toHaveBeenCalledWith({ type: 'removeAssetDirectory', directory: 'C:\\fixture-assets' });
     send({ type: 'manifestAssetsLoaded', snapshot: { ...snapshot, directories: [], diagnostics: [] } });
     expect(host.textContent).not.toContain('Bad fixture manifest rejected');
     expect(host.textContent).toContain('Unavailable asset: unknown-old-id');
-    expect(vi.mocked(vscode.postMessage).mock.calls.filter(([m]) => m.type === 'saveLayout')).toEqual([]);
+    expect(vi.mocked(client.send).mock.calls.filter(([m]) => m.type === 'saveLayout')).toEqual([]);
     expect(layout.furniture[0]).toEqual({ uid: 'old', type: 'unknown-old-id', col: 2, row: 2, rotation: 0 });
   });
 });

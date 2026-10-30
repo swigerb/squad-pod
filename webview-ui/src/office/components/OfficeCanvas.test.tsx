@@ -8,7 +8,9 @@ import { EditorState } from '../editor/editorState.js';
 import { useEditorActions } from '../../hooks/useEditorActions.js';
 import { useEditorKeyboard } from '../../hooks/useEditorKeyboard.js';
 import { TileType } from '../types.js';
-import { vscode } from '../../vscodeApi.js';
+import { HostClientProvider } from '../../HostClientContext.js';
+import { createHostClientFixture } from '../../__tests__/hostClientFixture.js';
+import type { ReactNode } from 'react';
 import * as gameLoop from '../engine/gameLoop.js';
 import * as renderer from '../engine/renderer.js';
 import { ZoomControls } from '../../components/ZoomControls.js';
@@ -19,6 +21,10 @@ import { setWallSprites } from '../wallTiles.js';
 import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+const client = createHostClientFixture();
+function withClient(children: ReactNode) {
+  return <HostClientProvider client={client}>{children}</HostClientProvider>;
+}
 
 it.each([
   ['missing', undefined],
@@ -51,8 +57,8 @@ it.each([
   const office = new OfficeState(layout);
   const root = createRoot(document.createElement('div'));
   try {
-    act(() => root.render(<OfficeCanvas officeState={office} editorState={new EditorState()}
-      isEditMode={false} editorTick={0} zoom={1} panRef={{ current: { x: 0, y: 0 } }} />));
+    act(() => root.render(withClient(<OfficeCanvas officeState={office} editorState={new EditorState()}
+      isEditMode={false} editorTick={0} zoom={1} panRef={{ current: { x: 0, y: 0 } }} />)));
     expect(ctx.clearRect).toHaveBeenCalled();
     expect(ctx.drawImage).toHaveBeenCalledTimes(1);
     expect(ctx.fillRect).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 16, 16);
@@ -86,8 +92,8 @@ it('passes live Debug View changes into every rendered frame', () => {
   const pan = { current: { x: 0, y: 0 } };
   try {
     for (const [enabled, areasVisible] of [[false, false], [true, true], [false, false]] as const) {
-      act(() => root.render(<OfficeCanvas officeState={office} editorState={editor} isEditMode={false}
-        isDebugMode={enabled} showAreas={areasVisible} editorTick={0} zoom={1} panRef={pan} />));
+      act(() => root.render(withClient(<OfficeCanvas officeState={office} editorState={editor} isEditMode={false}
+        isDebugMode={enabled} showAreas={areasVisible} editorTick={0} zoom={1} panRef={pan} />)));
       expect(frame.mock.lastCall?.at(-7)).toBe(enabled);
       expect(frame.mock.lastCall?.at(-6)).toBe(office.layout.carpetTiles);
       expect(frame.mock.lastCall?.at(-5)).toBe(office.pets);
@@ -113,8 +119,8 @@ it('lets a canvas click toggle the persisted pet heart interaction', () => {
   const host = document.createElement('div');
   const root = createRoot(host);
   try {
-    act(() => root.render(<OfficeCanvas officeState={office} editorState={new EditorState()}
-      isEditMode={false} editorTick={0} zoom={1} panRef={{ current: { x: 0, y: 0 } }} />));
+    act(() => root.render(withClient(<OfficeCanvas officeState={office} editorState={new EditorState()}
+      isEditMode={false} editorTick={0} zoom={1} panRef={{ current: { x: 0, y: 0 } }} />)));
     const canvas = host.querySelector('canvas')!;
     const pet = office.pets[0];
     const clickPet = () => act(() => canvas.dispatchEvent(new MouseEvent('mousedown', {
@@ -144,7 +150,7 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
     // Rendering is not under test in jsdom; mouse handlers and real layout
     // transforms/history are. No gesture or editor callback is mocked.
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
-    vi.spyOn(vscode, 'postMessage').mockImplementation(() => {});
+    vi.mocked(client.send).mockClear();
     office = new OfficeState({
       version: 2, cols: 12, rows: 10, tiles: Array(120).fill(TileType.FLOOR_1),
       furniture: [
@@ -158,21 +164,21 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
     const getOffice = () => office;
     const panRef = { current: { x: 0, y: 0 } };
     function Harness() {
-      actions = useEditorActions(getOffice, editorState);
+      actions = useEditorActions(getOffice, editorState, undefined);
       useEditorKeyboard(actions.isEditMode, editorState, actions.handleDeleteSelected,
         actions.handleRotateSelected, actions.handleUndo, actions.handleRedo,
         () => actions.handleEditorSelectionChange(null), actions.handleToggleEditMode);
-      return <OfficeCanvas officeState={office} editorState={editorState}
+      return withClient(<OfficeCanvas officeState={office} editorState={editorState}
         isEditMode={actions.isEditMode} editorTick={actions.editorTick} zoom={1} panRef={panRef}
         onEditorSelectionChange={actions.handleEditorSelectionChange}
         onDragMove={actions.handleDragMove}
         onExpandGrid={actions.handleExpandGrid}
-        onGestureStart={actions.handleGestureStart} onGestureEnd={actions.handleGestureEnd} />;
+        onGestureStart={actions.handleGestureStart} onGestureEnd={actions.handleGestureEnd} />);
     }
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
-    act(() => root.render(<Harness />));
+    act(() => root.render(<HostClientProvider client={client}><Harness /></HostClientProvider>));
     act(() => {
       actions.receiveLayout(office.getLayout(), 'external', null);
       actions.handleToggleEditMode();
@@ -274,9 +280,9 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
     expect(actions.isDirty).toBe(false);
     expect(actions.canUndo).toBe(false);
     expect(host.querySelector('[role=alert]')?.textContent).toMatch(/overlaps/);
-    expect(vscode.postMessage).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
     act(() => actions.handleSave());
-    expect(vscode.postMessage).toHaveBeenCalledWith({ type: 'saveLayout', layout: before, expectedRevision: null, workspaceRoot: null });
+    expect(client.send).toHaveBeenCalledWith({ type: 'saveLayout', layout: before, expectedRevision: null, workspaceRoot: null });
   });
 
   it.each([false, true])('rejects a drop off-grid without expanding or resetting layout (copy=%s)', (alt) => {
@@ -382,7 +388,7 @@ describe('zoom keeps the office in view', () => {
     panRef.current = { x: 0, y: 0 };
     const getOffice = () => office;
     function Harness() {
-      actions = useEditorActions(getOffice, new EditorState());
+      actions = useEditorActions(getOffice, new EditorState(), undefined);
       return <>
         <OfficeCanvas officeState={office} editorState={new EditorState()} isEditMode={false}
           editorTick={0} zoom={actions.zoom} onZoomChange={actions.handleZoomChange} panRef={panRef} />
@@ -392,7 +398,7 @@ describe('zoom keeps the office in view', () => {
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
-    act(() => root.render(<Harness />));
+    act(() => root.render(<HostClientProvider client={client}><Harness /></HostClientProvider>));
   });
 
   afterEach(() => {

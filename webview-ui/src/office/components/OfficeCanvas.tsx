@@ -11,7 +11,7 @@ import { renderFrame } from '../engine/renderer.js';
 import { clampPanOffset, zoomPanAroundAnchor } from '../engine/viewport.js';
 import { updateCharacter } from '../engine/characters.js';
 import { updatePet } from '../engine/petEntity.js';
-import { vscode } from '../../vscodeApi.js';
+import { useHostClient } from '../../HostClientContext.js';
 import { TILE_SIZE, CHARACTER_HIT_HALF_WIDTH, CHARACTER_HIT_HEIGHT, PAN_MARGIN_FRACTION, ZOOM_SCROLL_THRESHOLD } from '../../constants.js';
 
 interface OfficeCanvasProps {
@@ -58,6 +58,7 @@ export function OfficeCanvas({
   panRef,
   onDeskClick,
 }: OfficeCanvasProps) {
+  const client = useHostClient();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
@@ -350,7 +351,7 @@ export function OfficeCanvas({
           if (seat && selected && seat.occupant !== selected) {
             // A selected agent plus a click on another seat moves the agent there.
             if (officeState.reassignSeat(selected, seat.id)) {
-              vscode.postMessage({ type: 'saveAgentSeats', seats: officeState.getSeatAssignments() });
+              client.send({ type: 'saveAgentSeats', seats: officeState.getSeatAssignments() });
             }
             officeState.selectedAgentId = null;
             onClick?.(col, row);
