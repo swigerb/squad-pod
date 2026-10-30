@@ -135,6 +135,34 @@ freedom. No publishing or release operation is needed to validate a local VSIX.
 6. Open **Settings** for sound, layout export/import, and the Debug View
 7. Open **Directories** to launch Squad in an open workspace folder or a saved directory
 
+### Agent details and charter
+
+Click a character, its name (also accessible with Enter or Space), or its occupied
+desk/chair to open that agent's details: role, observed status, charter summary and
+recent activity. **View Charter** opens that member's `charter.md` in VS Code;
+if absent it opens `history.md`, reveals the member folder, or explains that no
+charter/history exists. Clicking does **not** open or focus a terminal or Squad
+session. Directory launches remain a separate, explicit action.
+
+Repeated clicks retain selection; clicking another seat with an agent selected
+still moves/swaps that agent. Switching members clears the old card while details
+load; removed members' cards and delayed replies are hidden. Cards fit narrow
+panels with scrolling, and measured name/tool overlays use deterministic collision
+lanes without shortening their text. Tool metadata in these checks is synthetic:
+the current provider does not emit live tool events.
+
+After building, run `node scripts/acceptance-interaction.cjs --evidence <directory>`
+with an existing Playwright installation (`PLAYWRIGHT_MODULE`) and Edge (`EDGE_PATH`).
+It serves the production bundle on its own ephemeral loopback port and checks real
+character/name/seat clicks, keyboard activation, compiled-provider charter opening,
+no terminal/focus requests and non-intersecting labels at 2x at 1280x900 and 360x640.
+`--negative-control` builds the pinned pre-fix commit
+`949972fc94558bbf0efd041174259f4df3dfc29f` in a disposable copy and requires the same
+geometry assertion to fail. `--mutations` builds disposable source mutants and
+runs the focused suites and browser acceptance; neither mode edits this checkout.
+These are mocked VS Code boundary/browser fixtures, **not** native VS Code or
+real Squad session evidence.
+
 ### Panel activation preference
 
 In VS Code Settings, enable **Squad Pod: Auto Show Panel**
