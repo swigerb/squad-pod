@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
-import { constants } from 'node:fs';
+import { constants, realpathSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import * as os from 'node:os';
@@ -147,7 +147,7 @@ try {
   channel.send({ type: 'attach', runId: run.runId, cursor: 0 });
   const output = () => channel.frames.filter(frame => frame.type === 'output').map(frame => frame.data).join('');
   await until(() => output().includes('"ready":true'), 'native output through installed transport');
-  assert.ok(output().includes(JSON.stringify(await fs.realpath(project))));
+  assert.ok(output().includes(JSON.stringify(realpathSync(project))));
   assert.ok(output().includes(JSON.stringify(['argument with spaces', 'literal"quote', 'trailing\\'])));
   assert.ok(output().includes('\u00e9\u4e2d\ud83d\ude80'));
   const readyLine = output().match(/FIXTURE (\{[^\r\n]*"ready":true[^\r\n]*\})/);

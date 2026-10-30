@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { chmod, mkdtemp, mkdir, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
+import { chmod, mkdtemp, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
@@ -52,7 +53,7 @@ describe('owned native PTY (no Windows skip)', () => {
     const text = async () => (await history.snapshot(0)).frames.map(frame => frame.data).join('');
     await until(async () => (await text()).includes('"ready":true'), 'native fixture ready');
     let output = await text();
-    expect(output).toContain(JSON.stringify(await realpath(project)));
+    expect(output).toContain(JSON.stringify(realpathSync(project)));
     expect(output).toContain(JSON.stringify(['argument with spaces', 'literal"quote', 'trailing\\']));
     expect(output).toContain('\u00e9\u4e2d\ud83d\ude80');
     await runtime.command({ version: 1, type: 'resize', runId: info.runId, cols: 101, rows: 37 });
@@ -220,16 +221,16 @@ it('resolves fixed native/Node launch argv without execvp text or shell-wrapper 
   if (process.platform === 'win32') {
     await writeFile(executable, 'MZsynthetic native-header-only fixture (never executed)');
     expect(resolveCopilot({ PATH: root })).toEqual({
-      file: await realpath(executable), args: ['--agent', 'squad'],
+      file: realpathSync(executable), args: ['--agent', 'squad'],
     });
   } else {
     await writeFile(executable, '#!/usr/bin/env node\n// synthetic entry point (never executed)\n');
     expect(resolveCopilot({ PATH: root })).toEqual({
-      file: await realpath(process.execPath), args: [await realpath(executable), '--agent', 'squad'],
+      file: realpathSync(process.execPath), args: [realpathSync(executable), '--agent', 'squad'],
     });
     await writeFile(executable, Buffer.from([0x7f, 0x45, 0x4c, 0x46]));
     expect(resolveCopilot({ PATH: root })).toEqual({
-      file: await realpath(executable), args: ['--agent', 'squad'],
+      file: realpathSync(executable), args: ['--agent', 'squad'],
     });
   }
 });
