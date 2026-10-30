@@ -337,10 +337,10 @@ async function main() {
     ]);
     const evidence = {
       head: require('node:child_process').execFileSync('git', ['rev-parse', 'HEAD'], {
-        cwd: repoRoot, encoding: 'utf8',
+        cwd: artifactRoot, encoding: 'utf8',
       }).trim(),
       artifactRoot,
-      servedWebviewBundle: path.relative(repoRoot, webviewScript),
+      servedWebviewBundle: path.relative(artifactRoot, webviewScript),
       servedWebviewBundleSha256: scriptSha256,
       browser: edgePath,
       audioEvidence: 'Recording AudioContext stub injected before page load; not native acoustic evidence.',
