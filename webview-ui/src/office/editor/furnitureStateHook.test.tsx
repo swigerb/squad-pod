@@ -120,7 +120,10 @@ describe('stateful furniture editor actions', () => {
     const test = setup(['unpaired-furniture']);
     try {
       expect(test.actions().canToggleSelectedState).toBe(false);
-      act(() => test.actions().handleToggleState());
+      act(() => {
+        test.actions().handleToggleState();
+        test.actions().handleEditorSelectionChange(null);
+      });
       expect(test.office.layout.furniture[0].type).toBe('unpaired-furniture');
       expect(test.actions().canUndo).toBe(false);
       expect(test.actions().canRedo).toBe(false);
