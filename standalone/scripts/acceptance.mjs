@@ -169,15 +169,29 @@ try {
     await tab.locator('.office-panel canvas').waitFor();
     await tab.getByRole('button', { name: /TestBot.*Developer/ }).waitFor();
     assert.match(await tab.locator('header [role="status"]').innerText(), /Connected - read-only/);
-    for (const label of ['Edit Layout', 'Directories', 'Settings', 'Squad Info']) {
+    for (const label of ['Edit Layout', 'Directories', 'Settings']) {
       assert.equal(await tab.getByRole('button', { name: label, exact: true }).isDisabled(), true);
     }
-    assert.equal(await tab.locator('canvas').evaluate(canvas => {
+    const squadInfoButton = tab.getByRole('button', { name: 'Squad Info', exact: true });
+    assert.equal(await squadInfoButton.isDisabled(), false);
+    await squadInfoButton.click();
+    const squadInfo = tab.getByRole('dialog', { name: 'Squad Info' });
+    await squadInfo.waitFor();
+    await squadInfo.getByRole('button', { name: 'Show details for TestBot', exact: true }).click();
+    await squadInfo.getByText(/Observed status:/).waitFor();
+    await squadInfo.getByText(/Observed task:/).waitFor();
+    await squadInfo.getByText(/Recent activity \(from workspace activity logs/).waitFor();
+    await squadInfo.getByText('Charter content is unavailable.', { exact: false }).waitFor();
+    assert.equal(await squadInfo.getByRole('button', { name: 'Open charter', exact: true }).isDisabled(), true);
+    await squadInfo.getByText('Opening a charter in the editor is unavailable in the read-only observer.', { exact: true }).waitFor();
+    check('read-only Squad Info expands observed details and explains unavailable charter opening');
+    await squadInfo.getByRole('button', { name: 'Close Squad Info', exact: true }).click();
+    await waitFor(async () => await tab.locator('canvas').evaluate(canvas => {
       const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
       const colors = new Set();
       for (let i = 0; i < pixels.length; i += 4) colors.add(`${pixels[i]},${pixels[i + 1]},${pixels[i + 2]}`);
       return colors.size > 20;
-    }), true);
+    }), 'rendered office canvas');
     await tab.getByRole('button', { name: 'Telemetry', exact: false }).click();
     await tab.getByRole('heading', { name: /Recorded usage \/ model history/ }).waitFor();
     await tab.getByText('Settings and live-log consent are unavailable in this read-only observer.', { exact: false }).waitFor();

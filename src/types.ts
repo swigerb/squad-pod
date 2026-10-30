@@ -33,9 +33,16 @@ export interface AgentDetailInfo {
   id: string;
   name: string;
   role: string;
+  workspaceRoot: string;
   status: 'active' | 'idle' | 'waiting';
   currentTask: string | null;
   charterSummary: string | null;  // first 2-3 sentences from charter.md
+  charterContent: string | null;
+  charterStatus: 'available' | 'missing' | 'unreadable' | 'unavailable';
+  modelSources?: import('./declaredModels.js').ModelConfigSource[];
+  expertise: string | null;
+  responsibilities: string | null;
+  boundaries: string | null;
   recentActivity: string[];        // last 3-5 log entries mentioning this agent
   lastActiveAt: number;
 }
@@ -217,7 +224,8 @@ export type WebviewMessage =
   | { type: 'saveAgentSeats'; seats: Record<string, string> }
   | { type: 'saveLayout'; layout: LayoutData; expectedRevision?: string | null; workspaceRoot?: string | null }
   | { type: 'exportLayoutSnapshot'; layout: LayoutData }
-  | { type: 'focusAgent' | 'openSquadAgent' | 'requestAgentDetail'; agentId: string }
+  | { type: 'focusAgent' | 'openSquadAgent'; agentId: string }
+  | { type: 'requestAgentDetail'; agentId: string; requestId?: string }
   | { type: 'diagnosticReport'; characterSheetsSize?: number; characterSheetKeys?: string[]; bootstrapRan?: boolean; errors?: string[] };
 
 export interface PodSettings {
@@ -309,7 +317,9 @@ export interface ExistingAgentsMessage {
 export interface SquadInfoData {
   teamName: string | null;
   description: string | null;
+  workspaceRoot: string | null;
   members: Array<{
+    id: string;
     name: string;
     role: string;
     status: string;
@@ -353,7 +363,7 @@ export type OutboundMessage =
   | { type: 'furnitureAssetsLoaded'; catalog?: unknown; sprites?: unknown }
   | { type: 'assetBaseUrl'; url: string }
   | { type: 'soundEnabled'; enabled: boolean }
-  | { type: 'agentDetailLoaded'; detail: AgentDetailInfo }
+  | { type: 'agentDetailLoaded'; detail: AgentDetailInfo; requestId?: string }
   | { type: 'squadInfoLoaded'; info: SquadInfoData }
   | { type: 'telemetryEvent'; event: TelemetryEvent }
   | { type: 'tilesetAssetsLoaded'; tilesetPngUri: string; tilesetData: TilesetData }

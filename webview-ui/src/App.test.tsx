@@ -97,19 +97,85 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     root = createRoot(host);
     act(() => root.render(<App client={client} readOnly />));
     snapshot(imported, 'observer');
+    send({ type: 'sourceStatus', status: {
+      workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad',
+      teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+    } });
     send({ type: 'existingAgents', agents: [{
       id: 'test-agent-1', name: 'TestBot', role: 'Developer', paletteIndex: 0,
-      seatId: null, status: 'idle', currentTask: null,
+      seatId: null, status: 'idle', currentTask: 'Approximate observed activity',
     }] });
     await nextFrame();
-    for (const label of ['Edit Layout', 'Settings', 'Directories', 'Squad Info']) {
+    for (const label of ['Edit Layout', 'Settings', 'Directories']) {
       const button = [...host.querySelectorAll('button')].find(button => button.textContent === label);
       expect(button?.disabled).toBe(true);
       act(() => button?.click());
     }
+    const squadInfo = [...host.querySelectorAll('button')].find(button => button.textContent === 'Squad Info');
+    expect(squadInfo?.disabled).toBe(false);
+    act(() => squadInfo?.click());
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('TestBot');
     expect(host.querySelector('[data-edit-mode="true"]')).toBeNull();
     expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
     expect(client.setState).not.toHaveBeenCalled();
+    const detailToggle = host.querySelector<HTMLButtonElement>('[aria-label="Show details for TestBot"]');
+    expect(detailToggle).not.toBeNull();
+    act(() => detailToggle?.click());
+    const detailRequest = vi.mocked(client.send).mock.calls
+      .map(([message]) => message).filter((message) => message.type === 'requestAgentDetail').at(-1);
+    expect(detailRequest?.type).toBe('requestAgentDetail');
+    send({ type: 'agentDetailLoaded',
+      requestId: detailRequest?.type === 'requestAgentDetail' ? detailRequest.requestId : undefined,
+      detail: {
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
+      status: 'active', currentTask: 'Approximate observed activity', charterSummary: null,
+      charterContent: null, charterStatus: 'unavailable', expertise: null,
+      responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+      } });
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Charter content is unavailable.');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Declared model metadata is unavailable in the read-only observer.');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Current-session model: unavailable');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed status: active');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed task: Approximate observed activity');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('unavailable in the read-only observer');
+    const collapseToggle = host.querySelector<HTMLButtonElement>('[aria-label="Hide details for TestBot"]');
+    expect(collapseToggle).not.toBeNull();
+    act(() => collapseToggle?.click());
+    send({ type: 'existingAgents', agents: [{
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', paletteIndex: 0,
+      seatId: null, status: 'waiting', currentTask: 'Refreshed observed activity',
+    }] });
+    const refreshedToggle = host.querySelector<HTMLButtonElement>('[aria-label="Show details for TestBot"]');
+    expect(refreshedToggle).not.toBeNull();
+    act(() => refreshedToggle?.click());
+    const refreshedRequest = vi.mocked(client.send).mock.calls
+      .map(([message]) => message).filter((message) => message.type === 'requestAgentDetail').at(-1);
+    expect(refreshedRequest?.type).toBe('requestAgentDetail');
+    expect(refreshedRequest?.type === 'requestAgentDetail' ? refreshedRequest.requestId : undefined)
+      .not.toBe(detailRequest?.type === 'requestAgentDetail' ? detailRequest.requestId : undefined);
+    send({ type: 'agentDetailLoaded',
+      requestId: detailRequest?.type === 'requestAgentDetail' ? detailRequest.requestId : undefined,
+      detail: {
+        id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
+        status: 'active', currentTask: 'Stale observed activity', charterSummary: null,
+        charterContent: null, charterStatus: 'unavailable', expertise: null,
+        responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+      } });
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Loading observed details');
+    send({ type: 'agentDetailLoaded',
+      requestId: refreshedRequest?.type === 'requestAgentDetail' ? refreshedRequest.requestId : undefined,
+      detail: {
+        id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
+        status: 'waiting', currentTask: 'Refreshed observed activity', charterSummary: null,
+        charterContent: null, charterStatus: 'unavailable', expertise: null,
+        responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+      } });
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed status: waiting');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed task: Refreshed observed activity');
+    expect(host.querySelector('[role="dialog"]')?.textContent).not.toContain('Stale observed activity');
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual([
+      'webviewReady', 'requestAgentDetail', 'requestAgentDetail',
+    ]);
     click('Telemetry');
     expect(host.textContent).toContain('Live transient tasks are unavailable in the read-only observer.');
     expect(host.textContent).not.toContain('Enable it in Settings');
