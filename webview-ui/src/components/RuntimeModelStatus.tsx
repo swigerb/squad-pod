@@ -1,4 +1,11 @@
-import type { LiveSourceStatus, RuntimeModelObservation } from '../../../src/types.js';
+import type { LiveModelSnapshot, LiveSourceStatus, RuntimeModelObservation } from '../../../src/types.js';
+
+export function memberRuntimeModel(
+  snapshot: LiveModelSnapshot | null | undefined,
+  memberId: string,
+): RuntimeModelObservation | null {
+  return snapshot && Object.hasOwn(snapshot.members, memberId) ? snapshot.members[memberId] : null;
+}
 
 export function liveModelUnavailableReason(
   status: LiveSourceStatus | undefined,
