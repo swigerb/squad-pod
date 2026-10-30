@@ -1,6 +1,6 @@
-import { CharacterState, Direction } from '../types.js';
+import { CharacterState, Direction, TILE_SIZE } from '../types.js';
 import type { OfficeLayout, Character, Seat, FurnitureInstance, Pet } from '../types.js';
-import { createCharacter } from './characters.js';
+import { createCharacter, isMidStep, routeToSeatPreservingStep } from './characters.js';
 import {
   layoutToTileMap,
   layoutToSeats,
@@ -249,9 +249,13 @@ export class OfficeState {
         if (seat) seat.occupant = agent.id;
       }
       if (char.seatId !== previousSeats.get(agent.id)) {
-        char.path = [];
-        char.moveProgress = 0;
-        char.state = CharacterState.IDLE;
+        if (isMidStep(char)) {
+          if (!char.seatId) char.path = [char.path[0]];
+        } else {
+          char.path = [];
+          char.moveProgress = 0;
+          char.state = CharacterState.IDLE;
+        }
         this.sendToSeat(agent.id);
       }
     }
@@ -291,7 +295,41 @@ export class OfficeState {
     }
     if (char.active === active) return;
     char.active = active;
-    char.state = active ? CharacterState.TYPE : CharacterState.IDLE;
+    if (!active) {
+      // A walking character finishes its route so the rendered position stays continuous.
+      if (char.state !== CharacterState.WALK || char.path.length === 0) {
+        char.state = CharacterState.IDLE;
+      }
+    } else if (!char.seatId) {
+      if (isMidStep(char)) {
+        char.path = [char.path[0]];
+      } else {
+        char.state = CharacterState.TYPE;
+      }
+    } else {
+      const seat = this.seats.find((candidate) => candidate.id === char.seatId);
+      if (!seat) {
+        if (isMidStep(char)) {
+          char.path = [char.path[0]];
+        } else {
+          char.state = CharacterState.IDLE;
+          char.path = [];
+          char.moveProgress = 0;
+          char.x = char.col * TILE_SIZE + TILE_SIZE / 2;
+          char.y = char.row * TILE_SIZE + TILE_SIZE / 2;
+        }
+      } else if (char.state !== CharacterState.WALK) {
+        if (char.col === seat.col && char.row === seat.row && char.path.length === 0 && char.moveProgress === 0) {
+          char.state = CharacterState.TYPE;
+          char.direction = seat.direction;
+          char.frameIndex = 0;
+          char.frameTimer = 0;
+        } else {
+          char.state = CharacterState.IDLE;
+          this.sendToSeat(id);
+        }
+      }
+    }
     this.rebuildFurnitureInstances();
   }
 
@@ -379,18 +417,40 @@ export class OfficeState {
     if (!char || !char.seatId) return;
     const seat = this.seats.find(s => s.id === char.seatId);
     if (!seat) return;
-    this.walkToTile(agentId, seat.col, seat.row);
+    if (routeToSeatPreservingStep(char, seat.col, seat.row, this.tileMap, this.blockedTiles)) return;
+    if (isMidStep(char)) {
+      // No route: finish the in-flight step rather than snapping back; never work off-seat.
+      if (char.active) char.path = [char.path[0]];
+      return;
+    }
+    if (char.active && (char.col !== seat.col || char.row !== seat.row)) {
+      char.state = CharacterState.IDLE;
+      char.path = [];
+      char.moveProgress = 0;
+      char.x = char.col * TILE_SIZE + TILE_SIZE / 2;
+      char.y = char.row * TILE_SIZE + TILE_SIZE / 2;
+    }
   }
 
   walkToTile(agentId: string, col: number, row: number): boolean {
     const char = this.characters.get(agentId);
     if (!char) return false;
 
-    const path = findPath(char.col, char.row, col, row, this.tileMap, this.blockedTiles);
+    const inFlightStep = isMidStep(char) ? char.path[0] : undefined;
+    if (inFlightStep && inFlightStep.col === col && inFlightStep.row === row) {
+      char.path = [inFlightStep];
+      return true;
+    }
+    const from = inFlightStep ?? { col: char.col, row: char.row };
+    const path = findPath(from.col, from.row, col, row, this.tileMap, this.blockedTiles);
     if (!path || path.length === 0) return false;
 
-    char.path = path;
-    char.moveProgress = 0;
+    if (inFlightStep) {
+      char.path = [inFlightStep, ...path];
+    } else {
+      char.path = path;
+      char.moveProgress = 0;
+    }
     char.state = CharacterState.WALK;
     return true;
   }
