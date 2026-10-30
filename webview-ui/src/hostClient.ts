@@ -1,12 +1,7 @@
 import type { WebviewApi } from "vscode-webview";
-import type { OutboundMessage, WebviewMessage } from "../../src/types.js";
-
-export interface HostClient {
-  send(message: WebviewMessage): void;
-  subscribe(listener: (message: OutboundMessage) => void): () => void;
-  getState(): unknown | undefined;
-  setState<T>(state: T): T;
-}
+import type { OutboundMessage } from "../../src/types.js";
+import type { HostClient } from "../../src/core/officeChannel.js";
+export type { HostClient } from "../../src/core/officeChannel.js";
 
 type MessageTarget = Pick<Window, "addEventListener" | "removeEventListener">;
 
