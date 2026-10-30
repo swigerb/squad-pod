@@ -183,6 +183,26 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     expect(memberDetail()?.textContent).not.toContain('Fixed retry handling');
   });
 
+  it('loads a delayed correlated charter without resurrecting its expired file hint in AgentCard', () => {
+    setSoundEnabled(false);
+    fs.appendFileSync(path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'history.md'),
+      '\n- Synthetic completed work\n');
+    act(() => vi.advanceTimersByTime(2000));
+    hold = true;
+    click('AdaDeveloper');
+    expect(held).toHaveLength(1);
+    expect(held[0]).toMatchObject({
+      type: 'agentDetailLoaded', detail: { status: 'active', currentTask: 'Synthetic completed work', currentTaskSource: 'file' },
+    });
+    act(() => vi.advanceTimersByTime(31000));
+    act(() => deliver(held[0]));
+    expect(card()?.textContent).toContain(agents[0].summary);
+    expect(card()?.textContent).toContain('idle');
+    expect(card()?.textContent).not.toContain('Synthetic completed work');
+    expect(card()?.textContent).not.toContain('File activity hint');
+    hold = false;
+  });
+
   it('clears A while B loads, rejects delayed A after B, and hides a removed card and its stale replies', () => {
     click('AdaDeveloper');
     expect(card()?.textContent).toContain(agents[0].summary);

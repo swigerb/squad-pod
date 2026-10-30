@@ -60,6 +60,24 @@ describe('roster snapshot ordering at the App host boundary', () => {
     vi.restoreAllMocks();
   });
 
+  it.each([
+    ['file', 'File activity hint'],
+    ['live', 'Live task'],
+    [undefined, 'Observed activity'],
+  ] as const)('labels reconnect snapshot provenance %s and clears it on idle', async (currentTaskSource, label) => {
+    send({ type: 'layoutLoaded', layout });
+    send({ type: 'existingAgents', agents: [{
+      id: 'test-agent', name: 'TestBot', role: 'Developer', paletteIndex: 0, seatId: null,
+      status: 'active', currentTask: 'Synthetic description', currentTaskSource,
+    }] });
+    await nextFrame();
+    expect(host.querySelector('[data-agent-tools="test-agent"]')?.textContent)
+      .toContain(`${label}: Synthetic description`);
+    send({ type: 'agentStatus', agentId: 'test-agent', status: 'idle', currentTask: null, currentTaskSource: null });
+    await nextFrame();
+    expect(host.textContent).not.toContain('Synthetic description');
+  });
+
   it('buffers roster-first activity in order, then reconciles later snapshots and removals', async () => {
     const roster = (name: string, role: string, currentTask: string | null, status: 'active' | 'idle') => ({
       type: 'existingAgents' as const,

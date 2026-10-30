@@ -62,6 +62,12 @@ describe('parseSessionFile', () => {
 });
 
 describe('parseLogEntry', () => {
+  it('ignores commented identity and setext headings, retaining only visible meaningful content', () => {
+    expect(parseLogEntry('<!-- **Agent:** hidden-agent -->\nLog\n===\n<!-- template -->')).toBeNull();
+    expect(parseLogEntry('**Agent:** TestBot\nLog\n===\n**Context:**\n- Verified retry behavior'))
+      .toMatchObject({ agent: 'testbot', summary: 'Verified retry behavior' });
+  });
+
   it('extracts agent and timestamp from **Agent:** and **Timestamp:** fields', () => {
     const content = `# Log Entry
 
@@ -146,6 +152,7 @@ describe('summarizeHistory', () => {
     '# History\n<!-- multi-line\n- Not completed work\n-->\n## Completed Work\n---\n- [ ]\n**Task:**',
     '# History\n## Empty section\n===\n| --- | :---: |',
     'TestBot History\n===\nLearnings\n---',
+    '# History\n**Context:**\n<!-- unfinished\n- Not completed work',
   ])('does not infer work from scaffolding: %s', content => {
     expect(summarizeHistory(content)).toBeNull();
   });

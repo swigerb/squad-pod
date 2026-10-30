@@ -120,7 +120,10 @@ export function parseLogEntry(
 
   // Build a one-line summary from the first meaningful non-heading line
   let summary = '';
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
+    if (/^[-=]+$/.test(lines[index + 1] ?? '')) {
+      continue;
+    }
     if (line.startsWith('#')) {
       continue;
     }
@@ -165,7 +168,7 @@ function meaningfulLine(line: string): string | null {
   if (/^#{1,6}(?:\s|$)/.test(line) || /^[-=|:\s]+$/.test(line)) { return null; }
   const cleaned = line.replace(/^[-*+]\s+|^\d+[.)]\s+/, '')
     .replace(/^\[[ xX]\]\s*/, '').replace(/\*\*/g, '').trim();
-  if (cleaned.length <= 3 || /^(?:Timestamp|Agent|Task|Status):\s*$/i.test(cleaned)) { return null; }
+  if (cleaned.length <= 3 || /^[\w -]+:\s*$/.test(cleaned)) { return null; }
   return cleaned;
 }
 

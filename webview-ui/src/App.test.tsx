@@ -137,7 +137,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Declared model metadata is unavailable in the read-only observer.');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Current-session model: unavailable');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed status: active');
-    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed task: Approximate observed activity');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed activity: Approximate observed activity');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('unavailable in the read-only observer');
     const collapseToggle = host.querySelector<HTMLButtonElement>('[aria-label="Hide details for TestBot"]');
     expect(collapseToggle).not.toBeNull();
@@ -172,7 +172,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
         responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
       } });
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed status: waiting');
-    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed task: Refreshed observed activity');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Observed activity: Refreshed observed activity');
     expect(host.querySelector('[role="dialog"]')?.textContent).not.toContain('Stale observed activity');
     expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual([
       'webviewReady', 'requestAgentDetail', 'requestAgentDetail',
@@ -280,7 +280,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(labels()[0].textContent).toContain('Homer');
     expect(labels()[0].textContent).toContain('Dev');
     expect(labels()[0].querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Active');
-    expect(host.textContent).toContain('Observed task: writing tests');
+    expect(host.textContent).toContain('Observed activity: writing tests');
 
     send({
       type: 'agentToolStart',
@@ -298,8 +298,8 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(labels()).toHaveLength(1);
     expect(labels()[0].textContent).toContain('Homer Simpson');
     expect(labels()[0].textContent).toContain('Architect');
-    expect(host.textContent.match(/Observed task: reviewing the snapshot/g)).toHaveLength(1);
-    expect(host.textContent).not.toContain('Observed task: writing tests');
+    expect(host.textContent.match(/Observed activity: reviewing the snapshot/g)).toHaveLength(1);
+    expect(host.textContent).not.toContain('Observed activity: writing tests');
     expect(host.textContent).not.toContain('stale-live-tool');
     expect(host.textContent).not.toContain('Stale live activity');
     expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type))
@@ -310,12 +310,12 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     send(roster('Homer Simpson', 'Architect', 'writing tests', 'idle'));
     await nextFrame();
     expect(labels()[0].querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Idle');
-    expect(host.textContent).not.toContain('Observed task: writing tests');
+    expect(host.textContent).not.toContain('Observed activity: writing tests');
 
     send({ type: 'existingAgents', agents: [] });
     await nextFrame();
     expect(labels()).toHaveLength(0);
-    expect(host.textContent).not.toContain('Observed task:');
+    expect(host.textContent).not.toContain('Observed activity:');
   });
 
   it('shows an actionable unsupported-host screen without functional office controls', () => {
