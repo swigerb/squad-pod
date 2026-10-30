@@ -15,6 +15,7 @@ import { getPetName, getPetSprites } from '../sprites/petSpriteData.js';
 import { FURNITURE_ANIM_INTERVAL_SEC, PET_HIT_HALF_WIDTH, PET_HIT_HEIGHT } from '../../constants.js';
 import { getAnimationFrames, getOnStateType } from '../layout/furnitureCatalog.js';
 import { appearanceFromIndex, type AgentSnapshot } from './agentSync.js';
+import { transientSubagents, type ObservedTaskSnapshot } from '../../../../src/observedTasks.js';
 
 export class OfficeState {
   layout: OfficeLayout;
@@ -25,6 +26,8 @@ export class OfficeState {
   walkableTiles: Set<string>;
   walkableTileList: Array<{ col: number; row: number }> = [];
   characters: Map<string, Character> = new Map();
+  subagents = new Map<string, { character: Character; parentAgentId: string }>();
+  private observedTasks: ObservedTaskSnapshot | null = null;
   pets: Pet[] = [];
   selectedAgentId: string | null = null;
   hoveredAgentId: string | null = null;
@@ -83,6 +86,64 @@ export class OfficeState {
     }
 
     this.rebuildFurnitureInstances();
+    this.reconcileSubagents();
+  }
+
+  setObservedTasks(snapshot: ObservedTaskSnapshot | null): void {
+    this.observedTasks = snapshot;
+    this.reconcileSubagents();
+  }
+
+  reconcileSubagents(): void {
+    const wanted = transientSubagents(this.observedTasks, [...this.characters.keys()]);
+    const ids = new Set(wanted.map(task => task.id));
+    for (const id of this.subagents.keys()) {
+      if (!ids.has(id)) this.subagents.delete(id);
+    }
+    for (const task of wanted) {
+      const parent = this.characters.get(task.parentAgentId);
+      if (!parent) continue;
+      const existing = this.subagents.get(task.id);
+      if (existing) {
+        existing.parentAgentId = task.parentAgentId;
+        existing.character.name = task.name;
+      } else {
+        const character = createCharacter(task.id, task.name, 'Ephemeral subagent',
+          parent.palette, null, null, (parent.hueShift + 60) % 360);
+        character.active = true;
+        character.state = CharacterState.TYPE;
+        this.subagents.set(task.id, { character, parentAgentId: task.parentAgentId });
+      }
+    }
+    this.positionSubagents();
+  }
+
+  /** Transients occupy no seats and never enter saved agent/layout preferences. */
+  positionSubagents(): void {
+    const occupied = new Set([...this.characters.values()].map(char => `${char.col},${char.row}`));
+    for (const [id, { character, parentAgentId }] of this.subagents) {
+      const parent = this.characters.get(parentAgentId);
+      if (!parent) continue;
+      const current = `${character.col},${character.row}`;
+      if (this.walkableTiles.has(current) && !occupied.has(current)
+        && Math.abs(character.col - parent.col) + Math.abs(character.row - parent.row) <= 2) {
+        occupied.add(current);
+        continue;
+      }
+      const candidates = this.walkableTileList.filter(tile => !occupied.has(`${tile.col},${tile.row}`));
+      candidates.sort((a, b) => (Math.abs(a.col - parent.col) + Math.abs(a.row - parent.row))
+        - (Math.abs(b.col - parent.col) + Math.abs(b.row - parent.row)));
+      const tile = candidates[0];
+      if (!tile) {
+        this.subagents.delete(id);
+        continue;
+      }
+      character.col = tile.col;
+      character.row = tile.row;
+      character.x = tile.col * 16 + 8;
+      character.y = tile.row * 16 + 8;
+      occupied.add(`${tile.col},${tile.row}`);
+    }
   }
 
   addAgent(
@@ -138,6 +199,7 @@ export class OfficeState {
     const seatObj = seatId ? this.seats.find(s => s.id === seatId) ?? null : null;
     const character = createCharacter(id, name, role, palette!, seatId, seatObj, hueShift!, preferredDirectoryId);
     this.characters.set(id, character);
+    this.reconcileSubagents();
 
     if (seatId) {
       this.sendToSeat(id);
@@ -217,6 +279,7 @@ export class OfficeState {
     if (this.cameraFollowId === id) this.cameraFollowId = null;
 
     this.characters.delete(id);
+    this.reconcileSubagents();
     this.rebuildFurnitureInstances();
   }
 

@@ -177,6 +177,36 @@ describe('live tools and context through the App boundary', () => {
     expect(host.querySelector('[data-observed-task]')?.textContent).toContain('New session');
   });
 
+  it('renders linked transient characters through host snapshots and clears them without changing the roster', async () => {
+    source('following');
+    const parent = row('parent', { agentId: 'ada' });
+    const child = row('child', { parentToolCallId: 'parent', instanceId: 'instance' });
+    const snapshot = (tasks: ObservedTask[]) => send({
+      type: 'observedTasks', snapshot: { sessionId: 'session', limited: false, tasks },
+    });
+    snapshot([parent, { ...child, state: 'observed' }]);
+    await frame();
+    expect(host.querySelector('[data-subagent-label]')).toBeNull();
+    snapshot([parent, child, { ...child, toolCallId: 'alias' }]);
+    await frame();
+    expect(host.querySelectorAll('[data-subagent-label]')).toHaveLength(1);
+    expect(host.querySelector('[data-subagent-label]')?.getAttribute('data-parent-agent')).toBe('ada');
+    expect(host.querySelector('[data-subagent-label]')?.textContent).toContain('Parent: Ada');
+    expect(host.querySelectorAll('[data-agent-label]')).toHaveLength(1);
+    snapshot([parent, { ...child, selectedAgentName: 'ada', agentId: 'ada' }]);
+    await frame();
+    expect(host.querySelector('[data-subagent-label]')).toBeNull();
+    snapshot([parent, child]);
+    await frame();
+    source('searching');
+    await frame();
+    expect(host.querySelector('[data-subagent-label]')).toBeNull();
+    expect(host.querySelectorAll('[data-agent-label]')).toHaveLength(1);
+    source('following');
+    await frame();
+    expect(host.querySelector('[data-subagent-label]')).toBeNull();
+  });
+
   it.each([
     [0, '#4ade80'], [0.5999, '#4ade80'], [0.6, '#facc15'], [0.7999, '#facc15'],
     [0.8, '#fb923c'], [0.9499, '#fb923c'], [0.95, '#ef4444'], [1, '#ef4444'], [2, '#ef4444'],

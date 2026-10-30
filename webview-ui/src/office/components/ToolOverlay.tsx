@@ -19,6 +19,9 @@ interface ToolPosition {
 
 export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverlayProps) {
   const [toolPositions, setToolPositions] = useState<ToolPosition[]>([]);
+  const [subagentPositions, setSubagentPositions] = useState<Array<{
+    id: string; parentId: string; name: string; parentName: string; x: number; y: number;
+  }>>([]);
   const rafRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -46,6 +49,18 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
           container?.clientWidth || window.innerWidth, container?.clientHeight || window.innerHeight, occupied);
         positions.push({ agentId, x: box.left, y: box.top, tools });
       }
+      const subPositions = [];
+      for (const [id, { character, parentAgentId }] of officeState.subagents) {
+        const bounds = getCharacterScreenBounds(character, zoom, panRef.current!);
+        const label = [...(container?.querySelectorAll<HTMLElement>('[data-subagent-label]') ?? [])]
+          .find(element => element.dataset.subagentLabel === id);
+        const box = placeOverlay((bounds.left + bounds.right) / 2, bounds.bottom + 4,
+          label?.offsetWidth ?? 0, label?.offsetHeight ?? 0,
+          container?.clientWidth || window.innerWidth, container?.clientHeight || window.innerHeight, occupied);
+        subPositions.push({ id, parentId: parentAgentId, name: character.name,
+          parentName: officeState.characters.get(parentAgentId)?.name ?? parentAgentId, x: box.left, y: box.top });
+      }
+      setSubagentPositions(subPositions);
       setToolPositions(positions);
       rafRef.current = requestAnimationFrame(updatePositions);
     };
@@ -57,6 +72,13 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
 
   return (
     <div ref={containerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 30 }}>
+      {subagentPositions.map(pos => <div key={pos.id} data-subagent-label={pos.id}
+        data-parent-agent={pos.parentId} role="note"
+        style={{ position: 'absolute', left: pos.x, top: pos.y, maxWidth: 'min(180px, calc(100vw - 8px))',
+          background: 'rgba(0, 0, 0, 0.8)', color: '#bfdbfe', fontSize: 10, padding: '2px 4px',
+          border: '1px dashed #93c5fd', borderRadius: 4, overflowWrap: 'anywhere' }}>
+        Subtask: {pos.name}<br />Parent: {pos.parentName}
+      </div>)}
       {toolPositions.map((pos) => {
         const running = pos.tools.filter(tool => !tool.done);
         const completedSlots = Math.max(0, 5 - running.length);

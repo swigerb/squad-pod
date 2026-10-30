@@ -248,6 +248,7 @@ export function useExtensionMessages(
           break;
         case 'observedTasks':
           setObservedTasks(message.snapshot);
+          getOfficeState().setObservedTasks(message.snapshot);
           break;
         case 'recordedUsage':
           setRecordedUsage(message.snapshot);
@@ -462,6 +463,7 @@ export function useExtensionMessages(
           const officeState = getOfficeState();
           if (onLayoutLoaded) onLayoutLoaded(layout, message.source ?? 'external', message.revision ?? null, message.workspaceRoot);
           else officeState.rebuildFromLayout(layout, true);
+          officeState.reconcileSubagents();
 
           if (bufferedAgentsRef.current !== null) {
             const buffered = bufferedAgentsRef.current;
@@ -544,6 +546,8 @@ export function useExtensionMessages(
 
         case 'sourceStatus': {
           if (sourceStatusRef.current?.workspaceRoot !== message.status.workspaceRoot) {
+            setObservedTasks(null);
+            getOfficeState().setObservedTasks(null);
             agentsRef.current = [];
             statusesRef.current = {};
             setAgents([]);
@@ -560,7 +564,10 @@ export function useExtensionMessages(
           }
           sourceStatusRef.current = message.status;
           setSourceStatus(message.status);
-          if (message.status.liveActivity?.state !== 'following') { setObservedTasks(null); }
+          if (message.status.liveActivity?.state !== 'following') {
+            setObservedTasks(null);
+            getOfficeState().setObservedTasks(null);
+          }
           setNoWorkspace(message.status.workspaceRoot === null);
           break;
         }
