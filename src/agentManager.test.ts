@@ -160,12 +160,14 @@ describe('agentManager', () => {
         makeMember('Grace', 'grace'),
       ]);
       initializeAgents('/workspace', context, webview);
+      const graceAt = Date.now() - 120_000;
       const adaAt = Date.now() - 60_000;
-      const graceAt = Date.now() - 30_000;
 
+      setLiveAgentStatus('grace', true, 'Earlier task', webview, graceAt);
+      setLiveAgentStatus('grace', false, null, webview);
       setLiveAgentStatus('ada', true, 'Inspect fixture', webview, adaAt);
       setLiveAgentStatus('ada', false, null, webview);
-      setLiveAgentStatus('grace', true, 'Inspect fixture', webview, graceAt);
+      setLiveAgentStatus('grace', true, 'Inspect fixture', webview);
 
       expect(getAgents().get('ada')?.lastActiveAt).toBe(adaAt);
       expect(getAgents().get('grace')?.lastActiveAt).toBe(graceAt);

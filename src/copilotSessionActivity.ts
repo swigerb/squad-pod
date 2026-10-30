@@ -492,9 +492,10 @@ export class CopilotSessionActivity {
           this.tasks.delete(observed.toolCallId);
         }
         if (observed.agentId) {
+          const previousForOwner = previous?.agentId === observed.agentId ? previous : undefined;
           const task = {
             agentId: observed.agentId, description: observed.description, instanceId: observed.instanceId,
-            activityAt: previous?.activityAt, clockSkew: previous?.clockSkew,
+            activityAt: previousForOwner?.activityAt, clockSkew: previousForOwner?.clockSkew,
           };
           this.mergeTaskActivity(task, activityTime);
           this.tasks.set(observed.toolCallId, task);

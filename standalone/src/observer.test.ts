@@ -96,6 +96,7 @@ describe('read-only selected-project observer', () => {
         type: 'agentDetailLoaded', requestId,
         detail: expect.objectContaining({
           id: 'test-agent-1', workspaceRoot: observer.root, charterStatus: 'unavailable',
+          lastActiveAt: 0, lastActiveAtStatus: 'unobserved',
           charterContent: null, expertise: null, responsibilities: null, boundaries: null,
         }),
       })]);

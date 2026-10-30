@@ -114,6 +114,7 @@ const schemas: Record<string, Check> = {
     charterStatus: oneOf('available', 'missing', 'unreadable', 'unavailable'),
     expertise: nullable(text), responsibilities: nullable(text), boundaries: nullable(text),
     recentActivity: array(text, 20), lastActiveAt: integer,
+    lastActiveAtStatus: oneOf('unobserved', 'available', 'clock-skew'),
   }) }),
   recordedUsage: object({ type: oneOf('recordedUsage'), snapshot: object({
     state: oneOf('unavailable', 'missing', 'ready', 'partial', 'error'), sourcePath: nullable(text),
