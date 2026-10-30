@@ -51,9 +51,13 @@ function Fixture(){
        const c=office.characters.get('member-'+i);
        Object.assign(c,{x:(innerWidth/2+Math.sin(t/650+i)*140-pan.current.x)/zoom,
          y:(innerHeight/2+Math.sin(t/1100+i)*24-pan.current.y)/zoom,
-         state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
+         col:10,row:7,state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
      }
-     for(const {character:c} of office.subagents.values()) c.wanderTimer=1000;
+     for(const [id,{character:c,parentAgentId}] of office.subagents){
+       const parent=office.characters.get(parentAgentId),index=id==='task-0'?0:1;
+       Object.assign(c,{x:parent.x+Math.sin(t/800+index)*12/zoom,y:parent.y+4/zoom,
+         col:index===0?11:9,row:7,state:CharacterState.IDLE,path:[],wanderTimer:1000});
+     }
    },
    sample(){
      return [...document.querySelectorAll('[data-agent-label], [data-subagent-label]')].map(e=>{
@@ -113,7 +117,7 @@ async function main() {
         .replace('/* transient-fixture */', variant === 'current' ? `
           for(let i=0;i<2;i++){
             const id='task-'+i, character=createCharacter(id,'Test subtask '+i,'Ephemeral',0,null,null,0);
-            character.wanderTimer=1000;
+            Object.assign(character,{col:i===0?11:9,row:7,wanderTimer:1000});
             office.subagents.set(id,{character,parentAgentId:'member-'+i});
           }` : '');
       await build({ stdin: { contents, loader: 'tsx', resolveDir: root }, bundle: true,
@@ -201,6 +205,8 @@ async function main() {
           assert.equal(record.maxCameraStep, 0, 'fixture must isolate lane motion from camera movement');
           assert.equal(await page.locator('[data-subagent-label]').count(), 2);
           record.transientCount = 2;
+          assert.ok(record.samples.every(sample => sample.labels.filter(label => label.transient && !label.offscreen).length === 2),
+            'both transient characters must stay on-screen during the motion/collision proof');
           record.measurementChanges = await page.evaluate(async () => {
             const samples=[];
             for(let tick=0;tick<36;tick++){
