@@ -79,7 +79,7 @@ function createLiveFixture({ extensionCode, baseUrl = 'http://127.0.0.1', consen
   const values = new Map([
     ['squad-pod.soundEnabled', false],
     ['squad-pod.layout', {
-      version: 2, cols: 10, rows: 10, tiles: Array(100).fill(1),
+      version: 2, cols: 10, rows: 10, tiles: Array(100).fill(2),
       furniture: [
         { uid: 'desk', type: 'desk', col: 4, row: 4, rotation: 0 },
         { uid: 'chair', type: 'chair', col: 4, row: 5, rotation: 0 },
@@ -194,6 +194,12 @@ function mutations(out) {
 
 async function browserAcceptance(out) {
   const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+  const colorizeModule = { exports: {} };
+  const colorizeCode = require('esbuild').transformSync(
+    fs.readFileSync(path.join(root, 'webview-ui', 'src', 'office', 'colorize.ts'), 'utf8'),
+    { loader: 'ts', format: 'cjs' },
+  ).code;
+  new Function('module', 'exports', colorizeCode)(colorizeModule, colorizeModule.exports);
   let fixture;
   const server = http.createServer((request, response) => {
     if (request.url === '/messages') {
@@ -218,9 +224,17 @@ async function browserAcceptance(out) {
         }, 100);
       </script>`));
     } else {
-      const file = path.resolve(root, '.' + decodeURIComponent(request.url.split('?')[0]));
-      if (!file.startsWith(path.join(root, 'dist') + path.sep) || !fs.existsSync(file)) { response.writeHead(404); response.end(); return; }
-      response.setHeader('content-type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'image/png');
+      const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+      if (process.argv.includes('--reject-builtin-assets') && pathname.startsWith('/assets/')) {
+        response.writeHead(404); response.end(); return;
+      }
+      const file = pathname.startsWith('/assets/')
+        ? path.resolve(root, 'dist', 'webview', '.' + pathname)
+        : path.resolve(root, '.' + pathname);
+      if (!file.startsWith(path.join(root, 'dist') + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+        response.writeHead(404); response.end(); return;
+      }
+      response.setHeader('content-type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : file.endsWith('.json') ? 'application/json' : 'image/png');
       response.end(fs.readFileSync(file));
     }
   });
@@ -233,9 +247,93 @@ async function browserAcceptance(out) {
       fixture = createLiveFixture({ baseUrl });
       const page = await browser.newPage({ viewport, deviceScaleFactor: 2 });
       const errors = [];
+      const failedAssets = [];
       page.on('pageerror', error => errors.push(String(error)));
+      page.on('response', response => {
+        if (response.status() >= 400 && new URL(response.url()).pathname.includes('/assets/')) {
+          failedAssets.push({ url: new URL(response.url()).pathname, status: response.status() });
+        }
+      });
+      await page.addInitScript(() => {
+        window.__liveAssetProof = { character: false, bundledFloor: false };
+        const drawImage = CanvasRenderingContext2D.prototype.drawImage;
+        CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
+          if (this.canvas.isConnected && source instanceof HTMLCanvasElement) {
+            if (source.width === 224 && source.height === 128 && args.length === 8) {
+              window.__liveAssetProof.character = true;
+            }
+            if (!window.__liveAssetProof.bundledFloor && window.__expectedFloor &&
+                args.length === 2 && source.width === source.height && source.width % 16 === 0) {
+              const pixels = source.getContext('2d').getImageData(0, 0, source.width, source.height).data;
+              const samples = [];
+              const scale = source.width / 16;
+              for (let row = 0; row < 16; row++) {
+                for (let col = 0; col < 16; col++) {
+                  const index = (row * scale * source.width + col * scale) * 4;
+                  samples.push(...pixels.slice(index, index + 4));
+                }
+              }
+              if (JSON.stringify(samples) === JSON.stringify(window.__expectedFloor)) window.__liveAssetProof.bundledFloor = true;
+            }
+          }
+          return drawImage.call(this, source, ...args);
+        };
+      });
       await page.goto(baseUrl);
+      const packagedImages = ['characters/char_employeeA.png', 'characters/char_employeeB.png', 'floors/floor_1.png'];
+      for (const asset of packagedImages) {
+        for (const prefix of ['/assets/', '/dist/webview/assets/']) {
+          const response = await page.request.get(baseUrl + prefix + asset);
+          assert.equal(response.status(), 200, `packaged resource must be served at ${prefix + asset}`);
+          assert.deepEqual(await response.body(), fs.readFileSync(path.join(root, 'dist', 'webview', 'assets', asset)),
+            'browser resource must be the exact packaged PNG, not a synthetic substitute');
+        }
+      }
+      const decodedAssets = await page.evaluate(async assets => Promise.all(assets.map(async asset => {
+        const image = new Image();
+        image.src = '/assets/' + asset;
+        await image.decode();
+        return { asset, width: image.naturalWidth, height: image.naturalHeight };
+      })), packagedImages);
+      assert.deepEqual(decodedAssets.map(({ width, height }) => [width, height]), [[224, 128], [224, 128], [16, 16]]);
+      await page.evaluate(() => {
+        for (const [name, value] of Object.entries({
+          'editor-background': '#1e1e1e', foreground: '#cccccc',
+          'button-background': '#0e639c', 'button-foreground': '#ffffff',
+          'button-secondaryBackground': '#3a3d41', 'button-secondaryForeground': '#ffffff',
+          'panel-border': '#80808059', errorForeground: '#f48771',
+        })) document.documentElement.style.setProperty(`--vscode-${name}`, value);
+      });
       await page.locator('[data-agent-label="ada"]').waitFor();
+      const snapshot = fixture.messages.find(message => message.type === 'manifestAssetsLoaded')?.snapshot;
+      assert.ok(snapshot?.floors.length === 9, 'provider must load all nine bundled floor sprites');
+      assert.ok(new Set(snapshot.floors[1].flat()).size > 1, 'fixture floor must be textured, not the flat fallback');
+      const floor = colorizeModule.exports.getColorizedSprite('acceptance-floor', snapshot.floors[1], { h: 35, s: 40, b: 15, c: 0 });
+      const expectedFloor = floor.flat().flatMap(hex => [
+        parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16),
+        parseInt(hex.slice(5, 7), 16), hex.length === 9 ? parseInt(hex.slice(7, 9), 16) : 255,
+      ]);
+      await page.evaluate(expected => { window.__expectedFloor = expected; }, expectedFloor);
+      try {
+        await page.waitForFunction(() => window.__liveAssetProof.character && window.__liveAssetProof.bundledFloor);
+      } catch (error) {
+        console.error(await page.evaluate(() => ({ assets: window.__liveAssetProof, text: document.body.innerText })));
+        throw error;
+      }
+      const assetWarnings = page.locator('details').filter({ has: page.locator('summary', { hasText: /^Asset warnings/ }) });
+      const expectedWarnings = [
+        'Unavailable art is shown as grey markers. Your layout is unchanged. Export a backup before manually replacing items; unknown dimensions block placement.',
+        'Unavailable asset: desk', 'Unavailable asset: chair',
+      ];
+      const assertAssetDiagnostics = async () => {
+        assert.deepEqual(await assetWarnings.locator('p').allTextContents(), expectedWarnings,
+          'only the two deliberately retained legacy furniture placeholders may be diagnosed');
+        assert.equal(await assetWarnings.locator('summary').innerText(), 'Asset warnings (2)');
+        const snapshots = fixture.messages.filter(message => message.type === 'manifestAssetsLoaded');
+        assert.ok(snapshots.length > 0 && snapshots.every(message => message.snapshot.floors.length === 9 &&
+          message.snapshot.diagnostics.length === 0), 'real compiled-provider bundled floor snapshots must be complete and diagnostic-free');
+      };
+      await assertAssetDiagnostics();
       while (await page.getByRole('button', { name: 'Zoom out', exact: true }).isEnabled()) {
         await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
       }
@@ -267,7 +365,7 @@ async function browserAcceptance(out) {
       await page.locator('[data-agent-tools="ada"]').filter({ hasText: 'Editing many-119.ts' }).waitFor();
       assert.equal(await page.locator('[data-agent-tools="ada"] > div').count(), 3, 'completed rows remain bounded after 120 calls');
       fixture.append(Array.from({ length: 12 }, (_, index) =>
-        tool(`parallel-${index}`, 'view', { path: `parallel-${index}.ts` })).join(''));
+        tool(`parallel-${index}`, 'edit', { path: `parallel-${index}.ts` })).join(''));
       await page.locator('[data-agent-tools="ada"]').filter({ hasText: '+10 more tools' }).waitFor();
       assert.equal(await page.locator('[data-agent-tools="ada"] > div').count(), 6, 'concurrent rows show five plus overflow');
       await page.waitForTimeout(200);
@@ -282,6 +380,7 @@ async function browserAcceptance(out) {
         ).map(b => [a.id, b.id]));
       });
       assert.deepEqual(overlaps, [], '2x overlays must not overlap');
+      await assertAssetDiagnostics();
       await page.screenshot({ path: path.join(out, `live-${viewport.width}x${viewport.height}.png`) });
       fixture.send({ type: 'webviewReady' });
       await page.getByRole('progressbar').waitFor();
@@ -302,7 +401,10 @@ async function browserAcceptance(out) {
       assert.ok(!(await page.locator('body').innerText()).includes(secret), 'telemetry drawer must not contain the sentinel');
       assert.ok(!JSON.stringify({ messages: fixture.messages, output: fixture.output }).includes(secret), 'host sinks must not contain the sentinel');
       assert.deepEqual(errors, [], 'zero page errors');
-      fs.writeFileSync(path.join(out, `browser-${viewport.width}.json`), JSON.stringify({ viewport, errors, overlaps, toolBounds, sequentialCalls: 120, concurrentCalls: 12, confirmations: fixture.confirmations.length, source: fixture.messages.filter(m => m.type === 'sourceStatus').at(-1) }, null, 2));
+      assert.deepEqual(failedAssets, [], 'zero failed packaged-asset requests');
+      await assertAssetDiagnostics();
+      const assetProof = await page.evaluate(() => window.__liveAssetProof);
+      fs.writeFileSync(path.join(out, `browser-${viewport.width}.json`), JSON.stringify({ viewport, errors, failedAssets, decodedAssets, assetProof, expectedWarnings, overlaps, toolBounds, sequentialCalls: 120, concurrentCalls: 12, confirmations: fixture.confirmations.length, source: fixture.messages.filter(m => m.type === 'sourceStatus').at(-1) }, null, 2));
       await page.close();
       fixture.dispose();
       fixture = undefined;
@@ -311,6 +413,7 @@ async function browserAcceptance(out) {
   } finally {
     if (fixture) fixture.dispose();
     await browser?.close();
+    server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
   }
 }
