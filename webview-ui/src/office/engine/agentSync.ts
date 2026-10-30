@@ -14,6 +14,7 @@ export interface AgentSnapshot {
   id: string;
   name: string;
   role: string;
+  currentTask?: string | null;
   paletteIndex?: number;
   seatId?: string | null;
   directoryId?: string | null;
@@ -22,7 +23,10 @@ export interface AgentSnapshot {
 }
 
 export interface AgentSyncTarget {
-  characters: Map<string, unknown>;
+  characters: {
+    get(id: string): { name: string; role: string } | undefined;
+    keys(): IterableIterator<string>;
+  };
   addAgent(
     id: string,
     name: string,
@@ -48,8 +52,13 @@ export function appearanceFromIndex(index: number | undefined): { palette: numbe
 }
 
 export function addSnapshotAgent(target: AgentSyncTarget, agent: AgentSnapshot): boolean {
-  if (target.characters.has(agent.id)) {
-    target.setAgentDirectoryId?.(agent.id, agent.directoryId);
+  const existing = target.characters.get(agent.id);
+  if (existing) {
+    existing.name = agent.name;
+    existing.role = agent.role;
+    if (agent.directoryId !== undefined) {
+      target.setAgentDirectoryId?.(agent.id, agent.directoryId);
+    }
     return false;
   }
   const hasAppearance = typeof agent.paletteIndex === 'number';

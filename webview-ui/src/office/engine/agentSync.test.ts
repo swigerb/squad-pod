@@ -67,6 +67,35 @@ describe('reconcileAgents', () => {
     expect(office.characters.size).toBe(2);
   });
 
+  it('updates roster identity without replacing appearance or seat assignments', () => {
+    reconcileAgents(office, [
+      {
+        id: 'homer', name: 'Homer', role: 'Lead', paletteIndex: 7, seatId: 'chair-1',
+        directoryId: 'workspace:fixture', directoryMappingIds: ['workspace:fixture', 'saved:fixture'],
+      },
+      { id: 'marge', name: 'Marge', role: 'Dev', paletteIndex: 2, seatId: 'chair-2' },
+    ]);
+    const homer = office.characters.get('homer')!;
+    const originalPalette = homer.palette;
+    const originalHueShift = homer.hueShift;
+
+    const result = reconcileAgents(office, [
+      { id: 'homer', name: 'Homer Simpson', role: 'Architect', paletteIndex: 4, seatId: 'chair-2' },
+      { id: 'marge', name: 'Marge', role: 'Dev', paletteIndex: 2, seatId: 'chair-2' },
+    ]);
+
+    expect(result).toEqual({ added: [], removed: [] });
+    expect(office.characters.get('homer')).toBe(homer);
+    expect(homer.name).toBe('Homer Simpson');
+    expect(homer.role).toBe('Architect');
+    expect(homer.palette).toBe(originalPalette);
+    expect(homer.hueShift).toBe(originalHueShift);
+    expect(homer.seatId).toBe('chair-1');
+    expect(homer.directoryId).toBe('workspace:fixture');
+    expect(office.characters.get('marge')!.seatId).toBe('chair-2');
+    expect(office.getSeatAssignments()).toEqual({ homer: 'chair-1', marge: 'chair-2' });
+  });
+
   it('removes agents missing from the snapshot', () => {
     reconcileAgents(office, [
       { id: 'homer', name: 'Homer', role: 'Lead', paletteIndex: 0 },

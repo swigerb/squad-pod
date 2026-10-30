@@ -43,6 +43,11 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   function snapshot(layout: OfficeLayout, revision: string, source: 'external' | 'import' = 'external') {
     send({ type: 'layoutLoaded', layout, revision, source, workspaceRoot: 'workspace-A' });
   }
+  async function nextFrame() {
+    await act(async () => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    });
+  }
   function saves() {
     return vi.mocked(client.send).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout');
   }
@@ -83,6 +88,66 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(client.events.slice(0, 3)).toEqual([
       'subscribe', 'send:webviewReady', 'send:diagnosticReport',
     ]);
+  });
+
+  it('updates existing roster identity and restores only the observed task from snapshots', async () => {
+    const roster = (name: string, role: string, currentTask: string | null, status: 'active' | 'idle') => ({
+      type: 'existingAgents' as const,
+      agents: [{
+        id: 'homer',
+        name,
+        role,
+        paletteIndex: 7,
+        seatId: null,
+        status,
+        currentTask,
+      }],
+    });
+
+    send(roster('Homer', 'Dev', 'writing tests', 'active'));
+    await nextFrame();
+    const labels = () => [...host.querySelectorAll('button')]
+      .filter((button) => button.querySelector('[role="img"]'));
+    expect(labels()).toHaveLength(1);
+    expect(labels()[0].textContent).toContain('Homer');
+    expect(labels()[0].textContent).toContain('Dev');
+    expect(labels()[0].querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Active');
+    expect(host.textContent).toContain('Observed task: writing tests');
+
+    send({
+      type: 'agentToolStart',
+      agentId: 'homer',
+      tool: 'stale-live-tool',
+      status: 'Stale live activity',
+    });
+    await nextFrame();
+    expect(host.textContent).toContain('stale-live-tool');
+    expect(host.textContent).toContain('Stale live activity');
+
+    send(roster('Homer Simpson', 'Architect', 'reviewing the snapshot', 'active'));
+    send(roster('Homer Simpson', 'Architect', 'reviewing the snapshot', 'active'));
+    await nextFrame();
+    expect(labels()).toHaveLength(1);
+    expect(labels()[0].textContent).toContain('Homer Simpson');
+    expect(labels()[0].textContent).toContain('Architect');
+    expect(host.textContent.match(/Observed task: reviewing the snapshot/g)).toHaveLength(1);
+    expect(host.textContent).not.toContain('Observed task: writing tests');
+    expect(host.textContent).not.toContain('stale-live-tool');
+    expect(host.textContent).not.toContain('Stale live activity');
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type))
+      .not.toContain('agentToolStart');
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type))
+      .not.toContain('telemetryEvent');
+
+    send(roster('Homer Simpson', 'Architect', 'writing tests', 'idle'));
+    await nextFrame();
+    expect(labels()[0].querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Idle');
+    expect(host.textContent).not.toContain('Observed task: writing tests');
+
+    send({ type: 'existingAgents', agents: [] });
+    await nextFrame();
+    expect(labels()).toHaveLength(0);
+    expect(host.textContent).not.toContain('Observed task:');
   });
 
   it('shows an actionable unsupported-host screen without functional office controls', () => {

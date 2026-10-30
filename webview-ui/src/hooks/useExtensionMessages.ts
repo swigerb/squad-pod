@@ -39,6 +39,26 @@ import {
 } from '../office/sprites/assetLoader.js';
 
 const MAX_TELEMETRY_EVENTS = 200;
+const OBSERVED_TASK_ROW_ID = '__squad-pod-observed-task';
+
+type AgentActivityMessage = Extract<OutboundMessage, {
+  type: 'agentStatus' | 'agentToolStart' | 'agentToolDone' | 'agentToolsClear'
+    | 'agentToolPermission' | 'agentToolPermissionClear';
+}>;
+
+function isAgentActivityMessage(message: OutboundMessage): message is AgentActivityMessage {
+  switch (message.type) {
+    case 'agentStatus':
+    case 'agentToolStart':
+    case 'agentToolDone':
+    case 'agentToolsClear':
+    case 'agentToolPermission':
+    case 'agentToolPermissionClear':
+      return true;
+    default:
+      return false;
+  }
+}
 
 export interface ExtensionMessageState {
   recordedUsage: RecordedUsageSnapshot | null;
@@ -92,6 +112,7 @@ export function useExtensionMessages(
   const [squadInfo, setSquadInfo] = useState<SquadInfoData | null>(null);
   const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
   const bufferedAgentsRef = useRef<AgentSnapshot[] | null>(null);
+  const bufferedActivityMessagesRef = useRef<AgentActivityMessage[]>([]);
   const statusesRef = useRef<Record<string, string>>({});
   const agentsRef = useRef<string[]>([]);
   const layoutReadyRef = useRef(false);
@@ -123,10 +144,23 @@ export function useExtensionMessages(
         return next;
       });
     };
-    const handleMessage = (message: OutboundMessage) => {
+    const handleMessage = (message: OutboundMessage): void => {
+      if (isAgentActivityMessage(message)
+        && bufferedAgentsRef.current !== null
+        && !layoutReadyRef.current
+        && getOfficeState().layout.cols === 0) {
+        bufferedActivityMessagesRef.current.push(message);
+        return;
+      }
+
       const applySnapshot = (snapshot: AgentSnapshot[]) => {
         const officeState = getOfficeState();
         reconcileAgents(officeState, snapshot);
+        for (const agent of snapshot) {
+          if (agent.status !== undefined || agent.currentTask !== undefined) {
+            officeState.setAgentTool(agent.id, null);
+          }
+        }
         const seats = officeState.getSeatAssignments();
         if (snapshot.some((a) => (a.seatId ?? undefined) !== seats[a.id])) {
           client.send({ type: 'saveAgentSeats', seats });
@@ -142,8 +176,20 @@ export function useExtensionMessages(
         setAgentStatuses(statuses);
         setAgentTools((prev) => {
           const next: Record<string, ToolActivity[]> = {};
-          for (const id of ids) {
-            if (prev[id]) next[id] = prev[id];
+          for (const agent of snapshot) {
+            const hasSnapshotActivity = agent.status !== undefined || agent.currentTask !== undefined;
+            if (hasSnapshotActivity) {
+              const task = agent.currentTask?.trim() && agent.status !== 'idle' ? agent.currentTask : null;
+              if (task) {
+                next[agent.id] = [{
+                  toolId: OBSERVED_TASK_ROW_ID,
+                  status: `Observed task: ${task}`,
+                  done: false,
+                }];
+              }
+            } else if (prev[agent.id]) {
+              next[agent.id] = prev[agent.id];
+            }
           }
           return next;
         });
@@ -191,6 +237,8 @@ export function useExtensionMessages(
           if (bufferedAgentsRef.current) {
             bufferedAgentsRef.current = bufferedAgentsRef.current.filter((a) => a.id !== id);
           }
+          bufferedActivityMessagesRef.current = bufferedActivityMessagesRef.current
+            .filter((activity) => activity.agentId !== id);
           setAgents((prev) => prev.filter((a) => a !== id));
           setAgentTools((prev) => {
             const next = { ...prev };
@@ -216,6 +264,14 @@ export function useExtensionMessages(
           if (previous === 'active' && status !== 'active') {
             playDoneSound();
           }
+          if (status === 'idle') {
+            getOfficeState().setAgentTool(id, null);
+            setAgentTools((prev) => {
+              const tools = prev[id];
+              if (!tools?.some((tool) => tool.toolId === OBSERVED_TASK_ROW_ID)) return prev;
+              return { ...prev, [id]: tools.filter((tool) => tool.toolId !== OBSERVED_TASK_ROW_ID) };
+            });
+          }
           break;
         }
 
@@ -224,7 +280,7 @@ export function useExtensionMessages(
           const toolId = message.tool ?? message.toolId;
           const status = message.status ?? toolId;
           setAgentTools((prev) => {
-            const tools = prev[id] || [];
+            const tools = (prev[id] || []).filter((tool) => tool.toolId !== OBSERVED_TASK_ROW_ID);
             const existing = tools.find((t) => t.toolId === toolId);
             if (existing) {
               existing.status = status;
@@ -297,6 +353,7 @@ export function useExtensionMessages(
           const layoutIsReady = layoutReadyRef.current || getOfficeState().layout.cols > 0;
           if (!layoutIsReady) {
             bufferedAgentsRef.current = snapshot;
+            bufferedActivityMessagesRef.current = [];
           } else {
             applySnapshot(snapshot);
           }
@@ -314,10 +371,17 @@ export function useExtensionMessages(
           if (onLayoutLoaded) onLayoutLoaded(layout, message.source ?? 'external', message.revision ?? null, message.workspaceRoot);
           else officeState.rebuildFromLayout(layout, true);
 
-          if (bufferedAgentsRef.current) {
+          if (bufferedAgentsRef.current !== null) {
             const buffered = bufferedAgentsRef.current;
+            const bufferedActivityMessages = bufferedActivityMessagesRef.current;
             bufferedAgentsRef.current = null;
+            bufferedActivityMessagesRef.current = [];
             applySnapshot(buffered);
+            for (const activity of bufferedActivityMessages) {
+              if (agentsRef.current.includes(activity.agentId)) {
+                handleMessage(activity);
+              }
+            }
           }
           break;
         }
