@@ -215,6 +215,7 @@ export interface TelemetryEvent {
 }
 
 export type WebviewMessage =
+  | { type: 'selectCliUsage' | 'refreshCliUsage' | 'clearCliUsage' }
   | { type: 'setLiveActivity'; enabled: boolean }
   | { type: 'addAssetDirectory' }
   | { type: 'removeAssetDirectory'; directory: string }
@@ -369,6 +370,7 @@ export type OutboundMessage =
   | { type: 'liveModels'; snapshot: LiveModelSnapshot }
   | { type: 'agentContextUsage'; agentId: string; contextTokens: number | null; maxContextTokens: number | null }
   | { type: 'recordedUsage'; snapshot: import('./recordedUsage.js').RecordedUsageSnapshot }
+  | { type: 'cliUsage'; snapshot: import('./cliUsage.js').CliUsageSnapshot }
   | AgentCreatedMessage
   | AgentStatusMessage
   | AgentToolStartMessage

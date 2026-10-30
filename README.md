@@ -99,6 +99,20 @@ Open **Telemetry** in the toolbar to browse observed status changes, session act
 
 **Activity events** counts only observed events; **Clear activity** leaves recorded usage and observed tasks unchanged. Existing files are not replayed. Missing usage is not zero consumption, and enabling live CLI observation does not create a usage ledger. Source diagnostics distinguish file watching from opt-in live CLI observation; **Observation settings and consent** opens the existing Settings flow without enabling anything. The standalone observer can display the same live tools/context/tasks after explicit local CLI [`--live-activity` opt-in](standalone/README.md#optional-live-activity); browser settings cannot enable private-log reads. With compatible opted-in owned terminals it selects an exact server-generated session UUID; otherwise diagnostics explicitly label matching-project selection or unavailable correlation.
 
+**Telemetry → Copilot CLI usage export** is a separate, opt-in historical source for
+`copilot --agent squad --usage-output-file <file.json>`. Pod never launches this command,
+creates an export or discovers private home/session files. After an existing export is
+available, use **Select CLI usage JSON...** and confirm reading that exact workspace-local
+file. **Refresh selected export** rereads it manually; **Forget export**, workspace changes
+and extension restart discard the in-memory selection. Nothing is written to the source.
+Premium-request cost and nano-AI units retain their native units, **never USD**; model
+quantities and the Squad ledger are not summed together. Missing data stays missing.
+The importer currently has source-pinned **synthetic fixture evidence only**:
+real-export compatibility and native VS Code acceptance remain pending.
+Session/workspace/agent attribution and completeness are unknown. Standalone import
+is unavailable. See the [CLI import contract and acceptance limits](docs/native-acceptance.md#cli-import-contract)
+for provenance, interpreted fields and safety bounds.
+
 ## Activity detection
 
 Squad Pod watches the selected project's `.squad/` files, including the roster, sessions, logs, orchestration logs, decision inbox, and agent files. It uses filesystem notifications with polling as a fallback and treats the initial scan as a baseline rather than replaying old files.

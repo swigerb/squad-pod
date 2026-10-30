@@ -2,6 +2,8 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import type { TelemetryEvent, TelemetryCategory } from '../office/types.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 import { RecordedUsage } from './RecordedUsage.js';
+import { CliUsage } from './CliUsage.js';
+import type { CliUsageSnapshot } from '../../../src/cliUsage.js';
 import { ObservedTasks } from './ObservedTasks.js';
 import type { ObservedTaskSnapshot } from '../../../src/observedTasks.js';
 import type { LiveSourceStatus, SourceStatus } from '../../../src/types.js';
@@ -11,6 +13,8 @@ interface TelemetryDrawerProps {
   readOnly?: boolean;
   events: TelemetryEvent[];
   recordedUsage: RecordedUsageSnapshot | null;
+  cliUsage?: CliUsageSnapshot | null;
+  onCliUsageAction?: (type: 'selectCliUsage' | 'refreshCliUsage' | 'clearCliUsage') => void;
   observedTasks?: ObservedTaskSnapshot | null;
   liveSource?: LiveSourceStatus;
   sourceStatus?: SourceStatus | null;
@@ -43,7 +47,7 @@ function formatTimestamp(ts: number): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function TelemetryDrawer({ readOnly = false, events, recordedUsage, observedTasks = null, liveSource, sourceStatus = null, onOpenSettings, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
+export function TelemetryDrawer({ readOnly = false, events, recordedUsage, cliUsage = null, onCliUsageAction, observedTasks = null, liveSource, sourceStatus = null, onOpenSettings, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -160,6 +164,7 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, obser
           </div>
         ) : null}
         <RecordedUsage snapshot={recordedUsage} />
+        <CliUsage snapshot={cliUsage} readOnly={readOnly} onAction={type => onCliUsageAction?.(type)} />
         <div style={{ padding: '6px 12px', overflowWrap: 'anywhere' }}>
           {readOnly ? <p role="status">Browser settings cannot grant live-log consent. Live observation requires explicit local CLI --live-activity opt-in; opening this drawer enables nothing.</p>
             : <><button onClick={onOpenSettings} style={smallButtonStyle}>Observation settings and consent</button>

@@ -5,6 +5,7 @@ import App from '../App.js';
 import { OfficeState } from '../office/engine/officeState.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 import type { OutboundMessage, SourceStatus } from '../../../src/types.js';
+import type { CliUsageSnapshot } from '../../../src/cliUsage.js';
 import { createHostClientFixture } from '../__tests__/hostClientFixture.js';
 import type { HostClientFixture } from '../__tests__/hostClientFixture.js';
 
@@ -64,6 +65,7 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
         timestamp: '2026-10-28T10:00:00Z', inputTokens: 0, outputTokens: 0, estimatedCost: 0,
       }],
     });
+
     expect(section.textContent).toContain('Partial sums (valid records only): 0 input / 0 output');
     expect(section.textContent).toContain('1 / 2 recorded starts');
     expect(section.textContent).toContain('unattributed (ambiguous roster identity)');
@@ -79,6 +81,65 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
     expect(section.textContent).toContain('No usage totals available');
   });
 
+  it('keeps CLI exports separate, unknown and historical through the real App seam and explicit actions', () => {
+      send(empty);
+      const initial = host.querySelector('[aria-label="Imported CLI usage"]')!;
+      const initialActions = [...initial.querySelectorAll('button')];
+      expect(initialActions.map(b => b.disabled)).toEqual([false, true, true]);
+      expect(initialActions.every(b => b.classList.contains('cli-usage-action') && b.type === 'button')).toBe(true);
+      const snapshot: CliUsageSnapshot = {
+        state: 'ready', sourcePath: 'C:\\fixture\\cli.json', canRefresh: true, checkedAt: '2026-10-30T12:00:00Z', diagnostic: null,
+        report: { sessionStartTime: '2026-10-28T15:00:00Z', userRequests: 2, premiumRequests: 0.5,
+          apiDurationMs: 1200, nanoAiu: null, modelCount: 1, models: [{
+            model: 'synthetic-model', requests: 3, premiumRequests: 0.5, inputTokens: 120, outputTokens: 30,
+            cacheReadTokens: 40, cacheWriteTokens: 10, reasoningTokens: null, nanoAiu: 0,
+          }] },
+      };
+      const addAgent = vi.spyOn(OfficeState.prototype, 'addAgent');
+      act(() => client.emit({ type: 'cliUsage', snapshot }));
+      const section = host.querySelector('[aria-label="Imported CLI usage"]')!;
+      expect([...section.querySelectorAll('button')].map(b => b.disabled)).toEqual([false, false, false]);
+      expect(section.textContent).toContain('0.5 premium-request cost');
+      expect(section.textContent).toContain('nano-AI units: not reported');
+      expect(section.textContent).toContain('nano-AI units: 0');
+      expect(section.textContent).toContain('Session identity: unknown');
+      expect(section.textContent).toContain('Completion, resumed history and all-agent coverage: unknown');
+      expect(section.textContent).toContain('Historical model: synthetic-model');
+      expect(section.textContent).toContain('real-export acceptance pending');
+      expect(host.querySelector('[aria-label="Recorded Squad usage"]')?.textContent).toContain('No usage totals available');
+      expect(host.textContent).toContain('Activity events (0)');
+      expect(addAgent).not.toHaveBeenCalled();
+      expect(audio).not.toHaveBeenCalled();
+      const fractions: CliUsageSnapshot = {
+        ...snapshot, report: {
+          ...snapshot.report!, premiumRequests: 0.0001, apiDurationMs: 1.23456789, nanoAiu: 0.0000001,
+          models: [{ ...snapshot.report!.models[0], premiumRequests: 0.0001, nanoAiu: 1.23456789 }],
+        },
+      };
+      act(() => client.emit({ type: 'cliUsage', snapshot: fractions }));
+      expect(section.textContent?.match(/0\.0001 premium-request cost/g)).toHaveLength(2);
+      expect(section.textContent).toContain('1.23456789 ms API time');
+      expect(section.textContent).toContain('nano-AI units: 1e-7');
+      expect(section.textContent).toContain('nano-AI units: 1.23456789');
+      const click = (name: string) => act(() => [...section.querySelectorAll('button')].find(b => b.textContent === name)!.click());
+      click('Select CLI usage JSON...');
+      click('Refresh selected export');
+      click('Forget export');
+      expect(vi.mocked(client.send).mock.calls.slice(-3).map(([m]) => m)).toEqual([
+        { type: 'selectCliUsage' }, { type: 'refreshCliUsage' }, { type: 'clearCliUsage' },
+      ]);
+      act(() => client.emit({ type: 'cliUsage', snapshot: { ...snapshot, state: 'error', report: null, diagnostic: 'Rejected export' } }));
+      expect(section.textContent).not.toContain('Historical model: synthetic-model');
+      expect(section.textContent).toContain('Rejected export');
+      expect(section.textContent).toContain('not zero consumption');
+    });
+
+    it.each([true, false])('does not expose CLI file actions in standalone (readOnly=%s)', readOnly => {
+      act(() => root.render(<App client={client} standalone readOnly={readOnly} />));
+      const section = host.querySelector('[aria-label="Imported CLI usage"]')!;
+      expect(section.textContent).toContain('CLI usage import is unavailable in standalone/read-only observation');
+      expect(section.querySelectorAll('button')).toHaveLength(0);
+    });
   const source: SourceStatus = {
     workspaceRoot: 'C:\\fixture', squadDir: 'C:\\fixture\\.squad', teamFound: true,
     observer: 'watching', nativeWatch: false, error: null, liveActivity: { state: 'off', sessionId: null },

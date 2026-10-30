@@ -321,6 +321,13 @@ Without `--live-activity` there are no live tools, context counters or transient
 Usage is the recorded ledger only, not billing or live
 session telemetry. Missing/malformed/bounded sources are explained; invalid saved
 layouts show the bundled starter, without overwriting the source.
+The Telemetry **Copilot CLI usage export** section explicitly reports import unavailable
+in standalone, including with office-control authority. The extension's consented
+workspace-local JSON selection/manual-refresh importer is not exposed as a filesystem,
+upload or control endpoint here. CLI exports are separate from `log/usage.jsonl`;
+premium-request cost and nano-AI units are not USD and must never be merged into ledger
+totals. Real-export compatibility acceptance remains pending; synthetic browser evidence
+does not establish real producer support.
 File aliases use the native roster resolver, including ambiguity rejection.
 Built-in appearances are deterministically scoped to member identity, not roster
 order, so existing and reconnecting viewers agree without writing metadata.
