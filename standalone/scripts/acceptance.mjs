@@ -60,7 +60,15 @@ try {
   assert.equal(inventory.name, 'squad-pod-observer');
   assert.ok(inventory.files.some(file => file.path === 'dist/cli.mjs'));
   const filename = inventory.filename;
-  npm(['install', '--prefix', install, '--ignore-scripts', '--offline', '--no-audit', '--no-fund', path.join(root, filename)], install);
+  // npm ci caches tarballs, not necessarily registry metadata. Pack the already
+  // restored runtime dependencies too, so acceptance needs neither metadata nor a feed.
+  const manifest = JSON.parse(await fs.readFile(path.join(packageRoot, 'package.json'), 'utf8'));
+  const runtimeTarballs = Object.keys(manifest.dependencies).map(name => {
+    const dependency = JSON.parse(npm(['pack', path.join(packageRoot, 'node_modules', name), '--json', '--pack-destination', root], packageRoot))[0];
+    return path.join(root, dependency.filename);
+  });
+  npm(['install', '--prefix', install, '--cache', path.join(root, 'empty npm cache'), '--ignore-scripts',
+    '--offline', '--omit=optional', '--no-audit', '--no-fund', path.join(root, filename), ...runtimeTarballs], install);
   report.packageInstalled = true;
   check('tarball installed offline into isolated path with spaces');
   const installed = path.join(install, 'node_modules', 'squad-pod-observer');

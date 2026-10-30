@@ -110,7 +110,9 @@ npm run package
 
 The packaged acceptance helper creates only an owned synthetic project and empty
 synthetic home, installs the tarball into an isolated path with spaces, then checks
-the production CLI/HTTP/WS/read-only path. When `PLAYWRIGHT_MODULE` points to an
+the production CLI/HTTP/WS/read-only path. Installation is offline with an empty
+cache, using local tarballs of the already-restored runtime dependencies (no feed
+metadata lookup). When `PLAYWRIGHT_MODULE` points to an
 already installed Playwright module, it additionally drives the actual browser
 authentication form and renderer, observes live fixture changes, reconnects, and
 writes desktop/narrow screenshots to `OBSERVER_ARTIFACTS`. `EDGE_PATH` optionally
