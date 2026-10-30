@@ -48,6 +48,19 @@ jobs:
       - name: Build and verify installed read-only observer
         run: npm run build --prefix standalone && npm run acceptance --prefix standalone
 
+      - name: Verify installed owned native terminals
+        run: npm run acceptance:terminals --prefix standalone
+        env:
+          TERMINAL_ARTIFACTS: ${{ runner.temp }}/owned-terminal-evidence
+
+      - name: Retain installed terminal evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4
+        with:
+          name: owned-terminal-${{ matrix.os }}
+          path: ${{ runner.temp }}/owned-terminal-evidence
+          if-no-files-found: ignore
+
       - name: Package VSIX
         run: npm run package
 
@@ -57,3 +70,44 @@ jobs:
         with:
           name: squad-pod-vsix
           path: '*.vsix'
+
+  standalone-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 #v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 #v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            webview-ui/package-lock.json
+            standalone/package-lock.json
+
+      - name: Install dependencies
+        run: npm run install:all && npm ci --prefix standalone
+
+      - name: Rebuild native dependency with executable macOS helper
+        run: npm rebuild node-pty --prefix standalone
+        env:
+          npm_config_build_from_source: 'true'
+
+      - name: Standalone types and native boundary tests
+        run: npm run check --prefix standalone && npm test --prefix standalone
+
+      - name: Build and verify installed read-only observer
+        run: npm run build --prefix standalone && npm run acceptance --prefix standalone
+
+      - name: Verify installed owned native terminals
+        run: npm run acceptance:terminals --prefix standalone
+        env:
+          TERMINAL_ARTIFACTS: ${{ runner.temp }}/owned-terminal-evidence
+
+      - name: Retain installed terminal evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4
+        with:
+          name: owned-terminal-macos-latest
+          path: ${{ runner.temp }}/owned-terminal-evidence
+          if-no-files-found: ignore
