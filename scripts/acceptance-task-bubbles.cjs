@@ -69,6 +69,13 @@ async function main() {
       page.on('pageerror', error => errors.push(String(error)));
       await page.goto(baseUrl);
       await page.locator('[data-agent-label="ada"]').waitFor();
+      await page.evaluate(() => {
+        for (const [name, value] of Object.entries({
+          'editor-background': '#1e1e1e', foreground: '#cccccc', 'button-background': '#0e639c',
+          'button-foreground': '#ffffff', 'button-secondaryBackground': '#3a3d41',
+          'button-secondaryForeground': '#ffffff', 'panel-border': '#80808059',
+        })) document.documentElement.style.setProperty('--vscode-' + name, value);
+      });
       const bubble = page.locator('[data-agent-task-bubble="ada"]');
       assert.equal(await bubble.count(), 0, 'default-off source has no invented summary');
       assert.equal(fixture.reads.length, 0, 'default-off does not inspect a home');
