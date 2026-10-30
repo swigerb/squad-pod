@@ -414,6 +414,37 @@ Prepare `acceptance-input.txt` with a few nonsecret sentences. A harmless unique
 - **Evidence:** Implementing commit, contract/control references and redacted before/after correlations.
 - **Cleanup:** Follow the shipped capability's scoped cleanup; preserve the normal roster. Do not invent discovery/promotion controls or write roster entries to force a pass.
 
+#### Prepared declared-model procedure (not accepted)
+
+This procedure is source-verified against frozen [#96](https://github.com/swigerb/squad-pod/pull/96) head `87acc00730e8f0d5f33ac0a3a41a256ce1f3c30c` for [#89](https://github.com/swigerb/squad-pod/issues/89). It is **not part of the accepted baseline**. Keep every subcheck below BLOCKED / NOT IMPLEMENTED until the parent supplies the accepted merge, this plan identifies it, and the installed artifact contains it. No native VS Code or real Squad-session execution is claimed.
+
+Use N-03's disposable member M1 and approved run-owned files only. Record M1's exact display name separately from its slug. In its charter, add one unfenced `## Model` section with non-empty `**Preferred:**`, `**Rationale:**` and `**Fallback:**` fields. In the resolved `.squad/config.json` (or legacy `.ai-team/config.json` when that is the selected Squad root), use this valid JSON, replacing `M1 exact display name` with the exact roster name:
+
+```json
+{
+  "defaultModel": "auto",
+  "agentModelOverrides": {
+    "M1 exact display name": "fixture-declared-model",
+    "M1-slug-or-different-case": "fixture-nonmatching-model"
+  }
+}
+```
+
+These are inert test declarations, not CLI settings or a request to execute any model. Keep the fixture values distinct from charter preferences so a precedence guess is detectable. Record each row independently under F-01; authored inputs are FIXTURE even when displayed in the native host.
+
+| Subcheck | Deliberate action and expected result |
+|---|---|
+| Separate provenance | In **Squad Info**, expand M1 and inspect **Model metadata**. **Declared model metadata (not effective runtime selection)** lists the charter source path with Preferred/Rationale/Fallback, the JSON source path with `defaultModel` and `agentModelOverrides["M1 exact display name"]`, and each source's read state/diagnostic. The nonmatching name/slug entry is not attributed to M1. Conflicting declarations stay separate; no precedence winner or effective model appears. |
+| Automatic versus current | With `defaultModel` set to `auto`, expect **Automatic selection (auto; not a concrete model)**. The same presentation applies to non-Rationale declared values equal to `auto`, ignoring case and surrounding whitespace. **Current-session model: unavailable** remains explicit, with the explanation that no authoritative runtime field is implemented. Charter preferences, configuration, role, history, usage reports and context gauges never fill that value. |
+| Refresh and removal | Collapse M1, change one charter model field and its exact-name JSON override, then re-expand. The new declarations appear without reload. Remove only the run-owned override and re-expand: the old override disappears; `defaultModel` remains separately attributed. Change only the roster display name in the approved fixture and verify exact-name matching, not slug/case-insensitive matching. Restore the name afterward. |
+| Missing and partial declarations | In separate reversible fixtures, omit the charter's Model section, omit one field, and remove the run-owned JSON file. Expect `missing` for absent section/file, or `ready` with a diagnostic naming undeclared fields for a partial section. Fenced Model examples and unrelated sections do not supply declarations. A valid JSON object with no matching supported preferences is `ready` with an explicit no-supported-preferences diagnostic, not a runtime-model conclusion. |
+| Malformed and ambiguous | Separately try invalid JSON, an invalid supported value (for example `defaultModel: 7` in otherwise valid JSON), an empty charter field, duplicate JSON keys, repeated Model sections and repeated Model fields. Invalid JSON/values/fields read `malformed`; duplicate keys/sections/fields read `ambiguous`. These error states withhold values rather than choosing a last declaration or retaining cached values. |
+| Bounded/unreadable source | Use approved run-owned fixtures over 64 KiB, invalid UTF-8 and a non-regular source; do not alter permissions on existing files. Oversized/non-regular JSON reads `unreadable`, invalid UTF-8 JSON reads `malformed`; a rejected charter reads `unreadable`. No partial or stale values survive. For a changing-read or symlink/junction refusal, use only a reviewed synthetic reader fixture; capture its explicit `ambiguous`/`unreadable` diagnostic rather than manipulating unrelated paths. Any unexercised variant stays BLOCKED with a reason. |
+| Legacy presence only | Use approved inert, run-owned `squad.config.ts` fixtures at the project root and selected Squad root. Present legacy files read `unsupported` with a not-imported/executed/resolved diagnostic; absent ones read `missing`, inspection failures `unreadable`. No values are read or inferred from executable config, and legacy presence does not mask a missing/malformed JSON source. Use hashes and synthetic reader evidence to establish no import/execution; do not create an executable side-effect probe. |
+| Read-only observer | With F-02's separate approval, open Squad Info in the observer. **Current-session model: unavailable** stays explicit; declared metadata reports **Declared model metadata is unavailable in the read-only observer.** No charter/configuration preferences are invented or copied from native state. Browser results remain BROWSER, not NATIVE or REAL. |
+
+Capture source paths/keys, exact input hashes, read states/diagnostics and before/after screenshots in the local report. Preserve historical recorded-usage evidence separately. Restore only run-owned charter/config/legacy fixtures and the roster name from their approved snapshots; no automatic deletion or cleanup permission is implied.
+
 ### F-02: Standalone observer, owned terminals, and other runtimes
 
 - **Setup:** Use the read-only observer procedure, then (only if separately approved) the owned-terminal procedure below on an approved local desktop/browser host. All common approval gates still apply; observer execution needs no native VS Code launch or real Squad process. Other runtimes require their own included implementation and approved procedure; otherwise BLOCKED / NOT IMPLEMENTED.
