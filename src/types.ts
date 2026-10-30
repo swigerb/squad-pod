@@ -323,6 +323,7 @@ export interface SquadInfoData {
 }
 
 export type OutboundMessage =
+  | { type: 'observedTasks'; snapshot: import('./observedTasks.js').ObservedTaskSnapshot }
   | { type: 'agentContextUsage'; agentId: string; contextTokens: number | null; maxContextTokens: number | null }
   | { type: 'recordedUsage'; snapshot: import('./recordedUsage.js').RecordedUsageSnapshot }
   | AgentCreatedMessage
