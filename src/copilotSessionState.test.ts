@@ -82,10 +82,19 @@ describe('read-only Copilot session metadata (synthetic homes only)', () => {
   });
 
   it('examines at most 500 entries even when a larger result is requested', () => {
-    for (let index = 0; index < 510; index++) { session(String(index), ''); }
+    session('fixture', '');
+    const sessionRoot = path.join(root, 'session-state');
+    const entry = fs.readdirSync(sessionRoot, { withFileTypes: true })[0];
+    const directory = fs.opendirSync(sessionRoot);
+    let supplied = 0;
+    const read = vi.spyOn(directory, 'readSync').mockImplementation(() => supplied++ < 510 ? entry : null);
+    const close = vi.spyOn(directory, 'closeSync');
+    vi.spyOn(fs, 'opendirSync').mockReturnValue(directory);
     const stat = vi.spyOn(fs, 'statSync');
     expect(listCopilotSessions(root, { limit: 1000 })).toHaveLength(500);
+    expect(read).toHaveBeenCalledTimes(500);
     expect(stat).toHaveBeenCalledTimes(500);
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it.each(['plain', 'single', 'double'] as const)('reads a %s top-level cwd, ignoring all other keys', (format) => {
