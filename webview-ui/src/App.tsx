@@ -419,7 +419,13 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       )}
 
       <AgentCard
-        detail={agentDetail && getOfficeState().characters.has(agentDetail.id) ? agentDetail : null}
+        detail={agentDetail && getOfficeState().characters.has(agentDetail.id) ? {
+          ...agentDetail,
+          status: agentStatuses[agentDetail.id] === 'active' ? 'active'
+            : agentStatuses[agentDetail.id] === 'waiting' ? 'waiting' : 'idle',
+          currentTask: agentTasks[agentDetail.id]?.currentTask ?? null,
+          currentTaskSource: agentTasks[agentDetail.id]?.currentTaskSource ?? null,
+        } : null}
         position={cardPosition}
         onClose={handleCloseCard}
         onViewCharter={readOnly || standalone ? undefined : handleViewCharter}

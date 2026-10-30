@@ -91,8 +91,8 @@ async function main() {
           { name: renamedAgent.name, expectedStatus: status });
         }
         await expectAgentStatus('Active');
-        await page.getByText('Observed task: Production fixture observed task', { exact: true }).waitFor();
-        assert.equal(await page.getByText('Observed task: Production fixture observed task', { exact: true }).count(), 1,
+        await page.getByText('Observed activity: Production fixture observed task', { exact: true }).waitFor();
+        assert.equal(await page.getByText('Observed activity: Production fixture observed task', { exact: true }).count(), 1,
           'App must render the reconnect snapshot task as observed task text');
         await page.evaluate(() => window.__sendHost({
           type: 'agentStatus', agentId: 'fixture-agent', status: 'waiting',
@@ -106,7 +106,7 @@ async function main() {
           type: 'agentStatus', agentId: 'fixture-agent', status: 'idle',
         }));
         await expectAgentStatus('Idle');
-        assert.equal(await page.getByText('Observed task: Production fixture observed task', { exact: true }).count(), 0,
+        assert.equal(await page.getByText('Observed activity: Production fixture observed task', { exact: true }).count(), 0,
           'idle must clear the stale reconnect task row');
         assert.equal(await page.evaluate(() =>
           window.__petAcceptance.outbound.some((message) => ['agentToolStart', 'telemetryEvent'].includes(message.type))), false,

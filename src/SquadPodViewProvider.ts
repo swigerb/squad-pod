@@ -1296,6 +1296,7 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
     workspaceRoot,
     status: agent.status,
     currentTask: agent.currentTask,
+    currentTaskSource: agent.currentTaskSource,
     charterSummary,
     charterContent,
     charterStatus,

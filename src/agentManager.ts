@@ -39,12 +39,15 @@ export function setLiveAgentStatus(agentId: string, active: boolean, task: strin
     liveRuns.add(agentId);
     agent.status = 'active';
     agent.currentTask = task;
+    agent.currentTaskSource = task ? 'live' : null;
     agent.lastActiveAt = Date.now();
     postToWebview(webview, { type: 'agentToolsClear', agentId });
-    postToWebview(webview, { type: 'agentStatus', agentId, status: 'active', currentTask: task });
+    postToWebview(webview, {
+      type: 'agentStatus', agentId, status: 'active',
+      currentTask: agent.currentTask, currentTaskSource: agent.currentTaskSource,
+    });
   } else {
     liveRuns.delete(agentId);
-    agent.currentTask = null;
     updateAgentStatus(agentId, 'idle', null, webview);
   }
 }
@@ -119,9 +122,8 @@ export function initializeAgents(
 ): Map<string, SquadAgentState> {
   const members = readTeamRoster(workspaceRoot);
   const persisted = loadPersistedMeta(context);
-  const previous = agents;
-
   cancelAllTimers();
+  liveRuns.clear();
   agents = new Map();
   disposed = false;
 
@@ -131,12 +133,6 @@ export function initializeAgents(
   );
   ordered.forEach((member, index) => {
     const state = memberToState(member, index, persisted, usedPalettes());
-    const prior = previous.get(state.id);
-    if (prior) {
-      state.status = prior.status;
-      state.currentTask = prior.currentTask;
-      state.lastActiveAt = prior.lastActiveAt;
-    }
     agents.set(state.id, state);
   });
 
@@ -213,21 +209,24 @@ export function updateAgentStatus(
 
   const prevStatus = agent.status;
   const prevTask = agent.currentTask;
+  const prevSource = agent.currentTaskSource;
   agent.status = status;
   agent.lastActiveAt = Date.now();
-  if (task !== null) {
-    agent.currentTask = truncateTask(task);
-  }
+  agent.currentTask = status !== 'idle' && task ? truncateTask(task) || null : null;
+  agent.currentTaskSource = agent.currentTask ? 'file' : null;
   const statusChanged = prevStatus !== status;
-  const taskChanged = prevTask !== agent.currentTask;
+  const taskChanged = prevTask !== agent.currentTask || prevSource !== agent.currentTaskSource;
 
   if (statusChanged || taskChanged) {
-    postToWebview(webview, { type: 'agentStatus', agentId, status, currentTask: status === 'idle' ? null : agent.currentTask });
+    postToWebview(webview, {
+      type: 'agentStatus', agentId, status,
+      currentTask: agent.currentTask, currentTaskSource: agent.currentTaskSource,
+    });
   }
 
   if (statusChanged || taskChanged) {
     const statusLabel = status === 'active' ? 'became active' : status === 'waiting' ? 'is waiting for input' : 'went idle';
-    const taskSuffix = agent.currentTask ? `: ${agent.currentTask}` : '';
+    const taskSuffix = agent.currentTask ? ` (file activity hint): ${agent.currentTask}` : '';
     postToWebview(webview, {
       type: 'telemetryEvent',
       event: makeTelemetryEvent('status', agentId, agent.name, `${agent.name} ${statusLabel}${taskSuffix}`),
@@ -244,7 +243,7 @@ export function updateAgentStatus(
         type: 'agentToolStart',
         agentId,
         tool: agent.currentTask ?? 'working',
-        status: agent.currentTask ?? 'Working',
+        status: agent.currentTask ? `File activity hint: ${agent.currentTask}` : 'File activity observed',
       });
     }
     resetActivityTimer(agentId, ACTIVITY_TIMEOUT_MS, () => {
@@ -280,6 +279,7 @@ export function sendExistingAgents(
     ...directoryIdentityFields(directoryIds),
     status: a.status,
     currentTask: a.currentTask,
+    currentTaskSource: a.currentTaskSource,
   }));
 
   postToWebview(webview, { type: 'existingAgents', agents: agentArray });
@@ -368,6 +368,7 @@ function memberToState(
     seatId: savedMeta?.seatId ?? null,
     status: 'idle',
     currentTask: null,
+    currentTaskSource: null,
     lastActiveAt: Date.now(),
   };
 }
