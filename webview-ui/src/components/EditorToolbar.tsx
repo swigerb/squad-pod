@@ -3,7 +3,7 @@ import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, EditTool as EditToolType } from '../office/types.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
-import { getFloorSprite } from '../office/floorTiles.js';
+import { FLOOR_PATTERNS, getFloorSprite } from '../office/floorTiles.js';
 import { getCarpetPreview, hasCarpetVariant } from '../office/sprites/carpetTiles.js';
 import type { SpriteData } from '../office/types.js';
 import {
@@ -85,17 +85,6 @@ const TOOL_DEFS: { tool: EditToolType; icon: string; label: string }[] = [
   { tool: EditTool.PETS, icon: '♥', label: 'Pets' },
   { tool: EditTool.ERASE, icon: '✕', label: 'Erase' },
   { tool: EditTool.EYEDROPPER, icon: '⊙', label: 'Eyedrop' },
-];
-
-const FLOOR_TYPES: { type: TileType; label: string }[] = [
-  { type: TileType.FLOOR_1, label: '1' },
-  { type: TileType.FLOOR_2, label: '2' },
-  { type: TileType.FLOOR_3, label: '3' },
-  { type: TileType.FLOOR_4, label: '4' },
-  { type: TileType.FLOOR_5, label: '5' },
-  { type: TileType.FLOOR_6, label: '6' },
-  { type: TileType.FLOOR_7, label: '7' },
-  { type: TileType.FLOOR_9, label: '9' },
 ];
 
 // Map TileType floor values to tileset-metadata item IDs for previews
@@ -195,12 +184,13 @@ const styles = {
 
   floorGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(8, 1fr)',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
     gap: '3px',
   },
 
   floorBtn: (active: boolean) => ({
     width: '100%',
+    padding: 0,
     aspectRatio: '1',
     background: active ? ACCENT : BG_SECTION,
     border: `1px solid ${active ? ACCENT : BORDER}`,
@@ -826,16 +816,17 @@ export function EditorToolbar({
         <div style={styles.section}>
           <div style={styles.sectionLabel}>Floor Pattern</div>
           <div style={styles.floorGrid}>
-            {FLOOR_TYPES.map(({ type, label }) => {
+            {FLOOR_PATTERNS.map(({ type, patternIndex }) => {
               const itemId = FLOOR_TYPE_TO_ITEM[type];
               return (
                 <button
                   key={type}
                   style={styles.floorBtn(editorState.tileType === type)}
                   onClick={() => onTileTypeChange(type)}
-                  title={`Floor ${label}${itemId ? ` (${formatItemLabel(itemId)})` : ''}`}
+                  title={`Floor ${type}${itemId ? ` (${formatItemLabel(itemId)})` : ''}`}
+                  aria-pressed={editorState.tileType === type}
                 >
-                  <SpritePreview sprite={getFloorSprite(type - 1)} size={22} />
+                  <SpritePreview sprite={getFloorSprite(patternIndex)} size={22} />
                 </button>
               );
             })}

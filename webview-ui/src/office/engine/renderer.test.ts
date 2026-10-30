@@ -162,6 +162,25 @@ describe('tile colors are optional rendering overrides', () => {
     expect(pixels).toHaveLength(3);
   });
 
+  it('renders every floor from its exact bundled sheet and never renders legacy VOID 8', () => {
+    const colors = ['#111111', '#222222', '#333333', '#444444', '#555555',
+      '#666666', '#777777', '#888888', '#999999'];
+    setFloorSprites(colors.map((color) => Array.from({ length: 16 }, () => Array(16).fill(color))));
+    const types = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const neutral = { h: 0, s: 0, b: 0, c: 0, colorize: false };
+    const overrides = new Map(types.map((_, col) => [`${col},0`, neutral]));
+
+    renderFrame(ctx, 160, 16, [types], [], [], 1, 0, 0, null, undefined, overrides);
+
+    expect(pixels).toEqual([
+      { x: 0, y: 0, color: '#111111' }, { x: 16, y: 0, color: '#222222' },
+      { x: 32, y: 0, color: '#333333' }, { x: 48, y: 0, color: '#444444' },
+      { x: 64, y: 0, color: '#555555' }, { x: 80, y: 0, color: '#666666' },
+      { x: 96, y: 0, color: '#777777' }, { x: 128, y: 0, color: '#999999' },
+      { x: 144, y: 0, color: '#888888' },
+    ]);
+  });
+
   it('uses the wall sprite fallback without any tile colors', () => {
     setWallSprites(Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => Array(16).fill('#808080'))));
     renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0);
