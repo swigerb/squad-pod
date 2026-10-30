@@ -9,6 +9,7 @@ const { execFileSync } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 const { PNG } = require('pngjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const playwrightPackage = require(path.join(path.dirname(require.resolve(process.env.PLAYWRIGHT_MODULE || 'playwright')), 'package.json'));
 require('tsx/cjs');
 const { getColorizedTileSprite } = require('../webview-ui/src/office/colorize.ts');
 
@@ -35,6 +36,8 @@ const result = {
   head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
   boundary: 'Production extension and webview; real provider save/reload/export/import and temporary disk files. Mocked VS Code APIs/dialogs; no native VS Code or real Squad session.',
   bundleSha256: digest(fs.readFileSync(path.join(root, 'dist', 'webview', 'assets', 'index.js'))),
+  playwrightVersion: playwrightPackage.version,
+  playwrightModule: require.resolve(process.env.PLAYWRIGHT_MODULE || 'playwright'),
 };
 const messages = [];
 const notices = [];
@@ -157,10 +160,16 @@ async function main() {
   browser = await chromium.launch({ channel: 'msedge', headless: true });
   result.browser = browser.version();
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
+  const waitForPage = (predicate, description) => until(() => page.evaluate(predicate), description);
+  const afterFrame = () => page.evaluate(() => new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(origin);
-  await page.waitForFunction(() => window.__floorAcceptance.incoming.some((m) => m.type === 'layoutLoaded'));
+  await waitForPage(() => window.__floorAcceptance.incoming.some((m) => m.type === 'layoutLoaded'), 'initial layout delivery');
+  result.csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content');
+  assert.match(result.csp, /script-src 'nonce-[^']+'/);
+  assert.ok(!result.csp.includes("'unsafe-eval'"), 'acceptance must retain the production unsafe-eval restriction');
   await page.evaluate(() => {
     for (const [name, value] of Object.entries({
       'editor-background': '#1e1e1e', foreground: '#cccccc',
@@ -215,7 +224,8 @@ async function main() {
   await page.getByRole('button', { name: 'Floor 10', exact: true }).click();
   await clickTile(4, 3);
   await page.mouse.move(0, 0);
-  await page.waitForTimeout(100);
+  await waitForPage(() => window.__floorAcceptance.state?.draft?.tiles[31] === 10, 'painted Floor 10 draft');
+  await afterFrame();
   const painted = await page.evaluate(() => window.__floorAcceptance.state.draft);
   assert.equal(painted.tiles[31], 10);
   const newColor = painted.tileColors['4,3'];
@@ -232,7 +242,7 @@ async function main() {
   }
   assert.deepEqual(JSON.parse(fs.readFileSync(layoutFile)), initial, 'painting is only a draft');
   await page.getByTitle('Undo (Ctrl+Z)', { exact: true }).click();
-  await page.waitForTimeout(100);
+  await waitForPage(() => window.__floorAcceptance.state?.draft?.tiles[31] === 1, 'undo draft');
   assert.deepEqual(await page.evaluate(() => window.__floorAcceptance.state.draft), initial);
   await page.getByTitle('Redo (Ctrl+Y)', { exact: true }).click();
   await page.getByRole('button', { name: /^Floor 1 \(/ }).click();
@@ -244,7 +254,7 @@ async function main() {
   assert.deepEqual(JSON.parse(fs.readFileSync(layoutFile)), painted);
   await page.screenshot({ path: path.join(output, 'floor10-painted.png') });
   await page.reload();
-  await page.waitForFunction(() => window.__floorAcceptance.incoming.some((m) => m.type === 'layoutLoaded'));
+  await waitForPage(() => window.__floorAcceptance.incoming.some((m) => m.type === 'layoutLoaded'), 'saved layout reload');
   assert.deepEqual(await page.evaluate(() => window.__floorAcceptance.incoming.find((m) => m.type === 'layoutLoaded').layout), painted);
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await page.getByRole('button', { name: 'Export Layout', exact: true }).click();
@@ -256,7 +266,7 @@ async function main() {
   imported.tileColors['5,3'] = newColor;
   fs.writeFileSync(exportedFile, JSON.stringify(imported, null, 2));
   await page.getByRole('button', { name: 'Import Layout', exact: true }).click();
-  await page.waitForFunction(() => window.__floorAcceptance.state?.draft?.tiles[32] === 10);
+  await waitForPage(() => window.__floorAcceptance.state?.draft?.tiles[32] === 10, 'imported draft');
   assert.deepEqual(await page.evaluate(() => window.__floorAcceptance.state.draft), imported);
   assert.deepEqual(JSON.parse(fs.readFileSync(layoutFile)), painted, 'import must remain an unsaved draft');
   await page.getByRole('button', { name: '\u00d7', exact: true }).click();
@@ -266,13 +276,53 @@ async function main() {
   await page.getByRole('button', { name: /Save Layout/ }).click();
   await until(() => JSON.parse(fs.readFileSync(layoutFile)).tiles[32] === 10, 'save imported draft');
   await page.reload();
-  await page.waitForFunction(() => window.__floorAcceptance.incoming.some((m) => m.type === 'layoutLoaded'));
+  await waitForPage(() => window.__floorAcceptance.incoming.some((m) => m.type === 'layoutLoaded'), 'import save reload');
   assert.deepEqual(await page.evaluate(() => window.__floorAcceptance.incoming.find((m) => m.type === 'layoutLoaded').layout), imported);
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.reload();
+  await waitForPage(() => window.__floorAcceptance.incoming.some((m) => m.type === 'layoutLoaded'), 'narrow layout reload');
+  await page.getByRole('button', { name: 'Edit Layout', exact: true }).click();
+  await page.getByTitle('Floor', { exact: true }).click();
+  await afterFrame();
+  for (const [type] of mapping) {
+    const button = page.getByRole('button', { name: new RegExp(`^Floor ${type}(?: \\(|$)`) });
+    await button.click();
+    assert.equal(await button.getAttribute('aria-pressed'), 'true');
+    const bounds = await button.boundingBox();
+    assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 360
+      && bounds.y >= 0 && bounds.y + bounds.height <= 640,
+    `Floor ${type} must be visible and clickable at 360x640`);
+  }
+  const narrow = await canvas.evaluate((c) => {
+    const rect = c.getBoundingClientRect();
+    const zoom = Number(document.querySelector('[aria-label="Office zoom"]').textContent.match(/\d+/)[0]);
+    return { x: rect.x + (c.width - 9 * 16 * zoom) / 2, y: rect.y + (c.height - 7 * 16 * zoom) / 2, zoom };
+  });
+  const target = { x: narrow.x + (7 * 16 + 8) * narrow.zoom, y: narrow.y + (3 * 16 + 8) * narrow.zoom };
+  const unobstructed = await canvas.evaluate((c, target) => document.elementFromPoint(target.x, target.y) === c, target);
+  assert.ok(unobstructed, 'narrow paint target must be visible and not covered by the editor');
+  await page.mouse.click(target.x, target.y);
+  await waitForPage(() => window.__floorAcceptance.state?.draft?.tiles[34] === 10, 'narrow painted draft');
+  assert.deepEqual(JSON.parse(fs.readFileSync(layoutFile)), imported, 'narrow painting must remain a draft');
+  await page.mouse.move(359, 0);
+  await afterFrame();
+  await page.screenshot({ path: path.join(output, 'floor10-palette-360.png') });
+  const narrowSave = page.getByRole('button', { name: /Save Layout/ });
+  await narrowSave.scrollIntoViewIfNeeded();
+  await narrowSave.click();
+  await until(() => JSON.parse(fs.readFileSync(layoutFile)).tiles[34] === 10, 'narrow provider save');
+  await waitForPage(() => [...document.querySelectorAll('button')]
+    .some((button) => button.textContent.trim() === 'Save Layout'), 'narrow save acknowledgement');
+  const narrowSaved = await page.evaluate(() => window.__floorAcceptance.state.draft);
+  assert.deepEqual(JSON.parse(fs.readFileSync(layoutFile)), narrowSaved);
+  await page.screenshot({ path: path.join(output, 'floor10-actions-360.png') });
+  result.narrow = { width: 360, height: 640, clickablePaletteChoices: 9, paintedTile: 34, savedThroughProvider: true };
   assert.deepEqual(errors, []);
   assert.equal(messages.some((m) => m.type === 'layoutError'), false);
   result.cases = ['nine exact source-sheet previews', 'ordinary-click Floor 10 paint and eyedrop', 'exact tinted canvas pixels',
     'legacy VOID and floor pixels unchanged', 'unrelated layers unchanged', 'undo/redo', 'provider disk save/reload',
-    'provider JSON export', 'provider import as unsaved draft', 'import save/reload'];
+    'provider JSON export', 'provider import as unsaved draft', 'import save/reload',
+    '360x640 all nine choices reachable and selectable', 'unobstructed narrow paint and scrolled Save through provider'];
   result.newStylePixelsSha256 = digest(Buffer.from(expectedPixels));
   result.notices = notices;
   fs.copyFileSync(layoutFile, path.join(output, 'saved-layout.json'));
