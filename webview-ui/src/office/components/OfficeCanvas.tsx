@@ -274,6 +274,7 @@ export function OfficeCanvas({
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      canvasRef.current?.focus({ preventScroll: true });
       if (e.button === 1 || (e.button === 0 && spaceKeyRef.current)) {
         e.preventDefault();
         setIsPanning(true);
@@ -561,6 +562,9 @@ export function OfficeCanvas({
       }
       if (e.key === 'Alt') updateCopyPreview(true);
       if (e.code === 'Space') {
+        spaceKeyRef.current = false;
+        if (e.defaultPrevented || target !== canvasRef.current || e.altKey || e.ctrlKey || e.metaKey
+          || document.querySelector('[aria-modal="true"]')) return;
         e.preventDefault();
         spaceKeyRef.current = true;
       }
@@ -571,11 +575,16 @@ export function OfficeCanvas({
         spaceKeyRef.current = false;
       }
     };
+    const clearSpace = () => { spaceKeyRef.current = false; };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', clearSpace);
+    window.addEventListener('focusin', clearSpace);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', clearSpace);
+      window.removeEventListener('focusin', clearSpace);
     };
   }, [officeState]);
 
@@ -675,6 +684,8 @@ export function OfficeCanvas({
     >
       <canvas
         ref={canvasRef}
+        tabIndex={0}
+        aria-label="Office canvas"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

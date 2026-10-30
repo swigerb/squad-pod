@@ -91,6 +91,7 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     host = document.createElement('div'); document.body.appendChild(host);
     root = createRoot(host);
     act(() => root.render(<App client={client} />));
+    act(() => deliver({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: false }));
     frame();
     // Canvas has no drawing context in jsdom, so pan stays at its real initial 0,0.
     // Move only characters, leaving occupied desk/chair hit tests independent.
@@ -240,6 +241,9 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     const info = received.filter(message => message.type === 'squadInfoLoaded').at(-1);
     if (source?.type !== 'sourceStatus' || info?.type !== 'squadInfoLoaded') throw new Error('Fixture did not emit workspace context.');
     act(() => deliver({ ...source, status: { ...source.status, workspaceRoot: nextRoot } }));
+    const roster = received.find(message => message.type === 'existingAgents');
+    if (roster?.type !== 'existingAgents') throw new Error('Fixture did not emit a roster.');
+    act(() => deliver(roster));
     act(() => deliver({ ...info, info: { ...info.info, workspaceRoot: nextRoot } }));
     hold = false;
     click('Show details for Ada');
@@ -257,6 +261,104 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     fixture.removeAgent('ada');
     act(() => vi.advanceTimersByTime(2000));
     expect(card()?.textContent).not.toContain('Ada builds precise interaction contracts.');
+  });
+
+  it('keeps open Squad Info live through idle-active-task-change-idle without requesting metadata again', () => {
+    click('Squad Info');
+    click('Show details for Ada');
+    const button = host.querySelector<HTMLButtonElement>('[aria-label="Hide details for Ada"]')!;
+    button.focus();
+    const before = fixture.sent.length;
+    expect(memberDetail()?.textContent).toContain('Observed status: idle');
+    expect(card()?.textContent).toContain('0 active');
+    const transition = (status: 'active' | 'idle', currentTask: string | null) => act(() => deliver({
+      type: 'agentStatus', agentId: 'ada', status, currentTask,
+    }));
+    transition('active', 'Verifying live dialog');
+    expect(memberDetail()?.textContent).toContain('Observed status: active');
+    expect(memberDetail()?.textContent).toContain('Observed activity: Verifying live dialog');
+    expect(card()?.textContent).toContain('1 active');
+    transition('active', 'Second observed task');
+    expect(memberDetail()?.textContent).toContain('Observed activity: Second observed task');
+    expect(memberDetail()?.textContent).not.toContain('Verifying live dialog');
+    transition('idle', null);
+    expect(memberDetail()?.textContent).toContain('Observed status: idle');
+    expect(memberDetail()?.textContent).toContain('No current task observed.');
+    expect(card()?.textContent).toContain('0 active');
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(button);
+    expect(fixture.sent.slice(before)).toEqual([]);
+    expect(memberDetail()?.textContent).toContain(agents[0].summary);
+  });
+
+  it('uses the current snapshot, not delayed detail or roster replies, for live fields and membership', () => {
+    click('Squad Info');
+    hold = true;
+    click('Show details for Ada');
+    act(() => deliver({ type: 'agentStatus', agentId: 'ada', status: 'active', currentTask: 'Current observation' }));
+    act(() => deliver(held.at(-1)!));
+    expect(memberDetail()?.textContent).toContain('Observed status: active');
+    expect(memberDetail()?.textContent).toContain('Observed activity: Current observation');
+    const staleInfo = received.filter(message => message.type === 'squadInfoLoaded').at(-1)!;
+    act(() => deliver({ type: 'agentClosed', agentId: 'ada' }));
+    act(() => deliver(staleInfo));
+    act(() => deliver(held.at(-1)!));
+    expect(host.querySelector('[aria-label="Show details for Ada"]')).toBeNull();
+    expect(host.textContent).not.toContain(agents[0].summary);
+    expect(card()?.textContent).toContain('1 agent');
+    hold = false;
+  });
+
+  it('projects reconnect snapshots and unknown observation state without stale detail fallback', () => {
+    click('Squad Info');
+    click('Show details for Ada');
+    const roster = received.find(message => message.type === 'existingAgents');
+    if (roster?.type !== 'existingAgents') throw new Error('Fixture did not emit a roster.');
+    act(() => deliver({ ...roster, agents: roster.agents.map(agent => ({
+      ...agent, status: 'active', currentTask: 'Snapshot task', currentTaskSource: 'live',
+    })) }));
+    expect(memberDetail()?.textContent).toContain('Live task: Snapshot task');
+    expect(card()?.textContent).toContain('2 active');
+    act(() => deliver({ type: 'agentStatus', agentId: 'ada', status: 'active' }));
+    expect(memberDetail()?.textContent).not.toContain('Snapshot task');
+    expect(memberDetail()?.textContent).toContain('No current task observed.');
+    act(() => deliver({ type: 'agentStatus', agentId: 'ada', status: 'active',
+      currentTask: 'File evidence', currentTaskSource: 'file' }));
+    expect(memberDetail()?.textContent).toContain('File activity hint: File evidence');
+    act(() => deliver({ type: 'agentClosed', agentId: 'ada' }));
+    act(() => deliver({ type: 'agentCreated', agent: {
+      id: 'ada', name: 'Ada', role: 'Developer', paletteIndex: 0,
+    } }));
+    click('Show details for Ada');
+    expect(memberDetail()?.textContent).toContain('Observed status: unavailable');
+    expect(memberDetail()?.textContent).not.toContain('File evidence');
+  });
+
+  it('does not let the mounted canvas consume Space from dialog buttons or text editing', () => {
+    click('Squad Info');
+    const button = host.querySelector<HTMLButtonElement>('[aria-label="Show details for Ada"]')!;
+    button.focus();
+    const key = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+    act(() => button.dispatchEvent(key));
+    expect(key.defaultPrevented).toBe(false);
+    // jsdom does not synthesize native keyboard activation; production-browser coverage does.
+    act(() => button.click());
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(button);
+    const input = document.createElement('input');
+    card()!.appendChild(input);
+    input.focus();
+    const textKey = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+    act(() => input.dispatchEvent(textKey));
+    expect(textKey.defaultPrevented).toBe(false);
+    input.remove();
+    click('Close Squad Info');
+    const canvas = host.querySelector('canvas')!;
+    canvas.focus();
+    const canvasKey = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+    act(() => canvas.dispatchEvent(canvasKey));
+    expect(canvasKey.defaultPrevented).toBe(true);
+    act(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' })));
   });
 
   it('refreshes the same agent charter and activity on re-expansion and ignores its older reply', () => {

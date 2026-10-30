@@ -86,7 +86,7 @@ function ConnectedApp({ readOnly, standalone }: { readOnly: boolean; standalone:
 function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryState: unknown; readOnly: boolean; standalone: boolean }) {
   const client = useHostClient();
   const editor = useEditorActions(getOfficeState, editorState, recoveryState, readOnly);
-  const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, agentDetails, requestAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, agentTasks, layoutReady, noWorkspace, agentDetail, setAgentDetail, agentDetails, requestAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
@@ -172,8 +172,8 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
     setSquadInfo(null);
   }, [setSquadInfo]);
 
-  const readOnlySquadInfo = useMemo(() => {
-    if (!readOnly && !standalone) return null;
+  const currentSquadInfo = useMemo(() => {
+    if (!readOnly && !standalone && (!squadInfo || squadInfo.workspaceRoot !== sourceStatus?.workspaceRoot)) return null;
     const characters = getOfficeState().characters;
     const members = agents.flatMap((id) => {
       const character = characters.get(id);
@@ -181,17 +181,20 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       const status = agentStatuses[id] ?? 'unknown';
       return [{
         id, name: character.name, role: character.role, status,
-        isActive: status === 'active', currentTask: null,
+        isActive: status === 'active', currentTask: agentTasks[id]?.currentTask ?? null,
+        currentTaskSource: agentTasks[id]?.currentTaskSource ?? null,
       }];
     });
     return {
       teamName: null, description: null, workspaceRoot: sourceStatus?.workspaceRoot ?? null,
-      members, hiddenMembers: [], projectContext: null, totalAgents: members.length,
+      hiddenMembers: [], projectContext: null,
+      ...(readOnly || standalone ? {} : squadInfo),
+      members, totalAgents: members.length,
       activeAgents: members.filter((member) => member.isActive).length,
     };
-  }, [agentStatuses, agents, readOnly, standalone, sourceStatus?.workspaceRoot]);
+  }, [agentStatuses, agentTasks, agents, readOnly, standalone, sourceStatus?.workspaceRoot, squadInfo]);
 
-  const visibleSquadInfo = isSquadInfoOpen ? (readOnly || standalone ? readOnlySquadInfo : squadInfo) : null;
+  const visibleSquadInfo = isSquadInfoOpen ? currentSquadInfo : null;
   const handleRequestSquadDetail = useCallback((agentId: string) => {
     const member = visibleSquadInfo?.members.find((candidate) => candidate.id === agentId);
     if (member && agents.includes(agentId) && visibleSquadInfo?.workspaceRoot === sourceStatus?.workspaceRoot) {
