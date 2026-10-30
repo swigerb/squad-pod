@@ -141,6 +141,7 @@ export function OfficeCanvas({
 
     const cleanup = startGameLoop(canvas, {
       update: (deltaTime: number) => {
+        officeState.updateFurnitureAnimation(deltaTime);
         for (const char of officeState.characters.values()) {
           updateCharacter(char, deltaTime, officeState.walkableTiles, officeState.seats, officeState.tileMap, officeState.blockedTiles);
         }

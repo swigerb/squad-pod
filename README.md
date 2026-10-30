@@ -14,7 +14,7 @@ Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradyga
 - Design the office with floors, walls, furniture, colors, carpets, named Areas, and pets.
 - Manage directories and explicitly launch Squad in a new VS Code terminal.
 - Browse activity and available recorded usage in the Telemetry drawer.
-- Add local furniture, pets, and character sheets.
+- Add local furniture, pets, and character sheets; stateful furniture animates at active desks and supports manual toggles.
 
 ## Requirements
 

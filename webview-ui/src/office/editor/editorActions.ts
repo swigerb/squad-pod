@@ -1,7 +1,7 @@
 import { OfficeLayout, TileType, FloorColor, PlacedFurniture, CarpetTile } from '../types.js';
 import { EditorState, UndoEntry } from './editorState.js';
 import { UNDO_STACK_MAX_SIZE } from '../../constants.js';
-import { getAssetProblem, getCatalogEntry, getRotatedType, isRotatable } from '../layout/furnitureCatalog.js';
+import { getAssetProblem, getCatalogEntry, getRotatedType, getOnStateType, isRotatable } from '../layout/furnitureCatalog.js';
 import { getFurnitureFootprint } from '../layout/layoutManager.js';
 import { isValidCarpetTile } from '../../../../src/carpetValidation.js';
 
@@ -118,7 +118,8 @@ export function planFurnitureRotate(layout: OfficeLayout, uid: string): Furnitur
   const item = layout.furniture.find((f) => f.uid === uid);
   const footprint = item && getFurnitureFootprint(item);
   if (!item || !footprint) return { items: [], error: 'Cannot rotate furniture with unknown dimensions.' };
-  const nextType = getRotatedType(item.type);
+  const rotationType = getCatalogEntry(item.type)?.state === 'on' ? getOnStateType(item.type) : item.type;
+  const nextType = getRotatedType(rotationType);
   if (nextType) {
     const problem = getAssetProblem(item);
     if (problem) return { items: [], error: problem };

@@ -1,13 +1,19 @@
-import { CharacterState } from '../types.js';
+import { CharacterState, Direction } from '../types.js';
 import type { OfficeLayout, Character, Seat, FurnitureInstance, Pet } from '../types.js';
 import { createCharacter } from './characters.js';
-import { layoutToTileMap, layoutToSeats, getBlockedTiles, layoutToFurnitureInstances } from '../layout/layoutManager.js';
+import {
+  layoutToTileMap,
+  layoutToSeats,
+  getBlockedTiles,
+  getFurnitureFootprint,
+  layoutToFurnitureInstances,
+} from '../layout/layoutManager.js';
 import { getWalkableTiles } from './pathfinding.js';
 import { findPath } from './pathfinding.js';
-import { getCatalogEntry } from '../layout/furnitureCatalog.js';
 import { createPet, getPetSpriteData, togglePetHeart } from './petEntity.js';
 import { getPetName, getPetSprites } from '../sprites/petSpriteData.js';
-import { PET_HIT_HALF_WIDTH, PET_HIT_HEIGHT } from '../../constants.js';
+import { FURNITURE_ANIM_INTERVAL_SEC, PET_HIT_HALF_WIDTH, PET_HIT_HEIGHT } from '../../constants.js';
+import { getAnimationFrames, getOnStateType } from '../layout/furnitureCatalog.js';
 
 export class OfficeState {
   layout: OfficeLayout;
@@ -23,6 +29,8 @@ export class OfficeState {
   hoveredAgentId: string | null = null;
   hoveredTile: { col: number; row: number } | null = null;
   cameraFollowId: string | null = null;
+  private furnitureAnimTimer = 0;
+  private furnitureAnimFrame = 0;
 
   constructor(layout?: OfficeLayout) {
     this.layout = layout || { version: 1, cols: 0, rows: 0, tiles: [], furniture: [], pets: [] };
@@ -255,6 +263,7 @@ export class OfficeState {
     newSeat.occupant = agentId;
     char.seatId = seatId;
     this.sendToSeat(agentId);
+    this.rebuildFurnitureInstances();
     return true;
   }
 
@@ -349,23 +358,59 @@ export class OfficeState {
     if (pet) togglePetHeart(pet);
   }
 
-  rebuildFurnitureInstances() {
-    const activeAgents = new Set<string>();
-    for (const char of this.characters.values()) {
-      if (char.active) activeAgents.add(char.id);
+  updateFurnitureAnimation(dt: number): void {
+    if (!Number.isFinite(dt) || dt <= 0) return;
+    this.furnitureAnimTimer += dt;
+    const frame = Math.floor(this.furnitureAnimTimer / FURNITURE_ANIM_INTERVAL_SEC);
+    if (frame === this.furnitureAnimFrame) return;
+    this.furnitureAnimFrame = frame;
+    if (this.furniture.some((item) => (getAnimationFrames(item.type)?.length ?? 0) > 1)) {
+      this.rebuildFurnitureInstances();
     }
+  }
 
-    for (const furn of this.furniture) {
-      const catalogEntry = getCatalogEntry(furn.type);
-      if (catalogEntry?.dynamicState) {
-        const nearbyActiveAgent = Array.from(this.characters.values()).some(c => {
-          if (!c.active) return false;
-          const dist = Math.hypot(c.col - furn.col, c.row - furn.row);
-          return dist <= 3;
-        });
-        furn.state = nearbyActiveAgent ? 'on' : 'off';
+  rebuildFurnitureInstances(): void {
+    const autoOnTiles = new Set<string>();
+    for (const character of this.characters.values()) {
+      if (!character.active || !character.seatId) continue;
+      const seat = this.seats.find((candidate) => candidate.id === character.seatId);
+      if (!seat) continue;
+
+      const dCol = seat.direction === Direction.RIGHT ? 1 : seat.direction === Direction.LEFT ? -1 : 0;
+      const dRow = seat.direction === Direction.DOWN ? 1 : seat.direction === Direction.UP ? -1 : 0;
+      for (let depth = 1; depth <= 3; depth++) {
+        autoOnTiles.add(`${seat.col + dCol * depth},${seat.row + dRow * depth}`);
+      }
+      for (let depth = 1; depth <= 2; depth++) {
+        const col = seat.col + dCol * depth;
+        const row = seat.row + dRow * depth;
+        if (dCol !== 0) {
+          autoOnTiles.add(`${col},${row - 1}`);
+          autoOnTiles.add(`${col},${row + 1}`);
+        } else {
+          autoOnTiles.add(`${col - 1},${row}`);
+          autoOnTiles.add(`${col + 1},${row}`);
+        }
       }
     }
+
+    const visibleFurniture = this.layout.furniture.map((item) => {
+      const footprint = getFurnitureFootprint(item);
+      const overlapsAutoOnTile = footprint !== undefined && Array.from(
+        { length: footprint.height },
+        (_, row) => Array.from(
+          { length: footprint.width },
+          (_, col) => autoOnTiles.has(`${item.col + col},${item.row + row}`),
+        ),
+      ).some((row) => row.some(Boolean));
+      const type = overlapsAutoOnTile ? getOnStateType(item.type) : item.type;
+      const frames = getAnimationFrames(type);
+      if (frames && frames.length > 1) {
+        return { ...item, type: frames[this.furnitureAnimFrame % frames.length] };
+      }
+      return type === item.type ? item : { ...item, type };
+    });
+    this.furniture = layoutToFurnitureInstances(visibleFurniture);
   }
 
   getLayout(): OfficeLayout {

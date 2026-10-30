@@ -15,7 +15,9 @@ const root = (members: unknown[]) => ({
 });
 const temporary: string[] = [];
 afterEach(() => {
-  for (const directory of temporary.splice(0)) fs.rmSync(directory, { recursive: true, force: true });
+  for (const directory of temporary.splice(0)) {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 describe('manifest group metadata', () => {
@@ -54,7 +56,9 @@ describe('manifest group metadata', () => {
       ...subgroup, members: Array.from({ length: 64 }, (_, i) => leaf(`R${i}`)),
     }]))).toThrow('node/depth');
     let nested: unknown = leaf('DEEP');
-    for (let i = 0; i < 8; i++) nested = { type: 'group', groupType: 'state', members: [nested] };
+    for (let i = 0; i < 8; i++) {
+      nested = { type: 'group', groupType: 'state', members: [nested] };
+    }
     expect(() => validateManifest(root([nested, leaf('OK')]))).toThrow('node/depth');
     const result = validateManifest(root([{ ...subgroup, members: Array(65).fill(leaf('BAD')) }, leaf('OK')]));
     expect(result.leaves.map((item) => item.id)).toEqual(['OK']);
@@ -73,7 +77,9 @@ describe('manifest group metadata', () => {
     ])));
     const png = new PNG({ width: 16, height: 16 });
     png.data.fill(255);
-    for (const id of ['FRONT', 'SIDE']) fs.writeFileSync(path.join(folder, `${id}.png`), PNG.sync.write(png));
+    for (const id of ['FRONT', 'SIDE']) {
+      fs.writeFileSync(path.join(folder, `${id}.png`), PNG.sync.write(png));
+    }
     const snapshot = loadAssetSnapshot(path.resolve('webview-ui', 'public', 'assets'), [directory]);
     expect(snapshot.diagnostics).toEqual([expect.stringContaining('Invalid group')]);
     expect(snapshot.furniture.find((item) => item.type === 'local_TEST_FRONT')).toMatchObject({
