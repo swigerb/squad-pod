@@ -14,6 +14,7 @@ import { createPet, getPetSpriteData, togglePetHeart } from './petEntity.js';
 import { getPetName, getPetSprites } from '../sprites/petSpriteData.js';
 import { FURNITURE_ANIM_INTERVAL_SEC, PET_HIT_HALF_WIDTH, PET_HIT_HEIGHT } from '../../constants.js';
 import { getAnimationFrames, getOnStateType } from '../layout/furnitureCatalog.js';
+import { appearanceFromIndex, type AgentSnapshot } from './agentSync.js';
 
 export class OfficeState {
   layout: OfficeLayout;
@@ -127,23 +128,7 @@ export class OfficeState {
     }
 
     if (!seatId) {
-      const freeSeats = this.seats.filter((seat) => !seat.occupant);
-      const directoryIds = [...new Set([
-        ...(preferredDirectoryMappingIds ?? []),
-        ...(preferredDirectoryId ? [preferredDirectoryId] : []),
-      ])];
-      const mappedAreas = directoryIds.flatMap((directoryId) =>
-        this.layout.areaMappings?.[directoryId] ?? [],
-      );
-      const areaLabels = new Set(mappedAreas);
-      const areaSeats = freeSeats.filter((seat) => {
-        const label = this.layout.areaTiles?.[seat.row * this.layout.cols + seat.col];
-        return label !== undefined && label !== null && areaLabels.has(label);
-      });
-      const unzonedSeats = freeSeats.filter((seat) =>
-        !this.layout.areaTiles?.[seat.row * this.layout.cols + seat.col],
-      );
-      const seat = areaSeats[0] ?? unzonedSeats[0] ?? freeSeats[0];
+      const seat = this.findFreeSeat(preferredDirectoryId, preferredDirectoryMappingIds);
       if (seat) {
         seatId = seat.id;
         seat.occupant = id;
@@ -158,6 +143,56 @@ export class OfficeState {
       this.sendToSeat(id);
     }
 
+    this.rebuildFurnitureInstances();
+  }
+
+  private findFreeSeat(directoryId?: string, directoryMappingIds?: string[]): Seat | undefined {
+    const freeSeats = this.seats.filter(seat => !seat.occupant);
+    const directoryIds = [...new Set([
+      ...(directoryMappingIds ?? []), ...(directoryId ? [directoryId] : []),
+    ])];
+    const areaLabels = new Set(directoryIds.flatMap(id => this.layout.areaMappings?.[id] ?? []));
+    const areaSeat = freeSeats.find(seat => {
+      const label = this.layout.areaTiles?.[seat.row * this.layout.cols + seat.col];
+      return label !== undefined && label !== null && areaLabels.has(label);
+    });
+    return areaSeat ?? freeSeats.find(seat =>
+      !this.layout.areaTiles?.[seat.row * this.layout.cols + seat.col]) ?? freeSeats[0];
+  }
+
+  /** Apply a complete standalone preference snapshot without interactive swap side effects. */
+  applyAgentPreferences(snapshot: AgentSnapshot[]): void {
+    const previousSeats = new Map([...this.characters].map(([id, char]) => [id, char.seatId]));
+    for (const seat of this.seats) seat.occupant = null;
+    for (const agent of snapshot) {
+      const char = this.characters.get(agent.id);
+      if (!char) continue;
+      if (agent.paletteIndex !== undefined) {
+        const appearance = appearanceFromIndex(agent.paletteIndex);
+        char.palette = appearance.palette;
+        char.hueShift = appearance.hueShift;
+      }
+      const seat = this.seats.find(candidate => candidate.id === agent.seatId && !candidate.occupant);
+      char.seatId = seat?.id ?? null;
+      if (seat) seat.occupant = agent.id;
+    }
+    // Reserve all explicit seats first, then keep automatic seating where possible.
+    for (const agent of snapshot) {
+      const char = this.characters.get(agent.id);
+      if (!char) continue;
+      if (!char.seatId) {
+        const previous = this.seats.find(seat => seat.id === previousSeats.get(agent.id) && !seat.occupant);
+        const seat = previous ?? this.findFreeSeat(char.directoryId, agent.directoryMappingIds);
+        char.seatId = seat?.id ?? null;
+        if (seat) seat.occupant = agent.id;
+      }
+      if (char.seatId !== previousSeats.get(agent.id)) {
+        char.path = [];
+        char.moveProgress = 0;
+        char.state = CharacterState.IDLE;
+        this.sendToSeat(agent.id);
+      }
+    }
     this.rebuildFurnitureInstances();
   }
 

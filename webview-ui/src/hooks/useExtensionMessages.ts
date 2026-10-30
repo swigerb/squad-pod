@@ -185,6 +185,7 @@ export function useExtensionMessages(
       const applySnapshot = (snapshot: AgentSnapshot[]) => {
         const officeState = getOfficeState();
         reconcileAgents(officeState, snapshot);
+        if (standalone) officeState.applyAgentPreferences(snapshot);
         for (const agent of snapshot) {
           if (agent.status !== undefined || agent.currentTask !== undefined) {
             officeState.setAgentTool(agent.id, null);

@@ -14,6 +14,7 @@ import { getFloorSprite, setFloorSprites } from './office/floorTiles.js';
 import { getWallSprite, setWallSprites } from './office/wallTiles.js';
 import { getCharacterSprites, setCharacterTemplates } from './office/sprites/defaultCharacters.js';
 import { createVSCodeClient } from './hostClient.js';
+import { OfficeState } from './office/engine/officeState.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -216,6 +217,43 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(open?.disabled).toBe(true);
     expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)
       .filter(type => ['openSquadInfo', 'openSquadAgent', 'saveAgentSeats'].includes(type))).toEqual([]);
+  });
+
+  it.each([false, true])('reconciles authoritative standalone seats before the next whole-map gesture with readOnly=%s', async readOnly => {
+    act(() => root.unmount());
+    client = createHostClientFixture();
+    const assignments = vi.spyOn(OfficeState.prototype, 'getSeatAssignments');
+    root = createRoot(host);
+    act(() => root.render(<App client={client} standalone readOnly={readOnly} />));
+    const chairCols = [2, 5, 8, 11];
+    snapshot({ ...imported, furniture: chairCols.flatMap((col, index) => [
+      { uid: `desk-${index}`, type: 'desk', col, row: 1, rotation: 0 },
+      { uid: `chair-${index}`, type: 'chair', col, row: 2, rotation: 0 },
+    ]) }, 'seat-layout');
+    const agents = ['test-agent-1', 'test-agent-2'].map((id, index) => ({
+      id, name: id, role: 'Developer', paletteIndex: index, seatId: `chair-${index * 2 + 1}`,
+      status: 'idle' as const, currentTask: null,
+    }));
+    send({ type: 'existingAgents', agents });
+    await nextFrame();
+    const office = assignments.mock.contexts.at(-1)!;
+    if (!(office instanceof OfficeState)) throw new Error('Expected the actual App OfficeState');
+    const first = office.characters.get('test-agent-1')!;
+    expect(office.getSeatAssignments()).toEqual({ 'test-agent-1': 'chair-1', 'test-agent-2': 'chair-3' });
+    send({ type: 'existingAgents', agents: [{ ...agents[0], seatId: 'chair-0', paletteIndex: 13 }, agents[1]] });
+    expect(office.characters.get('test-agent-1')).toBe(first);
+    expect(office.getSeatAssignments()).toEqual({ 'test-agent-1': 'chair-0', 'test-agent-2': 'chair-3' });
+    expect([first.palette, first.hueShift]).toEqual([1, 90]);
+    expect(vi.mocked(client.send).mock.calls.filter(([message]) => message.type === 'saveAgentSeats')).toEqual([]);
+    if (!readOnly) {
+      office.selectedAgentId = 'test-agent-2';
+      act(() => host.querySelector('canvas')!.dispatchEvent(new MouseEvent('mousedown', {
+        bubbles: true, button: 0, clientX: 8.5 * 32, clientY: 2.5 * 32,
+      })));
+      expect(client.send).toHaveBeenCalledWith({
+        type: 'saveAgentSeats', seats: { 'test-agent-1': 'chair-0', 'test-agent-2': 'chair-2' },
+      });
+    }
   });
 
   it('updates existing roster identity and restores only the observed task from snapshots', async () => {

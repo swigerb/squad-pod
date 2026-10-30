@@ -91,6 +91,9 @@ preference draft, a different attempt is explicitly rejected and the displayed
 settings/seats reconciled to authoritative state, without replacing the draft.
 Export and deliberately discard it to make a different change; discarding is blocked
 while a save is awaiting acknowledgement.
+Authoritative standalone snapshots reconcile existing characters' complete seat and
+appearance maps before subsequent gestures, without recreating identities or changing
+native VS Code roster-refresh behavior.
 Native dialogs/charters, cross-project directories, external asset registration and
 private-home/live-log consent stay explicitly unavailable. VS Code recovery and
 settings remain unchanged. Narrow screenshots do not claim touch-editor parity.

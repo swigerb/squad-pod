@@ -49,6 +49,10 @@ Preference attempts are retained before readiness checks. A different attempt wh
 a preference draft remains unresolved is explicitly rejected, not queued or retained,
 and optimistic settings/seats are reconciled to the last authoritative snapshot.
 The prior draft remains exportable/retryable; deliberate discard requires no save in flight.
+Both standalone modes apply complete roster preference maps to existing OfficeState
+characters, reserving explicit seats before automatic fallback rather than issuing
+interactive swaps. Later whole-map seat gestures therefore include other viewers'
+committed moves; native/local roster-refresh behavior is unchanged.
 
 `OfficeStore` writes fixed project targets with exclusive cooperating-writer locks,
 atomic staged/fsynced rename, exact-byte hashed revisions and prior-byte recovery
