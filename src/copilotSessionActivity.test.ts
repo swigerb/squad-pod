@@ -121,6 +121,88 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(messages).toContainEqual({ type: 'agentContextUsage', agentId: 'ada', contextTokens: 800, maxContextTokens: 1000 });
   });
 
+  it('restores a live activity timestamp from its source event without advancing it on replay', () => {
+    const timestamp = new Date(now - 60_000).toISOString();
+    const toolStartedAt = new Date(now - 50_000).toISOString();
+    const toolCompletedAt = new Date(now - 45_000).toISOString();
+    const taskCompletedAt = new Date(now - 40_000).toISOString();
+    const file = session('dated', marked(
+      taskCall('run', 'Ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run' }, { agentId: 'internal-run', timestamp }),
+    ));
+    reader.start();
+    expect(lifecycle.mock.calls).toEqual([['ada', true, 'Inspect fixture', Date.parse(timestamp)]]);
+
+    reader.replay();
+    expect(lifecycle.mock.calls).toEqual([
+      ['ada', true, 'Inspect fixture', Date.parse(timestamp)],
+      ['ada', true, 'Inspect fixture', Date.parse(timestamp)],
+    ]);
+
+    fs.appendFileSync(file,
+      line('tool.execution_start', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view' }, {
+        timestamp: toolStartedAt,
+      })
+      + line('tool.execution_complete', { toolCallId: 'tool', parentToolCallId: 'run' }, {
+        timestamp: toolCompletedAt,
+      }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(toolCompletedAt),
+    ]);
+
+    reader.replay();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(toolCompletedAt),
+    ]);
+
+    fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'run' }, {
+      agentId: 'internal-run', timestamp: taskCompletedAt,
+    }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', false, null, Date.parse(taskCompletedAt),
+    ]);
+  });
+
+  it('ignores future source timestamps and accepts a later valid observation', () => {
+    const previousTimestamp = new Date(now - 120_000).toISOString();
+    const futureTimestamp = new Date(now + 60_000).toISOString();
+    const validTimestamp = new Date(now - 1000).toISOString();
+    const file = session('clock-skew', marked(
+      taskCall('run', 'Ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run' }, { agentId: 'internal-run', timestamp: previousTimestamp }),
+    ));
+    reader.start();
+    expect(lifecycle.mock.calls).toEqual([['ada', true, 'Inspect fixture', Date.parse(previousTimestamp)]]);
+
+    fs.appendFileSync(file, line('tool.execution_start', {
+      toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view',
+    }, { timestamp: futureTimestamp }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(previousTimestamp), true,
+    ]);
+
+    reader.replay();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(previousTimestamp), true,
+    ]);
+
+    fs.appendFileSync(file, line('tool.execution_complete', {
+      toolCallId: 'tool', parentToolCallId: 'run',
+    }, { timestamp: validTimestamp }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(validTimestamp),
+    ]);
+
+    reader.replay();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(validTimestamp),
+    ]);
+  });
+
   it('projects only authoritative model fields and excludes ephemeral or message content', () => {
     const timestamp = '2026-10-30T12:34:56.000Z';
     expect(parseLiveEvent(line('session.start', { selectedModel: 'selected-model' }, { timestamp })))
@@ -157,6 +239,8 @@ describe('read-only Copilot live activity with synthetic homes', () => {
       .toBeUndefined();
     expect(parseLiveEvent(line('assistant.message', { model: 'missing-timestamp' } ) )?.modelObservation)
       .toBeUndefined();
+    expect(parseLiveEvent(line('subagent.started', { toolCallId: 'untimed' }, { timestamp: 'not-a-timestamp' }))
+      ?.activityAt).toBeUndefined();
   });
 
   it('uses session-start model metadata without replaying completed member lifecycle', () => {
@@ -304,7 +388,7 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(inventory().tasks).toContainEqual(expect.objectContaining({
       toolCallId: 'child', state: 'running', agentId: 'grace', instanceId: 'child-instance',
     }));
-    expect(lifecycle).toHaveBeenCalledWith('grace', true, 'Inspect fixture');
+    expect(lifecycle).toHaveBeenCalledWith('grace', true, 'Inspect fixture', Date.parse(timestamp));
 
     fs.appendFileSync(file, line('subagent.selected', { agentName: 'grace' },
       { agentId: 'unretained-instance', timestamp })
@@ -467,6 +551,91 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     reader.poll();
     expect(lifecycle.mock.calls.at(-1)).toEqual(['grace', false, null]);
     expect(inventory().tasks.find(row => row.toolCallId === 'child')?.state).toBe('aborted');
+  });
+
+  it('does not count identity reassignment as new activity for the former member', () => {
+    const firstObservedAt = new Date(now - 120_000).toISOString();
+    const toolObservedAt = new Date(now - 60_000).toISOString();
+    const reassignedAt = new Date(now - 30_000).toISOString();
+    const file = session('reassigned', marked(
+      taskCall('run', 'Ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run' }, { agentId: 'internal-run', timestamp: firstObservedAt }),
+    ));
+    reader.start();
+    fs.appendFileSync(file, line('tool.execution_start', {
+      toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view',
+    }, { timestamp: toolObservedAt }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse(toolObservedAt),
+    ]);
+
+    fs.appendFileSync(file, line('subagent.selected', { agentName: 'Grace' }, {
+      agentId: 'internal-run', timestamp: reassignedAt,
+    }));
+    reader.poll();
+
+    expect(lifecycle.mock.calls.slice(-2)).toEqual([
+      ['ada', false, null],
+      ['grace', true, 'Inspect fixture', Date.parse(reassignedAt)],
+    ]);
+  });
+
+  it.each([
+    { label: 'missing', offset: null, expectedOffset: null, clockSkew: false },
+    { label: 'earlier', offset: -3 * 60_000, expectedOffset: -3 * 60_000, clockSkew: false },
+    { label: 'future', offset: 2 * 60_000, expectedOffset: null, clockSkew: true },
+  ])('does not transfer old-owner activity on a $label selection or replay', ({
+    offset, expectedOffset, clockSkew,
+  }) => {
+    const previousAt = now - 4 * 60_000;
+    const adaToolAt = now - 2 * 60_000;
+    const file = session('owner-scoped-activity', marked(
+      taskCall('run', 'Ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run' }, {
+        agentId: 'internal-run', timestamp: new Date(previousAt).toISOString(),
+      })
+      + line('tool.execution_start', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view' }, {
+        timestamp: new Date(adaToolAt).toISOString(),
+      }),
+    ));
+    reader.start();
+    const selectionAt = offset === null ? undefined : new Date(now + offset).toISOString();
+    fs.appendFileSync(file, line('subagent.selected', { agentName: 'Grace' }, {
+      agentId: 'internal-run', timestamp: selectionAt,
+    }));
+    reader.poll();
+
+    const expected = clockSkew
+      ? ['grace', true, 'Inspect fixture', undefined, true]
+      : expectedOffset === null
+        ? ['grace', true, 'Inspect fixture']
+        : ['grace', true, 'Inspect fixture', now + expectedOffset];
+    expect(lifecycle.mock.calls.at(-1)).toEqual(expected);
+
+    reader.replay();
+    expect(lifecycle.mock.calls.at(-1)).toEqual(expected);
+  });
+
+  it('preserves task-local activity for a same-owner selection and replay', () => {
+    const observedAt = now - 2 * 60_000;
+    const file = session('same-owner-activity', marked(
+      taskCall('run', 'Ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run' }, {
+        agentId: 'internal-run', timestamp: new Date(now - 4 * 60_000).toISOString(),
+      })
+      + line('tool.execution_start', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view' }, {
+        timestamp: new Date(observedAt).toISOString(),
+      }),
+    ));
+    reader.start();
+    fs.appendFileSync(file, line('subagent.selected', { agentName: 'Ada' }, { agentId: 'internal-run' }));
+    reader.poll();
+    const expected = ['ada', true, 'Inspect fixture', observedAt];
+    expect(lifecycle.mock.calls.at(-1)).toEqual(expected);
+
+    reader.replay();
+    expect(lifecycle.mock.calls.at(-1)).toEqual(expected);
   });
 
   it('ends a roster run when another call for the same authoritative instance completes', () => {

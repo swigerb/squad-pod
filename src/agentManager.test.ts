@@ -95,6 +95,82 @@ describe('agentManager', () => {
       const homer = agents.get('homer');
       expect(homer?.status).toBe('idle');
       expect(homer?.currentTask).toBeNull();
+      expect(homer?.lastActiveAt).toBeNull();
+      expect(homer?.lastActiveAtStatus).toBe('unobserved');
+    });
+
+    it('does not turn file hints, idle bookkeeping, or roster reloads into activity timestamps', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('TestBot', 'testbot')]);
+      initializeAgents('/workspace', context, webview);
+      setLiveAgentStatus('testbot', true, 'Live task without a source timestamp', webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
+      expect(getAgents().get('testbot')?.lastActiveAtStatus).toBe('unobserved');
+      setLiveAgentStatus('testbot', false, null, webview);
+      updateAgentStatus('testbot', 'active', 'File activity hint', webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
+
+      const observedAt = Date.now() - 60_000;
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview, observedAt);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(observedAt);
+      expect(getAgents().get('testbot')?.lastActiveAtStatus).toBe('available');
+
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview, observedAt);
+      updateAgentStatus('testbot', 'active', 'Later file hint', webview);
+      setLiveAgentStatus('testbot', false, null, webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(observedAt);
+
+      updateAgentStatus('testbot', 'idle', null, webview);
+      refreshAgents('/workspace', context, webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(observedAt);
+
+      const completedAt = Date.now() - 30_000;
+      setLiveAgentStatus('testbot', true, 'Completed live task', webview, observedAt);
+      setLiveAgentStatus('testbot', false, null, webview, completedAt);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(completedAt);
+
+      initializeAgents('/workspace', context, webview);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
+      expect(getAgents().get('testbot')?.lastActiveAtStatus).toBe('unobserved');
+    });
+
+    it('does not store future live timestamps and accepts a later valid observation', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('TestBot', 'testbot')]);
+      initializeAgents('/workspace', context, webview);
+      const previousAt = Date.now() - 2 * 60 * 1000;
+      const futureAt = Date.now() + 60 * 1000;
+      const laterValidAt = Date.now() - 1000;
+
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview, futureAt);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
+      expect(getAgents().get('testbot')?.lastActiveAtStatus).toBe('clock-skew');
+
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview, previousAt);
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview, futureAt);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(previousAt);
+      expect(getAgents().get('testbot')?.lastActiveAtStatus).toBe('clock-skew');
+
+      setLiveAgentStatus('testbot', true, 'Actual live task', webview, laterValidAt);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(laterValidAt);
+      expect(getAgents().get('testbot')?.lastActiveAtStatus).toBe('available');
+    });
+
+    it('keeps the previous member timestamp when a live task is reassigned', () => {
+      mockReadTeamRoster.mockReturnValue([
+        makeMember('Ada', 'ada'),
+        makeMember('Grace', 'grace'),
+      ]);
+      initializeAgents('/workspace', context, webview);
+      const graceAt = Date.now() - 120_000;
+      const adaAt = Date.now() - 60_000;
+
+      setLiveAgentStatus('grace', true, 'Earlier task', webview, graceAt);
+      setLiveAgentStatus('grace', false, null, webview);
+      setLiveAgentStatus('ada', true, 'Inspect fixture', webview, adaAt);
+      setLiveAgentStatus('ada', false, null, webview);
+      setLiveAgentStatus('grace', true, 'Inspect fixture', webview);
+
+      expect(getAgents().get('ada')?.lastActiveAt).toBe(adaAt);
+      expect(getAgents().get('grace')?.lastActiveAt).toBe(graceAt);
     });
 
     it('does not carry expired source hints into a newly initialized workspace with the same member', () => {
@@ -122,12 +198,14 @@ describe('agentManager', () => {
       expect(getAgents().get('testbot')).toMatchObject({
         currentTask: 'File changed: history.md', currentTaskSource: 'file',
       });
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
       expect(webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
         type: 'agentToolStart', status: 'File activity hint: File changed: history.md',
       }));
       const callback = vi.mocked(resetActivityTimer).mock.calls.at(-1)![2];
       callback();
       expect(getAgents().get('testbot')).toMatchObject({ status: 'idle', currentTask: null, currentTaskSource: null });
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
       expect(webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
         type: 'agentStatus', status: 'idle', currentTask: null, currentTaskSource: null,
       }));
