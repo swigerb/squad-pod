@@ -258,25 +258,30 @@ export function watchLayoutFile(
 
 /**
  * Export the given layout to a user-chosen file via the VS Code save dialog.
- * Returns true if the export succeeded.
+ * Returns true if the export succeeded, or false on cancellation or reported failure.
  */
 export async function exportLayoutToFile(
   layout: LayoutData,
   vscode: typeof import('vscode'),
 ): Promise<boolean> {
-  const uri = await vscode.window.showSaveDialog({
-    filters: { 'JSON files': ['json'] },
-    defaultUri: vscode.Uri.file('squad-pod-layout.json'),
-    saveLabel: 'Export Layout',
-  });
+  try {
+    const uri = await vscode.window.showSaveDialog({
+      filters: { 'JSON files': ['json'] },
+      defaultUri: vscode.Uri.file('squad-pod-layout.json'),
+      saveLabel: 'Export Layout',
+    });
 
-  if (!uri) {
+    if (!uri) {
+      return false;
+    }
+
+    const content = Buffer.from(JSON.stringify(layout, null, 2), 'utf-8');
+    await vscode.workspace.fs.writeFile(uri, content);
+    return true;
+  } catch (error) {
+    void vscode.window.showErrorMessage(`Squad Pod: Could not export layout: ${String(error)}. Check the destination and permissions, then try exporting again.`);
     return false;
   }
-
-  const content = Buffer.from(JSON.stringify(layout, null, 2), 'utf-8');
-  await vscode.workspace.fs.writeFile(uri, content);
-  return true;
 }
 
 /**
