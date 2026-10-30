@@ -7,7 +7,8 @@ import { OfficeState } from '../engine/officeState.js';
 import { EditorState } from '../editor/editorState.js';
 import { useEditorActions } from '../../hooks/useEditorActions.js';
 import { useEditorKeyboard } from '../../hooks/useEditorKeyboard.js';
-import { Direction, TileType } from '../types.js';
+import { CharacterState, Direction, TileType } from '../types.js';
+import { createCharacter } from '../engine/characters.js';
 import { HostClientProvider } from '../../HostClientContext.js';
 import { createHostClientFixture } from '../../__tests__/hostClientFixture.js';
 import type { ReactNode } from 'react';
@@ -25,6 +26,44 @@ const client = createHostClientFixture();
 function withClient(children: ReactNode) {
   return <HostClientProvider client={client}>{children}</HostClientProvider>;
 }
+
+it.each([[1, 1], [2, 2], [4, 3]])('anchors transient links to interpolated walking geometry at zoom %s / DPR %s', (zoom, dpr) => {
+  vi.stubGlobal('devicePixelRatio', dpr);
+  const ctx = { setTransform: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(),
+    beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), imageSmoothingEnabled: false };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600, toJSON: () => ({}),
+  });
+  vi.spyOn(gameLoop, 'startGameLoop').mockImplementation((_canvas, callbacks) => {
+    callbacks.render(ctx as unknown as CanvasRenderingContext2D);
+    return () => {};
+  });
+  const frame = vi.spyOn(renderer, 'renderFrame').mockImplementation(() => {});
+  const office = new OfficeState({ version: 2, cols: 5, rows: 5, tiles: Array(25).fill(1), furniture: [] });
+  office.addAgent('ada', 'Ada', 'Developer');
+  const parent = office.characters.get('ada')!;
+  Object.assign(parent, { state: CharacterState.WALK, col: 1, row: 1, x: 24, y: 24,
+    path: [{ col: 2, row: 1 }], moveProgress: 0.5 });
+  const child = createCharacter('child', 'Child', 'Ephemeral', 0, null, null, 0);
+  child.x = 40;
+  child.y = 40;
+  office.subagents.set('child', { character: child, parentAgentId: 'ada' });
+  const pan = { current: { x: 0, y: 0 } };
+  const root = createRoot(document.createElement('div'));
+  try {
+    act(() => root.render(withClient(<OfficeCanvas officeState={office} editorState={new EditorState()}
+      isEditMode={false} editorTick={0} zoom={zoom} panRef={pan} />)));
+    expect(ctx.setTransform).toHaveBeenCalledWith(dpr, 0, 0, dpr, 0, 0);
+    expect(ctx.moveTo).toHaveBeenCalledWith(32 * zoom + pan.current.x, 24 * zoom + pan.current.y);
+    expect(ctx.lineTo).toHaveBeenCalledWith(40 * zoom + pan.current.x, 40 * zoom + pan.current.y);
+    expect(frame.mock.lastCall?.[5]).toEqual([parent, child]);
+  } finally {
+    act(() => root.unmount());
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});
 
 it.each([false, true])('enforces readOnly=%s before a selected-agent seat gesture mutates office state', readOnly => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);

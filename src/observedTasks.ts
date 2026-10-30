@@ -42,9 +42,12 @@ export function transientSubagents(snapshot: ObservedTaskSnapshot | null, roster
   if (!snapshot?.sessionId) { return []; }
   const tasks = snapshot.tasks.filter(task => task.sessionId === snapshot.sessionId).slice(0, MAX_OBSERVED_TASKS);
   const byCall = new Map(tasks.map(task => [task.toolCallId, task]));
-  const rosterId = (task: ObservedTask): string | undefined =>
-    rosterIds.find(id => id === task.agentId)
-      ?? (task.selectedAgentName ? rosterIds.find(id => id.toLowerCase() === task.selectedAgentName!.toLowerCase()) : undefined);
+  const rosterId = (task: ObservedTask): string | undefined => {
+    if (task.agentId && rosterIds.includes(task.agentId)) { return task.agentId; }
+    const matches = task.selectedAgentName
+      ? rosterIds.filter(id => id.toLowerCase() === task.selectedAgentName!.toLowerCase()) : [];
+    return matches.length === 1 ? matches[0] : undefined;
+  };
   const identity = (task: ObservedTask) => JSON.stringify([task.sessionId,
     task.instanceId ? 'instance' : 'call', task.instanceId || task.toolCallId]);
   // A selected roster identity or terminal alias wins over another call for the same instance.
@@ -135,6 +138,12 @@ export class ObservedTasks {
       // tool.execution_complete is dispatch completion, not subagent completion.
     }
     if (terminal(task)) {
+      if (task.instanceId) {
+        for (const alias of this.tasks.values()) {
+          if (alias.instanceId === task.instanceId) { alias.state = task.state; }
+        }
+        this.selections.delete(task.instanceId);
+      }
       this.tasks.delete(event.toolCallId);
       this.tasks.set(event.toolCallId, task);
     }

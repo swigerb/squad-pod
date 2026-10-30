@@ -18,7 +18,7 @@ const line = (type: string, data: object, envelope = {}) => JSON.stringify({ typ
 export const spawnLines = (name = 'ada', task = 'run') =>
   line('tool.execution_start', { toolName: 'task', toolCallId: task,
     arguments: { name, agent_type: 'general-purpose', mode: 'background', description: 'Build tests', prompt: secret } })
-  + line('subagent.started', { toolCallId: task, agentName: 'general-purpose' }, { agentId: 'internal-id' });
+  + line('subagent.started', { toolCallId: task, agentName: 'general-purpose' }, { agentId: `internal-${task}` });
 
 describe('read-only Copilot live activity with synthetic homes', () => {
   let home: string;
@@ -145,11 +145,29 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(inventory().tasks.find(row => row.toolCallId === 'child')).toMatchObject({
       instanceId: 'instance', selectedAgentName: 'grace', agentId: 'grace',
     });
+
     expect(lifecycle.mock.calls).toEqual([['grace', true, 'Inspect fixture']]);
     fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'child', cancelled: true }, { agentId: 'instance' }));
     reader.poll();
     expect(lifecycle.mock.calls.at(-1)).toEqual(['grace', false, null]);
     expect(inventory().tasks.find(row => row.toolCallId === 'child')?.state).toBe('aborted');
+  });
+
+  it('ends a roster run when another call for the same authoritative instance completes', () => {
+    const file = session('session', marked(''));
+    reader.start();
+    fs.appendFileSync(file, taskCall('one', 'ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'one' }, { agentId: 'same-instance' })
+      + taskCall('alias', 'ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'alias' }, { agentId: 'same-instance' }));
+    reader.poll();
+    fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'one' }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual(['ada', false, null]);
+    expect(inventory().tasks.every(row => row.state === 'completed')).toBe(true);
+    lifecycle.mockClear();
+    reader.replay();
+    expect(lifecycle).not.toHaveBeenCalled();
   });
 
   it('silently seeds only in-flight state, never replaying completed history on enable, reload or rotation', () => {

@@ -217,7 +217,7 @@ export class CopilotSessionActivity {
   private lastBytesAt = 0;
   private lastSize = -1;
   private stale = false;
-  private tasks = new Map<string, { agentId: string; description: string }>();
+  private tasks = new Map<string, { agentId: string; description: string; instanceId?: string }>();
   private runs = new Map<string, string>();
   private tools = new Map<string, { agentId: string; toolName: string; label: string }>();
   private gauge = new Map<string, NonNullable<LiveEvent['context']>>();
@@ -372,7 +372,8 @@ export class CopilotSessionActivity {
           this.tasks.delete(observed.toolCallId);
         }
         if (observed.agentId) {
-          this.tasks.set(observed.toolCallId, { agentId: observed.agentId, description: observed.description });
+          this.tasks.set(observed.toolCallId, { agentId: observed.agentId, description: observed.description,
+            instanceId: observed.instanceId });
           this.startRun(observed.agentId, observed.toolCallId, observed.description);
         }
       }
@@ -388,15 +389,22 @@ export class CopilotSessionActivity {
       const observed = this.observedTasks.snapshot(this.session?.id ?? null).tasks
         .find(row => row.toolCallId === event.toolCallId);
       if (observed?.agentId && observed.state === 'running') {
-        this.tasks.set(event.toolCallId, { agentId: observed.agentId, description: observed.description });
+        this.tasks.set(event.toolCallId, { agentId: observed.agentId, description: observed.description,
+          instanceId: observed.instanceId });
       }
     }
     const task = this.tasks.get(event.toolCallId);
     if (event.type === 'subagent.started' && task) {
+      task.instanceId = this.observedTasks.snapshot(this.session?.id ?? null).tasks
+        .find(row => row.toolCallId === event.toolCallId)?.instanceId;
       this.startRun(task.agentId, event.toolCallId, task.description);
     } else if (['subagent.completed', 'subagent.failed', 'subagent.aborted'].includes(event.type)) {
-      if (task && this.runs.get(task.agentId) === event.toolCallId) {this.finish(task.agentId);}
-      this.tasks.delete(event.toolCallId);
+      const instanceId = task?.instanceId ?? event.instanceId;
+      for (const [id, ended] of this.tasks) {
+        if (id !== event.toolCallId && (!instanceId || ended.instanceId !== instanceId)) { continue; }
+        if (this.runs.get(ended.agentId) === id) { this.finish(ended.agentId); }
+        this.tasks.delete(id);
+      }
     } else if (event.type === 'tool.execution_start') {
       const parent = this.tasks.get(event.parentToolCallId);
       if (!parent || this.runs.get(parent.agentId) !== event.parentToolCallId || this.tools.size >= MAX_TRACKED) {return;}

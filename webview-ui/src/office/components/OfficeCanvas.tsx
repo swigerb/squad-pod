@@ -13,6 +13,7 @@ import { clampPanOffset, zoomPanAroundAnchor } from '../engine/viewport.js';
 import { officePanStep, pinchZoom, type OfficePanAnchor, type Point } from '../../mobile/touchDecisions.js';
 import {
   updateCharacter,
+  getCharacterWorldPosition,
 } from '../engine/characters.js';
 import { getCharacterScreenBounds } from '../engine/characterGeometry.js';
 import { updatePet } from '../engine/petEntity.js';
@@ -259,9 +260,11 @@ export function OfficeCanvas({
           for (const { character, parentAgentId } of officeState.subagents.values()) {
             const parent = officeState.characters.get(parentAgentId);
             if (!parent) continue;
+            const parentPosition = getCharacterWorldPosition(parent);
+            const childPosition = getCharacterWorldPosition(character);
             ctx.beginPath();
-            ctx.moveTo(parent.x * zoom + panRef.current!.x, parent.y * zoom + panRef.current!.y);
-            ctx.lineTo(character.x * zoom + panRef.current!.x, character.y * zoom + panRef.current!.y);
+            ctx.moveTo(parentPosition.x * zoom + panRef.current!.x, parentPosition.y * zoom + panRef.current!.y);
+            ctx.lineTo(childPosition.x * zoom + panRef.current!.x, childPosition.y * zoom + panRef.current!.y);
             ctx.stroke();
           }
           ctx.restore();

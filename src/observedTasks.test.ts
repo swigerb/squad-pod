@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ObservedTasks, transientSubagents, type ObservedTask, type ObservedTaskSnapshot } from './observedTasks.js';
+import { MAX_RECENT_TASKS, ObservedTasks, transientSubagents, type ObservedTask, type ObservedTaskSnapshot } from './observedTasks.js';
 import { parseLiveEvent } from './copilotSessionActivity.js';
 
 const row = (toolCallId: string, extra: Partial<ObservedTask> = {}): ObservedTask => ({
@@ -47,6 +47,37 @@ describe('authoritative instance identity and transient hierarchy', () => {
       { ...parent, agentId: null, parentToolCallId: 'child' },
     ]) { expect(transientSubagents(snapshot(badParent, child), ['ada'])).toEqual([]); }
     expect(transientSubagents(snapshot(child), ['ada'])).toEqual([]);
+  });
+
+  it('does not undo host ambiguity rejection on selected identities or late roster arrival', () => {
+    const selectedParent = { ...parent, agentId: null, selectedAgentName: 'ada' };
+    const child = row('child', { parentToolCallId: 'parent' });
+    expect(transientSubagents(snapshot(selectedParent, child), ['Ada', 'ada'])).toEqual([]);
+    expect(transientSubagents(snapshot(selectedParent, child), ['ada'])).toHaveLength(1);
+    expect(transientSubagents(snapshot(parent, { ...child, selectedAgentName: 'grace' }), ['ada', 'Grace', 'grace']))
+      .toHaveLength(1);
+  });
+
+  it('propagates terminal state to instance aliases before completed rows age out', () => {
+    const inventory = new ObservedTasks();
+    const accept = (type: string, id: string, instance?: string) => inventory.accept({
+      type, toolCallId: id, parentToolCallId: id === 'parent' ? '' : 'parent', toolName: 'task', squad: false, instanceId: instance,
+      ...(type === 'tool.execution_start' ? { task: { name: id, agent_type: 'explore', mode: 'background', description: '' } } : {}),
+    }, 'session', id === 'parent' ? 'ada' : null);
+    for (const id of ['parent', 'one', 'alias']) {
+      accept('tool.execution_start', id);
+      accept('subagent.started', id, id === 'parent' ? 'lead' : 'instance');
+    }
+    expect(transientSubagents(inventory.snapshot('session'), ['ada'])).toHaveLength(1);
+    accept('subagent.completed', 'one');
+    expect(inventory.snapshot('session').tasks.find(task => task.toolCallId === 'alias')?.state).toBe('completed');
+    for (let i = 0; i <= MAX_RECENT_TASKS; i++) {
+      accept('tool.execution_start', `other-${i}`);
+      accept('subagent.started', `other-${i}`, `other-instance-${i}`);
+      accept('subagent.completed', `other-${i}`);
+    }
+    expect(inventory.snapshot('session').tasks.some(task => task.toolCallId === 'one')).toBe(false);
+    expect(transientSubagents(inventory.snapshot('session'), ['ada'])).toEqual([]);
   });
 
   it.each([true, false])('correlates selected custom agents by envelope instance ID (selection first: %s)', first => {
