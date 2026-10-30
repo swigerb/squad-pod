@@ -20,6 +20,9 @@ const report = { mode: 'installed synthetic office control (no native VS Code or
 let child;
 let context;
 let browser;
+let diagnosticPage;
+const controlTrace = [];
+const layoutFile = path.join(project, '.squad-pod', 'layout.json');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 function check(name) { report.checks.push(name); console.log(`PASS ${name}`); }
 function npm(args, cwd = packageRoot) {
@@ -86,6 +89,7 @@ try {
   context.setDefaultTimeout(10_000);
   context.setDefaultNavigationTimeout(15_000);
   const page = await context.newPage();
+  diagnosticPage = page;
   const controlSockets = [];
   const sentControlFrames = [];
   await page.routeWebSocket('**/control', route => {
@@ -93,10 +97,18 @@ try {
     controlSockets.push(route);
   });
   page.on('websocket', socket => {
-    if (socket.url().endsWith('/control')) socket.on('framesent', frame => {
-      const value = JSON.parse(String(frame.payload));
-      if (value.kind === 'control') sentControlFrames.push(value.requestId);
-    });
+    if (socket.url().endsWith('/control')) {
+      socket.on('framesent', frame => {
+        const value = JSON.parse(String(frame.payload));
+        if (value.kind === 'control') {
+          sentControlFrames.push(value.requestId);
+          controlTrace.push({ at: Date.now(), direction: 'sent', value });
+        }
+      });
+      socket.on('framereceived', frame => {
+        controlTrace.push({ at: Date.now(), direction: 'received', value: JSON.parse(String(frame.payload)) });
+      });
+    }
   });
   check('owned headless browser launched');
   const errors = [];
@@ -136,7 +148,6 @@ try {
   await editor.getByTitle('Redo (Ctrl+Y)', { exact: true }).click();
   assert.equal(await pet.getAttribute('aria-pressed'), 'true');
   await editor.getByRole('button', { name: /Save Layout/ }).click();
-  const layoutFile = path.join(project, '.squad-pod', 'layout.json');
   await until(async () => {
     try { return JSON.parse(await fs.readFile(layoutFile, 'utf8')).pets?.some(p => p.petType === petType); }
     catch (error) { if (error.code === 'ENOENT') return false; throw error; }
@@ -210,16 +221,47 @@ try {
   assert.equal(recovered.areas[0].label, 'Synthetic area');
   await page.getByRole('button', { name: /Keep local draft #/ }).click();
   await page.getByRole('button', { name: 'Edit Layout', exact: true }).click();
+  const resolvedSaveTraceStart = controlTrace.length;
   await page.getByRole('region', { name: 'Layout editor' }).getByRole('button', { name: /Save Layout/ }).click();
   await until(async () => JSON.parse(await fs.readFile(layoutFile, 'utf8')).pets?.length === 1, 'resolved draft commit');
+  await until(() => {
+    const request = controlTrace.slice(resolvedSaveTraceStart).find(frame =>
+      frame.direction === 'sent' && frame.value.message?.type === 'saveLayout');
+    return request && controlTrace.slice(resolvedSaveTraceStart).some(frame =>
+      frame.direction === 'received' && frame.value.kind === 'controlResult'
+      && frame.value.requestId === request.value.requestId
+      && frame.value.messages?.some(message => message.type === 'layoutSaved' && message.layout.pets?.length === 1));
+  }, 'correlated resolved draft acknowledgement', 10_000);
+  await page.getByRole('region', { name: 'Layout editor' }).getByRole('button', { name: 'Save Layout', exact: true }).waitFor();
+  await until(async () => {
+    try { await fs.stat(`${layoutFile}.lock`); return false; }
+    catch (error) { if (error.code === 'ENOENT') return true; throw error; }
+  }, 'prior layout writer lock released', 10_000);
+  report.beforeLock = {
+    at: Date.now(), controlTrace: structuredClone(controlTrace),
+    ui: await page.locator('body').innerText(),
+    lock: await fs.readFile(`${layoutFile}.lock`, 'utf8').catch(error => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    }),
+  };
   check('external conflict does not overwrite; dirty draft survives browser reload, exports and explicitly resolves');
   // An exclusive cooperating-writer lock forces a recoverable storage failure.
-  await fs.writeFile(`${layoutFile}.lock`, 'synthetic competing writer');
+  const beforeLockedSave = await fs.readFile(layoutFile, 'utf8');
+  await fs.writeFile(`${layoutFile}.lock`, 'synthetic competing writer', { flag: 'wx' });
   await page.getByRole('region', { name: 'Layout editor' }).getByTitle('Pets', { exact: true }).click();
   await page.getByRole('region', { name: 'Layout editor' }).locator('button[data-pet-type]').first().click();
+  assert.equal(await page.getByRole('region', { name: 'Layout editor' })
+    .getByRole('button', { name: '● Save Layout', exact: true }).count(), 1);
   await page.getByRole('region', { name: 'Layout editor' }).getByRole('button', { name: /Save Layout/ }).click();
   await page.getByText(/Office save failed:/).waitFor();
+  report.lockedFailure = { at: Date.now(), controlTrace: structuredClone(controlTrace),
+    layout: JSON.parse(await fs.readFile(layoutFile, 'utf8')), lock: await fs.readFile(`${layoutFile}.lock`, 'utf8') };
   assert.equal(JSON.parse(await fs.readFile(layoutFile, 'utf8')).pets.length, 1);
+  assert.equal(await fs.readFile(layoutFile, 'utf8'), beforeLockedSave);
+  assert.equal(await fs.readFile(`${layoutFile}.lock`, 'utf8'), 'synthetic competing writer');
+  assert.equal(await page.getByRole('region', { name: 'Layout editor' })
+    .getByRole('button', { name: '● Save Layout', exact: true }).count(), 1);
   await fs.unlink(`${layoutFile}.lock`);
   await page.getByRole('region', { name: 'Layout editor' }).getByRole('button', { name: /Save Layout/ }).click();
   await until(async () => JSON.parse(await fs.readFile(layoutFile, 'utf8')).pets.length === 0, 'retry after storage failure');
@@ -263,6 +305,20 @@ try {
   check('fixture roster and installed bytes unchanged, empty synthetic home untouched; only owned office state/recovery project targets written');
 } catch (error) {
   report.failures.push(error instanceof Error ? error.message : String(error));
+  if (artifacts && diagnosticPage && !diagnosticPage.isClosed()) {
+    await fs.mkdir(artifacts, { recursive: true });
+    const readDiagnostic = async file => {
+      try { return await fs.readFile(file, 'utf8'); }
+      catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+    };
+    await fs.writeFile(path.join(artifacts, 'office-failure.json'), JSON.stringify({
+      at: Date.now(), controlTrace,
+      ui: await diagnosticPage.locator('body').innerText(),
+      layout: await readDiagnostic(layoutFile),
+      lock: await readDiagnostic(`${layoutFile}.lock`),
+    }, null, 2));
+    await diagnosticPage.screenshot({ path: path.join(artifacts, 'office-failure.png'), fullPage: true });
+  }
   process.exitCode = 1;
 } finally {
   await context?.close();

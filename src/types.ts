@@ -278,10 +278,14 @@ export interface AgentCreatedMessage {
   };
 }
 
+export type CurrentTaskSource = 'file' | 'live';
+
 export interface AgentStatusMessage {
   type: 'agentStatus';
   agentId: string;
   status: 'active' | 'idle' | 'waiting';
+  currentTask?: string | null;
+  currentTaskSource?: CurrentTaskSource | null;
 }
 
 export interface AgentToolStartMessage {
@@ -311,6 +315,7 @@ export interface ExistingAgentsMessage {
     directoryMappingIds?: string[];
     status: 'active' | 'idle' | 'waiting';
     currentTask: string | null;
+    currentTaskSource?: CurrentTaskSource | null;
   }>;
 }
 
@@ -325,6 +330,7 @@ export interface SquadInfoData {
     status: string;
     isActive: boolean;
     currentTask: string | null;
+    currentTaskSource?: CurrentTaskSource | null;
   }>;
   hiddenMembers: Array<{ name: string; role: string; status: string }>;
   projectContext: string | null;
