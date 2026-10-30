@@ -213,6 +213,24 @@ After each case, close its dialog, leave data in the last documented safe state,
 - **Evidence:** Member-to-native-file path mapping, keyboard capture, before/after charter hashes for the refresh step, and screenshots of the missing, unreadable and read-only states.
 - **Cleanup:** Close test editors/cards/dialogs, restore the run-owned charter copies and roster snapshot, and restore any moved seat.
 
+#### Squad Info live and keyboard regression (#99 / #100)
+
+Keep Squad Info open with a member expanded through idle -> active -> changed task -> idle.
+Member status/task and the active count must follow the selected workspace without collapsing
+the member, moving focus, or rereading charter/model metadata on every activity event. A
+missing observation is unavailable, not idle. Remove the member or switch workspaces while
+a detail reply is pending; old replies must not restore removed members or prior-workspace data.
+Tab and Shift+Tab stay within the dialog, Space and Enter activate native buttons, and closing
+returns focus to the opener. With the dialog closed, focus/click the office canvas and verify
+Space-drag still pans; Space and editor shortcut letters must remain ordinary text in inputs.
+
+The bounded synthetic production-browser counterpart is
+`node scripts/acceptance-interaction.cjs --squad-info-only --evidence <local-results-directory>`
+after `npm run build`, using an existing Playwright installation via `PLAYWRIGHT_MODULE`
+and an existing Edge executable via `EDGE_PATH` where needed. It captures both 1280x900
+and 360x640 with source SHA/dirty state and bundle hashes. This is **BROWSER / FIXTURE**
+evidence with a mocked VS Code boundary, not NATIVE or REAL acceptance.
+
 ### N-04: Startup history and source selection
 
 - **Setup:** Live off. Before opening A, place clearly labeled historical fixtures in its sessions/log/orchestration/decision/agent directories. Keep B distinct. Use a legacy-only folder, a folder with both state directories, and an empty folder in separate subchecks.

@@ -131,6 +131,35 @@ describe('agentManager', () => {
         ([msg]: [any]) => msg.type === 'agentStatus',
       );
       expect(statusCall[0].status).toBe('active');
+      expect(statusCall[0].currentTask).toBe('writing tests');
+    });
+
+    it('sends changed tasks without a status transition and clears the idle task payload', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('Homer', 'homer')]);
+      initializeAgents('/workspace', context, webview);
+      updateAgentStatus('homer', 'active', 'first task', webview);
+      webview.postMessage.mockClear();
+      updateAgentStatus('homer', 'active', 'second task', webview);
+      updateAgentStatus('homer', 'idle', null, webview);
+      const statuses = webview.postMessage.mock.calls.map(([message]) => message)
+        .filter(message => message.type === 'agentStatus');
+      expect(statuses).toEqual([
+        { type: 'agentStatus', agentId: 'homer', status: 'active', currentTask: 'second task' },
+        { type: 'agentStatus', agentId: 'homer', status: 'idle', currentTask: null },
+      ]);
+    });
+
+    it('includes the authoritative live task and clears it on completion', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('Homer', 'homer')]);
+      initializeAgents('/workspace', context, webview);
+      webview.postMessage.mockClear();
+      setLiveAgentStatus('homer', true, 'live task', webview);
+      setLiveAgentStatus('homer', false, null, webview);
+      expect(webview.postMessage.mock.calls.map(([message]) => message)
+        .filter(message => message.type === 'agentStatus')).toEqual([
+        { type: 'agentStatus', agentId: 'homer', status: 'active', currentTask: 'live task' },
+        { type: 'agentStatus', agentId: 'homer', status: 'idle', currentTask: null },
+      ]);
     });
 
     it('is a no-op for unknown agent IDs', () => {
