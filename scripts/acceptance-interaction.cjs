@@ -312,11 +312,20 @@ async function checkSquadInfo(page, fixture, outputDir, viewport) {
   await canvas.focus();
   const label = page.getByRole('button').filter({ hasText: 'GraceReviewer' });
   const before = await label.boundingBox();
+  const origin = await canvas.evaluate(element => {
+    for (const y of [100, 160, 220]) {
+      for (const x of [innerWidth / 2, innerWidth * 0.8]) {
+        if (document.elementFromPoint(x, y) === element && document.elementFromPoint(x + 12, y + 12) === element) return { x, y };
+      }
+    }
+    return null;
+  });
+  assert.ok(origin, 'pan starts on exposed canvas, not an overlaid office control');
   await page.keyboard.down('Space');
-  await page.mouse.move(30, 30);
+  await page.mouse.move(origin.x, origin.y);
   await page.mouse.down();
   assert.equal(await canvas.evaluate(element => element.parentElement.style.cursor), 'grabbing', 'canvas Space arms pan');
-  await page.mouse.move(60, 50, { steps: 4 });
+  await page.mouse.move(origin.x + 12, origin.y + 12, { steps: 4 });
   await page.mouse.up();
   await page.keyboard.up('Space');
   await poll(page, ({ x, y }) => {
