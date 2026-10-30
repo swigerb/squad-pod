@@ -10,6 +10,10 @@ import type { LayoutRecovery } from './office/editor/layoutDraft.js';
 import type { OfficeLayout } from './office/types.js';
 import { createHostClientFixture } from './__tests__/hostClientFixture.js';
 import type { HostClientFixture } from './__tests__/hostClientFixture.js';
+import { getFloorSprite, setFloorSprites } from './office/floorTiles.js';
+import { getWallSprite, setWallSprites } from './office/wallTiles.js';
+import { getCharacterSprites, setCharacterTemplates } from './office/sprites/defaultCharacters.js';
+import { createVSCodeClient } from './hostClient.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -68,6 +72,9 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     act(() => root.unmount());
     host.remove();
     resetPetTemplates();
+    setFloorSprites([]);
+    setWallSprites([]);
+    setCharacterTemplates([]);
     vi.restoreAllMocks();
   });
 
@@ -97,15 +104,72 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   });
 
   it('shows recovery-state read failures without replacing or saving state', () => {
+    click('Edit Layout');
+    click('→');
+    const previousRecovery = structuredClone(persisted);
     vi.mocked(client.getState).mockImplementation(() => {
       throw new Error('state unavailable');
     });
     vi.mocked(client.setState).mockClear();
+    vi.mocked(client.subscribe).mockClear();
+    vi.mocked(client.send).mockClear();
+    const previousEvents = [...client.events];
     remount();
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('state unavailable');
     expect(host.textContent).toContain('existing recovery data was not replaced');
     expect(host.textContent).not.toContain('Save Layout');
     expect(client.setState).not.toHaveBeenCalled();
+    expect(client.subscribe).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+    expect(persisted).toEqual(previousRecovery);
+    expect(client.events).toEqual(previousEvents);
+  });
+
+  it('guards legacy sprite payloads at the real adapter boundary without replacing valid assets', () => {
+    const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});
+    act(() => root.unmount());
+    const adapter = createVSCodeClient(() => ({
+      postMessage: vi.fn(), getState: () => undefined, setState: (value) => value,
+    }), window);
+    root = createRoot(host);
+    act(() => root.render(<App client={adapter} />));
+    const dispatch = (message: unknown) => act(() => window.dispatchEvent(new MessageEvent('message', { data: message })));
+    dispatch({ type: 'layoutLoaded', layout: imported, revision: 'legacy-test' });
+    const tile = { width: 2, height: 1, pixels: [0xabcdef80, 0] };
+    const sprite = [['#abcdef80', '']];
+    const frames = { 0: [sprite], 1: [sprite], 2: [sprite], 3: [sprite] };
+    const character = { walk: frames, typing: frames, reading: frames };
+    dispatch({ type: 'characterSpritesLoaded', sprites: [character] });
+    expect(getCharacterSprites(0, 0)).toEqual(character);
+    dispatch({ type: 'floorTilesLoaded', tiles: [sprite] });
+    expect(getFloorSprite(0)).toEqual([['#abcdef80', '']]);
+    dispatch({ type: 'wallTilesLoaded', sprites: Array.from({ length: 16 }, () => sprite) });
+    expect(getWallSprite([0], 1, 1, 0, 0).sprite).toEqual([['#abcdef80', '']]);
+    const before = getCharacterSprites(0, 0);
+    dispatch({ type: 'characterSpritesLoaded', sprites: [{
+      paletteIndex: 0, directions: { down: { idle: [tile], walk: [tile] } },
+    }] });
+    expect(getCharacterSprites(0, 0)).toBe(before);
+    dispatch({ type: 'floorTilesLoaded', tiles: [sprite, tile] });
+    dispatch({ type: 'wallTilesLoaded' });
+    expect(getFloorSprite(0)).toEqual([['#abcdef80', '']]);
+    expect(getWallSprite([0], 1, 1, 0, 0).sprite).toEqual([['#abcdef80', '']]);
+    for (const type of ['characterSpritesLoaded', 'floorTilesLoaded', 'wallTilesLoaded']) {
+      expect(diagnostic).toHaveBeenCalledWith(expect.stringContaining(`${type}: unsupported legacy sprite format`));
+      expect(host.textContent).toContain(`${type}: unsupported legacy sprite format`);
+    }
+    dispatch({ type: 'manifestAssetsLoaded', snapshot: {
+      furniture: [], floors: [[['#123456']]], walls: Array.from({ length: 16 }, () => [['#654321']]),
+      carpets: [], pets: [], directories: [], diagnostics: ['Manifest warning retained'],
+    } });
+    expect(getFloorSprite(0)).toEqual([['#123456']]);
+    expect(getWallSprite([0], 1, 1, 0, 0).sprite).toEqual([['#654321']]);
+    expect(host.textContent).toContain('characterSpritesLoaded: unsupported legacy sprite format');
+    expect(host.textContent).toContain('Manifest warning retained');
+    dispatch({ type: 'floorTilesLoaded', tiles: [sprite] });
+    expect(host.textContent).not.toContain('floorTilesLoaded:');
+    expect(host.textContent).toContain('wallTilesLoaded:');
+    expect(host.textContent).toContain('Manifest warning retained');
   });
 
   it('keeps tool choice, dirty draft and undo history independent of zoom and editor control rearrangement', () => {

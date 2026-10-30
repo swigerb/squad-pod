@@ -22,6 +22,7 @@ import type { OutboundMessage } from '../../../src/types.js';
 // e.g. setFloorSprites on the chunk's copy has NO effect on the renderer's
 // copy imported statically in renderer.ts.  Static imports guarantee a single
 // module instance shared across the entire bundle.
+import { isRendererCharacters, isRendererTiles } from '../legacySprites.js';
 import { setCharacterTemplates } from '../office/sprites/defaultCharacters.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
 import { setFloorSprites } from '../office/floorTiles.js';
@@ -72,6 +73,7 @@ export function useExtensionMessages(
   const client = useHostClient();
   const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
+  const [legacyAssetDiagnostics, setLegacyAssetDiagnostics] = useState<Record<string, string>>({});
   const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false, showAreas: false });
   const [sourceStatus, setSourceStatus] = useState<SourceStatus | null>(null);
   const [directoryCatalog, setDirectoryCatalog] = useState<DirectoryCatalog | null>(null);
@@ -109,6 +111,18 @@ export function useExtensionMessages(
   }, [client]);
 
   useEffect(() => {
+    const rejectLegacySprites = (type: string) => {
+      const diagnostic = `${type}: unsupported legacy sprite format. Existing assets were retained. Reload supported assets from VS Code.`;
+      console.error(`[useExtensionMessages] ${diagnostic}`);
+      setLegacyAssetDiagnostics((previous) => ({ ...previous, [type]: diagnostic }));
+    };
+    const clearLegacyDiagnostic = (type: string) => {
+      setLegacyAssetDiagnostics((previous) => {
+        const next = { ...previous };
+        delete next[type];
+        return next;
+      });
+    };
     const handleMessage = (message: OutboundMessage) => {
       const applySnapshot = (snapshot: AgentSnapshot[]) => {
         const officeState = getOfficeState();
@@ -315,8 +329,11 @@ export function useExtensionMessages(
           break;
 
         case 'characterSpritesLoaded': {
-          const { sprites } = message;
-          setCharacterTemplates(sprites as unknown as Parameters<typeof setCharacterTemplates>[0]);
+          const sprites: unknown = message.sprites;
+          if (isRendererCharacters(sprites)) {
+            setCharacterTemplates(sprites);
+            clearLegacyDiagnostic(message.type);
+          } else rejectLegacySprites(message.type);
           break;
         }
 
@@ -329,17 +346,14 @@ export function useExtensionMessages(
           buildDynamicCatalog();
           break;
 
-        case 'floorTilesLoaded': {
-          const tiles = message.tiles ?? message.sprites;
-          if (tiles) setFloorSprites(tiles as unknown as Parameters<typeof setFloorSprites>[0]);
-          else console.error('[useExtensionMessages] floorTilesLoaded missing tiles');
-          break;
-        }
-
+        case 'floorTilesLoaded':
         case 'wallTilesLoaded': {
-          const tiles = message.tiles ?? message.sprites;
-          if (tiles) setWallSprites(tiles as unknown as Parameters<typeof setWallSprites>[0]);
-          else console.error('[useExtensionMessages] wallTilesLoaded missing tiles');
+          const tiles: unknown = message.tiles ?? message.sprites;
+          if (isRendererTiles(tiles)) {
+            if (message.type === 'floorTilesLoaded') setFloorSprites(tiles);
+            else setWallSprites(tiles);
+            clearLegacyDiagnostic(message.type);
+          } else rejectLegacySprites(message.type);
           break;
         }
 
@@ -464,7 +478,7 @@ export function useExtensionMessages(
 
   return {
     recordedUsage,
-    assetStatus,
+    assetStatus: { ...assetStatus, diagnostics: [...assetStatus.diagnostics, ...Object.values(legacyAssetDiagnostics)] },
     settings,
     sourceStatus,
     directoryCatalog,
