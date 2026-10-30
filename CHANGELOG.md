@@ -4,8 +4,7 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
-- Furniture manifests now retain group metadata and support 2-way, 3-way-mirror and 4-way variant rotation. One palette representative per complete group, mirrored side artwork, per-variant tint caching, validated footprint/role updates and atomic undo preserve saved leaf ids and seat identities. Legacy/ungrouped furniture still rotates geometrically. Malformed nested groups report diagnostics without dropping valid siblings; existing work limits remain enforced.
-- Unlike Pixel Agents v1.5.0, state/animation/on-PC behavior remains deferred (metadata passes through), partial groups without front use the first available orientation, and all companion leaves of a complete rotation group are hidden from the palette. Mirror pixels are baked before tint. Surface riders retain position and must fit on the replacement desk; no saved-layout migration or schema change occurs. See README's furniture rotation groups for the local import and validation differences.
+- Furniture groups now support directional rotation and mirrored views, with one palette entry per group, preserved tint and seat assignments, and one undo step per turn.
 
 ### Changed
 - Explicit supported reading-tool metadata now selects supplied reading sprites instead of typing sprites. Bundled employee PNG sheets contain no reading art, so reading uses an inline sprite template instead of duplicated walk frames; the generated fallback shares typing art until dedicated reading frames are supplied, and the provider still emits no live tool metadata.
