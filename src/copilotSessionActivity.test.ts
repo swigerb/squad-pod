@@ -136,12 +136,29 @@ describe('read-only Copilot live activity with synthetic homes', () => {
       ['ada', true, 'Inspect fixture', Date.parse(timestamp)],
     ]);
 
+    fs.appendFileSync(file,
+      line('tool.execution_start', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view' }, {
+        timestamp: '2026-10-30T12:35:05.000Z',
+      })
+      + line('tool.execution_complete', { toolCallId: 'tool', parentToolCallId: 'run' }, {
+        timestamp: '2026-10-30T12:35:10.000Z',
+      }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse('2026-10-30T12:35:10.000Z'),
+    ]);
+
+    reader.replay();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse('2026-10-30T12:35:10.000Z'),
+    ]);
+
     fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'run' }, {
-      agentId: 'internal-run', timestamp: '2026-10-30T12:35:10.000Z',
+      agentId: 'internal-run', timestamp: '2026-10-30T12:35:15.000Z',
     }));
     reader.poll();
     expect(lifecycle.mock.calls.at(-1)).toEqual([
-      'ada', false, null, Date.parse('2026-10-30T12:35:10.000Z'),
+      'ada', false, null, Date.parse('2026-10-30T12:35:15.000Z'),
     ]);
   });
 
@@ -181,6 +198,8 @@ describe('read-only Copilot live activity with synthetic homes', () => {
       .toBeUndefined();
     expect(parseLiveEvent(line('assistant.message', { model: 'missing-timestamp' } ) )?.modelObservation)
       .toBeUndefined();
+    expect(parseLiveEvent(line('subagent.started', { toolCallId: 'untimed' }, { timestamp: 'not-a-timestamp' }))
+      ?.activityAt).toBeUndefined();
   });
 
   it('uses session-start model metadata without replaying completed member lifecycle', () => {

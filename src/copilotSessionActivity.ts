@@ -456,9 +456,10 @@ export class CopilotSessionActivity {
           this.tasks.delete(observed.toolCallId);
         }
         if (observed.agentId) {
+          const activityAt = Math.max(event.activityAt ?? 0, previous?.activityAt ?? 0) || undefined;
           this.tasks.set(observed.toolCallId, { agentId: observed.agentId, description: observed.description,
-            instanceId: observed.instanceId, activityAt: event.activityAt ?? previous?.activityAt });
-          this.startRun(observed.agentId, observed.toolCallId, observed.description, event.activityAt);
+            instanceId: observed.instanceId, activityAt });
+          this.startRun(observed.agentId, observed.toolCallId, observed.description, activityAt);
           this.rememberModelOwner(event.instanceId, observed.agentId);
         } else {
           this.clearInstanceModelOwner(event.instanceId);
@@ -487,7 +488,7 @@ export class CopilotSessionActivity {
     if (event.type === 'subagent.started' && task) {
       task.instanceId = this.observedTasks.snapshot(this.session?.id ?? null).tasks
         .find(row => row.toolCallId === event.toolCallId)?.instanceId ?? event.instanceId;
-      task.activityAt = event.activityAt ?? task.activityAt;
+      task.activityAt = Math.max(event.activityAt ?? 0, task.activityAt ?? 0) || undefined;
       this.startRun(task.agentId, event.toolCallId, task.description, task.activityAt);
       if (task.instanceId) {this.rememberModelOwner(task.instanceId, task.agentId);}
     } else if (['subagent.completed', 'subagent.failed', 'subagent.aborted'].includes(event.type)) {
@@ -500,6 +501,12 @@ export class CopilotSessionActivity {
     } else if (event.type === 'tool.execution_start') {
       const parent = this.tasks.get(event.parentToolCallId);
       const scopedOwner = event.agentScoped ? this.modelAgentOwners.get(event.agentInstanceId) : undefined;
+      if (parent) {
+        this.observeTaskActivity(event.parentToolCallId, event.activityAt);
+      } else if (scopedOwner) {
+        const runId = this.runs.get(scopedOwner);
+        if (runId) {this.observeTaskActivity(runId, event.activityAt);}
+      }
       if (parent) {
         this.rememberToolOwner(event.toolCallId, parent.agentId);
       } else if (scopedOwner) {
@@ -515,9 +522,15 @@ export class CopilotSessionActivity {
       this.telemetry(parent.agentId, label);
     } else if (event.type === 'tool.execution_complete') {
       const tool = this.tools.get(event.toolCallId);
+      const parentTask = this.tasks.get(event.parentToolCallId);
       if (!tool) {
-        const parentTask = this.tasks.get(event.parentToolCallId);
         const owner = this.toolOwners.get(event.toolCallId);
+        if (parentTask && (owner === undefined || owner === parentTask.agentId)) {
+          this.observeTaskActivity(event.parentToolCallId, event.activityAt);
+        } else if (owner) {
+          const runId = this.runs.get(owner);
+          if (runId) {this.observeTaskActivity(runId, event.activityAt);}
+        }
         if (owner === null) {
           if (parentTask) {return;}
           this.acceptModelEvent(event, undefined, undefined, true);
@@ -528,6 +541,12 @@ export class CopilotSessionActivity {
           this.acceptModelEvent(event, parentTask, parentTask?.agentId);
         }
         return;
+      }
+      if (parentTask && parentTask.agentId === tool.agentId) {
+        this.observeTaskActivity(event.parentToolCallId, event.activityAt);
+      } else {
+        const runId = this.runs.get(tool.agentId);
+        if (runId) {this.observeTaskActivity(runId, event.activityAt);}
       }
       this.post({ type: 'agentToolDone', agentId: tool.agentId, toolId: event.toolCallId, tool: tool.toolName });
       if (event.context) {
@@ -543,15 +562,28 @@ export class CopilotSessionActivity {
 
   private startRun(agentId: string, toolCallId: string, description: string, activityAt?: number): void {
     const task = this.tasks.get(toolCallId);
-    if (task && activityAt !== undefined) {task.activityAt = activityAt;}
+    if (task && activityAt !== undefined) {
+      task.activityAt = Math.max(task.activityAt ?? 0, activityAt);
+    }
     if (this.runs.get(agentId) === toolCallId) {
-      if (activityAt !== undefined) {this.lifecycle(agentId, true, description, activityAt);}
+      if (activityAt !== undefined) {this.lifecycle(agentId, true, description, task?.activityAt);}
       return;
     }
     if (this.runs.has(agentId)) { this.clearDisplays(agentId); }
     this.runs.set(agentId, toolCallId);
     this.lifecycle(agentId, true, description, task?.activityAt);
     this.telemetry(agentId, 'Live member started');
+  }
+
+  private observeTaskActivity(toolCallId: string, activityAt: number | undefined): void {
+    const task = this.tasks.get(toolCallId);
+    if (!task || activityAt === undefined) {return;}
+    const latest = Math.max(task.activityAt ?? 0, activityAt);
+    if (latest === task.activityAt) {return;}
+    task.activityAt = latest;
+    if (this.runs.get(task.agentId) === toolCallId) {
+      this.lifecycle(task.agentId, true, task.description, latest);
+    }
   }
 
   private finish(agentId: string, activityAt?: number): void {

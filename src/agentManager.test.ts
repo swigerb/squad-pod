@@ -149,12 +149,14 @@ describe('agentManager', () => {
       expect(getAgents().get('testbot')).toMatchObject({
         currentTask: 'File changed: history.md', currentTaskSource: 'file',
       });
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
       expect(webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
         type: 'agentToolStart', status: 'File activity hint: File changed: history.md',
       }));
       const callback = vi.mocked(resetActivityTimer).mock.calls.at(-1)![2];
       callback();
       expect(getAgents().get('testbot')).toMatchObject({ status: 'idle', currentTask: null, currentTaskSource: null });
+      expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
       expect(webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({
         type: 'agentStatus', status: 'idle', currentTask: null, currentTaskSource: null,
       }));

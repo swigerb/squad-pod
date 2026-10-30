@@ -43,6 +43,7 @@ export function setLiveAgentStatus(
   cancelActivityTimer(agentId);
   if (active) {
     const alreadyLive = liveRuns.has(agentId);
+    const statusChanged = agent.status !== 'active';
     const taskChanged = agent.currentTask !== task || agent.currentTaskSource !== (task ? 'live' : null);
     liveRuns.add(agentId);
     agent.status = 'active';
@@ -52,10 +53,12 @@ export function setLiveAgentStatus(
     if (!alreadyLive || taskChanged) {
       postToWebview(webview, { type: 'agentToolsClear', agentId });
     }
-    postToWebview(webview, {
-      type: 'agentStatus', agentId, status: 'active',
-      currentTask: agent.currentTask, currentTaskSource: agent.currentTaskSource,
-    });
+    if (statusChanged || taskChanged) {
+      postToWebview(webview, {
+        type: 'agentStatus', agentId, status: 'active',
+        currentTask: agent.currentTask, currentTaskSource: agent.currentTaskSource,
+      });
+    }
   } else {
     liveRuns.delete(agentId);
     recordLiveActivity(agent, activityAt);
