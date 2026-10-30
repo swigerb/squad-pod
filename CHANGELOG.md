@@ -4,6 +4,8 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+- Furniture groups now support directional rotation and mirrored views, with one palette entry per group, preserved tint and seat assignments, and one undo step per turn.
+
 ### Changed
 - Reserved `characters` and `pets` folders are excluded from furniture imports.
 - Explicit supported reading-tool metadata now selects supplied reading sprites instead of typing sprites. Bundled employee PNG sheets contain no reading art, so reading uses an inline sprite template instead of duplicated walk frames; the generated fallback shares typing art until dedicated reading frames are supplied, and the provider still emits no live tool metadata.

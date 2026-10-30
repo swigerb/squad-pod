@@ -555,7 +555,8 @@ spent or reserved, preventing repeated corrupt PNGs from bypassing decode caps.
 
 Roots cannot borrow each other's allowances: an oversized import cannot starve
 another root or the originals. Within each root, folders are processed in
-lexicographic order, each manifest atomically. An over-budget manifest receives
+lexicographic order. Invalid nested groups show warnings without hiding valid
+siblings. An over-budget manifest receives
 a path-specific warning and is not claimed loaded; smaller later manifests can
 still fit unused capacity. When a read/enumeration allowance is exhausted,
 remaining affected manifests each receive warnings. Split large collections
@@ -580,6 +581,23 @@ Nine floor PNGs are included; the existing seven floor slots use the first seven
 without changing tile IDs (legacy tile 8 remains VOID). The single bundled wall
 set is active. External floor/wall/character packs are not supported.
 Bundled and custom pets use the separately documented manifest and provenance checks above.
+
+### Furniture rotation groups
+
+Set `groupType: "rotation"` in a furniture manifest to group directional sprites.
+Use `rotationScheme` to choose `2-way`, `3-way-mirror` or `4-way` rotation.
+Each member's `orientation` identifies its view: `front`, `right`, `back`,
+`left` or `side`. `side` means right; `mirrorSide: true` adds a mirrored left
+view using the same sprite. A `2-way` group uses only front and right.
+The host derives `groupId` from the manifest id to keep variants together.
+`groupType` also accepts `state` and `animation`; `state` (`on`/`off`) and
+`frame` identify those variants, but state switching and animation are not yet supported.
+
+Groups with at least two views show one palette entry. Select a placed piece
+and press **R** or click **Rotate** to cycle through its available views in
+**front → right → back → left** order. Each turn is one undo step.
+Rotation preserves tint and seat assignments, and checks that the new footprint
+and any items on its surface fit. Ungrouped pieces keep their usual rotation.
 
 ## Telemetry Feed
 
