@@ -17,6 +17,7 @@
 
 import { getCharacterSheet } from './assetLoader.js';
 import { Direction, TILE_SIZE } from '../types.js';
+import { EXTERNAL_CHARACTER_BASE, PALETTE_COUNT } from '../engine/agentSync.js';
 
 /** Map game Direction enum to sprite-sheet row index. */
 const DIRECTION_TO_ROW: Record<Direction, number> = {
@@ -37,7 +38,7 @@ function logCharacterSheetIssueOnce(key: string, ...args: unknown[]): void {
 }
 
 function getSheetKeyForPalette(palette: number): string {
-  return PALETTE_TO_SHEET[palette % PALETTE_TO_SHEET.length];
+  return sheetAppearance(palette).sheetKey;
 }
 
 /** Hue offset that separates palettes sharing the same PNG sheet. */
@@ -48,10 +49,16 @@ const SHEET_PALETTE_HUE_STEP = 120;
  * six logical palettes stay visually distinct with only two shipped sheets.
  */
 export function sheetAppearance(palette: number, hueShift = 0): { sheetKey: string; hueDegrees: number } {
-  const p = Math.max(0, Math.floor(palette) || 0);
+  let p = Math.max(0, Math.floor(palette) || 0);
+  if (Number.isSafeInteger(p) && p >= EXTERNAL_CHARACTER_BASE) {
+    const key = `external:${p - p % 48}`;
+    if (getCharacterSheet(key)) { return { sheetKey: key, hueDegrees: (p % 48 * 45) % 360 }; }
+    hueShift = (Math.floor(p / PALETTE_COUNT) * 45) % 360;
+    p %= PALETTE_COUNT;
+  }
   const variant = Math.floor(p / PALETTE_TO_SHEET.length);
   return {
-    sheetKey: getSheetKeyForPalette(p),
+    sheetKey: PALETTE_TO_SHEET[p % PALETTE_TO_SHEET.length],
     hueDegrees: (((variant * SHEET_PALETTE_HUE_STEP + hueShift) % 360) + 360) % 360,
   };
 }

@@ -517,7 +517,16 @@ export function useExtensionMessages(
         case 'characterAssetsLoaded': {
           const { characters } = message;
           if (characters && Array.isArray(characters)) {
-            loadCharacterSheetsFromUris(characters);
+            const diagnostics = Array.isArray(message.diagnostics) ? message.diagnostics : [];
+            setAssetStatus((previous) => ({
+              ...previous,
+              diagnostics: [...previous.diagnostics.filter((line) => !line.startsWith('Character: ')), ...diagnostics],
+            }));
+            void loadCharacterSheetsFromUris(characters).then((errors) => {
+              if (errors.length) {
+                setAssetStatus((previous) => ({ ...previous, diagnostics: [...previous.diagnostics, ...errors] }));
+              }
+            });
           } else {
             console.error('[useExtensionMessages] characterAssetsLoaded missing characters array');
           }

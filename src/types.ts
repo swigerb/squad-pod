@@ -143,8 +143,12 @@ export interface TilesetData {
 
 /** Webview-safe URI for a single custom character sprite sheet. */
 export interface CharacterAssetEntry {
-  id: string;   // e.g. "char_employeeA"
-  uri: string;  // webview-safe URI string (from webview.asWebviewUri)
+  id: string;
+  uri: string;
+  paletteIndex: number;
+  source: string;
+  file: string;
+  sha256: string;
 }
 
 // ─── Tileset Metadata (rich format from tileset-metadata.json) ───────
@@ -203,7 +207,8 @@ export type WebviewMessage =
   | { type: 'setLiveActivity'; enabled: boolean }
   | { type: 'addAssetDirectory' }
   | { type: 'removeAssetDirectory'; directory: string }
-  | { type: 'getDirectories' | 'addDirectory' }
+  | { type: 'getDirectories' }
+  | { type: 'addDirectory'; path?: string; name?: string }
   | { type: 'updateDirectoryName'; id: string; name: string }
   | { type: 'changeDirectoryPath' | 'removeDirectory' | 'forgetDirectoryLaunch'; id: string }
   | { type: 'launchDirectory'; id: string; source: 'workspace' | 'saved' | 'recent' }
@@ -234,7 +239,7 @@ export interface DirectoryCatalog {
   workspaceDirectories: DirectoryEntry[];
   savedDirectories: DirectoryEntry[];
   recentLaunches: DirectoryEntry[];
-  squadHistoryAvailable: false;
+  squadHistory: DirectoryEntry[];
 }
 
 export interface SourceStatus {
@@ -352,5 +357,5 @@ export type OutboundMessage =
   | { type: 'telemetryEvent'; event: TelemetryEvent }
   | { type: 'tilesetAssetsLoaded'; tilesetPngUri: string; tilesetData: TilesetData }
   | { type: 'tilesetMetadataLoaded'; tilesetPngUri: string; metadata: TilesetMetadata }
-  | { type: 'characterAssetsLoaded'; characters: CharacterAssetEntry[] }
+  | { type: 'characterAssetsLoaded'; characters: CharacterAssetEntry[]; diagnostics: string[] }
   | { type: 'noWorkspace' };

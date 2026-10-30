@@ -60,6 +60,7 @@ function DirectoryRow({
     <div
       style={{
         display: 'flex',
+        flexWrap: 'wrap',
         alignItems: 'center',
         gap: '10px',
         padding: '10px',
@@ -67,7 +68,7 @@ function DirectoryRow({
         minWidth: 0,
       }}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: '1 1 160px', minWidth: 0 }}>
         {source === 'saved' ? (
           <label style={{ display: 'block', marginBottom: '4px' }}>
             <span style={{ display: 'block', fontSize: '11px', opacity: 0.75, marginBottom: '3px' }}>Name</span>
@@ -89,7 +90,7 @@ function DirectoryRow({
         )}
         {entry.error && <div role="alert" style={{ color: 'var(--vscode-errorForeground)', fontSize: '12px' }}>{entry.error}</div>}
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '6px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '6px', maxWidth: '100%' }}>
         <ActionButton
           disabled={!entry.valid}
           title={entry.valid ? undefined : entry.error ?? 'This directory is invalid.'}
@@ -128,9 +129,12 @@ function DirectoryRow({
 export function DirectoryModal({ catalog, error, notice, onClose }: DirectoryModalProps) {
   const client = useHostClient();
   const [names, setNames] = useState<Record<string, string>>({});
+  const [directoryPath, setDirectoryPath] = useState('');
+  const [directoryName, setDirectoryName] = useState('');
   const workspaceDirectories = catalog?.workspaceDirectories ?? [];
   const savedDirectories = catalog?.savedDirectories ?? [];
   const recentLaunches = catalog?.recentLaunches ?? [];
+  const squadHistory = catalog?.squadHistory ?? [];
 
   return (
     <div
@@ -145,6 +149,7 @@ export function DirectoryModal({ catalog, error, notice, onClose }: DirectoryMod
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
+        boxSizing: 'border-box',
         background: 'rgba(0, 0, 0, 0.65)',
       }}
       onClick={onClose}
@@ -153,7 +158,7 @@ export function DirectoryModal({ catalog, error, notice, onClose }: DirectoryMod
         style={{
           display: 'flex',
           flexDirection: 'column',
-          width: 'min(760px, 96vw)',
+          width: 'min(760px, 100%)',
           maxHeight: '90vh',
           background: 'var(--vscode-editor-background)',
           color: 'var(--vscode-foreground)',
@@ -173,7 +178,6 @@ export function DirectoryModal({ catalog, error, notice, onClose }: DirectoryMod
           Launches use <code>copilot --agent squad</code> in a new terminal at the selected folder. Squad Pod does not auto-launch.
         </p>
         <p style={{ fontSize: '12px', margin: '0 0 10px' }}>
-          Squad history suggestions are unavailable because Squad does not expose a supported directory-launch history source.
           Recent launch requests below are recorded by Squad Pod when it submits the command; they do not prove the CLI started.
         </p>
 
@@ -189,6 +193,63 @@ export function DirectoryModal({ catalog, error, notice, onClose }: DirectoryMod
             borderBottom: '1px solid var(--vscode-panel-border)',
           }}
         >
+          {squadHistory.length > 0 && (
+            <section aria-label="Recent Squad directories" style={{ padding: '0 10px 10px' }}>
+              <h3 style={{ fontSize: '13px', margin: '12px 0 4px' }}>Recent Squad directories</h3>
+              <p style={{ fontSize: '12px' }}>Choose a folder to fill the form. Nothing is saved or launched.</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {squadHistory.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    title={entry.path}
+                    onClick={() => {
+                      setDirectoryPath(entry.path);
+                      setDirectoryName(entry.name);
+                    }}
+                    style={{ maxWidth: '100%', overflowWrap: 'anywhere', padding: '6px 9px' }}
+                  >
+                    {entry.name}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <form
+            aria-label="Add directory"
+            style={{ display: 'grid', gap: '6px', padding: '10px', minWidth: 0 }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (directoryPath && directoryName.trim()) {
+                client.send({ type: 'addDirectory', path: directoryPath, name: directoryName });
+              }
+            }}
+          >
+            <label>
+              Directory path
+              <input
+                aria-label="Directory path"
+                value={directoryPath}
+                onChange={(event) => setDirectoryPath(event.currentTarget.value)}
+                style={{ display: 'block', width: '100%', boxSizing: 'border-box', minWidth: 0 }}
+                required
+              />
+            </label>
+            <label>
+              Directory name
+              <input
+                aria-label="Directory name"
+                value={directoryName}
+                onChange={(event) => setDirectoryName(event.currentTarget.value)}
+                style={{ display: 'block', width: '100%', boxSizing: 'border-box', minWidth: 0 }}
+                maxLength={80}
+                required
+              />
+            </label>
+            <button type="submit" disabled={!directoryPath || !directoryName.trim()}>Save directory</button>
+          </form>
+
           <h3 style={{ fontSize: '13px', margin: '12px 10px 4px' }}>Workspace folders</h3>
           {workspaceDirectories.length ? workspaceDirectories.map((entry) => (
             <DirectoryRow key={entry.id} entry={entry} source="workspace" />

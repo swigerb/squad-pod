@@ -6,6 +6,7 @@
  */
 
 export const PALETTE_COUNT = 6;
+export const EXTERNAL_CHARACTER_BASE = 48 * 0x1000000;
 const HUE_STEP_DEGREES = 45;
 
 export type AgentStatus = 'active' | 'idle' | 'waiting';
@@ -45,6 +46,9 @@ export interface AgentSyncTarget {
 
 export function appearanceFromIndex(index: number | undefined): { palette: number; hueShift: number } {
   const i = Number.isFinite(index) && (index as number) > 0 ? Math.floor(index as number) : 0;
+  if (Number.isSafeInteger(i) && i >= EXTERNAL_CHARACTER_BASE) {
+    return { palette: i, hueShift: 0 };
+  }
   return {
     palette: i % PALETTE_COUNT,
     hueShift: (Math.floor(i / PALETTE_COUNT) * HUE_STEP_DEGREES) % 360,
