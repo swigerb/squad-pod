@@ -28,6 +28,17 @@ const asset = (type: string, extra: Partial<ManifestFurniture> = {}): ManifestFu
   canPlaceOnWalls: false,
   ...extra,
 });
+const sizedAsset = (
+  type: string,
+  width: number,
+  height: number,
+  extra: Partial<ManifestFurniture> = {},
+): ManifestFurniture => ({
+  ...asset(type, extra),
+  width,
+  height,
+  sprite: Array.from({ length: height * 16 }, () => Array(width * 16).fill('#804020')),
+});
 const pcAssets = [
   asset('pa_pc_front_off', { state: 'off' }),
   asset('pa_pc_front_on_0', { groupType: 'animation', state: 'on', frame: 0, sprite: sprite('#ff0000') }),
@@ -115,6 +126,26 @@ describe('state and animation catalog', () => {
     expect(getToggledType('pa_anim_1')).toBe('pa_anim_off');
   });
 
+  it('rejects mismatched state and animation footprints without affecting valid pairs', () => {
+    buildDynamicCatalog([
+      asset('pa_pair_off', { groupId: 'pa_pair', state: 'off' }),
+      sizedAsset('pa_pair_on', 2, 1, { groupId: 'pa_pair', state: 'on' }),
+      asset('pa_frames_off', { groupId: 'pa_frames', state: 'off' }),
+      asset('pa_frames_on_0', { groupId: 'pa_frames', groupType: 'animation', state: 'on', frame: 0 }),
+      sizedAsset('pa_frames_on_1', 2, 1, { groupId: 'pa_frames', groupType: 'animation', state: 'on', frame: 1 }),
+      asset('pa_valid_off', { groupId: 'pa_valid', state: 'off' }),
+      asset('pa_valid_on', { groupId: 'pa_valid', state: 'on' }),
+    ]);
+
+    expect(getToggledType('pa_pair_off')).toBeNull();
+    expect(getToggledType('pa_pair_on')).toBeNull();
+    expect(getToggledType('pa_frames_off')).toBeNull();
+    expect(getToggledType('pa_frames_on_0')).toBeNull();
+    expect(getAnimationFrames('pa_frames_on_0')).toBeUndefined();
+    expect(getToggledType('pa_valid_off')).toBe('pa_valid_on');
+    expect(getToggledType('pa_valid_on')).toBe('pa_valid_off');
+  });
+
   it('keeps mirrored, tinted on-frame sprites distinct from their base and other frame/color variants', () => {
     buildDynamicCatalog(pcAssets);
     const color = { h: 120, s: 80, b: -5, c: 10 };
@@ -177,6 +208,37 @@ describe('seat-facing auto-on and animation', () => {
     unseated.addAgent('unseated', 'Unseated', 'Test');
     unseated.setAgentActive('unseated', true);
     expect(unseated.furniture.find((item) => item.uid === 'pc')?.type).toBe('pa_pc_front_off');
+  });
+
+  it.each([
+    ['the right edge', 5, []],
+    ['beside existing furniture', 8, [{ uid: 'neighbor', type: 'bookshelf', col: 5, row: 2, rotation: 0 }]],
+  ] as const)('keeps mismatched state variants off at %s', (_description, cols, neighbors) => {
+    buildDynamicCatalog([
+      asset('pa_mismatch_off', { groupId: 'pa_mismatch', state: 'off' }),
+      sizedAsset('pa_mismatch_on', 2, 1, { groupId: 'pa_mismatch', state: 'on' }),
+    ]);
+    const layout: OfficeLayout = {
+      version: 2,
+      cols,
+      rows: 5,
+      tiles: Array(cols * 5).fill(1),
+      furniture: [
+        { uid: 'desk', type: 'desk', col: 2, row: 2, rotation: 0 },
+        { uid: 'seat', type: 'chair', col: 1, row: 2, rotation: 0 },
+        placed('pa_mismatch_off', { uid: 'mismatch', col: 4, row: 2 }),
+        ...neighbors,
+      ],
+    };
+    const original = structuredClone(layout);
+    const office = new OfficeState(layout);
+    office.addAgent('fixture-agent', 'Fixture Agent', 'Test', undefined, undefined, 'seat');
+    office.setAgentActive('fixture-agent', true);
+
+    expect(getToggledType('pa_mismatch_off')).toBeNull();
+    expect(office.furniture.find((item) => item.uid === 'mismatch')?.type).toBe('pa_mismatch_off');
+    expect(office.getLayout()).toBe(layout);
+    expect(layout).toEqual(original);
   });
 
   it('reassigns occupied seats, updates only on the next active seat, and keeps layout snapshots untouched', () => {

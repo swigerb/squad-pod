@@ -38,21 +38,29 @@ function animationGroupKey(entry: FurnitureCatalogEntry): string | null {
   return `${entry.groupId}|${entry.orientation}|${entry.state}`;
 }
 
+function hasConsistentFootprint(entries: FurnitureCatalogEntry[]): boolean {
+  const first = entries[0];
+  return first !== undefined && entries.every((entry) =>
+    entry.width === first.width && entry.height === first.height);
+}
+
 function buildAnimationGroups(): void {
   animationFrames.clear();
   animationGroupByType.clear();
   const grouped = new Map<string, FurnitureCatalogEntry[]>();
   for (const entry of dynamicCatalog) {
     const key = animationGroupKey(entry);
-    if (!key || !Number.isInteger(entry.frame) || entry.frame! < 0) continue;
+    if (!key) continue;
     const entries = grouped.get(key) ?? [];
     entries.push(entry);
     grouped.set(key, entries);
   }
 
   for (const [key, entries] of grouped) {
+    if (!hasConsistentFootprint(entries)) continue;
     const frameTypes = new Map<number, string>();
     for (const entry of entries) {
+      if (!Number.isInteger(entry.frame) || entry.frame! < 0) continue;
       const frame = entry.frame!;
       const current = frameTypes.get(frame);
       if (current === undefined || compareTypes(entry.type, current) < 0) frameTypes.set(frame, entry.type);
@@ -92,7 +100,7 @@ function buildStatePairs(): void {
     const offEntries = states.get('off');
     const on = representative(onEntries);
     const off = representative(offEntries);
-    if (!on || !off) continue;
+    if (!on || !off || !hasConsistentFootprint([...(onEntries ?? []), ...(offEntries ?? [])])) continue;
 
     const onFrames = animationGroupByType.get(on.type);
     const offFrames = animationGroupByType.get(off.type);

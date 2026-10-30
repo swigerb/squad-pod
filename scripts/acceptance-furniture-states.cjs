@@ -318,6 +318,7 @@ async function main() {
   if (process.argv.includes('--mutations')) {
     const officeFile = path.join('webview-ui', 'src', 'office', 'engine', 'officeState.ts');
     const hookFile = path.join('webview-ui', 'src', 'hooks', 'useEditorActions.ts');
+    const catalogFile = path.join('webview-ui', 'src', 'office', 'layout', 'furnitureCatalog.ts');
     const mutants = [
       {
         name: 'ignore-facing',
@@ -346,6 +347,20 @@ async function main() {
         pattern: /^    const type = furniture && getToggledType\(furniture\.type\);\r?\n    if \(!furniture \|\| !type\) return;\r?\n    pushUndo\(\);$/m,
         replacement: '    pushUndo();\n    const type = furniture && getToggledType(furniture.type);\n    if (!furniture || !type) return;',
         killedBy: /does not record undo when the selected item has no complete state pair/,
+      },
+      {
+        name: 'allow-mismatched-state-footprints',
+        file: catalogFile,
+        pattern: /^    if \(!on \|\| !off \|\| !hasConsistentFootprint\(\[\.\.\.\(onEntries \?\? \[\]\), \.\.\.\(offEntries \?\? \[\]\)\]\)\) continue;$/m,
+        replacement: '    if (!on || !off) continue;',
+        killedBy: /rejects mismatched state and animation footprints|keeps mismatched state variants off/,
+      },
+      {
+        name: 'allow-mismatched-animation-frame-footprints',
+        file: catalogFile,
+        pattern: /^    if \(!hasConsistentFootprint\(entries\)\) continue;$/m,
+        replacement: '    if (false) continue;',
+        killedBy: /rejects mismatched state and animation footprints/,
       },
     ];
     const reports = [];
