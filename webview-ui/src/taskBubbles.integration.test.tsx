@@ -130,7 +130,7 @@ describe('source-grounded summaries through the production App', () => {
     expect(toggle.disabled).toBe(false);
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
     expect(bubble()).not.toBeNull();
-    const sent = client.send.mock.calls.length;
+    const sent = vi.mocked(client.send).mock.calls.length;
     act(() => toggle.click());
     await frame();
     expect(bubble()).toBeNull();
