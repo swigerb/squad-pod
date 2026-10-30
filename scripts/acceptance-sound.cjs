@@ -44,6 +44,7 @@ function makeVscode(baseUrl) {
       executeCommand() {},
     },
     workspace: {
+      getConfiguration: () => ({ get: (_key, defaultValue) => defaultValue }),
       workspaceFolders: [],
       onDidChangeWorkspaceFolders: () => disposable,
     },
