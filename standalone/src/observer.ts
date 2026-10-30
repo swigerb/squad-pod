@@ -12,10 +12,19 @@ import type { OutboundMessage, WebviewMessage, ExistingAgentsMessage } from '../
 import { ProjectFiles } from './projectFiles.js';
 import { isObserverLayout } from './events.js';
 import { OfficeStore } from './officeStore.js';
+import { CopilotSessionActivity, type LiveSessionSelection } from '../../src/copilotSessionActivity.js';
+import type { LiveSourceStatus } from '../../src/types.js';
 
 const settings = { type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: false } as const;
 
-export function createObserver(project: string, bundledAssetsRoot: string, pollMs = 1000) {
+export interface ObserverOptions {
+  liveActivity?: boolean;
+  /** Local host configuration only; never supplied by a browser message. */
+  copilotHome?: string;
+  sessionSelection?: () => LiveSessionSelection;
+}
+
+export function createObserver(project: string, bundledAssetsRoot: string, pollMs = 1000, options: ObserverOptions = {}) {
   const files = new ProjectFiles(project);
   const office = new OfficeStore(project);
   const assets: OutboundMessage = {
@@ -28,7 +37,25 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
   let disposed = false;
   const fingerprints = new Map<string, string>();
   const listeners = new Set<(messages: OutboundMessage[]) => void>();
-  const activity = new Map<string, { hash: string; changedAt: number | null }>();
+  const activity = new Map<string, { hash: string; changedAt: number | null; agentId: string | null }>();
+  const liveAgents = new Map<string, string | null>();
+  let liveStatus: LiveSourceStatus = { state: 'off', sessionId: null };
+  let liveMessages: OutboundMessage[] = [];
+  let liveStarted = false;
+  const live = options.liveActivity ? new CopilotSessionActivity({
+    workspaceRoot: files.root, copilotHome: options.copilotHome,
+    sessionSelection: options.sessionSelection,
+    roster: () => latestAgents.map(agent => ({ id: agent.id })),
+    post: message => liveMessages.push(message),
+    lifecycle: (id, running, task) => {
+      if (running) liveAgents.set(id, task);
+      else liveAgents.delete(id);
+      // Like the native host, ignore file hints during live ownership and do not
+      // resurrect an earlier file hint when a live run finishes or expires.
+      for (const value of activity.values()) if (value.agentId === id) value.changedAt = null;
+    },
+    status: status => { liveStatus = status; },
+  }) : undefined;
 
   function readSnapshot(observeActivity = listeners.size > 0): OutboundMessage[] {
     const errors: string[] = [];
@@ -90,11 +117,12 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
         const hash = createHash('sha256').update(content).digest('hex');
         const prior = activity.get(relative);
         const changedAt = !observeActivity ? null : prior?.hash === hash ? prior.changedAt : Date.now();
-        activity.set(relative, { hash, changedAt });
         const reportedAgent = folder === 'sessions' ? parseSessionFile(content)?.agent
           : detectAgentFromFilename(name) ?? parseLogEntry(content)?.agent;
         const agent = reportedAgent ? resolveFileAgentId(reportedAgent, identities) : null;
-        if (agent && changedAt !== null && Date.now() - changedAt < 30_000) active.set(agent, changedAt);
+        const observedAt = agent && liveAgents.has(agent) ? null : changedAt;
+        activity.set(relative, { hash, changedAt: observedAt, agentId: agent });
+        if (agent && observedAt !== null && Date.now() - observedAt < 30_000) active.set(agent, observedAt);
       }
     }
     for (const key of activity.keys()) if (!seen.has(key)) activity.delete(key);
@@ -109,16 +137,42 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
       currentTask: active.has(member.slug) ? 'Approximate local file activity (not live tool execution)' : null,
       currentTaskSource: active.has(member.slug) ? 'file' : null,
     }));
+    liveMessages = [];
+    if (live) {
+      if (!liveStarted) { liveStarted = true; live.start(false); }
+      else live.replay();
+      const selection = options.sessionSelection?.();
+      liveStatus = { ...liveStatus,
+        selection: selection?.preferredId === null ? 'unavailable'
+          : selection?.preferredId ? 'owned-session' : 'matching-project',
+        reason: selection?.preferredId ? liveStatus.state === 'following'
+          ? 'Exact server-generated owned session; canonical project and Squad marker verified.'
+          : selection.reason ?? 'Waiting for the exact owned session.'
+          : selection?.reason ?? 'Newest matching-project Squad session; not an owned-terminal correlation.',
+      };
+      latestAgents = latestAgents.map(agent => {
+        const task = liveAgents.get(agent.id);
+        const fileActive = [...activity.values()].some(value => value.agentId === agent.id
+          && value.changedAt !== null && Date.now() - value.changedAt < 30_000);
+        return { ...agent,
+          status: liveAgents.has(agent.id) || fileActive ? 'active' : 'idle',
+          currentTask: liveAgents.has(agent.id) ? task ?? null
+            : fileActive ? 'Approximate local file activity (not live tool execution)' : null,
+          currentTaskSource: liveAgents.has(agent.id) ? task ? 'live' : null : fileActive ? 'file' : null,
+        };
+      });
+    }
     return [
       { ...settings, ...preferences?.settings },
       { type: 'sourceStatus', status: {
         workspaceRoot: files.root, squadDir: path.join(files.root, squad), teamFound: team !== null,
-        observer: 'watching', nativeWatch: false, liveActivity: { state: 'off', sessionId: null },
+        observer: 'watching', nativeWatch: false, liveActivity: liveStatus,
         error: errors.length ? errors.slice(0, 8).join('\n').slice(0, 4096) : null,
       } },
       { type: 'layoutLoaded', layout, revision: saved === null ? null : createHash('sha256').update(saved).digest('hex'), workspaceRoot: files.root },
       { type: 'existingAgents', agents: latestAgents },
       { type: 'recordedUsage', snapshot: usage },
+      ...liveMessages,
     ];
   }
 
@@ -134,18 +188,30 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
       readSnapshot(false);
       timer = setInterval(() => {
         const messages = readSnapshot();
+        const liveTypes = new Set(liveMessages.map(message => message.type));
         const changes = messages.filter(message => {
+          if (liveTypes.has(message.type)) return false;
           const signature = JSON.stringify(message, (key, value: unknown) => key === 'checkedAt' ? undefined : value);
           if (fingerprints.get(message.type) === signature) return false;
           fingerprints.set(message.type, signature);
           return true;
         });
+        if (live) {
+          const signature = JSON.stringify(liveMessages);
+          if (fingerprints.get('live') !== signature || changes.some(message => message.type === 'existingAgents')) {
+            fingerprints.set('live', signature);
+            changes.push(...liveMessages);
+          }
+        }
         if (changes.length) for (const notify of listeners) notify(changes);
       }, pollMs);
     }
     return () => {
       listeners.delete(listener);
-      if (!listeners.size && timer) { clearInterval(timer); timer = undefined; }
+      if (!listeners.size && timer) {
+        clearInterval(timer); timer = undefined;
+        live?.stop(); liveStarted = false; liveMessages = [];
+      }
     };
   }
   async function onRead(message: WebviewMessage): Promise<OutboundMessage[]> {
@@ -169,6 +235,7 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
     root: files.root, snapshot, subscribe, onRead,
     dispose() {
       disposed = true;
+      live?.stop();
       if (timer) clearInterval(timer);
       timer = undefined;
       listeners.clear();

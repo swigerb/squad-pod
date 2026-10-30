@@ -89,6 +89,25 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     vi.restoreAllMocks();
   });
 
+  it('lets a host snapshot clock drive bounded reads without creating an automatic timer', () => {
+    const file = session('session', marked(spawnLines()));
+    reader.start(false);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(lifecycle.mock.calls).toEqual([['ada', true, 'Build tests']]);
+    fs.appendFileSync(file, toolStart());
+    now += 1000;
+    expect(messages.some(message => message.type === 'agentToolStart')).toBe(false);
+    reader.replay();
+    expect(messages).toContainEqual({
+      type: 'agentToolStart', agentId: 'ada', toolId: 'tool', tool: 'view', status: 'Reading test.ts',
+    });
+    reader.stop();
+    messages.length = 0;
+    reader.poll();
+    expect(messages).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('requires workspace equality and a root Squad marker, including one in the head only', () => {
     session('wrong-cwd', marked(spawnLines()), home);
     session('no-marker', spawnLines());

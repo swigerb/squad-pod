@@ -101,7 +101,8 @@ it('requires separate terminal credentials and Host/Origin checks on both channe
 });
 
 it('reports explicit no-terminal mode, rejects browser launch arguments and observed identities, revokes all sockets', async () => {
-  const { server, origin, auth } = await fixture();
+  const { server, origin, auth, terminals } = await fixture();
+  const revoke = vi.spyOn(terminals, 'revokeObservation');
   const oldToken = server.terminalToken;
   const terminal = await auth(true, oldToken);
   const ws = socket(origin, 'terminal', terminal.cookie);
@@ -113,6 +114,7 @@ it('reports explicit no-terminal mode, rejects browser launch arguments and obse
 
   for (const command of [
     { version: 1, type: 'launch', executable: 'evil' },
+    { version: 1, type: 'launch', requestId: 'forged-id', sessionId: '12345678-1234-4234-8234-123456789abc' },
     { version: 1, type: 'launch' },
     { version: 1, type: 'attach', runId: 'observed-agent', cursor: 0 },
     { version: 1, type: 'input', runId: 'forged', data: 'evil' },
@@ -131,6 +133,7 @@ it('reports explicit no-terminal mode, rejects browser launch arguments and obse
   await once(office, 'open');
   const closed = Promise.all([once(ws, 'close'), once(office, 'close')]);
   server.rotate();
+  expect(revoke).toHaveBeenCalledOnce();
   await closed;
   expect(server.terminalToken).not.toBe(oldToken);
   expect((await auth(true, oldToken)).status).toBe(403);

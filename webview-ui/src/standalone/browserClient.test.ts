@@ -18,6 +18,31 @@ class Socket {
 afterEach(() => vi.useRealTimers());
 describe('production browser HostClient adapter', () => {
   const layout: OfficeLayout = { version: 2, cols: 2, rows: 2, tiles: [1, 1, 1, 1], furniture: [] };
+  it('accepts whitelisted live observation frames without granting consent or terminal/control authority', () => {
+    const ws = new Socket();
+    const client = createBrowserClient(vi.fn(), () => ws as unknown as WebSocket, 'http://127.0.0.1:1234');
+    const received = vi.fn();
+    const unsubscribe = connectOffice(client, received);
+    try {
+      ws.open();
+      const messages = [
+        { type: 'agentToolStart', agentId: 'ada', toolId: 'one', tool: 'view', status: 'Reading fixture.ts' },
+        { type: 'agentToolDone', agentId: 'ada', toolId: 'one', tool: 'view' },
+        { type: 'agentContextUsage', agentId: 'ada', contextTokens: 800, maxContextTokens: 1000 },
+        { type: 'observedTasks', snapshot: { sessionId: 'fixture', limited: false, tasks: [] } },
+        { type: 'agentToolsClear', agentId: 'ada' },
+        { type: 'agentContextUsage', agentId: 'ada', contextTokens: null, maxContextTokens: null },
+      ];
+      for (const message of messages) {
+        ws.onmessage?.({ data: JSON.stringify({ version: 1, kind: 'office', message }) });
+        expect(received).toHaveBeenLastCalledWith(message);
+      }
+      const count = ws.send.mock.calls.length;
+      client.send({ type: 'setLiveActivity', enabled: true });
+      client.send({ type: 'setShowAreas', enabled: true });
+      expect(ws.send).toHaveBeenCalledTimes(count);
+    } finally { unsubscribe(); client.dispose(); }
+  });
   function controlled(storage = new Map<string, string>()) {
     const sockets: Socket[] = [];
     const preferenceDraft = vi.fn();

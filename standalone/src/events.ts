@@ -1,5 +1,7 @@
 import type { OutboundMessage } from '../../src/types.js';
 import { isValidLayout } from '../../src/layoutValidation.js';
+import { MAX_OBSERVED_TASKS, taskIdentity } from '../../src/observedTasks.js';
+import { TASK_DESCRIPTION_DISPLAY_MAX_LENGTH } from '../../src/constants.js';
 
 type Check = (value: unknown) => boolean;
 const text: Check = v => typeof v === 'string' && v.length <= 8192;
@@ -44,11 +46,41 @@ const agent = {
   currentTaskSource: optional(nullable(oneOf('file', 'live'))),
 };
 const schemas: Record<string, Check> = {
+  agentToolStart: object({
+    type: oneOf('agentToolStart'), agentId: short, tool: short,
+    toolId: v => !!taskIdentity(v), status: short,
+  }),
+  agentToolDone: object({
+    type: oneOf('agentToolDone'), agentId: short, tool: short, toolId: v => !!taskIdentity(v),
+  }),
+  agentToolsClear: object({ type: oneOf('agentToolsClear'), agentId: short }),
+  agentContextUsage: object({
+    type: oneOf('agentContextUsage'), agentId: short,
+    contextTokens: nullable(v => number(v) && (v as number) >= 0),
+    maxContextTokens: nullable(v => number(v) && (v as number) > 0),
+  }),
+  observedTasks: object({ type: oneOf('observedTasks'), snapshot: object({
+    sessionId: nullable(short), limited: boolean, tasks: array(object({
+      sessionId: short, toolCallId: v => !!taskIdentity(v),
+      parentToolCallId: nullable(v => !!taskIdentity(v)),
+      name: short, agentType: short, mode: short,
+      description: v => typeof v === 'string' && v.length <= TASK_DESCRIPTION_DISPLAY_MAX_LENGTH,
+      agentId: nullable(short), state: oneOf('observed', 'running', 'completed', 'failed', 'aborted'),
+      fieldsTruncated: boolean,
+    }), MAX_OBSERVED_TASKS),
+  }) }),
+  telemetryEvent: object({ type: oneOf('telemetryEvent'), event: object({
+    id: short, timestamp: number, category: oneOf('status'),
+    agentId: nullable(short), agentName: nullable(short), summary: short, detail: oneOf(null),
+  }) }),
   settingsLoaded: object({ type: oneOf('settingsLoaded'), soundEnabled: boolean, debugEnabled: boolean, showAreas: boolean }),
   sourceStatus: object({ type: oneOf('sourceStatus'), status: object({
     workspaceRoot: nullable(text), squadDir: nullable(text), teamFound: boolean,
     observer: oneOf('watching', 'stopped'), nativeWatch: boolean, error: nullable(text),
-    liveActivity: optional(object({ state: oneOf('off', 'searching', 'following', 'error'), sessionId: nullable(short) })),
+    liveActivity: optional(object({
+      state: oneOf('off', 'searching', 'following', 'error'), sessionId: nullable(short),
+      selection: optional(oneOf('owned-session', 'matching-project', 'unavailable')), reason: optional(text),
+    })),
   }) }),
   layoutLoaded: object({
     type: oneOf('layoutLoaded'), layout, revision: nullable(text), workspaceRoot: text,

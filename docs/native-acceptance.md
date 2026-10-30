@@ -160,6 +160,7 @@ Create one row per check/subcheck with the implementing commit, prerequisite, an
 | Squad Info live status/count, stale-response rejection, and keyboard focus | Implemented by [#106](https://github.com/swigerb/squad-pod/pull/106) (head `f2ae14ac4f26383007c8742c084e410e4c01fa92`) for [#99](https://github.com/swigerb/squad-pod/issues/99) and [#100](https://github.com/swigerb/squad-pod/issues/100), with [parent acceptance](https://github.com/swigerb/squad-pod/pull/106#issuecomment-6531135965). N-03's regression subcheck is applicable in artifacts containing this source. Report its installed production-browser/mock-boundary evidence as BROWSER / FIXTURE only; it is not NATIVE or REAL acceptance. |
 | Standalone read-only observer/browser runtime | Implemented by [#82](https://github.com/swigerb/squad-pod/pull/82) ([acceptance](https://github.com/swigerb/squad-pod/pull/82#issuecomment-6527080180)); telemetry labels by [#92](https://github.com/swigerb/squad-pod/pull/92) ([acceptance](https://github.com/swigerb/squad-pod/pull/92#issuecomment-6528183133)); read-only Squad Info by [#94](https://github.com/swigerb/squad-pod/pull/94). Includes an authenticated loopback listener and production browser office for one explicit local project; the office stays read-only by default. Use F-02's procedure, exact installed-package identity and separate approvals. Existing synthetic evidence is not a user-run project observation or NATIVE/REAL acceptance. |
 | Standalone owned terminals | Implemented by [#93](https://github.com/swigerb/squad-pod/pull/93) ([acceptance](https://github.com/swigerb/squad-pod/pull/93#issuecomment-6528461097); [exact-head CI](https://github.com/swigerb/squad-pod/actions/runs/41093901469) and [post-merge CI](https://github.com/swigerb/squad-pod/actions/runs/41094658138) include the scoped macOS standalone source-build job): opt-in `--terminals`, separate terminal credential/cookie, fixed `copilot --agent squad` in the canonical selected project, PTY reconnect/replay/resync and owned-run close/shutdown. Use F-02's owned-terminal procedure. Synthetic `--fixture` evidence is FIXTURE; a REAL subcheck requires a separately approved, spend-bounded real launch. |
+| Standalone live observation | Applicable only to artifacts containing [#112](https://github.com/swigerb/squad-pod/issues/112)'s `--live-activity` flag. Use F-02's optional live-observation procedure below, independently of terminal/control authority. Default-off observation remains file-only. This reuses the bounded native live adapter, preferring an exact server-generated owned-session UUID and otherwise explicitly labeling project fallback/unavailable correlation. Synthetic installed Edge/session evidence is BROWSER/FIXTURE, not REAL or NATIVE. |
 | Selected-project authenticated office controls | Implemented by [#95](https://github.com/swigerb/squad-pod/pull/95) for [#90](https://github.com/swigerb/squad-pod/issues/90), with [parent browser acceptance](https://github.com/swigerb/squad-pod/pull/95#issuecomment-6530351013). F-02's office-control procedure covers separate authority, revision-protected layout/seat/settings writes and browser draft/import/export/recovery. This browser evidence is not native or real-session approval. |
 | Unavailable observed activity time | Implemented by [#98](https://github.com/swigerb/squad-pod/pull/98) for [#97](https://github.com/swigerb/squad-pod/issues/97): zero or invalid activity timestamps display **Activity time unavailable**, not an epoch-derived age or invented timestamp. Check N-03/F-02 without adding a case ID. |
 | Conference-table accessory depth composition | Implemented by [#105](https://github.com/swigerb/squad-pod/pull/105) for [#103](https://github.com/swigerb/squad-pod/issues/103), with [parent production-browser acceptance](https://github.com/swigerb/squad-pod/pull/105#issuecomment-6531386399) and exact-head Ubuntu/Windows/macOS CI green. L-06's conference-table subcheck applies to artifacts containing the accepted source. Evidence is a strict-CSP production-bundle fixture with mocked VS Code/save boundary, not installed-package persistence, native VS Code or REAL acceptance. |
@@ -515,7 +516,7 @@ This procedure is source-checked at the accepted source in [Scope and outcomes](
 
    For a POSIX host, use its approved absolute paths and `node node_modules/squad-pod-observer/dist/cli.mjs "/approved/run-id/project A" --port 0`; record that host separately. A source-only diagnostic launch from the product root is `node standalone\dist\cli.mjs "C:\Acceptance\run-id\project A" --port 0`, not installed-package acceptance. `--port 0` selects a free port; omission uses 3210. The CLI requires an explicit absolute project path and canonicalizes it; it does not select recent projects, open a browser, install Squad or start Copilot.
 4. **Authenticate without capturing secrets.** Disable console transcripts, screen recording and command-output capture **before starting the CLI**: it prints a tokenless `http://127.0.0.1:PORT` address, separate observation and terminal credentials, and terminal availability. An additional office-control credential is printed only with `--office-control`; it must be absent in this observer-only run. Never use the terminal credential here; terminal authority must report disabled/unavailable. Open only that exact address manually (not `localhost`, another machine or a proxy); never put a credential in a URL, shell argument, environment file, screenshot or saved evidence. Leave **Use separate office-control authority** unchecked. The human pastes the observation credential privately into **Runtime credential from the observer console**, then selects **Connect read-only office**. Do not save it in a password manager or capture auth request bodies, cookies, browser storage/network exports or the console. The form clears its input; auth posts JSON and uses an HttpOnly/SameSite=Strict session cookie. Credentials are runtime-only; no credential file or persistent Windows ACL protection is claimed. Protect the console/machine account: same-user local processes are not an isolated trust boundary. Capture only the authenticated office and redacted status, never credential values.
-5. **Observe the approved project and negative fixtures.** Compare the canonical selected root recorded from the startup path with **Telemetry > Recorded usage / model history > Usage coverage and source diagnostics**, which shows the local ledger path even when missing (redact personal paths in evidence). Telemetry shows a read-only notice instead of **Observation settings and consent**, and **Activity source diagnostics** reports the live CLI observer unavailable. Settings is disabled here; do not demand its native source-status control. Run the subchecks below with individually approved, nonsecret disposable inputs; keep before/after hashes and source changes separate from observer-caused writes. For actual producer coverage, use only output from a separately approved user-run project/session, not manufactured files. Missing fields after such a run are NOT-PRODUCED; no run/read approval means BLOCKED.
+5. **Observe the approved project and negative fixtures.** Compare the canonical selected root recorded from the startup path with **Telemetry > Recorded usage / model history > Usage coverage and source diagnostics**, which shows the local ledger path even when missing (redact personal paths in evidence). Telemetry shows a read-only notice instead of **Observation settings and consent**, and **Activity source diagnostics** reports the live CLI observer off in artifacts with the optional live adapter (unavailable in older builds). Settings is disabled here; do not demand its native source-status control. Run the subchecks below with individually approved, nonsecret disposable inputs; keep before/after hashes and source changes separate from observer-caused writes. For actual producer coverage, use only output from a separately approved user-run project/session, not manufactured files. Missing fields after such a run are NOT-PRODUCED; no run/read approval means BLOCKED.
 
    | F-02 subcheck | Procedure and expected result |
    |---|---|
@@ -528,6 +529,77 @@ This procedure is source-checked at the accepted source in [Scope and outcomes](
 
 6. **Revoke and stop gracefully.** Outside all capture, type `rotate` in the owned CLI console: all observation, office-control and terminal viewers/cookies are revoked and new credentials are printed. The old credential cannot reauthenticate; the viewer uses **Authenticate again** and private entry of the new one. Restarting also revokes credentials/cookies. After scoped stop approval, type `quit` in that console, press Ctrl+C, or send SIGTERM only to the exact owned PID. Expect process exit, closed listener/sockets, disposed subscriptions/polling and browser disconnected status; verify the tokenless endpoint no longer responds. Close owned browser tabs to stop retries; keep redacted evidence and record any retained console/clipboard material for human cleanup. No credential persistence, project writes or automatic deletion is expected. Follow X-01 for any separately approved restoration/deletion.
 7. **Return the local report, not an acceptance claim.** Save `report.md` and relative redacted evidence links outside the product workspace. Record every observer subcheck independently as PASS/FAIL/BLOCKED/NOT-PRODUCED. Record office-control, owned-terminal and mobile subchecks separately under the following procedures (BLOCKED if not approved). Keep synthetic installed-browser evidence, approved-project observation, REAL producer evidence and NATIVE VS Code evidence separate; physical-device mobile results remain unverified unless separately tested. Require human sign-off. Do not upload, publish, merge or close broad trackers.
+
+#### Optional standalone live-observation procedure
+
+These are additional **F-02 subchecks**, not new case IDs. Keep all 27 IDs and
+NATIVE/REAL/FIXTURE/BROWSER outcomes separate. Apply only to an installed artifact
+with `--live-activity`; baseline `e9fde56` does not contain this feature.
+
+1. **Approve private-read scope independently.** Default-off startup must not
+   discover/read home sessions. For the FIXTURE pass, create an isolated run-owned
+   `COPILOT_HOME` with only the sanitized live recipe from this plan; set its
+   `workspace.yaml` cwd to the canonical disposable project. Do not copy real logs.
+   Record the CLI version and `copilot help environment` support for `COPILOT_HOME`.
+   Before REAL reads, approve the actual resolved home/session paths separately,
+   verify the producer writes there and retain the existing spend/permission gates.
+   No private-log approval is implied by office, terminal or control authentication.
+2. **Start and authenticate.** Outside console capture, start the identified
+   installed CLI with `--port 0 --live-activity`, initially without terminals or
+   office control. Confirm the printed read scope: bounded session directory
+   metadata and `workspace.yaml` cwd discovery, then `events.jsonl` only for
+   exact-canonical-workspace Squad candidates. Authenticate only observation.
+   Telemetry must show actual off/searching/following/error state and the short
+   session label. The browser has no live-consent checkbox/action.
+3. **Prove attribution and precedence.** Append the sanitized live recipe one
+   event at a time: exact member task, correlated start, child tool, context-bearing
+   tool completion and member completion. Compare labels, status, context gauge,
+   Squad Info detail and bounded transient inventory. An active live task must
+   survive the 30-second file timeout; file writes cannot replace it. Completing
+   the run clears tools/context and must not revive ignored file hints. A new
+   recognized file edit may provide a hint after completion. Unknown names,
+   mismatched cwd, non-Squad sources and non-general-purpose calls must not
+   animate a roster member. Record actual producer shapes, never fabricate REAL data.
+4. **Exercise recovery/bounds with fixtures only.** Reconnect during a live tool,
+   refresh the roster and verify tools/context are restored after its snapshot.
+   All viewers leaving stops polling; resuming restores only current in-flight
+   calls, not completed history. Source rotation/truncation, deletion/read errors
+   and five minutes plus 10 seconds without new bytes clear live displays.
+   Oversized lines/seed tails mark partial coverage rather than replaying invented
+   state. Limits are 500 directory entries, newest 32 candidates, 8 KiB cwd files,
+   64 KiB head/tail marker scans, 2 MiB event reads per poll, 64 KiB lines,
+   64 transient tasks and 16 recent completions. Never modify real producer logs.
+5. **Preserve authority and privacy.** Observation-only viewers still cannot
+   mutate settings/layout/seats, enable live reads, launch/attach/input/terminate.
+   Check runtime rotation, canonical Host/Origin checks and separate credentials
+   as in F-02. Prompts, outputs, arguments/scripts, private full file paths and
+   credentials must not appear in UI/wire evidence. Session-local display metadata
+   is not durable membership or recorded/billable usage.
+6. **Verify owned-run correlation independently (REAL).** With separate approval, combine
+   `--live-activity --terminals` for the supported fixed `copilot --agent squad`
+   REAL run and record both terminal lifecycle and matching-project observation.
+   The opt-in fixed command adds only `--session-id <server-generated fresh v4 UUID>`
+   when observer and sanitized child homes match. Installed CLI 1.0.105 documents
+   this new-UUID/resume selection; the host checks for collisions and never accepts
+   a client-chosen/resume target. Compare the locally approved exact session source
+   with the generated launch identity without publishing private bindings. Verify
+   canonical cwd and Squad marker; another same-project session cannot take over.
+   Missing marker/file, wrong cwd or stale exact data must show waiting, not
+   unrelated project activity. Exit/close selects another active owned run or
+   matching-project fallback, excluding previously issued IDs. Rotation revokes
+   exact observation without terminating owned terminals. Confirm private
+   run/session binding is absent from terminal wire inventory.
+   `COPILOT_HOME` remains excluded from the child environment: if homes differ,
+   default launch argv is retained and correlation must say unavailable, not read
+   another home or silently forward the override. Synthetic terminals also report
+   unavailable exact correlation. Synthetic broker tests establish wiring only;
+   do not claim #8's REAL lifecycle from cwd equality, timing or fixtures. No extra
+   paid task is authorized just to produce evidence.
+7. **Revoke and stop.** Follow F-02's private-console rotation and scoped shutdown.
+   Restart without `--live-activity` and verify source off/no live reads. Record
+   installed tarball/runtime/browser identities, scope, redacted screenshots and
+   each subcheck result. REAL or physical/native evidence remains user/Scout-owned;
+   this procedure and fixture results do not waive those gates.
 
 #### Selected-project office-control procedure
 

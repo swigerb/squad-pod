@@ -151,8 +151,8 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
 
   it('degrades visibly in the read-only observer without sending an unsupported settings action', () => {
     act(() => root.render(<App client={client} readOnly />));
-    expect(host.textContent).toContain('Settings and live-log consent are unavailable in this read-only observer');
-    expect(host.textContent).toContain('Live CLI observer: Unavailable in the read-only observer');
+    expect(host.textContent).toContain('Browser settings cannot grant live-log consent');
+    expect(host.textContent).toContain('Live observation requires server startup opt-in (--live-activity)');
     expect([...host.querySelectorAll('button')].some(b => b.textContent === 'Observation settings and consent')).toBe(false);
     expect(vi.mocked(client.send).mock.calls.some(([message]) => message.type === 'setLiveActivity')).toBe(false);
   });

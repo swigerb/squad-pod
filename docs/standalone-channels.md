@@ -154,6 +154,9 @@ tokenless or persistent-credential mode, proxy exposure or remote TLS/auth is cl
 bounded run-state/error events to the terminal frames above. Clients cannot supply
 an executable, argv, environment or directory. The supported launch is
 `copilot --agent squad`, with normal permissions and an allowlisted environment.
+With explicit `--live-activity` opt-in and matching observer/sanitized-child homes,
+the only additional argv is `--session-id <server-generated fresh v4 UUID>`.
+Clients cannot choose/resume a session or change argv; default launches are unchanged.
 Windows requires a real `copilot.exe`, not a `.cmd` shim; POSIX admits native binary
 headers or an explicit supported Node entry point, not execvp's implicit shell
 fallback for executable text. The canonical selected cwd is revalidated immediately
@@ -171,10 +174,32 @@ and optionally captures installed Edge desktop/narrow browser evidence. Windows
 tests are not skipped; CI also exercises Ubuntu/macOS rather than assuming prebuild
 metadata proves support. Canonical notices and VSIX isolation are inspected.
 
-The native VS Code live-data adapter remains consented/best-effort Copilot JSONL;
-standalone office activity remains approximate project-file observation, not a
-fabricated live Squad lifecycle. No automatically started Squad EventBus producer
-is assumed. Real Squad-session and native VS Code acceptance remain user/Scout-owned
+The native VS Code and standalone live-data paths reuse the same host-neutral,
+bounded, best-effort Copilot JSONL adapter. Standalone defaults to approximate
+project-file observation. Explicit local `--live-activity` opt-in prints the read
+scope and enables matching-project session metadata/events reads; a browser cannot
+grant this consent. See the [scope and limits](../standalone/README.md#optional-live-activity).
+The standalone snapshot clock drives the adapter without an additional timer.
+Live lifecycle takes precedence over file hints, clears tools/context on completion
+or source loss, and expires after five minutes without new bytes; reconnect replays
+only current in-flight state. The browser's strict server-event allowlist includes
+projected tools, context, bounded transient tasks and status-only live telemetry,
+not raw records/prompts/outputs. When a roster snapshot resets renderer tools, the
+observer replays current live displays after it. Read-only diagnostics report the
+actual off/searching/following/error source state, not an assumed unavailable state.
+
+Without an active owned run this is visibly labeled newest matching-project
+Squad-session selection, **not exact ownership**. With real owned terminals and
+compatible homes, the private run/session binding selects only the fresh
+server-generated session UUID, still requiring canonical cwd and Squad marker.
+Missing/stale/mismatched exact sources block unrelated fallback while that run is
+active. Exit/close/revocation clear inherited state; issued UUIDs cannot reenter
+project fallback. Rotation revokes correlation but keeps existing terminal ownership.
+The installed CLI 1.0.105 documents explicit `--session-id` new/resume semantics;
+collision checks prevent deliberate reuse, and no client-supplied ID or new
+environment variable is accepted. `COPILOT_HOME` is still excluded from children;
+a home mismatch or synthetic terminal reports unavailable instead of guessing.
+No automatically started Squad EventBus producer is assumed. Real Squad-session and native VS Code acceptance remain user/Scout-owned
 under their separately pinned plan. Full mobile interactions, cross-project/native browser
 capabilities, remote access and persistent credentials remain separate gates. Narrow
 screenshots are not full mobile parity. Revision-protected drafts, native

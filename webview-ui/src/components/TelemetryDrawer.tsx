@@ -161,7 +161,7 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, obser
         ) : null}
         <RecordedUsage snapshot={recordedUsage} />
         <div style={{ padding: '6px 12px', overflowWrap: 'anywhere' }}>
-          {readOnly ? <p role="status">Settings and live-log consent are unavailable in this read-only observer. Nothing is enabled here.</p>
+          {readOnly ? <p role="status">Browser settings cannot grant live-log consent. Live observation requires explicit local CLI --live-activity opt-in; opening this drawer enables nothing.</p>
             : <><button onClick={onOpenSettings} style={smallButtonStyle}>Observation settings and consent</button>
               <p>Review live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.</p></>}
           <details>

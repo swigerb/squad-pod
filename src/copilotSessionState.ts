@@ -8,6 +8,30 @@ export interface CopilotSessionRef {
   mtimeMs: number;
 }
 
+export function isSessionUuid(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+}
+
+/** Exact host-generated IDs bypass newest-session limits, not path or symlink checks. */
+export function findCopilotSession(copilotHome: string, id: string): CopilotSessionRef | undefined {
+  if (!isSessionUuid(id)) { throw new Error('Invalid generated Copilot session UUID.'); }
+  const root = path.join(copilotHome, 'session-state');
+  try {
+    const rootStat = fs.lstatSync(root);
+    if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) { throw new Error('Unsupported Copilot session root.'); }
+    const dir = path.join(root, id);
+    const stat = fs.lstatSync(dir);
+    if (!stat.isDirectory() || stat.isSymbolicLink()
+      || path.dirname(fs.realpathSync.native(dir)) !== fs.realpathSync.native(root)) {
+      throw new Error('Unsupported exact Copilot session directory.');
+    }
+    return { id, dir, mtimeMs: stat.mtimeMs };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') { return undefined; }
+    throw error;
+  }
+}
+
 export function resolveCopilotHome(env = process.env, homedir = os.homedir()): string {
   const override = env.COPILOT_HOME;
   return override?.trim() && path.isAbsolute(override) ? override : path.join(homedir, '.copilot');

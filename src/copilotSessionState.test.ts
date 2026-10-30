@@ -2,7 +2,7 @@ import fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { listCopilotSessions, readSessionCwd, resolveCopilotHome } from './copilotSessionState.js';
+import { findCopilotSession, listCopilotSessions, readSessionCwd, resolveCopilotHome } from './copilotSessionState.js';
 import { SquadDirectorySuggestions } from './directories.js';
 
 describe('read-only Copilot session metadata (synthetic homes only)', () => {
@@ -34,6 +34,29 @@ describe('read-only Copilot session metadata (synthetic homes only)', () => {
     for (const override of [undefined, '', '   ', 'relative-home']) {
       expect(resolveCopilotHome({ COPILOT_HOME: override }, root)).toBe(path.join(root, '.copilot'));
     }
+  });
+
+  it('finds only safe exact generated UUIDs without scanning other sessions or opening their content', () => {
+    const id = '12345678-1234-4234-8234-123456789abc';
+    const missing = '22345678-1234-4234-8234-123456789abc';
+    const dir = session(id, 'synthetic cwd metadata');
+    const list = vi.spyOn(fs, 'opendirSync');
+    const read = vi.spyOn(fs, 'openSync');
+    expect(findCopilotSession(root, id)).toMatchObject({ id, dir });
+    expect(findCopilotSession(root, missing)).toBeUndefined();
+    expect(() => findCopilotSession(root, '../../escape')).toThrow('Invalid generated');
+    fs.symlinkSync(dir, path.join(root, 'session-state', missing), 'junction');
+    expect(() => findCopilotSession(root, missing)).toThrow('Unsupported exact');
+    expect(list).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('rejects a linked exact-session root instead of following it for generated-ID lookup', () => {
+    const id = '12345678-1234-4234-8234-123456789abc';
+    const target = path.join(root, 'target');
+    fs.mkdirSync(target);
+    fs.symlinkSync(target, path.join(root, 'session-state'), 'junction');
+    expect(() => findCopilotSession(root, id)).toThrow('Unsupported Copilot session root');
   });
 
   it('returns empty/null for missing or non-directory session roots and missing metadata', () => {

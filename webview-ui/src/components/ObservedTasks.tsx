@@ -6,13 +6,12 @@ export function ObservedTasks({ snapshot, source, readOnly = false }: {
   source?: LiveSourceStatus;
   readOnly?: boolean;
 }) {
-  const following = !readOnly && source?.state === 'following';
+  const following = source?.state === 'following';
   const tasks = following ? snapshot?.tasks ?? [] : [];
-  const unavailable = readOnly
-    ? 'Live transient tasks are unavailable in the read-only observer. Private home/session logs are not read and cannot be enabled here.'
-    : !source ? 'Live source status is unavailable. No task state is available.'
+  const unavailable = !source ? 'Live source status is unavailable. No task state is available.'
     : source.state === 'off'
-    ? 'Live Activity is off. Enable it in Settings and accept the confirmation.'
+    ? readOnly ? 'Live Activity is off. After approving the session-log scope, restart the local CLI with --live-activity. It cannot be enabled from the browser.'
+      : 'Live Activity is off. Enable it in Settings and accept the confirmation.'
     : source.state === 'error'
       ? 'Live source unavailable. Task state cleared.'
       : 'Searching for a current session. Stale or missing task state is cleared.';

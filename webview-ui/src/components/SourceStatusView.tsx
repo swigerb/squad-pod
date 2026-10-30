@@ -13,9 +13,12 @@ export function SourceStatusView({ status, readOnly = false }: { status: SourceS
           {status.error && <div role="alert">{status.error}</div>}
         </>
       ) : <div>Awaiting host source status...</div>}
-      <div>Live CLI observer: {readOnly ? 'Unavailable in the read-only observer'
-        : status?.liveActivity?.state ?? 'Unavailable (no live source status)'}
-        {!readOnly && status?.liveActivity?.sessionId ? ` (${status.liveActivity.sessionId})` : ''}</div>
+      <div>Live CLI observer: {status?.liveActivity?.state ?? 'Unavailable (no live source status)'}
+        {status?.liveActivity?.sessionId ? ` (${status.liveActivity.sessionId})` : ''}</div>
+      {readOnly && <p>Live observation requires server startup opt-in (--live-activity).
+        {' '}{status?.liveActivity?.selection && `Selection: ${status.liveActivity.selection}. `}
+        {status?.liveActivity?.reason
+          ?? 'Selects the newest matching-project Squad session; not an owned-terminal correlation.'}</p>}
       <p>File observations are activity hints, not authoritative lifecycle, tool or context events.</p>
       <div>EventBus / WebSocket bridge: Not connected (no producer).</div>
     </section>
