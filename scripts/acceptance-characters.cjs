@@ -118,6 +118,10 @@ function providerFixture() {
         receive({ type: 'webviewReady' });
         const roster = messages.find((message) => message.type === 'existingAgents')?.agents;
         const characters = messages.find((message) => message.type === 'characterAssetsLoaded')?.characters;
+        const manifest = messages.find((message) => message.type === 'manifestAssetsLoaded')?.snapshot;
+        assert.deepEqual(manifest?.diagnostics, [], 'reserved characters folder must not produce furniture diagnostics');
+        assert.deepEqual(manifest?.furniture.filter((item) => item.type.startsWith('local_')), [],
+          'reserved characters folder must not load as furniture');
         assert.equal(characters?.length, 1, 'compiled provider must deliver external characters');
         assert.equal(roster.find((agent) => agent.id === 'external').paletteIndex, characters[0].paletteIndex,
           'new member must receive the external sheet identity from the compiled provider');
@@ -373,6 +377,19 @@ function mutations() {
       pattern: /^    p %= PALETTE_COUNT;$/gm,
       replacement: '    p = 1;',
     },
+    {
+      name: 'reserved-folder-loader',
+      file: 'src/manifestAssets.ts',
+      pattern: /^        if \(index !== 0 && \(folder === 'pets' \|\| folder === 'characters'\)\) \{ continue; \}\r?\n        attempt\(`\$\{root\} \/ \$\{folder\}`, \(\) => \{$/gm,
+      replacement: "        if (index !== 0 && folder === 'pets') { continue; }\n        attempt(`${root} / ${folder}`, () => {",
+    },
+    {
+      name: 'reserved-folder-fingerprint',
+      file: 'src/manifestAssets.ts',
+      pattern: /^        if \(index !== 0 && \(folder === 'pets' \|\| folder === 'characters'\)\) \{ continue; \}\r?\n        hash\.update\(folder\);$/gm,
+      replacement: "        if (index !== 0 && folder === 'pets') { continue; }\n        hash.update(folder);",
+      harnessMayPass: true,
+    },
   ];
   fs.mkdirSync(output, { recursive: true });
   const npm = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
@@ -409,7 +426,9 @@ function mutations() {
         'run', 'src/office/sprites/externalCharacters.test.ts'], path.join(directory, 'webview-ui'));
       const harness = run('acceptance', [path.join(directory, 'scripts', 'acceptance-characters.cjs')]);
       assert.ok(host !== 0 || webview !== 0, `${definition.name} must be killed by focused tests`);
-      assert.notEqual(harness, 0, `${definition.name} must also be killed by production acceptance`);
+      if (!definition.harnessMayPass) {
+        assert.notEqual(harness, 0, `${definition.name} must also be killed by production acceptance`);
+      }
       reports.push({
         name: definition.name, file: definition.file, pattern: String(definition.pattern),
         replacement: definition.replacement, matches: 1, host, webview, harness, evidence,

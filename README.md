@@ -209,6 +209,9 @@ chunk boundaries, CRC and exact IEND trailer are checked before use. Symlinks,
 junctions, traversal and duplicate filenames (case-insensitive across roots)
 are rejected. Roots and filenames are sorted deterministically; the first valid
 duplicate wins. Bad sheets do not displace bundled characters or valid siblings.
+`characters` and `pets` are reserved external-root folder names. In particular,
+a furniture folder literally named `characters` is no longer loaded as
+furniture, even if it contains an otherwise valid furniture manifest.
 Settings shows character failures alongside other asset diagnostics; the
 **Squad Pod** output channel records source directory, filename and SHA-256.
 One-second bounded content polling detects additions, edits and removals without
@@ -238,8 +241,10 @@ builds the explicit negative-control commit
 overrides that pinned commit if necessary. This is mocked-provider/browser
 evidence, not native VS Code or real Squad acceptance.
 After committing, `node scripts/acceptance-characters.cjs --mutations` archives
-HEAD into disposable copies, applies four exact-once line-anchored substitutions,
-and requires both focused tests and production acceptance to kill each mutant.
+HEAD into disposable copies and applies six exact-once line-anchored substitutions.
+Focused tests kill all six; production acceptance also kills the four rendering/
+validation mutants and the reserved-folder loader mutant. The reserved-folder
+fingerprint mutant is killed directly by the dedicated host fingerprint test.
 It never edits the checked-out source; per-mutant logs and `mutations.json` go
 under the selected evidence directory.
 

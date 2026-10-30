@@ -7,6 +7,7 @@ import {
   CHARACTER_LIMITS, EXTERNAL_CHARACTER_BASE, loadCharacterSnapshot,
   characterSourceFingerprint, watchCharacterSnapshots,
 } from './characterAssets.js';
+import { assetSourceFingerprint, loadAssetSnapshot } from './manifestAssets.js';
 
 function png(width = 224, height = 128, red = 91): Buffer {
   const image = new PNG({ width, height });
@@ -144,5 +145,45 @@ describe('bounded external characters', () => {
     expect(publish).toHaveBeenCalledTimes(4);
     watcher.dispose();
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('reserves characters alongside pets: no furniture or missing-manifest diagnostics', () => {
+    const bundled = path.resolve('webview-ui', 'public', 'assets');
+    write('char_fixture.png');
+    let result = loadAssetSnapshot(bundled, [directory]);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.furniture.filter((item) => item.type.startsWith('local_'))).toEqual([]);
+    // Even an otherwise valid furniture item may no longer claim this reserved folder.
+    write('char_fixture.png', png(16, 16));
+    fs.writeFileSync(path.join(directory, 'characters', 'manifest.json'), JSON.stringify({
+      id: 'TEST', name: 'Reserved furniture', type: 'asset', category: 'decor',
+      file: 'char_fixture.png', width: 16, height: 16, footprintW: 1, footprintH: 1,
+      canPlaceOnWalls: false, canPlaceOnSurfaces: false, backgroundTiles: 0,
+    }));
+    result = loadAssetSnapshot(bundled, [directory]);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.furniture.filter((item) => item.type.startsWith('local_'))).toEqual([]);
+  });
+
+  it('furniture fingerprint ignores characters contents but still observes ordinary folders', () => {
+    const bundled = path.resolve('webview-ui', 'public', 'assets');
+    const meta = {
+      id: 'TEST', name: 'Fingerprint fixture', type: 'asset', category: 'decor',
+      file: 'char_fixture.png', width: 16, height: 16, footprintW: 1, footprintH: 1,
+      canPlaceOnWalls: false, canPlaceOnSurfaces: false, backgroundTiles: 0,
+    };
+    // A manifest makes an accidentally re-enabled furniture scan actually hash this PNG.
+    fs.writeFileSync(path.join(directory, 'characters', 'manifest.json'), JSON.stringify(meta));
+    write('char_fixture.png');
+    const before = assetSourceFingerprint(bundled, [directory]);
+    write('char_fixture.png', png(224, 128, 99));
+    expect(assetSourceFingerprint(bundled, [directory])).toBe(before);
+    fs.mkdirSync(path.join(directory, 'ordinary'));
+    fs.writeFileSync(path.join(directory, 'ordinary', 'manifest.json'), JSON.stringify(meta));
+    fs.writeFileSync(path.join(directory, 'ordinary', 'char_fixture.png'), png(16, 16));
+    const ordinary = assetSourceFingerprint(bundled, [directory]);
+    expect(ordinary).not.toBe(before);
+    fs.writeFileSync(path.join(directory, 'ordinary', 'char_fixture.png'), png(16, 16, 99));
+    expect(assetSourceFingerprint(bundled, [directory])).not.toBe(ordinary);
   });
 });

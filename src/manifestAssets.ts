@@ -363,7 +363,7 @@ export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] =
       // External roots contain item folders, each with manifest.json and sibling PNGs.
       const furnitureRoot = index === 0 ? safePath(root, ['furniture']) : fs.realpathSync(root);
       for (const folder of directories(furnitureRoot, budget)) {
-        if (index !== 0 && folder === 'pets') { continue; }
+        if (index !== 0 && (folder === 'pets' || folder === 'characters')) { continue; }
         attempt(`${root} / ${folder}`, () => {
           const { root: meta, leaves, buffers } = readManifest(furnitureRoot, folder, budget);
           const loaded = leaves.map((leaf): ManifestFurniture => {
@@ -437,7 +437,7 @@ export function assetSourceFingerprint(bundledRoot: string, externalRoots: strin
       if (!path.isAbsolute(root)) { throw new Error('Asset directory must be absolute'); }
       const furnitureRoot = index === 0 ? safePath(root, ['furniture']) : fs.realpathSync(root);
       for (const folder of directories(furnitureRoot, budget)) {
-        if (index !== 0 && folder === 'pets') { continue; }
+        if (index !== 0 && (folder === 'pets' || folder === 'characters')) { continue; }
         hash.update(folder);
         attempt(folder, () => {
           readManifest(furnitureRoot, folder, budget, (name, bytes) => {

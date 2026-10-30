@@ -5,6 +5,7 @@ All notable changes to Squad Pod are documented here.
 ## [Unreleased]
 
 ### Changed
+- External-root folder names `characters` and `pets` are reserved for their dedicated pipelines. A furniture folder literally named `characters` is no longer loaded as furniture or read by the furniture fingerprint, even with a valid furniture manifest (#59).
 - Explicit supported reading-tool metadata now selects supplied reading sprites instead of typing sprites. Bundled employee PNG sheets contain no reading art, so reading uses an inline sprite template instead of duplicated walk frames; the generated fallback shares typing art until dedicated reading frames are supplied, and the provider still emits no live tool metadata.
 - Replaced the unresolved office tileset and inline furniture art with the source-pinned original Pixel Agents furniture/floor/wall bundle (MIT, Pablo De Lucca). The historical screenshot is excluded from the VSIX. Legacy layout IDs/geometry remain intact as explicit missing-art markers; no automatic reset or remap occurs.
 - Toolchain modernized: Node 22.13+, VS Code 1.107+, React 19, Vite 8, Vitest 4, ESLint 10, esbuild 0.28; CI on Ubuntu and Windows.
