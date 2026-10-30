@@ -33,6 +33,9 @@ live observer is following. Task records must match their snapshot's full sessio
 ID. The source's shortened display ID is checked for display consistency only,
 not treated as proof of ownership: matching-workspace and exact-owned selection
 remain the adapter's existing responsibility.
+Two full session IDs can share that display prefix. The prefix check alone cannot
+detect such a switch; the adapter's clearing/current-snapshot ordering remains
+required. Tests of changed display IDs do not claim otherwise.
 
 Text is restricted to fixed phrases such as **CLI task: Task in progress** and
 **CLI tool: Reading a file**. Tool names select a finite phrase table; unknown

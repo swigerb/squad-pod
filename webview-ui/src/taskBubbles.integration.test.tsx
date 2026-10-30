@@ -84,7 +84,7 @@ describe('source-grounded summaries through the production App', () => {
     expect(bubble()).toBeNull();
   });
 
-  it('invalidates snapshot on session switch including equal shortened display IDs', async () => {
+  it('invalidates snapshot on changed display-session IDs and rejects cross-snapshot records', async () => {
     await frame();
     expect(bubble()).not.toBeNull();
     source('following', 'another');

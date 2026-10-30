@@ -240,7 +240,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       agentId, active: agentStatuses[agentId] === 'active',
       liveTask: agentTasks[agentId]?.currentTaskSource === 'live',
       source: sourceStatus?.liveActivity, snapshot: observedTasks,
-      tool: agentTools[agentId]?.filter(tool => !tool.done).at(-1)?.toolName,
+      tool: Object.hasOwn(agentTools, agentId) ? agentTools[agentId].filter(tool => !tool.done).at(-1)?.toolName : null,
     });
     return summary ? [[agentId, summary]] : [];
   }) : []);
