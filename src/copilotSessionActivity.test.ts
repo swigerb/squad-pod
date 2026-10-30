@@ -250,6 +250,39 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(lifecycle).toHaveBeenLastCalledWith('grace', true, 'Build tests');
   });
 
+  it('silently reconstructs in-flight members once when the same stale session resumes growing', () => {
+    const history = spawnLines('grace', 'past') + line('subagent.completed', { toolCallId: 'past' });
+    const file = session('session', marked(history + spawnLines()));
+    reader.start();
+    now += LIVE_STALE_MS + 1;
+    reader.poll();
+    expect(lifecycle).toHaveBeenLastCalledWith('ada', false, null);
+    const reads = vi.mocked(fs.readSync);
+    reads.mockClear();
+    reader.poll();
+    reader.poll();
+    expect(reads).not.toHaveBeenCalled();
+    fs.appendFileSync(file, toolStart('resumed'));
+    const stamp = new Date(now);
+    fs.utimesSync(file, stamp, stamp);
+    reader.poll();
+    expect(statuses.at(-1)?.state).toBe('following');
+    expect(lifecycle).toHaveBeenLastCalledWith('ada', true, 'Build tests');
+    expect(messages.filter(m => m.type === 'agentToolStart').at(-1)).toMatchObject({
+      toolId: 'resumed', status: 'Reading test.ts',
+    });
+    expect(messages.filter(m => m.type === 'telemetryEvent')).toHaveLength(1);
+    expect(messages.filter(m => m.type === 'telemetryEvent')).toEqual([
+      expect.objectContaining({ event: expect.objectContaining({ summary: 'Live member finished', agentId: 'ada' }) }),
+    ]);
+    fs.appendFileSync(file, done('resumed'));
+    reader.poll();
+    expect(messages.filter(m => m.type === 'agentContextUsage').at(-1)).toMatchObject({ contextTokens: 800, maxContextTokens: 1000 });
+    const activations = lifecycle.mock.calls.filter(call => call[1]).length;
+    reader.poll();
+    expect(lifecycle.mock.calls.filter(call => call[1])).toHaveLength(activations);
+  });
+
   it('resets the live lifecycle when a followed file is truncated or replaced, and deletion clears immediately', () => {
     const file = session('session', marked(spawnLines()) + toolStart() + done());
     reader.start();

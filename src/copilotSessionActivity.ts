@@ -197,6 +197,7 @@ export class CopilotSessionActivity {
   private discoveryAt = -Infinity;
   private lastBytesAt = 0;
   private lastSize = -1;
+  private stale = false;
   private tasks = new Map<string, { agentId: string; description: string }>();
   private runs = new Map<string, string>();
   private tools = new Map<string, { agentId: string; toolName: string; label: string }>();
@@ -222,6 +223,7 @@ export class CopilotSessionActivity {
     this.clear();
     this.session = undefined;
     this.discoveryAt = -Infinity;
+    this.stale = false;
     this.setSource('off');
   }
 
@@ -257,21 +259,29 @@ export class CopilotSessionActivity {
           this.session = match;
           this.tail = new EventTail();
           this.lastSize = -1;
+          this.stale = false;
         }
       }
       if (!this.session) { this.setSource('searching'); return; }
       const file = path.join(this.session.dir, 'events.jsonl');
       const events: LiveEvent[] = [];
-      const stat = this.tail.read(file, event => events.push(event));
+      let stat = this.tail.read(file, event => events.push(event));
+      if (this.stale && (this.tail.reset || stat.size !== this.lastSize)) {
+        this.tail = new EventTail();
+        events.length = 0;
+        stat = this.tail.read(file, event => events.push(event));
+      }
       if (this.tail.reset || stat.size !== this.lastSize) {
         this.lastBytesAt = Math.min(now, stat.mtimeMs);
         this.lastSize = stat.size;
       }
       if (now - this.lastBytesAt >= LIVE_STALE_MS) {
         this.clear();
+        this.stale = true;
         this.setSource('searching');
         return;
       }
+      this.stale = false;
       if (this.tail.reset) {
         const previous = new Set(this.runs.keys());
         this.seeding = true;
@@ -290,6 +300,7 @@ export class CopilotSessionActivity {
     } catch (error) {
       this.clear();
       this.session = undefined;
+      this.stale = false;
       this.discoveryAt = -Infinity;
       this.setSource((error as NodeJS.ErrnoException).code === 'ENOENT' ? 'searching' : 'error');
     }
