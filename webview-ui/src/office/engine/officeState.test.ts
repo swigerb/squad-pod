@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { OfficeState } from './officeState.js';
-import { updateCharacter } from './characters.js';
+import { getCharacterWorldPosition, updateCharacter } from './characters.js';
 import { TileType, CharacterState } from '../types.js';
-import type { OfficeLayout } from '../types.js';
+import type { Character, OfficeLayout } from '../types.js';
+import { WALK_SPEED_PX_PER_SEC } from '../../constants.js';
 import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
 
 describe('OfficeState', () => {
@@ -475,5 +476,136 @@ describe('OfficeState', () => {
       officeState.setAgentActive('nonexistent', true);
       expect(officeState.characters.size).toBe(0);
     });
+  });
+});
+
+describe('OfficeState rendered continuity across seat transitions', () => {
+  // Two role-based seats adjoining a desk, matching the parent issue #120 transition probe.
+  const seatLayout: OfficeLayout = {
+    version: 2,
+    cols: 8,
+    rows: 4,
+    tiles: Array(32).fill(TileType.FLOOR_1),
+    furniture: [
+      { uid: 'desk', type: 'custom-desk', col: 7, row: 1, assetRole: 'desk', assetFootprint: { width: 1, height: 2 } },
+      { uid: 'seat-a', type: 'custom-seat', col: 6, row: 1, assetRole: 'seat', assetFootprint: { width: 1, height: 1 } },
+      { uid: 'seat-b', type: 'custom-seat', col: 6, row: 2, assetRole: 'seat', assetFootprint: { width: 1, height: 1 } },
+    ],
+  } as OfficeLayout;
+
+  function setupHalfwayWalk(): { office: OfficeState; character: Character } {
+    const office = new OfficeState(seatLayout);
+    office.addAgent('ada', 'Ada', 'Developer', 0, 0, 'seat-a');
+    const character = office.characters.get('ada')!;
+    expect(office.seats.map(seat => seat.id).sort()).toEqual(['seat-a', 'seat-b']);
+    expect(character.seatId).toBe('seat-a');
+    for (const tile of ['7,1', '7,2', '6,1', '6,2']) {
+      expect(office.blockedTiles.has(tile)).toBe(true);
+    }
+    Object.assign(character, {
+      state: CharacterState.WALK, active: false, col: 1, row: 1, x: 24, y: 24,
+      moveProgress: 0.5, path: [{ col: 2, row: 1 }, { col: 3, row: 1 }],
+    });
+    expect(getCharacterWorldPosition(character)).toEqual({ x: 32, y: 24 });
+    return { office, character };
+  }
+
+  function tick(office: OfficeState, character: Character, dt: number): void {
+    updateCharacter(character, dt, office.walkableTiles, office.seats, office.tileMap, office.blockedTiles);
+  }
+
+  /** Drive the production update loop, asserting continuous, collision-safe movement and no early work. */
+  function driveUntilSettled(office: OfficeState, character: Character, seatKey: string | null): void {
+    const dt = 0.05;
+    const maxStep = WALK_SPEED_PX_PER_SEC * dt + 1e-9;
+    let previous = getCharacterWorldPosition(character);
+    for (let i = 0; i < 400 && character.state === CharacterState.WALK; i++) {
+      tick(office, character, dt);
+      const current = getCharacterWorldPosition(character);
+      expect(Math.hypot(current.x - previous.x, current.y - previous.y)).toBeLessThanOrEqual(maxStep);
+      previous = current;
+      const anchor = `${character.col},${character.row}`;
+      if (anchor !== seatKey) expect(office.blockedTiles.has(anchor)).toBe(false);
+      if (character.state === CharacterState.TYPE) expect(anchor).toBe(seatKey);
+    }
+    expect(character.state).not.toBe(CharacterState.WALK);
+  }
+
+  it('keeps the rendered position through completion and reactivation, then works only at the seat', () => {
+    const { office, character } = setupHalfwayWalk();
+    office.setAgentActive('ada', true);
+    tick(office, character, 0);
+
+    office.setAgentActive('ada', false);
+    expect(character.state).toBe(CharacterState.WALK);
+    expect(getCharacterWorldPosition(character)).toEqual({ x: 32, y: 24 });
+
+    office.setAgentActive('ada', true);
+    tick(office, character, 0);
+    expect(getCharacterWorldPosition(character)).toEqual({ x: 32, y: 24 });
+    expect(character.moveProgress).toBe(0.5);
+    expect(character.path[0]).toEqual({ col: 2, row: 1 });
+    expect(character.path.at(-1)).toEqual({ col: 6, row: 1 });
+
+    driveUntilSettled(office, character, '6,1');
+    expect(character.state).toBe(CharacterState.TYPE);
+    expect([character.col, character.row]).toEqual([6, 1]);
+  });
+
+  it('keeps the rendered position through a mid-step seat reassignment', () => {
+    const { office, character } = setupHalfwayWalk();
+    office.setAgentActive('ada', true);
+    tick(office, character, 0);
+
+    expect(office.reassignSeat('ada', 'seat-b')).toBe(true);
+    tick(office, character, 0);
+    expect(getCharacterWorldPosition(character)).toEqual({ x: 32, y: 24 });
+    expect(character.moveProgress).toBe(0.5);
+    expect(character.path[0]).toEqual({ col: 2, row: 1 });
+    expect(character.path.at(-1)).toEqual({ col: 6, row: 2 });
+
+    driveUntilSettled(office, character, '6,2');
+    expect(character.state).toBe(CharacterState.TYPE);
+    expect([character.col, character.row]).toEqual([6, 2]);
+  });
+
+  it('finishes the in-flight step without working when the reassigned seat is unreachable', () => {
+    const { office, character } = setupHalfwayWalk();
+    office.tileMap[2][5] = TileType.WALL;
+    office.tileMap[3][6] = TileType.WALL;
+    office.setAgentActive('ada', true);
+    tick(office, character, 0);
+
+    expect(office.reassignSeat('ada', 'seat-b')).toBe(true);
+    tick(office, character, 0);
+    expect(getCharacterWorldPosition(character)).toEqual({ x: 32, y: 24 });
+    expect(character.path).toEqual([{ col: 2, row: 1 }]);
+    expect(character.state).toBe(CharacterState.WALK);
+
+    driveUntilSettled(office, character, '6,2');
+    expect(character.state).toBe(CharacterState.IDLE);
+    expect([character.col, character.row]).toEqual([2, 1]);
+  });
+
+  it('finishes the in-flight step without working when the assigned seat is missing', () => {
+    const { office, character } = setupHalfwayWalk();
+    character.seatId = 'missing-seat';
+
+    office.setAgentActive('ada', true);
+    tick(office, character, 0);
+    expect(getCharacterWorldPosition(character)).toEqual({ x: 32, y: 24 });
+    expect(character.path).toEqual([{ col: 2, row: 1 }]);
+
+    driveUntilSettled(office, character, null);
+    expect(character.state).toBe(CharacterState.IDLE);
+    expect([character.col, character.row]).toEqual([2, 1]);
+  });
+
+  it('keeps the rendered position when an explicit walk target interrupts a step', () => {
+    const { office, character } = setupHalfwayWalk();
+    expect(office.walkToTile('ada', 1, 3)).toBe(true);
+    expect(getCharacterWorldPosition(character)).toEqual({ x: 32, y: 24 });
+    expect(character.path[0]).toEqual({ col: 2, row: 1 });
+    expect(character.path.at(-1)).toEqual({ col: 1, row: 3 });
   });
 });

@@ -51,6 +51,47 @@ function startWalking(ch: Character, path: Array<{ col: number; row: number }>):
   ch.frameTimer = 0;
 }
 
+/**
+ * Route a character to its seat without discarding a partially completed step.
+ * Mid-step characters keep `path[0]` and `moveProgress`, and the new route starts from that step,
+ * so the rendered position never jumps back to the previous tile anchor.
+ * Returns false (leaving the character untouched) when no route exists.
+ */
+export function routeToSeatPreservingStep(
+  ch: Character,
+  seatCol: number,
+  seatRow: number,
+  tileMap: number[][],
+  blockedTiles: Set<string>
+): boolean {
+  const inFlightStep = ch.state === CharacterState.WALK && ch.moveProgress > 0 ? ch.path[0] : undefined;
+  if (inFlightStep) {
+    if (inFlightStep.col === seatCol && inFlightStep.row === seatRow) {
+      ch.path = [inFlightStep];
+      return true;
+    }
+    const route = findPathToSeat(inFlightStep.col, inFlightStep.row, seatCol, seatRow, tileMap, blockedTiles);
+    if (route.length === 0) return false;
+    ch.path = [inFlightStep, ...route];
+    return true;
+  }
+  const route = findPathToSeat(ch.col, ch.row, seatCol, seatRow, tileMap, blockedTiles);
+  if (route.length === 0) return false;
+  if (ch.state === CharacterState.WALK) {
+    ch.path = route;
+    ch.moveProgress = 0;
+    ch.direction = directionBetween(ch.col, ch.row, route[0].col, route[0].row);
+  } else {
+    startWalking(ch, route);
+  }
+  return true;
+}
+
+/** True when the character is part-way between its tile anchor and `path[0]`. */
+export function isMidStep(ch: Character): boolean {
+  return ch.state === CharacterState.WALK && ch.moveProgress > 0 && ch.path.length > 0;
+}
+
 function advanceAnimation(ch: Character, dt: number, frameDuration: number, frameCount: number): void {
   ch.frameTimer += dt;
   const framesElapsed = Math.floor(ch.frameTimer / frameDuration + Number.EPSILON * 8);
@@ -267,12 +308,7 @@ export function updateCharacter(
         const destCol = ch.path.length > 0 ? ch.path[ch.path.length - 1].col : ch.col;
         const destRow = ch.path.length > 0 ? ch.path[ch.path.length - 1].row : ch.row;
         if (destCol !== mySeat.col || destRow !== mySeat.row) {
-          const inFlightStep = ch.moveProgress > 0 ? ch.path[0] : undefined;
-          const routeFrom = inFlightStep ?? { col: ch.col, row: ch.row };
-          const newPath = findPathToSeat(routeFrom.col, routeFrom.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
-          if (newPath.length > 0) {
-            ch.path = inFlightStep ? [inFlightStep, ...newPath] : newPath;
-          }
+          routeToSeatPreservingStep(ch, mySeat.col, mySeat.row, tileMap, blockedTiles);
         }
       }
       break;
