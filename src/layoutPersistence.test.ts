@@ -45,6 +45,25 @@ describe('layoutPersistence', () => {
     expect(result).toEqual(sampleLayout);
   });
 
+  it('persists and imports all additive floor IDs without migrating VOID or other layout layers', () => {
+    const layout: LayoutData = {
+      ...sampleLayout,
+      tiles: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...Array(69).fill(1)],
+      areas: [{ label: 'Test Area', color: '#123456' }],
+      areaTiles: Array(80).fill(null).map((value, i) => i === 10 ? 'Test Area' : value),
+      areaMappings: { 'test-directory': ['Test Area'] },
+      carpetTiles: Array(80).fill(null).map((value, i) => i === 10 ? { variant: 1 } : value),
+      tileColors: { '0,1': { h: 210, s: 25, b: 0, c: 0 } },
+      pets: [{ id: 'test-pet', petType: 0 }],
+    };
+    const before = JSON.stringify(layout);
+    expect(isValidLayout(layout)).toBe(true);
+    expect(parseLayoutJson(before)).toEqual(layout);
+    writePersistedLayout(tmpDir, layout);
+    expect(readPersistedLayout(tmpDir)).toEqual(layout);
+    expect(JSON.stringify(layout)).toBe(before);
+  });
+
   it('returns null when layout file does not exist', () => {
     expect(readPersistedLayout(tmpDir)).toBeNull();
   });

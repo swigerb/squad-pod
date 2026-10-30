@@ -56,7 +56,7 @@ Open the **Squad Pod** panel, or run **Squad Pod: Show Panel** from the Command 
 
 Choose **Layout** in the toolbar to edit the office:
 
-- Paint floors and walls, adjust their colors, and place or color furniture.
+- Paint all nine bundled floor styles and walls, adjust their colors, and place or color furniture. Floor 10 adds the remaining style; existing floors and empty tiles keep their meaning.
 - Paint decorative carpets with a style and main/accent colors.
 - Create named Areas, paint their tiles, and map launch directories to Areas to prefer those seats for observed agents. Turn the Area overlay on or off in Settings.
 - Add or remove Claudio and Gitcat; pets wander around the office and react when clicked.

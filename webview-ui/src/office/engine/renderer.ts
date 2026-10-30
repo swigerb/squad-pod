@@ -35,7 +35,7 @@ import {
 } from '../../constants.js';
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
-import { getColorizedFloorSprite, hasFloorSprites } from '../floorTiles.js';
+import { getColorizedFloorSprite, getFloorPatternIndex, hasFloorSprites } from '../floorTiles.js';
 import type { CarpetTile } from '../types.js';
 import { getCharacterAnimation, getCharacterWorldPosition, isReadingTool } from './characters.js';
 import { getCharacterScreenBounds } from './characterGeometry.js';
@@ -143,7 +143,7 @@ export function renderTileGrid(
       } else {
         const colorKey = `${col},${row}`;
         const color = tileColors.get(colorKey) ?? DEFAULT_FLOOR_COLOR;
-        const sprite = getColorizedFloorSprite(tile - 1, color);
+        const sprite = getColorizedFloorSprite(getFloorPatternIndex(tile), color);
         if (sprite) {
           const canvas = getCachedSprite(sprite, zoom);
           ctx.drawImage(canvas, x, y);
