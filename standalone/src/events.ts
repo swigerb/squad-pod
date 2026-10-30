@@ -53,6 +53,8 @@ const schemas: Record<string, Check> = {
     type: oneOf('layoutLoaded'), layout, revision: nullable(text), workspaceRoot: text,
     source: optional(oneOf('external', 'import')),
   }),
+  layoutSaved: object({ type: oneOf('layoutSaved'), layout, revision: nullable(text) }),
+  layoutError: object({ type: oneOf('layoutError'), error: text, source: optional(oneOf('watcher')) }),
   existingAgents: object({ type: oneOf('existingAgents'), agents: array(object(agent), 128) }),
   agentDetailLoaded: object({ type: oneOf('agentDetailLoaded'), detail: object({
     id: short, name: short, role: short, status: agent.status, currentTask: nullable(text),

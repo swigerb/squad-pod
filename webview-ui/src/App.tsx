@@ -37,10 +37,12 @@ export default function App({
   client = defaultHostClient,
   hostError = defaultHostError,
   readOnly = false,
+  standalone = false,
 }: {
   client?: HostClient | null;
   hostError?: string | null;
   readOnly?: boolean;
+  standalone?: boolean;
 } = {}) {
   if (!client) {
     return (
@@ -54,12 +56,12 @@ export default function App({
   }
   return (
     <HostClientProvider client={client}>
-      <ConnectedApp readOnly={readOnly} />
+      <ConnectedApp readOnly={readOnly} standalone={standalone} />
     </HostClientProvider>
   );
 }
 
-function ConnectedApp({ readOnly }: { readOnly: boolean }) {
+function ConnectedApp({ readOnly, standalone }: { readOnly: boolean; standalone: boolean }) {
   const client = useHostClient();
   const [recovery] = useState(() => {
     try {
@@ -72,14 +74,16 @@ function ConnectedApp({ readOnly }: { readOnly: boolean }) {
     return (
       <div role="alert" style={{ padding: '24px', color: 'var(--vscode-foreground)' }}>
         <h1>Squad Pod could not read layout recovery state</h1>
-        <p>{recovery.error}. Reopen the panel after the VS Code host is available; existing recovery data was not replaced.</p>
+        <p>{recovery.error}. {standalone
+          ? 'Existing browser recovery data was not replaced. Recover or export that project/server storage before reconnecting.'
+          : 'Reopen the panel after the VS Code host is available; existing recovery data was not replaced.'}</p>
       </div>
     );
   }
-  return <ConnectedOffice recoveryState={recovery.value} readOnly={readOnly} />;
+  return <ConnectedOffice recoveryState={recovery.value} readOnly={readOnly} standalone={standalone} />;
 }
 
-function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; readOnly: boolean }) {
+function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryState: unknown; readOnly: boolean; standalone: boolean }) {
   const client = useHostClient();
   const editor = useEditorActions(getOfficeState, editorState, recoveryState, readOnly);
   const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
@@ -88,6 +92,7 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
     editor.acknowledgeSave,
     editor.layoutError,
     readOnly,
+    standalone,
   );
   const isDebugMode = settings.debugEnabled;
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
@@ -174,7 +179,7 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
         }}
       >
         Loading office...
-        <LayoutConflict protection={editor.protection} onResolve={editor.resolveLayout} />
+        <LayoutConflict standalone={standalone} protection={editor.protection} onResolve={editor.resolveLayout} />
       </div>
     );
   }
@@ -328,10 +333,11 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
           {sourceStatus.error}
         </p>
       )}
-      <LayoutConflict protection={editor.protection} onResolve={editor.resolveLayout} />
+      <LayoutConflict standalone={standalone} protection={editor.protection} onResolve={editor.resolveLayout} />
       <AssetWarnings status={assetStatus} furniture={getOfficeState().layout.furniture} />
 
       <BottomToolbar
+        nativeUnavailable={standalone}
         onOpenSettings={() => setShowSettings(true)}
         readOnly={readOnly}
         isEditMode={editor.isEditMode}
@@ -355,7 +361,7 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
         onToggle={handleToggleTelemetry}
         onClear={handleClearTelemetry}
       />
-      {showSettings && !readOnly && <SettingsModal onClose={() => setShowSettings(false)} isDebugMode={isDebugMode}
+      {showSettings && !readOnly && <SettingsModal standalone={standalone} onClose={() => setShowSettings(false)} isDebugMode={isDebugMode}
         onToggleDebugMode={() => updateSetting('debugEnabled', !isDebugMode)}
         settings={settings} sourceStatus={sourceStatus} assetStatus={assetStatus}
         onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
@@ -381,7 +387,7 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
         detail={agentDetail && getOfficeState().characters.has(agentDetail.id) ? agentDetail : null}
         position={cardPosition}
         onClose={handleCloseCard}
-        onViewCharter={readOnly ? undefined : handleViewCharter}
+        onViewCharter={readOnly || standalone ? undefined : handleViewCharter}
       />
 
       <SquadInfoCard

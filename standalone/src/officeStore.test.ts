@@ -11,6 +11,7 @@ vi.mock('node:fs', async importOriginal => {
     ...actual,
     writeFileSync: vi.fn(actual.writeFileSync),
     renameSync: vi.fn(actual.renameSync),
+    lstatSync: vi.fn(actual.lstatSync),
   };
 });
 
@@ -242,5 +243,30 @@ describe('guarded selected-project office persistence', () => {
     expect(() => store.saveLayout({ ...layout, pets: [] }, initial.revision, authorized)).toThrow();
     expect(fs.readFileSync(`${file}.lock`, 'utf8')).toBe('other writer');
     expect(fs.readFileSync(file, 'utf8')).toBe(JSON.stringify(layout, null, 2));
+  });
+
+  it('does not clean up through a changed directory identity; retained original lock/staged bytes are explicit', () => {
+    const { store, root, outer, file } = fixture();
+    const initial = store.saveLayout(layout, null, authorized);
+    const outside = path.join(outer, 'outside marker');
+    fs.writeFileSync(outside, 'must not change');
+    const originalLstat = vi.mocked(fs.lstatSync).getMockImplementation()!;
+    let checks = 0;
+    expect(() => store.saveLayout({ ...layout, pets: [] }, initial.revision, () => {
+      if (++checks !== 3) return;
+      // Windows prevents renaming a directory containing the open lock. Inject
+      // the changed identity to exercise the cleanup guard on every platform.
+      vi.mocked(fs.lstatSync).mockImplementation((...args: Parameters<typeof fs.lstatSync>) => {
+        const stat = originalLstat(...args);
+        if (stat && String(args[0]) === path.join(root, '.squad-pod') && typeof stat.ino === 'bigint') {
+          return Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { ino: stat.ino + 1n }) as typeof stat;
+        }
+        return stat;
+      });
+    })).toThrow('lock and staged bytes were retained');
+    expect(fs.readFileSync(file, 'utf8')).toBe(JSON.stringify(layout, null, 2));
+    expect(fs.readFileSync(outside, 'utf8')).toBe('must not change');
+    expect(fs.readdirSync(path.join(root, '.squad-pod')).filter(name => name.endsWith('.tmp'))).toHaveLength(1);
+    expect(fs.existsSync(`${file}.lock`)).toBe(true);
   });
 });

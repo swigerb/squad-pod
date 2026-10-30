@@ -26,7 +26,7 @@ Open the printed `http://127.0.0.1:PORT` address manually. Paste the separate
 runtime credential from the console into the password form. Do not put it in a
 URL, take a screenshot of that console, or send it in diagnostics.
 
-Type `rotate` in the CLI console to revoke both channels and print new credentials;
+Type `rotate` in the CLI console to revoke all channels and print new credentials;
 use **Authenticate again** in the browser. Type `quit`, press Ctrl+C, or send
 SIGTERM to dispose the server. Restarting also revokes credentials and cookies.
 Shutdown also closes owned terminals; merely disconnecting a viewer does not.
@@ -42,6 +42,59 @@ npm install "C:\owned output\squad-pod-observer-0.1.0.tgz"
 node node_modules\squad-pod-observer\dist\cli.mjs "C:\absolute\selected project" --port 0
 ```
 
+## Optional selected-project office control
+
+```powershell
+node standalone\dist\cli.mjs "C:\absolute\selected project" --port 0 --office-control
+```
+
+The default form still connects a **read-only viewer**. Explicitly select
+**Use separate office-control authority** and paste the additional office-control
+credential. `POST /control-auth` and `/control` use a third independent runtime
+credential/cookie; observation and terminal credentials never grant office writes.
+`--office-control` can be used without terminals or combined with `--terminals`.
+Rotation/restart revokes all channels. Reconnect requests snapshots only, never
+replays a save. Export unsaved copies before restarting the server.
+
+The existing desktop editor supports floors, carpets, furniture colors/states,
+pets, Areas, undo/redo and manual save. Seat changes and sound/debug/Areas settings
+persist only for the selected project; settings display committed acknowledgements.
+Browser **Import Layout** deliberately selects bounded JSON and creates a draft;
+**Save Layout** is still required. **Export Layout** downloads the current validated
+draft. Recovery copies can also be exported from the conflict panel. These are
+browser file selection/download actions, not native-file or shell bridges.
+
+Layout stays in canonical `.squad-pod/layout.json`; standalone settings and member
+appearance/seat history use `.squad-pod/office-preferences.json`. A removed member's
+unchanged saved identity remains retained for its return, but cannot authorize new
+seat writes. The existing `.squad` directory wins over `.ai-team`, even if its roster
+is missing. Cooperating writers use exclusive locks, exact-byte revision hashes,
+staged/fsynced writes and atomic rename, with prior versions under
+`.squad-pod/recovery/`. Stale viewers/external edits conflict rather than overwrite;
+invalid saved files must be recovered explicitly. Failed saves remain visible with
+the local draft retained. Do not edit the files concurrently with noncooperating
+programs during a commit: portable Node checks are not an adversarial filesystem sandbox.
+If a parent directory identity changes during a save, cleanup deliberately does not
+follow the replacement: the lock/staged bytes remain in the original directory for
+manual recovery, with no successful acknowledgement.
+
+Browser draft storage is bounded to 8 MiB and scoped to project **and server instance**,
+contains no runtime credentials and is not a durable backup. Reload within that
+instance can recover conflicts/unsaved drafts; another server instance never
+automatically applies old recovery data. Storage denial/quota errors remain visible;
+export copies before clearing browser data or switching instances.
+Unacknowledged setting/seat attempts have a separate bounded preference draft in
+the same project/server scope. Inspect/export it or retry deliberately after
+reconciling current assignments; reconnect/reload never resends it automatically.
+Disconnected/not-ready attempts are retained before sending. With an unresolved
+preference draft, a different attempt is explicitly rejected and the displayed
+settings/seats reconciled to authoritative state, without replacing the draft.
+Export and deliberately discard it to make a different change; discarding is blocked
+while a save is awaiting acknowledgement.
+Native dialogs/charters, cross-project directories, external asset registration and
+private-home/live-log consent stay explicitly unavailable. VS Code recovery and
+settings remain unchanged. Narrow screenshots do not claim touch-editor parity.
+
 ## Optional owned terminals
 
 ```powershell
@@ -50,9 +103,9 @@ node standalone\dist\cli.mjs "C:\absolute\selected project" --port 0 --terminals
 
 Authorize the office and terminal forms with their **different console credentials**.
 Terminal authentication is `POST /terminal-auth`; its independent HttpOnly cookie
-authorizes `/terminal`, never `/office`. Office authentication remains `POST /auth`.
-Both channels require exact Host/Origin checks. Rotation invalidates both cookies,
-detaches viewers synchronously and cancels launches still waiting for the native
+authorizes `/terminal`, never office observation/control. Office viewing remains
+`POST /auth`. All channels require exact Host/Origin checks. Rotation invalidates all
+cookies, detaches viewers synchronously and cancels launches still waiting for the native
 broker; it does not terminate an already-owned process. Reauthenticate after rotation.
 Credentials stay runtime-only, never in URLs, files or browser storage.
 
@@ -158,10 +211,10 @@ File aliases use the native roster resolver, including ambiguity rejection.
 Built-in appearances are deterministically scoped to member identity, not roster
 order, so existing and reconnecting viewers agree without writing metadata.
 
-Layout/editor/appearance/seat changes, settings, asset registration, directory
-management, native file dialogs and charter opening are disabled. Pan, zoom,
-agent details, and recorded-usage inspection remain available. No draft recovery
-is persisted by the standalone adapter. VS Code draft/recovery behavior is unchanged.
+Read-only viewers cannot change layouts/appearance/seats or settings and do not
+persist drafts. Pan, zoom, agent details and recorded usage remain available.
+Separately authorized office control adds the selected-project slice described above;
+asset registration, directory management, native dialogs and charter opening remain unavailable.
 
 ## Security and limits
 
@@ -181,11 +234,14 @@ is persisted by the standalone adapter. VS Code draft/recovery behavior is uncha
   account; another process running as the same user is not an isolated trust boundary.
   There is no tokenless mode, remote auth, TLS or firewall configuration.
 - Direction-specific network allowlists reject unsupported versions/kinds/fields.
-  Only readiness, settings reads and bounded agent-detail reads are accepted;
+  On `/office`, only readiness, settings reads and bounded agent-detail reads are accepted;
   forged layout, seat, settings, directory, asset and terminal commands on the
   office channel are rejected server-side before dispatch. Invalid server event/layout/numeric
-  shapes are rejected by the browser adapter.
-- At most 8 TCP connections, 4 KiB inbound frames/auth bodies/headers, 8 MiB
+  shapes are rejected by the browser adapter. Opted-in `/control` additionally accepts
+  revision-protected layout/seat writes and sound/debug/Areas toggles, not arbitrary
+  settings, paths, native actions or terminal commands.
+- At most 8 TCP connections, 4 KiB observer frames/auth bodies/headers, 2 MiB + 8 KiB
+  control frames (layout data 2 MiB; preferences 128 KiB), 8 MiB
   outbound office frames, 16 MiB queued bytes per viewer, 32 commands/second,
   5-second reads and 10-second sends. Ping/pong detects dead viewers.
   The built-in asset event measures 483,977 bytes (about 473 KiB) and the initial
@@ -209,6 +265,7 @@ npm run check --prefix standalone
 npm test --prefix standalone
 npm run build --prefix standalone
 node standalone\scripts\acceptance.mjs
+npm run acceptance:office --prefix standalone
 npm run acceptance:terminals --prefix standalone
 npm run verify
 npm run package
@@ -225,6 +282,15 @@ writes desktop/narrow screenshots to `OBSERVER_ARTIFACTS`. A saved-project Floor
 probe checks exact installed source-sheet canvas pixels and legacy VOID8 transparency.
 `EDGE_PATH` optionally
 selects an installed Edge executable; it installs no browsers.
+
+The office-control helper requires `PLAYWRIGHT_MODULE` and uses the same optional
+`EDGE_PATH`. It installs the tarball offline, starts only the opted-in office host
+with an empty synthetic home, and drives the real editor, save/reload, conflict
+recovery/export, storage-failure retry, settings, import/export and reconnect.
+`OFFICE_ARTIFACTS` receives the credential-free desktop/narrow screenshots and
+structured results. It checks actual project bytes, unchanged installed bytes,
+unchanged roster and no synthetic-home writes. All fixture hosts/browser contexts
+are closed and their owned fixture directories removed.
 
 The terminal acceptance helper installs the actual tarball and official dependencies
 using the configured feed, loads a real native PTY and executes only the packaged

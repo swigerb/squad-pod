@@ -95,6 +95,7 @@ export function useExtensionMessages(
   onLayoutSaved?: (layout: OfficeLayout, revision: string | null) => void,
   onLayoutError?: (error: string, source?: 'watcher') => void,
   readOnly = false,
+  standalone = false,
 ): ExtensionMessageState {
   const client = useHostClient();
   const [observedTasks, setObservedTasks] = useState<ObservedTaskSnapshot | null>(null);
@@ -133,12 +134,14 @@ export function useExtensionMessages(
 
   const clearTelemetry = useCallback(() => setTelemetryEvents([]), []);
   const updateSetting = useCallback((setting: keyof PodSettings, enabled: boolean) => {
-    setSettings((prev) => ({ ...prev, [setting]: enabled }));
-    if (setting === 'soundEnabled' && soundSettingsLoadedRef.current) setSoundEnabled(enabled);
+    if (!standalone) {
+      setSettings((prev) => ({ ...prev, [setting]: enabled }));
+      if (setting === 'soundEnabled' && soundSettingsLoadedRef.current) setSoundEnabled(enabled);
+    }
     const type = setting === 'soundEnabled' ? 'setSoundEnabled'
       : setting === 'debugEnabled' ? 'setDebugEnabled' : 'setShowAreas';
     client.send({ type, enabled });
-  }, [client]);
+  }, [client, standalone]);
 
   useEffect(() => {
     const rejectLegacySprites = (type: string) => {
@@ -172,7 +175,7 @@ export function useExtensionMessages(
           }
         }
         const seats = officeState.getSeatAssignments();
-        if (!readOnly && snapshot.some((a) => (a.seatId ?? undefined) !== seats[a.id])) {
+        if (!readOnly && !standalone && snapshot.some((a) => (a.seatId ?? undefined) !== seats[a.id])) {
           client.send({ type: 'saveAgentSeats', seats });
         }
         const ids = snapshot.map((a) => a.id);
@@ -583,7 +586,7 @@ export function useExtensionMessages(
 
     return unsubscribe;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly]);
+  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly, standalone]);
 
   return {
     observedTasks,

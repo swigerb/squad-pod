@@ -1,22 +1,18 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import type { LayoutData, PersistedAgentMeta, PodSettings } from '../../src/types.js';
+import type { LayoutData } from '../../src/types.js';
 import { isValidLayout } from '../../src/layoutValidation.js';
 import { parseLayoutJson } from '../../src/layoutPersistence.js';
 import { ProjectFiles } from './projectFiles.js';
+import { validPreferences, type OfficePreferences } from './officePreferences.js';
+export type { OfficePreferences } from './officePreferences.js';
 
 export const MAX_OFFICE_BYTES = 2 * 1024 * 1024;
 const MAX_PREFERENCES_BYTES = 128 * 1024;
 const DIRECTORY = '.squad-pod';
 const LAYOUT = path.join(DIRECTORY, 'layout.json');
 const PREFERENCES = path.join(DIRECTORY, 'office-preferences.json');
-
-export interface OfficePreferences {
-  version: 1;
-  settings: PodSettings;
-  agents: PersistedAgentMeta;
-}
 
 export interface OfficeSnapshot<T> {
   value: T | null;
@@ -30,29 +26,6 @@ export type OfficeSave<T> = OfficeSnapshot<T> & { saved: boolean };
  * not just to the server's current opt-in flag or terminal authorization.
  */
 export type AssertOfficeAuthority = () => void;
-
-function record(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-function exactKeys(value: Record<string, unknown>, keys: string[]): boolean {
-  return Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
-}
-
-function validPreferences(value: unknown): value is OfficePreferences {
-  if (!record(value) || !exactKeys(value, ['version', 'settings', 'agents']) || value.version !== 1
-    || !record(value.settings) || !exactKeys(value.settings, ['soundEnabled', 'debugEnabled', 'showAreas'])
-    || !Object.values(value.settings).every(setting => typeof setting === 'boolean')
-    || !record(value.agents) || Object.keys(value.agents).length > 128) return false;
-  return Object.entries(value.agents).every(([id, meta]) =>
-    /^[a-zA-Z0-9_-]{1,128}$/.test(id) && record(meta)
-    && Object.keys(meta).every(key => key === 'palette' || key === 'seatId')
-    && (meta.palette === undefined || (Number.isSafeInteger(meta.palette)
-      && typeof meta.palette === 'number' && meta.palette >= 0 && meta.palette <= 4095))
-    && (meta.seatId === undefined || (typeof meta.seatId === 'string'
-      && meta.seatId.length > 0 && meta.seatId.length <= 256
-      && !/[\u0000-\u001f\u007f]/.test(meta.seatId))));
-}
 
 function revision(content: string | null): string | null {
   return content === null ? null : createHash('sha256').update(content).digest('hex');
@@ -107,7 +80,9 @@ export class OfficeStore {
     const content = this.serialize(input, MAX_PREFERENCES_BYTES);
     const candidate: unknown = JSON.parse(content);
     if (!validPreferences(candidate)) throw new Error('Invalid or unsupported office preferences.');
-    if (Object.keys(candidate.agents).some(id => !agentIds.has(id))) {
+    const retained = this.readPreferences().value?.agents ?? {};
+    if (Object.entries(candidate.agents).some(([id, meta]) => !agentIds.has(id)
+      && (!Object.hasOwn(retained, id) || retained[id].palette !== meta.palette || retained[id].seatId !== meta.seatId))) {
       throw new Error('Office preferences contain an unknown selected-project agent.');
     }
     return this.commit(PREFERENCES, content, expectedRevision, MAX_PREFERENCES_BYTES, assertAuthority,
@@ -214,7 +189,10 @@ export class OfficeStore {
     } finally {
       fs.closeSync(lock);
       // Do not follow a replaced parent directory even during cleanup.
-      assertDirectory();
+      try { assertDirectory(); }
+      catch {
+        throw new Error('Office storage identity changed; lock and staged bytes were retained in the original directory for manual recovery.');
+      }
       if (staged) fs.unlinkSync(temporary);
       fs.unlinkSync(lockPath);
     }

@@ -4,14 +4,16 @@ import { createInterface } from 'node:readline';
 import { createObserver } from './observer.js';
 import { startTransport } from './transport.js';
 import { OwnedRuns } from './ownedRuns.js';
+import { createOfficeControl } from './officeControl.js';
 
 async function main() {
   const raw = process.argv.slice(2);
   const enabled = raw.includes('--terminals') || raw.includes('--fixture');
   const fixture = raw.includes('--fixture');
-  const args = raw.filter(arg => arg !== '--terminals' && arg !== '--fixture');
+  const control = raw.includes('--office-control');
+  const args = raw.filter(arg => arg !== '--terminals' && arg !== '--fixture' && arg !== '--office-control');
   if (args.length < 1 || args.length > 3 || (args.length > 1 && args[1] !== '--port')) {
-    throw new Error('Usage: squad-pod-observer <absolute-project-path> [--port <0..65535>] [--terminals | --fixture]');
+    throw new Error('Usage: squad-pod-observer <absolute-project-path> [--port <0..65535>] [--terminals | --fixture] [--office-control]');
   }
   const port = args.length === 1 ? 3210 : Number(args[2]);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Port must be an integer from 0 to 65535.');
@@ -25,6 +27,7 @@ async function main() {
       port, staticRoot: path.join(packageRoot, 'dist', 'browser'),
       snapshot: observer.snapshot, subscribe: observer.subscribe, onRead: observer.onRead,
       terminals,
+      officeControl: control ? createOfficeControl(args[0]) : undefined,
     });
   } catch (error) { observer.dispose(); throw error; }
   // Credentials are never written to disk, URLs, access logs, or automatic diagnostics.
@@ -34,7 +37,11 @@ async function main() {
   console.log('Terminal authority credential (separate from office viewing):');
   console.log(server.terminalToken);
   console.log(terminals.reason ?? (fixture ? 'Synthetic fixture terminals enabled; no Copilot/Squad is executed.' : 'Owned terminals enabled: copilot --agent squad (normal permissions).'));
-  console.log('Office stays read-only. Type rotate to revoke both channels; quit to stop and clean up owned runs.');
+  if (server.controlToken) {
+    console.log('Office control authority credential (separate from observation and terminals):');
+    console.log(server.controlToken);
+  }
+  console.log('Office is read-only unless separately authenticated for opted-in control. Type rotate to revoke all channels; quit to stop and clean up owned runs.');
   const input = createInterface({ input: process.stdin });
   let stopping = false;
   async function stop() {
@@ -54,6 +61,10 @@ async function main() {
       console.log(server.rotate());
       console.log('New terminal authority credential:');
       console.log(server.terminalToken);
+      if (server.controlToken) {
+        console.log('New office control authority credential:');
+        console.log(server.controlToken);
+      }
     } else if (line.trim() === 'quit') void stop();
   });
   process.on('SIGINT', stop);

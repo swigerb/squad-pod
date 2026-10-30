@@ -2,9 +2,10 @@ import { useState } from 'react';
 import type { LayoutDraft } from '../office/editor/layoutDraft.js';
 import { useHostClient } from '../HostClientContext.js';
 
-export function LayoutConflict({ protection, onResolve }: {
+export function LayoutConflict({ protection, onResolve, standalone = false }: {
   protection: LayoutDraft;
   onResolve: (id: number, choice: 'local' | 'incoming') => void;
+  standalone?: boolean;
 }) {
   const client = useHostClient();
   const [confirmId, setConfirmId] = useState<number | null>(null);
@@ -19,7 +20,9 @@ export function LayoutConflict({ protection, onResolve }: {
     <strong>{pending.length ? `Layout conflict: ${pending.length} pending snapshot(s)` : 'Layout recovery copies'}</strong>
     <p>Both versions are retained. Keep editing locally, or explicitly use an incoming snapshot.
       Save is blocked until every pending snapshot is resolved. Imported layouts need Save to reach disk.</p>
-    <p>Recovery uses this VS Code panel&apos;s state, not a durable backup. Export copies before closing the panel or changing workspace.</p>
+    <p>{standalone
+      ? 'Recovery uses browser storage scoped to this project and server instance, not a durable backup. Export copies before clearing browser data or restarting the server.'
+      : 'Recovery uses this VS Code panel\'s state, not a durable backup. Export copies before closing the panel or changing workspace.'}</p>
     {error && <p role="alert">{error}</p>}
     {protection.invalidRecovery && <details><summary>Inspect original recovery state (copy before reopening)</summary>
       <pre>{JSON.stringify(protection.recoveryInput, null, 2)}</pre>
