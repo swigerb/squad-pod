@@ -183,7 +183,8 @@ The standalone snapshot clock drives the adapter without an additional timer.
 Live lifecycle takes precedence over file hints, clears tools/context on completion
 or source loss, and expires after five minutes without new bytes; reconnect replays
 only current in-flight state. The browser's strict server-event allowlist includes
-projected tools, context, bounded transient tasks and status-only live telemetry,
+projected tools, context, bounded transient task/instance/selected-agent identities,
+emitted runtime models with source timestamps, and status-only live telemetry,
 not raw records/prompts/outputs. When a roster snapshot resets renderer tools, the
 observer replays current live displays after it. Read-only diagnostics report the
 actual off/searching/following/error source state, not an assumed unavailable state.

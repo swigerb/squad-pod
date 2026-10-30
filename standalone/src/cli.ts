@@ -22,7 +22,7 @@ async function main() {
   const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   if (liveActivity) {
     console.log(`Live activity opted in: bounded session-state directory metadata and workspace.yaml cwd reads under ${resolveCopilotHome()}; events.jsonl head/tail checks only for exact selected-project candidates, then follows one matching Squad session.`);
-    console.log('Displays whitelisted task/tool/context fields only, never prompts or outputs. With --terminals, new owned launches use a server-generated --session-id UUID when child/observer homes match; otherwise exact observation is unavailable. With no active owned run, selects the newest matching-project Squad session (not an owned-terminal correlation).');
+    console.log('Displays whitelisted task/tool/context fields and emitted runtime model/source timestamps only, never prompts or outputs. With --terminals, new owned launches use a server-generated --session-id UUID when child/observer homes match; otherwise exact observation is unavailable. With no active owned run, selects the newest matching-project Squad session (not an owned-terminal correlation).');
   }
   const terminals = new OwnedRuns({ project: args[0], enabled,
     fixture: fixture ? path.join(packageRoot, 'dist', 'fixture.mjs') : undefined, liveActivity });

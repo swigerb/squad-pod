@@ -129,17 +129,21 @@ oversized data can be omitted. This is best-effort reading of an undocumented
 format, not a supported event producer or a hostile-filesystem sandbox.
 
 Only projected task names/types/modes/short descriptions, tool names, file basenames,
-shell executable names, explicit call/parent IDs and context counts reach the office.
+shell executable names, explicit call/parent/instance IDs, selected-agent identity,
+context counts and emitted runtime model/source timestamps reach the office.
 Prompts, command arguments/scripts, outputs and credentials are never displayed or
 retained by the observer. Exact visible roster slugs on general-purpose task calls
-can animate members; other task calls remain in the bounded transient inventory.
+can animate members, as can an authoritative custom-agent selection joined through
+the explicit instance ID. Other task calls stay unattributed; eligible child calls
+can render temporary characters without roster promotion. Runtime models come only
+from supported emitted fields, not launch flags, task hints or configured metadata.
 Live tasks override file hints until completion, source loss or five minutes without
 new bytes. Ending a live run clears tools/context and does not resurrect ignored
 file hints. New file changes can supply hints again. Discovery is every five
 seconds; polling is every second while viewers are connected. All viewers leaving
 stops reads and clears in-memory live state; reconnect restores only current
-in-flight calls, not completed history. Source status, tools, context gauges and
-transient tasks are visible to observation-only viewers without browser consent controls.
+in-flight calls, not completed history. Source status, tools, context gauges,
+runtime models and transient tasks are visible to observation-only viewers without browser consent controls.
 Restart without the flag to turn live reads off.
 
 `--live-activity` grants **no** launch, attach, input, termination, settings or

@@ -50,7 +50,9 @@ async function digest(folder) {
   }
   return hash(JSON.stringify(entries));
 }
-const line = (type, data, agentId) => JSON.stringify({ type, data, ...(agentId ? { agentId } : {}) }) + '\n';
+const line = (type, data, agentId) => JSON.stringify({
+  type, timestamp: new Date().toISOString(), data, ...(agentId ? { agentId } : {}),
+}) + '\n';
 const marker = line('subagent.selected', { agentName: 'Squad' });
 const running = line('tool.execution_start', { toolCallId: 'fixture-run', toolName: 'task',
   arguments: { name: 'ada', agent_type: 'general-purpose', mode: 'background', description: 'Fixture live task', prompt: secret } })
@@ -61,7 +63,7 @@ const transient = line('tool.execution_start', { toolCallId: 'fixture-child', pa
   + line('subagent.started', { toolCallId: 'fixture-child' }, 'fixture-instance');
 const tool = id => line('tool.execution_start', { toolCallId: id, parentToolCallId: 'fixture-run', toolName: 'view',
   arguments: { path: `/private/${secret}/fixture.ts` } });
-const done = id => line('tool.execution_complete', { toolCallId: id, output: secret,
+const done = id => line('tool.execution_complete', { toolCallId: id, output: secret, model: 'fixture-member-model',
   toolTelemetry: { metrics: { context_current_tokens: 800, context_token_limit: 1000 } } });
 async function session(id, cwd, content, age = 0) {
   const directory = path.join(home, 'session-state', id);
@@ -186,15 +188,37 @@ try {
   await tab.getByText('Activity source diagnostics', { exact: true }).click();
   await until(() => tab.evaluate(() => document.body.textContent.includes('Live CLI observer: following')), 'browser live diagnostics');
   assert.equal(await tab.locator('#squad-pod-live-activity').count(), 0);
+  await tab.getByRole('button', { name: 'Squad Info', exact: true }).click();
+  await until(() => tab.evaluate(() => document.body.textContent.includes('runtime has not emitted')), 'following source without a model is described accurately');
+  await tab.getByRole('button', { name: 'Close Squad Info' }).click();
   for (const label of ['Edit Layout', 'Directories', 'Settings']) {
     assert.equal(await tab.getByRole('button', { name: label, exact: true }).isDisabled(), true);
   }
-  await fs.appendFile(file, running + transient + tool('read-one'));
+  await fs.appendFile(file, line('session.start', { selectedModel: 'fixture-session-model' })
+    + running + transient + tool('read-one'));
   await until(() => tab.evaluate(() => document.querySelector('[data-agent-tools="ada"]')?.textContent.includes('Reading fixture.ts')), 'live tool rendered');
   await fs.appendFile(file, done('read-one') + tool('read-two'));
   await until(() => tab.evaluate(() => document.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow') === '80'), 'live context rendered');
   await until(() => tab.evaluate(() => document.querySelector('[data-observed-task="fixture-run"]')?.textContent.includes('running')), 'bounded transient task rendered');
   await until(() => tab.evaluate(() => document.querySelector('[data-subagent-label]')?.textContent.includes('Fixture child')), 'temporary child character label');
+  await until(() => browserMessages.some(message => message.type === 'liveModels'
+    && message.snapshot.session?.model === 'fixture-session-model'
+    && message.snapshot.session.source === 'session.start.selectedModel'
+    && message.snapshot.members.ada?.model === 'fixture-member-model'
+    && message.snapshot.members.ada.source === 'tool.execution_complete.model'
+    && Number.isFinite(Date.parse(message.snapshot.members.ada.timestamp))), 'emitted session/member model source and timestamps forwarded');
+  await tab.getByRole('button', { name: 'Squad Info', exact: true }).click();
+  await tab.getByRole('button', { name: 'Show details for Ada' }).click();
+  await until(() => tab.evaluate(() => document.body.textContent.includes('fixture-session-model')
+    && document.body.textContent.includes('session.start.selectedModel')
+    && document.body.textContent.includes('fixture-member-model')
+    && document.body.textContent.includes('tool.execution_complete.model')), 'emitted session/member model displayed');
+  if (artifacts) {
+    await fs.mkdir(artifacts, { recursive: true });
+    await tab.screenshot({ path: path.join(artifacts, 'standalone-live-runtime-models.png') });
+    report.screenshots.push('standalone-live-runtime-models.png');
+  }
+  await tab.getByRole('button', { name: 'Close Squad Info' }).click();
   assert.ok(browserMessages.some(message => message.type === 'observedTasks' && message.snapshot.tasks.some(task =>
     task.toolCallId === 'fixture-child' && task.instanceId === 'fixture-instance' && task.selectedAgentName === 'TestBot')));
   assert.ok(browserMessages.filter(message => message.type === 'existingAgents')
