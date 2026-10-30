@@ -85,6 +85,24 @@ describe('read-only selected-project observer', () => {
     expect(() => observer.subscribe(() => {})).toThrow('disposed');
   });
 
+  it('serves bounded detail reads with an explicit read-only charter limitation', async () => {
+    const root = fixture();
+    const observer = createObserver(root, packageRoot);
+    try {
+      await observer.snapshot();
+      const messages = await observer.onRead({ type: 'requestAgentDetail', agentId: 'test-agent-1' });
+      expect(messages).toEqual([expect.objectContaining({
+        type: 'agentDetailLoaded',
+        detail: expect.objectContaining({
+          id: 'test-agent-1', workspaceRoot: root, charterStatus: 'unavailable',
+          charterContent: null, expertise: null, responsibilities: null, boundaries: null,
+        }),
+      })]);
+      expect(() => decodeEvent(JSON.stringify({ version: 1, kind: 'office', message: messages[0] }))).not.toThrow();
+      await expect(observer.onRead({ type: 'requestAgentDetail', agentId: 'removed-agent' })).rejects.toThrow('Unknown observed agent.');
+    } finally { observer.dispose(); }
+  });
+
   it('explains missing/malformed sources, rejects escapes and enforces bounded reads', async () => {
     const root = fixture();
     fs.writeFileSync(path.join(root, '.squad-pod', 'layout.json'), '{"cols":null}');

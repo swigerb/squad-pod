@@ -1,5 +1,5 @@
 import './index.css';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { OfficeState } from './office/engine/officeState.js';
 import { OfficeCanvas } from './office/components/OfficeCanvas.js';
 import { ToolOverlay } from './office/components/ToolOverlay.js';
@@ -81,7 +81,7 @@ function ConnectedApp({ readOnly }: { readOnly: boolean }) {
 function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; readOnly: boolean }) {
   const client = useHostClient();
   const editor = useEditorActions(getOfficeState, editorState, recoveryState, readOnly);
-  const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
+  const { observedTasks, recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, agentDetails, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
     editor.acknowledgeSave,
@@ -92,6 +92,7 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
   const [telemetrySeenCount, setTelemetrySeenCount] = useState(0);
   const [isDirectoryModalOpen, setIsDirectoryModalOpen] = useState(false);
+  const [isSquadInfoOpen, setIsSquadInfoOpen] = useState(false);
   const [cardPosition, setCardPosition] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -126,12 +127,43 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
   }, [setAgentDetail]);
 
   const handleOpenSquadInfo = useCallback(() => {
+    setIsSquadInfoOpen(true);
+    if (readOnly) return;
+    setSquadInfo(null);
     client.send({ type: 'openSquadInfo' });
-  }, [client]);
+  }, [client, readOnly, setSquadInfo]);
 
   const handleCloseSquadInfo = useCallback(() => {
+    setIsSquadInfoOpen(false);
     setSquadInfo(null);
   }, [setSquadInfo]);
+
+  const readOnlySquadInfo = useMemo(() => {
+    if (!readOnly) return null;
+    const characters = getOfficeState().characters;
+    const members = agents.flatMap((id) => {
+      const character = characters.get(id);
+      if (!character) return [];
+      const status = agentStatuses[id] ?? 'unknown';
+      return [{
+        id, name: character.name, role: character.role, status,
+        isActive: status === 'active', currentTask: null,
+      }];
+    });
+    return {
+      teamName: null, description: null, workspaceRoot: sourceStatus?.workspaceRoot ?? null,
+      members, hiddenMembers: [], projectContext: null, totalAgents: members.length,
+      activeAgents: members.filter((member) => member.isActive).length,
+    };
+  }, [agentStatuses, agents, readOnly, sourceStatus?.workspaceRoot]);
+
+  const visibleSquadInfo = isSquadInfoOpen ? (readOnly ? readOnlySquadInfo : squadInfo) : null;
+  const handleRequestSquadDetail = useCallback((agentId: string) => {
+    const member = visibleSquadInfo?.members.find((candidate) => candidate.id === agentId);
+    if (member && agents.includes(agentId) && visibleSquadInfo?.workspaceRoot === sourceStatus?.workspaceRoot) {
+      client.send({ type: 'requestAgentDetail', agentId });
+    }
+  }, [agents, client, sourceStatus?.workspaceRoot, visibleSquadInfo]);
 
   const handleViewCharter = useCallback((agentId: string) => {
     client.send({ type: 'openSquadAgent', agentId });
@@ -382,7 +414,11 @@ function ConnectedOffice({ recoveryState, readOnly }: { recoveryState: unknown; 
       />
 
       <SquadInfoCard
-        info={squadInfo}
+        info={visibleSquadInfo}
+        agentDetails={agentDetails}
+        availableAgentIds={agents}
+        onRequestAgentDetail={handleRequestSquadDetail}
+        onOpenCharter={readOnly ? undefined : handleViewCharter}
         onClose={handleCloseSquadInfo}
       />
       {isDirectoryModalOpen && (

@@ -102,11 +102,15 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       seatId: null, status: 'idle', currentTask: null,
     }] });
     await nextFrame();
-    for (const label of ['Edit Layout', 'Settings', 'Directories', 'Squad Info']) {
+    for (const label of ['Edit Layout', 'Settings', 'Directories']) {
       const button = [...host.querySelectorAll('button')].find(button => button.textContent === label);
       expect(button?.disabled).toBe(true);
       act(() => button?.click());
     }
+    const squadInfo = [...host.querySelectorAll('button')].find(button => button.textContent === 'Squad Info');
+    expect(squadInfo?.disabled).toBe(false);
+    act(() => squadInfo?.click());
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('TestBot');
     expect(host.querySelector('[data-edit-mode="true"]')).toBeNull();
     expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
     expect(client.setState).not.toHaveBeenCalled();

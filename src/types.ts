@@ -33,9 +33,15 @@ export interface AgentDetailInfo {
   id: string;
   name: string;
   role: string;
+  workspaceRoot: string;
   status: 'active' | 'idle' | 'waiting';
   currentTask: string | null;
   charterSummary: string | null;  // first 2-3 sentences from charter.md
+  charterContent: string | null;
+  charterStatus: 'available' | 'missing' | 'unreadable' | 'unavailable';
+  expertise: string | null;
+  responsibilities: string | null;
+  boundaries: string | null;
   recentActivity: string[];        // last 3-5 log entries mentioning this agent
   lastActiveAt: number;
 }
@@ -309,7 +315,9 @@ export interface ExistingAgentsMessage {
 export interface SquadInfoData {
   teamName: string | null;
   description: string | null;
+  workspaceRoot: string | null;
   members: Array<{
+    id: string;
     name: string;
     role: string;
     status: string;

@@ -147,8 +147,10 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
     const agent = latestAgents.find(a => a.id === message.agentId);
     if (!agent) throw new Error('Unknown observed agent.');
     return [{ type: 'agentDetailLoaded', detail: {
-      id: agent.id, name: agent.name, role: agent.role, status: agent.status,
+      id: agent.id, name: agent.name, role: agent.role, workspaceRoot: files.root, status: agent.status,
       currentTask: agent.currentTask, charterSummary: null, recentActivity: [],
+      charterContent: null, charterStatus: 'unavailable',
+      expertise: null, responsibilities: null, boundaries: null,
       lastActiveAt: 0,
     } }];
   }
