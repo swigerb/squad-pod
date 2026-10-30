@@ -51,6 +51,31 @@ html, body, #root {
   white-space: nowrap;
 }
 
+.cli-usage-action {
+  padding: 6px 9px;
+  border: 1px solid var(--vscode-button-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.cli-usage-action:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+
+.cli-usage-action:disabled {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-disabledForeground);
+  cursor: not-allowed;
+}
+
+.cli-usage-action:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
 /* Reserve a separate top strip without changing the canvas viewport or pan anchor. */
 .office-panel[data-edit-mode="true"] {
   --editor-toolbar-top: 64px;

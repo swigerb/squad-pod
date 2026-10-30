@@ -4,7 +4,7 @@ import * as path from 'path';
 import { createRequire } from 'module';
 import { buildSync } from 'esbuild';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { OutboundMessage } from './types.js';
+import type { OutboundMessage, WebviewMessage } from './types.js';
 
 const providerCode = buildSync({
   entryPoints: [path.resolve('src', 'SquadPodViewProvider.ts')],
@@ -22,7 +22,7 @@ interface MockView {
   webview: {
     cspSource: string;
     asWebviewUri: (value: { fsPath: string }) => string;
-    onDidReceiveMessage: (listener: (message: { type: 'webviewReady' }) => void) => typeof disposable;
+    onDidReceiveMessage: (listener: (message: WebviewMessage) => void) => typeof disposable;
     postMessage: (message: OutboundMessage) => Promise<boolean>;
   };
   onDidDispose: () => typeof disposable;
@@ -36,7 +36,10 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
   let root: string;
   let ledger: string;
   let provider: Provider;
-  let receive: (message: { type: 'webviewReady' }) => void;
+  let receive: (message: WebviewMessage) => void;
+  let selectedFile: string | undefined;
+  let approved: boolean;
+  let choose: ReturnType<typeof vi.fn>;
   let retarget: () => void;
   let messages: OutboundMessage[];
   const workspace: { workspaceFolders: Array<{ uri: { fsPath: string } }>; onDidChangeWorkspaceFolders?: unknown;
@@ -49,13 +52,16 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
 
   beforeEach(() => {
     vi.useFakeTimers();
-    root = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-recorded-provider-'));
+    root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-recorded-provider-')));
     ledger = path.join(root, '.squad', 'log', 'usage.jsonl');
     fs.mkdirSync(path.dirname(ledger), { recursive: true });
     fs.writeFileSync(path.join(root, '.squad', 'team.md'), team);
     workspace.workspaceFolders = [{ uri: { fsPath: root } }];
     workspace.onDidChangeWorkspaceFolders = (listener: () => void) => { retarget = listener; return disposable; };
     messages = [];
+    selectedFile = undefined;
+    approved = false;
+    choose = vi.fn(async () => selectedFile ? [{ fsPath: selectedFile }] : undefined);
     const storage = { get: (_key: string, fallback: unknown) => fallback, update: async () => {} };
     const vscode = {
       workspace,
@@ -63,7 +69,11 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
         file: (fsPath: string) => ({ fsPath }),
         joinPath: (base: { fsPath: string }, ...parts: string[]) => ({ fsPath: path.join(base.fsPath, ...parts) }),
       },
-      window: { createOutputChannel: () => ({ appendLine() {}, dispose() {} }) },
+      window: {
+        createOutputChannel: () => ({ appendLine() {}, dispose() {} }),
+        showOpenDialog: choose,
+        showWarningMessage: async () => approved ? 'Read selected export' : undefined,
+      },
     };
     const module: { exports: { SquadPodViewProvider?: new (context: unknown) => Provider } } = { exports: {} };
     const require = (specifier: string): unknown => specifier === 'vscode' ? vscode : nodeRequire(specifier);
@@ -129,5 +139,48 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
     const stopped = snapshots().length;
     vi.advanceTimersByTime(10_000);
     expect(snapshots()).toHaveLength(stopped);
+  });
+
+  it('imports only after explicit selection and consent, manually replaces snapshots and clears on retarget', async () => {
+    const cli = () => messages.filter((m): m is Extract<OutboundMessage, { type: 'cliUsage' }> => m.type === 'cliUsage').at(-1)?.snapshot;
+    const file = path.join(root, 'cli.json');
+    fs.copyFileSync(path.resolve('src', '__fixtures__', 'cli-usage-1.0.105.synthetic.json'), file);
+    selectedFile = file;
+    receive({ type: 'webviewReady' });
+    expect(cli()).toMatchObject({ state: 'unselected', report: null });
+    receive({ type: 'selectCliUsage' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(cli()?.report).toBeNull();
+    approved = true;
+    receive({ type: 'selectCliUsage' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(choose).toHaveBeenLastCalledWith(expect.objectContaining({ canSelectMany: false, filters: { 'CLI usage JSON': ['json'] } }));
+    expect(cli()).toMatchObject({ state: 'ready', report: { premiumRequests: 0.5 } });
+    const count = messages.filter(m => m.type === 'cliUsage').length;
+    vi.advanceTimersByTime(6000);
+    expect(messages.filter(m => m.type === 'cliUsage')).toHaveLength(count);
+    receive({ type: 'refreshCliUsage' });
+    expect(cli()?.report?.premiumRequests).toBe(0.5);
+    expect(snapshots().at(-1)?.snapshot.totals).toBeNull();
+    expect(messages.filter(m => ['agentStatus', 'agentToolStart', 'agentToolDone', 'telemetryEvent', 'agentCreated'].includes(m.type))).toEqual([]);
+    receive({ type: 'clearCliUsage' });
+    expect(cli()).toMatchObject({ state: 'unselected', report: null });
+    receive({ type: 'selectCliUsage' });
+    await vi.advanceTimersByTimeAsync(0);
+    workspace.workspaceFolders = [];
+    retarget();
+    expect(cli()).toMatchObject({ state: 'unselected', sourcePath: null, report: null });
+  });
+
+  it('ignores a pending file-selection result when workspace changes or selection is cleared', async () => {
+    let resolve: (value: Array<{ fsPath: string }>) => void = () => {};
+    choose.mockImplementation(() => new Promise(r => { resolve = r; }));
+    approved = true;
+    receive({ type: 'webviewReady' });
+    receive({ type: 'selectCliUsage' });
+    receive({ type: 'clearCliUsage' });
+    resolve([{ fsPath: path.join(root, 'nonexistent.json') }]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(messages.filter(m => m.type === 'cliUsage').at(-1)).toMatchObject({ snapshot: { state: 'unselected', report: null } });
   });
 });

@@ -318,6 +318,7 @@ describe('office WebSocket protocol', () => {
   it.each([
     'saveLayout', 'saveAgentSeats', 'exportLayout', 'importLayout', 'launchDirectory',
     'addDirectory', 'openSquadAgent', 'focusAgent', 'setLiveActivity', 'diagnosticReport', 'unknown',
+    'selectCliUsage', 'refreshCliUsage', 'clearCliUsage',
   ])('returns READ_ONLY for %s without forwarding or reflecting secrets', async type => {
     const { transport, onRead, snapshot } = await launch();
     const client = await office(transport, await cookie(transport));
