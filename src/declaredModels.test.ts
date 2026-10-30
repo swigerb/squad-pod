@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { syncBuiltinESMExports } from 'module';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MAX_MODEL_CONFIG_BYTES, parseModelConfig, readModelConfig } from './declaredModels.js';
+import { MAX_MODEL_CONFIG_BYTES, parseCharterModel, parseModelConfig, readModelConfig } from './declaredModels.js';
 
 const sourcePath = '.squad/config.json';
 const parse = (content: string, name = 'Ada') => parseModelConfig(content, name, sourcePath);
@@ -22,6 +22,19 @@ afterEach(() => {
 });
 
 describe('declared JSON model metadata', () => {
+  it('extracts only declared charter Model fields, not other sections or fenced examples', () => {
+    expect(parseCharterModel('# TestBot\n\n## Model\n- **Preferred:** auto\n- **Rationale:** Task dependent\n- **Fallback:** Declared chain\n## Work\n- **Preferred:** wrong', 'charter.md'))
+      .toMatchObject({ state: 'ready', values: [
+        { key: 'Preferred', value: 'auto' }, { key: 'Rationale', value: 'Task dependent' }, { key: 'Fallback', value: 'Declared chain' },
+      ] });
+    expect(parseCharterModel('```\n## Model\n- **Preferred:** fake\n```', 'charter.md').state).toBe('missing');
+    expect(parseCharterModel('## Model\n## Model', 'charter.md').state).toBe('ambiguous');
+    expect(parseCharterModel('## Model\n**Preferred:** one\n**Preferred:** two', 'charter.md').state).toBe('ambiguous');
+    expect(parseCharterModel('## Model\n**Preferred:** ', 'charter.md').state).toBe('malformed');
+    expect(parseCharterModel('## Model\n**Preferred:** explicit-model', 'charter.md'))
+      .toMatchObject({ state: 'ready', diagnostic: 'Not declared: Rationale, Fallback.', values: [{ key: 'Preferred', value: 'explicit-model' }] });
+  });
+
   it('keeps auto, conflicting preferences and exact key provenance separate without resolution', () => {
     expect(parse('{"defaultModel":"auto","agentModelOverrides":{"Ada":"explicit-model","ada":"other-model"}}')).toEqual({
       sourcePath, state: 'ready', diagnostic: expect.stringContaining('runtime selection is not known'),

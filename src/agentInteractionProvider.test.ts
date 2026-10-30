@@ -51,6 +51,10 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
         id: agent.id, name: agent.name, role: agent.role, workspaceRoot: fixture.workspaceRoot, status: 'idle',
         charterSummary: agent.summary, charterContent: expect.stringContaining(agent.summary),
         charterStatus: 'available', expertise: `${agent.name} expertise`, responsibilities: `- ${agent.name} responsibilities`,
+        modelSources: expect.arrayContaining([
+          expect.objectContaining({ sourcePath: path.join(fixture.workspaceRoot, '.squad', 'agents', agent.id, 'charter.md'), state: 'missing', values: [] }),
+          expect.objectContaining({ sourcePath: path.join(fixture.workspaceRoot, '.squad', 'config.json'), state: 'missing', values: [] }),
+        ]),
         boundaries: expect.stringContaining(`${agent.name} boundaries`), recentActivity: [agent.activity],
         currentTask: null, lastActiveAt: expect.any(Number),
       },
@@ -126,6 +130,46 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
         ],
         hiddenMembers: [{ name: 'Scribe', role: 'Scribe' }],
       },
+    });
+  });
+
+  it('returns conflicting declarations separately with exact-name keys and refreshes without runtime inference', () => {
+    const squad = path.join(fixture.workspaceRoot, '.squad');
+    const charter = path.join(squad, 'agents', 'ada', 'charter.md');
+    fs.appendFileSync(charter, '\n## Model\n- **Preferred:** auto\n- **Rationale:** Synthetic task policy\n- **Fallback:** synthetic-fallback\n');
+    fs.writeFileSync(path.join(squad, 'config.json'), JSON.stringify({
+      defaultModel: 'synthetic-default', agentModelOverrides: { Ada: 'synthetic-override', ada: 'not-the-name' },
+    }));
+    fs.writeFileSync(path.join(fixture.workspaceRoot, 'squad.config.ts'), 'throw new Error("never execute")');
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada', requestId: 'models-1' });
+    expect(details().at(-1)).toMatchObject({ requestId: 'models-1', detail: { modelSources: [
+      { sourcePath: charter, state: 'ready', values: [
+        { key: 'Preferred', value: 'auto' }, { key: 'Rationale', value: 'Synthetic task policy' }, { key: 'Fallback', value: 'synthetic-fallback' },
+      ] },
+      { sourcePath: path.join(squad, 'config.json'), state: 'ready', values: [
+        { key: 'defaultModel', value: 'synthetic-default' }, { key: 'agentModelOverrides["Ada"]', value: 'synthetic-override' },
+      ] },
+      { state: 'unsupported', values: [] }, { state: 'missing', values: [] },
+    ] } });
+    fs.writeFileSync(path.join(squad, 'config.json'), '{');
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada', requestId: 'models-2' });
+    expect(details().at(-1)).toMatchObject({ requestId: 'models-2', detail: {
+      modelSources: expect.arrayContaining([expect.objectContaining({ state: 'malformed', values: [] })]),
+    } });
+    fs.writeFileSync(charter, '## Model\n**Preferred:** first\n**Preferred:** second');
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(details().at(-1)?.detail.modelSources?.[0]).toMatchObject({ state: 'ambiguous', values: [] });
+  });
+
+  it('withholds charter declarations from an escaping agent-directory junction', () => {
+    const squad = path.join(fixture.workspaceRoot, '.squad');
+    const directory = path.join(squad, 'agents', 'ada');
+    fs.renameSync(directory, path.join(fixture.workspaceRoot, 'original-agent'));
+    fs.symlinkSync(path.join(fixture.workspaceRoot, 'original-agent'), directory, 'junction');
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(details().at(-1)?.detail).toMatchObject({
+      charterStatus: 'unreadable', charterContent: null,
+      modelSources: expect.arrayContaining([expect.objectContaining({ state: 'unreadable', values: [] })]),
     });
   });
 });

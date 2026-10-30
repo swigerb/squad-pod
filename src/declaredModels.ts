@@ -15,6 +15,41 @@ export interface ModelConfigSource {
   values: DeclaredModelValue[];
 }
 
+export function parseCharterModel(content: string, sourcePath: string): ModelConfigSource {
+  const result = (state: ModelReadState, diagnostic: string, values: DeclaredModelValue[] = []): ModelConfigSource =>
+    ({ sourcePath, state, diagnostic, values });
+  if (Buffer.byteLength(content, 'utf8') > MAX_MODEL_CONFIG_BYTES) {
+    return result('unreadable', 'Charter exceeds the 64 KiB read limit.');
+  }
+  let fence: string | undefined;
+  const lines = content.split(/\r?\n/).filter(line => {
+    const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
+    if (marker) {
+      if (!fence) {fence = marker;}
+      else if (marker[0] === fence[0] && marker.length >= fence.length) {fence = undefined;}
+      return false;
+    }
+    return !fence;
+  });
+  const sections = lines.flatMap((line, index) => /^##\s+Model\s*$/i.test(line) ? [index] : []);
+  if (!sections.length) {return result('missing', 'No declared ## Model section.');}
+  if (sections.length > 1) {return result('ambiguous', 'Multiple Model sections; declarations withheld.');}
+  const section = lines.slice(sections[0] + 1);
+  const end = section.findIndex(line => /^#{1,2}\s/.test(line));
+  const fields = (end < 0 ? section : section.slice(0, end)).flatMap(line => {
+    const field = /^\s*(?:[-*]\s+)?\*\*(Preferred|Rationale|Fallback):\*\*\s*(.*)$/i.exec(line);
+    return field ? [{ key: field[1][0].toUpperCase() + field[1].slice(1).toLowerCase(), value: field[2].trim() }] : [];
+  });
+  if (new Set(fields.map(field => field.key)).size !== fields.length) {
+    return result('ambiguous', 'Repeated Model fields; declarations withheld.');
+  }
+  if (fields.some(field => !field.value || field.value.length > 4096 || /[\u0000-\u001f\u007f]/.test(field.value))) {
+    return result('malformed', 'Model fields must be non-empty text of at most 4,096 characters.');
+  }
+  const missing = ['Preferred', 'Rationale', 'Fallback'].filter(key => !fields.some(field => field.key === key));
+  return result('ready', missing.length ? `Not declared: ${missing.join(', ')}.` : 'Declared charter fields only.', fields);
+}
+
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

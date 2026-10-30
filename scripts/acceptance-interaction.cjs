@@ -330,6 +330,13 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
             await page.screenshot({ path: path.join(outputDir, `card-${agent.id}-${viewport.width}.png`) });
             await card.getByRole('button', { name: 'Close agent details' }).click();
           }
+          const squad = path.join(fixture.workspaceRoot, '.squad');
+          fs.appendFileSync(path.join(squad, 'agents', 'ada', 'charter.md'),
+            '\n## Model\n- **Preferred:** auto\n- **Rationale:** Synthetic task policy\n- **Fallback:** synthetic-fallback\n');
+          fs.writeFileSync(path.join(squad, 'config.json'), JSON.stringify({
+            defaultModel: 'synthetic-default', agentModelOverrides: { Ada: 'synthetic-override', ada: 'not-the-name' },
+          }));
+          fs.writeFileSync(path.join(fixture.workspaceRoot, 'squad.config.ts'), 'throw new Error("never execute")');
           await page.getByRole('button', { name: 'Squad Info' }).click();
           const adaDetails = page.getByRole('button', { name: 'Show details for Ada' });
           await adaDetails.focus();
@@ -344,6 +351,19 @@ async function acceptance(artifactRoot, outputDir, geometryOnly = false) {
           assert.ok((await adaPanel.innerText()).includes('Ada expertise'), 'declared expertise is shown');
           assert.ok((await adaPanel.innerText()).includes('Ada responsibilities'), 'declared responsibilities are shown');
           assert.ok((await adaPanel.innerText()).includes('Ada boundaries'), 'declared boundaries are shown');
+          const modelText = await adaPanel.locator('section[aria-label="Model metadata"]').innerText();
+          for (const expected of ['Current-session model: unavailable', 'not effective runtime selection',
+            'Automatic selection (auto; not a concrete model)', 'Rationale: Synthetic task policy',
+            'Fallback: synthetic-fallback', 'defaultModel: synthetic-default',
+            'agentModelOverrides["Ada"]: synthetic-override', path.join(squad, 'config.json'),
+            'Executable/legacy configuration is present; not imported, executed or resolved.']) {
+            assert.ok(modelText.includes(expected), `model source evidence: ${expected}`);
+          }
+          assert.ok(!modelText.includes('not-the-name'), 'no fuzzy agent override matching');
+          await adaPanel.locator('section[aria-label="Model metadata"]').screenshot({
+            path: path.join(outputDir, `model-metadata-${viewport.width}.png`),
+          });
+          result.modelMetadata = modelText;
           assert.equal(await adaPanel.locator('img,script').count(), 0, 'charter source is rendered as text, not HTML');
           assert.ok((await adaPanel.innerText()).includes('<img src=x'), 'literal charter markup remains visible as source text');
           const beforeInfoCharter = fixture.calls.documents.length;
