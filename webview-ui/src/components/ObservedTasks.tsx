@@ -24,6 +24,8 @@ export function ObservedTasks({ snapshot, source, readOnly = false }: {
       <h3 style={{ margin: '0 0 4px', fontSize: 12 }}>Observed transient tasks ({tasks.length})</h3>
       <p style={{ margin: '0 0 4px' }}>
         Session-local, not durable membership or recorded usage.
+        {' '}Running calls with an explicit roster parent appear as temporary subtask characters.
+        {' '}Squad provides no durable parent hierarchy or automatic roster promotion.
       </p>
       {!following ? <p role="status" style={{ margin: 0 }}>{unavailable}</p> : <>
         <details style={{ marginBottom: 4 }}>
@@ -48,6 +50,7 @@ export function ObservedTasks({ snapshot, source, readOnly = false }: {
                   {' | '}{task.agentType || 'Unknown type'}{' | '}{task.mode || 'Unknown mode'}
                   {' | '}Parent: {parent >= 0 ? `task #${parent + 1}` : 'unknown'}
                 </div>
+                {task.selectedAgentName && <div>Selected custom agent: {task.selectedAgentName}</div>}
                 {task.description && <div>{task.description}</div>}
                 {task.fieldsTruncated && <div>Display metadata truncated or omitted.</div>}
               </li>;
