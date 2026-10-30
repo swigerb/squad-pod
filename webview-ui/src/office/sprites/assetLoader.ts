@@ -13,6 +13,7 @@
 
 import { TILE_SIZE } from '../types.js';
 import { EMBEDDED_CHARACTERS } from './embeddedCharacters.js';
+import { EXTERNAL_CHARACTER_BASE } from '../engine/agentSync.js';
 
 // ── Types — legacy tileset.json format ────────────────────────────
 
@@ -304,12 +305,12 @@ export function setLegacyTilesetAssets(
 
 // ── Internals ─────────────────────────────────────────────────────
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+function loadImage(src: string, label = src): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     trackImage(img);
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    img.onerror = () => reject(new Error(`Failed to load image: ${label}`));
     img.src = src;
   });
 }
@@ -363,102 +364,63 @@ function resolveUrl(relativePath: string): string {
 
 // ── URI-based character sheet loader ──────────────────────────────
 
-/**
- * Load character sprite sheets from webview-safe URIs sent by the
- * extension host via `characterAssetsLoaded`.  Each entry has an id
- * like "char_employeeA" and a webview URI pointing to the PNG.
- *
- * This populates the same `characterSheets` Map used by
- * `drawCharacterFromSheet()`, keyed by the trailing letter (A–D).
- *
- * Loads WITHOUT crossOrigin to avoid CORS failures in VS Code
- * webviews.  The `removeBackground()` call may fail on the
- * tainted canvas but its catch block falls back to the raw image.
- */
-export function loadCharacterSheetsFromUris(
-  characters: Array<{ id: string; uri: string }>
-): void {
+const externalSheetUris = new Map<string, string>();
+let characterGeneration = 0;
 
-  // If embedded characters already loaded successfully, skip the
-  // postMessage reload — new Image() is unreliable in VS Code webviews
-  // and clearing the map would wipe working sprites.
-  if (characterSheets.size > 0) {
-    return;
-  }
-
-  expectedCharacterSheetKeys.clear();
-  loadedCharacterSheetKeys.clear();
-  failedCharacterSheetKeys.clear();
-
-  if (!Array.isArray(characters) || characters.length === 0) {
-    console.warn('[assetLoader] No character sheet URIs received');
-    return;
-  }
-
-  for (const { id, uri } of characters) {
-    // Extract sheet key: "char_employeeA" → "A"
-    const key = id.replace(/^char_employee/, '');
-    if (!key) {
-      console.warn('[assetLoader] Could not extract sheet key from id:', id);
+/** Reconcile only the external namespace; embedded A/B never leave the map. */
+export async function loadCharacterSheetsFromUris(
+  characters: Array<{ id: string; uri: string; paletteIndex?: number }>,
+): Promise<string[]> {
+  const generation = ++characterGeneration;
+  const errors: string[] = [];
+  const requested = new Set<string>();
+  const jobs: Promise<void>[] = [];
+  for (const { id, uri, paletteIndex } of characters.slice(0, 32)) {
+    if (!id.startsWith('external_') || !Number.isSafeInteger(paletteIndex)
+      || paletteIndex! < EXTERNAL_CHARACTER_BASE || paletteIndex! % 48 !== 0
+      || typeof uri !== 'string' || uri.length > 700000 || !uri.startsWith('data:image/png;base64,')) {
+      errors.push(`Character: invalid external sheet ${id}`);
       continue;
     }
+    const key = `external:${paletteIndex}`;
+    if (requested.has(key)) { errors.push(`Character: duplicate sheet ${id}`); continue; }
+    requested.add(key);
     expectedCharacterSheetKeys.add(key);
-
-    if (!uri.startsWith('data:image/png;base64,')) {
-      failedCharacterSheetKeys.add(key);
-      console.warn(`[assetLoader] Sheet "${key}" URI is NOT a PNG data URI, starts with:`, uri.slice(0, 40));
-      continue;
-    }
-
-
-    const processImage = (img: HTMLImageElement) => {
+    failedCharacterSheetKeys.delete(key);
+    if (externalSheetUris.get(key) === uri && characterSheets.has(key)) { continue; }
+    jobs.push((async () => {
       try {
-        // Draw to canvas WITHOUT removeBackground — our PNGs already
-        // have transparent backgrounds from Python PIL processing.
-        // removeBackground was destroying 15-29% of visible pixels
-        // because top-left is (0,0,0,0) → bgR/G/B=0 → any pixel
-        // with R+G+B<45 got erased.
+        const img = await loadImage(uri, id);
+        if (generation !== characterGeneration) { return; }
+        if (img.width !== 224 || img.height !== 128) {
+          throw new Error('Expected 224x128 (7 x 4 frames of 32x32)');
+        }
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
-        const ctx2 = canvas.getContext('2d');
-        if (!ctx2) throw new Error('Failed to get 2d context');
-        ctx2.drawImage(img, 0, 0);
-
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { throw new Error('Failed to get 2d context'); }
+        ctx.drawImage(img, 0, 0);
         storeCharacterSheet(key, img.width, img.height, canvas);
-
-        failedCharacterSheetKeys.delete(key);
-      } catch (e) {
+        externalSheetUris.set(key, uri);
+      } catch (error) {
+        if (generation !== characterGeneration) { return; }
+        characterSheets.delete(key);
+        externalSheetUris.delete(key);
+        loadedCharacterSheetKeys.delete(key);
         failedCharacterSheetKeys.add(key);
-        console.warn(`[assetLoader] processImage THREW for "${key}":`, e);
+        errors.push(`Character: ${id}: ${String(error)}`);
+        console.warn('[assetLoader] External character failed:', id, error);
       }
-    };
-
-    const img = new Image();
-    trackImage(img);
-    img.onload = () => {
-      processImage(img);
-    };
-    img.onerror = (e) => {
-      failedCharacterSheetKeys.add(key);
-      console.warn(`[assetLoader] img.onerror fired for "${key}":`, uri.slice(0, 80), e);
-    };
-    img.src = uri;
-
-    // For data URIs, browsers may decode synchronously. If already
-    // complete, process immediately — onload may have already fired
-    // or may never fire in some Electron versions.
-    if (img.complete && img.naturalWidth > 0 && !characterSheets.has(key)) {
-      processImage(img);
+    })());
+  }
+  for (const keys of [characterSheets, externalSheetUris, expectedCharacterSheetKeys, loadedCharacterSheetKeys, failedCharacterSheetKeys]) {
+    for (const key of keys.keys()) {
+      if (key.startsWith('external:') && !requested.has(key)) { keys.delete(key); }
     }
   }
-
-  // Health check: verify sheets actually load after async Image decode
-  setTimeout(() => {
-    if (characterSheets.size === 0 && expectedCharacterSheetKeys.size > 0) {
-      console.error('[assetLoader] No character sheets loaded after 2s; falling back to inline sprites.');
-    }
-  }, 2000);
+  await Promise.all(jobs);
+  return generation === characterGeneration ? errors : [];
 }
 
 // ── Public loader ─────────────────────────────────────────────────

@@ -13,9 +13,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, CharacterAssetEntry, SourceStatus, PodSettings, DirectoryCatalog } from './types.js';
+import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, SourceStatus, PodSettings, DirectoryCatalog } from './types.js';
 import {
-  CUSTOM_CHAR_SPRITE_PREFIX,
   WORKSPACE_KEY_LAYOUT,
   VIEW_ID,
 } from './constants.js';
@@ -29,6 +28,7 @@ import {
   saveAgentSeats,
   getAgents,
   disposeAgentManager,
+  setExternalCharacterPalettes,
 } from './agentManager.js';
 import { startSquadWatching, type ActivitySource } from './squadWatcher.js';
 import { pickSquadWorkspace, resolveSquadDir } from './squadPaths.js';
@@ -54,6 +54,7 @@ import {
 } from './teamParser.js';
 import { readSettings, saveSetting } from './settings.js';
 import { assetSourceFingerprint, loadAssetSnapshot, watchAssetSnapshots } from './manifestAssets.js';
+import { watchCharacterSnapshots } from './characterAssets.js';
 import {
   asDirectoryEntry,
   createSavedDirectory,
@@ -79,6 +80,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private usageRoster: ReturnType<typeof parseAllMembers> = [];
   private disposeLayoutWatcher: { dispose: () => void } | undefined;
   private assetWatcher: { dispose: () => void } | undefined;
+  private characterWatcher: { dispose: () => void } | undefined;
+  private characterDiagnostics: string[] = [];
   private disposables: vscode.Disposable[] = [];
   private telemetryCounter = 0;
   private watchedRoot: string | undefined;
@@ -272,6 +275,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     // A reloaded webview only needs a fresh snapshot; keep agent state,
     // timers and watchers alive so in-flight activity is not lost.
+    this.loadAndSendCustomAssetUris();
     let agents = getAgents();
     if (this.watchedRoot !== workspaceRoot || !this.disposeSquadWatcher) {
       this.stopWatching();
@@ -282,7 +286,6 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     // Assets first, then layout, then the roster snapshot (the webview
     // buffers roster until layout arrives, so either order is safe).
     this.loadAndSendAssets();
-    this.loadAndSendCustomAssetUris();
     this.loadAndSendLayout(workspaceRoot);
     sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
     this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
@@ -401,12 +404,16 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   }
 
   private startAssetWatching(): void {
+    this.loadAndSendCustomAssetUris();
     this.assetWatcher?.dispose();
     const root = path.join(this.context.extensionPath, 'dist', 'assets');
     this.assetWatcher = watchAssetSnapshots(
       () => loadAssetSnapshot(root, this.assetDirectories()),
       (snapshot) => {
-        this.postMessage({ type: 'manifestAssetsLoaded', snapshot });
+        this.postMessage({
+          type: 'manifestAssetsLoaded',
+          snapshot: { ...snapshot, diagnostics: [...snapshot.diagnostics, ...this.characterDiagnostics] },
+        });
         for (const diagnostic of snapshot.diagnostics) { this.log(`Asset: ${diagnostic}`); }
       },
       1000,
@@ -637,61 +644,20 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
    * VS Code version/platform.  Data URIs bypass the webview resource
    * server entirely and are explicitly allowed by the CSP (`img-src data:`).
    */
-  private pngToDataUri(filePath: string): string {
-    const buf = fs.readFileSync(filePath);
-    if (buf.length < 8) {
-      throw new Error(`PNG file is too small to be valid: ${filePath}`);
-    }
-    const pngSignature = [0x89, 0x50, 0x4E, 0x47];
-    const hasPngSignature = pngSignature.every((byte, index) => buf[index] === byte);
-    if (!hasPngSignature) {
-      throw new Error(`File is not a valid PNG: ${filePath}`);
-    }
-    return `data:image/png;base64,${buf.toString('base64')}`;
-  }
-
   private loadAndSendCustomAssetUris(): void {
-    const webview = this.view?.webview;
-    if (!webview) { return; }
-
-    const assetsDir = path.join(this.context.extensionPath, 'dist', 'assets');
-    console.log('[SquadPod] loadAndSendCustomAssetUris — assetsDir:', assetsDir);
-
-    // ── Custom character sprite sheets (char_employeeA–E.png) ────────
-    const charsDir = path.join(assetsDir, 'characters');
-    if (fs.existsSync(charsDir)) {
-      const customCharFiles = fs.readdirSync(charsDir)
-        .filter(f => f.startsWith(CUSTOM_CHAR_SPRITE_PREFIX) && f.endsWith('.png'))
-        .sort();
-
-      if (customCharFiles.length > 0) {
-        const characters: CharacterAssetEntry[] = [];
-        for (const file of customCharFiles) {
-          const filePath = path.join(charsDir, file);
-          try {
-            const uri = this.pngToDataUri(filePath);
-            characters.push({
-              id: path.basename(file, '.png'),
-              uri,
-            });
-            console.log('[SquadPod] Prepared character asset', file, '(' + Math.round(uri.length / 1024) + ' KB)');
-          } catch (e) {
-            console.error('[SquadPod] ❌ Failed to convert character PNG to data URI:', filePath, e);
-          }
+    this.characterWatcher?.dispose();
+    this.characterWatcher = watchCharacterSnapshots(
+      () => this.assetDirectories(),
+      ({ characters, diagnostics }) => {
+        setExternalCharacterPalettes(characters.map((character) => character.paletteIndex));
+        this.characterDiagnostics = diagnostics.map((line) => `Character: ${line}`);
+        this.postMessage({ type: 'characterAssetsLoaded', characters, diagnostics: this.characterDiagnostics });
+        for (const diagnostic of diagnostics) { this.log(`Character: ${diagnostic}`); }
+        for (const character of characters) {
+          this.log(`Character: ${character.source} / ${character.file} SHA-256 ${character.sha256}`);
         }
-
-        console.log('[SquadPod] Sending characterAssetsLoaded with', characters.length, 'sheets:', characters.map(c => c.id + ' (' + Math.round(c.uri.length / 1024) + ' KB)').join(', '));
-        if (characters.length > 0) {
-          this.postMessage({ type: 'characterAssetsLoaded', characters });
-        } else {
-          console.warn('[SquadPod] characterAssetsLoaded skipped because no PNGs converted successfully');
-        }
-      } else {
-        console.warn('[SquadPod] No custom character PNGs found in:', charsDir);
-      }
-    } else {
-      console.warn('[SquadPod] characters/ dir not found at:', charsDir);
-    }
+      },
+    );
   }
 
   // ─── Layout ───────────────────────────────────────────────────
@@ -1018,6 +984,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private teardown(): void {
     this.assetWatcher?.dispose();
     this.assetWatcher = undefined;
+    this.characterWatcher?.dispose();
+    this.characterWatcher = undefined;
     this.stopWatching();
 
     const agents = getAgents();
