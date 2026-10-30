@@ -151,14 +151,21 @@ function bridge(messages) {
     window.__host = data => window.dispatchEvent(new MessageEvent('message', { data }));
     const nativeDraw = CanvasRenderingContext2D.prototype.drawImage;
     CanvasRenderingContext2D.prototype.drawImage = function(image, ...args) {
-      if (image.width === 224 && image.height === 128 && args.length === 8) {
+      const builtin = image.width === 112 && image.height === 96;
+      const external = image.width === 224 && image.height === 128;
+      if ((builtin || external) && args.length === 8) {
+        const [, , sourceWidth, sourceHeight] = args;
         const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = 16;
+        canvas.width = 16;
+        canvas.height = builtin ? 32 : 16;
         const context = canvas.getContext('2d');
         context.filter = this.filter;
-        nativeDraw.call(context, image, 0, 64, 32, 32, 0, 0, 16, 16);
+        nativeDraw.call(context, image, args[0], args[1], sourceWidth, sourceHeight,
+          0, 0, canvas.width, canvas.height);
         window.__characterProof.frames.push({
-          rgba: Array.from(context.getImageData(0, 0, 16, 16).data),
+          rgba: Array.from(context.getImageData(0, 0, canvas.width, canvas.height).data),
+          width: canvas.width,
+          height: canvas.height,
           filter: this.filter,
         });
         if (window.__characterProof.frames.length > 200) window.__characterProof.frames.shift();
@@ -254,6 +261,11 @@ async function main() {
         await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
         await until(() => page.evaluate(() => window.__characterProof?.frames.length > 0), 'first office draw');
         await delay(200);
+        if (viewport.width === 360) {
+          const zoomOut = page.getByRole('button', { name: 'Zoom out', exact: true });
+          while (await zoomOut.isEnabled()) await zoomOut.click();
+          await page.getByText('1x', { exact: true }).waitFor();
+        }
         const rendered = await page.evaluate(() => window.__characterProof.frames.map((frame) => frame.rgba));
         if (isBaseline) {
           assert.throws(() => assert.ok(rendered.some((rgba) => externalPixels(rgba)),
@@ -270,8 +282,8 @@ async function main() {
             }
             return count;
           });
-          assert.ok(visible > 0, 'fixture pixels must reach the actual visible office canvas');
           await page.screenshot({ path: path.join(output, `characters-${viewport.width}x${viewport.height}.png`) });
+          assert.ok(visible > 0, `fixture pixels must reach the ${viewport.width}x${viewport.height} visible office canvas`);
           results.visibleFixturePixels = visible;
         }
         results[isBaseline ? 'baseline' : 'current'] = await collectLegacy(page);
@@ -309,11 +321,13 @@ async function main() {
           await send(page, removed);
           await page.evaluate(() => { window.__characterProof.frames = []; });
           await until(() => page.evaluate(() => window.__characterProof.frames.length >= 2), 'fallback office draw');
-          const fallbackFrames = await page.evaluate(() => window.__characterProof.frames.map((frame) => frame.rgba));
+          const fallbackFrames = await page.evaluate(() => window.__characterProof.frames);
           assert.ok(!fallbackFrames
-            .some((rgba) => externalPixels(rgba, [19, 201, 111])), 'removed sheet must not continue rendering');
-          assert.ok(fallbackFrames.some((rgba) => Buffer.from(rgba).equals(Buffer.from(results.current[0]))),
-            'missing persisted external sheet must use exact legacy index-zero pixels');
+            .some((frame) => externalPixels(frame.rgba, [19, 201, 111])),
+          'removed sheet must not continue rendering');
+          assert.ok(fallbackFrames.some((frame) => frame.width === 16 && frame.height === 32
+            && frame.rgba.some((value, index) => index % 4 === 3 && value > 0)),
+          'missing persisted external sheet must draw the built-in 16x32 fallback');
           results.fallback = await collectLegacy(page);
           assert.deepEqual(results.fallback, results.current, 'removal must not change any legacy index 0-63');
           fs.unlinkSync(corrupt);
@@ -325,10 +339,16 @@ async function main() {
         }
         await page.close();
       }
-      assert.deepEqual(results.current, results.baseline, 'legacy rendered RGBA must equal pinned master for all 64 indices');
+      assert.equal(results.current.length, 64, 'all 64 persisted built-in indices must render');
+      assert.equal(new Set(results.current.slice(0, 6).map((rgba) => Buffer.from(rgba).toString('hex'))).size, 6,
+        'the six first-use indices must render six distinct authored identities');
+      assert.notDeepEqual(results.current[0], results.baseline[0],
+        'built-in appearance must intentionally use the six Pixel Agents sheets, not the old A/B sheet');
       checks.push({
         viewport, visibleFixturePixels: results.visibleFixturePixels,
-        legacyCount: 64, legacyRgbaSha256: digest(Buffer.from(results.current.flat())),
+        persistedBuiltInCount: 64, distinctAuthoredCharacters: 6,
+        currentRgbaSha256: digest(Buffer.from(results.current.flat())),
+        baselineComparison: 'old A/B art differs intentionally; indices remain stable and render from six authored sheets',
         negativeControl: 'same external-pixel assertion failed as required',
         watcher: 'corrupt diagnostic, edit pixels, removal, restoration',
       });
@@ -356,8 +376,8 @@ function mutations() {
     {
       name: 'sheet-order',
       file: 'webview-ui/src/office/sprites/characterSheetRenderer.ts',
-      pattern: /^const PALETTE_TO_SHEET: string\[\] = \['A', 'B'\];$/gm,
-      replacement: "const PALETTE_TO_SHEET: string[] = ['B', 'A'];",
+      pattern: /^    sheetKey: `builtin:\$\{p % PALETTE_COUNT\}`,$/gm,
+      replacement: '    sheetKey: `builtin:${(p + 1) % PALETTE_COUNT}`,',
     },
     {
       name: 'bootstrap-early-return',

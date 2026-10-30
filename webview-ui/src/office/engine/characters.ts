@@ -42,6 +42,24 @@ function directionBetween(fromCol: number, fromRow: number, toCol: number, toRow
   return dy > 0 ? Direction.DOWN : Direction.UP;
 }
 
+function startWalking(ch: Character, path: Array<{ col: number; row: number }>): void {
+  ch.path = path;
+  ch.state = CharacterState.WALK;
+  ch.moveProgress = 0;
+  ch.direction = directionBetween(ch.col, ch.row, path[0].col, path[0].row);
+  ch.frameIndex = 0;
+  ch.frameTimer = 0;
+}
+
+function advanceAnimation(ch: Character, dt: number, frameDuration: number, frameCount: number): void {
+  ch.frameTimer += dt;
+  const framesElapsed = Math.floor(ch.frameTimer / frameDuration + Number.EPSILON * 8);
+  if (framesElapsed > 0) {
+    ch.frameTimer = Math.max(0, ch.frameTimer - framesElapsed * frameDuration);
+    ch.frameIndex = (ch.frameIndex + framesElapsed) % frameCount;
+  }
+}
+
 export function createCharacter(
   id: string,
   name: string,
@@ -82,6 +100,22 @@ export function createCharacter(
   };
 }
 
+export function getCharacterWorldPosition(ch: Character): { x: number; y: number } {
+  let x = ch.x;
+  let y = ch.y;
+  if (ch.state === CharacterState.WALK && ch.path.length > 0) {
+    x += (ch.path[0].col - ch.col) * TILE_SIZE * ch.moveProgress;
+    y += (ch.path[0].row - ch.row) * TILE_SIZE * ch.moveProgress;
+  }
+  return { x, y };
+}
+
+export function getCharacterAnimation(ch: Character): 'idle' | 'walk' | 'typing' | 'reading' {
+  if (ch.state === CharacterState.WALK) return 'walk';
+  if (ch.state === CharacterState.TYPE) return isReadingTool(ch.tool) ? 'reading' : 'typing';
+  return 'idle';
+}
+
 export function updateCharacter(
   ch: Character,
   dt: number,
@@ -94,11 +128,7 @@ export function updateCharacter(
 
   switch (ch.state) {
     case CharacterState.TYPE: {
-      ch.frameTimer += dt;
-      if (ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
-        ch.frameTimer = 0;
-        ch.frameIndex = (ch.frameIndex + 1) % 2;
-      }
+      advanceAnimation(ch, dt, TYPE_FRAME_DURATION_SEC, 2);
 
       if (!ch.active) {
         ch.seatTimer -= dt;
@@ -117,11 +147,7 @@ export function updateCharacter(
         if (!atSeat) {
           const path = findPath(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
           if (path.length > 0) {
-            ch.path = path;
-            ch.state = CharacterState.WALK;
-            ch.moveProgress = 0;
-            ch.frameIndex = 0;
-            ch.frameTimer = 0;
+            startWalking(ch, path);
           }
         } else {
           ch.state = CharacterState.TYPE;
@@ -140,11 +166,7 @@ export function updateCharacter(
             const target = allWalkable[randomInt(0, allWalkable.length - 1)];
             const path = findPath(ch.col, ch.row, target.col, target.row, tileMap, blockedTiles);
             if (path.length > 0) {
-              ch.path = path;
-              ch.state = CharacterState.WALK;
-              ch.moveProgress = 0;
-              ch.frameIndex = 0;
-              ch.frameTimer = 0;
+              startWalking(ch, path);
               ch.wanderCount++;
             } else {
               ch.wanderTimer = randomRange(WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC);
@@ -158,24 +180,28 @@ export function updateCharacter(
     }
 
     case CharacterState.WALK: {
-      ch.frameTimer += dt;
-      if (ch.frameTimer >= WALK_FRAME_DURATION_SEC) {
-        ch.frameTimer = 0;
-        ch.frameIndex = (ch.frameIndex + 1) % 4;
-      }
+      advanceAnimation(ch, dt, WALK_FRAME_DURATION_SEC, 4);
 
       const distPerSec = WALK_SPEED_PX_PER_SEC / TILE_SIZE;
-      ch.moveProgress += dt * distPerSec;
+      let movementRemaining = dt * distPerSec;
+      while (movementRemaining > 0 && ch.path.length > 0) {
+        const next = ch.path[0];
+        ch.direction = directionBetween(ch.col, ch.row, next.col, next.row);
+        const tileRemaining = 1 - ch.moveProgress;
+        const movement = Math.min(movementRemaining, tileRemaining);
+        ch.moveProgress += movement;
+        movementRemaining -= movement;
 
-      if (ch.moveProgress >= 1.0) {
-        ch.moveProgress = 0;
-        if (ch.path.length > 0) {
-          const next = ch.path.shift()!;
-          ch.direction = directionBetween(ch.col, ch.row, next.col, next.row);
-          ch.col = next.col;
-          ch.row = next.row;
+        if (ch.moveProgress >= 1) {
+          const arrived = ch.path.shift()!;
+          ch.col = arrived.col;
+          ch.row = arrived.row;
+          ch.moveProgress = 0;
           ch.x = ch.col * TILE_SIZE + TILE_SIZE / 2;
           ch.y = ch.row * TILE_SIZE + TILE_SIZE / 2;
+          if (ch.path.length > 0) {
+            ch.direction = directionBetween(ch.col, ch.row, ch.path[0].col, ch.path[0].row);
+          }
         }
       }
 
@@ -202,9 +228,7 @@ export function updateCharacter(
             } else {
               const path = findPath(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
               if (path.length > 0) {
-                ch.path = path;
-                ch.state = CharacterState.WALK;
-                ch.moveProgress = 0;
+                startWalking(ch, path);
               } else {
                 ch.wanderTimer = randomRange(WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC);
               }
@@ -221,10 +245,11 @@ export function updateCharacter(
         const destCol = ch.path.length > 0 ? ch.path[ch.path.length - 1].col : ch.col;
         const destRow = ch.path.length > 0 ? ch.path[ch.path.length - 1].row : ch.row;
         if (destCol !== mySeat.col || destRow !== mySeat.row) {
-          const newPath = findPath(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
+          const inFlightStep = ch.moveProgress > 0 ? ch.path[0] : undefined;
+          const routeFrom = inFlightStep ?? { col: ch.col, row: ch.row };
+          const newPath = findPath(routeFrom.col, routeFrom.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
           if (newPath.length > 0) {
-            ch.path = newPath;
-            ch.moveProgress = 0;
+            ch.path = inFlightStep ? [inFlightStep, ...newPath] : newPath;
           }
         }
       }

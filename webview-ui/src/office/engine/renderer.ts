@@ -12,7 +12,6 @@ import {
 } from '../types.js';
 import type { AreaDefinition } from '../types.js';
 import {
-  CHARACTER_SITTING_OFFSET_PX,
   CHARACTER_Z_SORT_OFFSET,
   SELECTED_OUTLINE_ALPHA,
   HOVERED_OUTLINE_ALPHA,
@@ -38,12 +37,17 @@ import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
 import { getColorizedFloorSprite, hasFloorSprites } from '../floorTiles.js';
 import type { CarpetTile } from '../types.js';
-import { isReadingTool } from './characters.js';
+import { getCharacterAnimation, getCharacterWorldPosition, isReadingTool } from './characters.js';
+import { getCharacterScreenBounds } from './characterGeometry.js';
 import { renderCarpetLayer } from '../sprites/carpetRenderer.js';
 import { wallColorToHex, getColorizedWallSprite, hasWallSprites } from '../wallTiles.js';
-import { areCharacterAssetsReady, areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
+import { areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
 import { drawTilesetFurniture, drawTilesetTile, drawMetadataItemScaled } from '../sprites/tilesetRenderer.js';
-import { drawCharacterFromSheet, getCharacterSheetOffset, hasCharacterSheetForPalette } from '../sprites/characterSheetRenderer.js';
+import {
+  drawCharacterFromSheet,
+  getCharacterSheetLayout,
+} from '../sprites/characterSheetRenderer.js';
+import type { CharacterAnimation } from '../sprites/characterSheetRenderer.js';
 import { getPetSpriteData } from './petEntity.js';
 import { getPetSprites } from '../sprites/petSpriteData.js';
 import { PET_HEART_BUBBLE } from '../sprites/petBubble.js';
@@ -63,6 +67,7 @@ interface Drawable {
   furnitureDestH?: number;
   /** Character reference for PNG sprite sheet rendering. */
   character?: Character;
+  animation?: CharacterAnimation;
   pet?: Pet;
 }
 
@@ -70,7 +75,6 @@ interface Drawable {
 let _loggedPngReady = false;
 let _loggedPngFallback = false;
 let _loggedTilesetWaiting = false;
-let _loggedCharFallback = false;
 let _loggedFirstRender = false;
 
 // Rendering defaults only: never synthesize colors in the persisted layout.
@@ -162,7 +166,6 @@ export function renderScene(
 ): void {
   const drawables: Drawable[] = [];
   const tilesetReady = areTilesetAssetsReady();
-  const characterAssetsReady = areCharacterAssetsReady();
 
   for (const furn of furniture) {
     const sprite = furn.sprite;
@@ -180,45 +183,16 @@ export function renderScene(
   for (const ch of characters) {
     const sprites = getCharacterSprites(ch.palette, ch.hueShift);
     const sprite = getCharacterSprite(ch, sprites);
-
-    let baseX = ch.col * TILE_SIZE;
-    let baseY = ch.row * TILE_SIZE;
-
-    if (ch.state === CharacterState.WALK && ch.path.length > 0) {
-      const next = ch.path[0];
-      const fromX = ch.col * TILE_SIZE;
-      const fromY = ch.row * TILE_SIZE;
-      const toX = next.col * TILE_SIZE;
-      const toY = next.row * TILE_SIZE;
-      baseX = fromX + (toX - fromX) * ch.moveProgress;
-      baseY = fromY + (toY - fromY) * ch.moveProgress;
-    }
-
-    // Determine sprite dimensions — prefer PNG sheet size when available
-    let spriteWidth: number;
-    let spriteHeight: number;
-    let drawX: number;
-    let drawY: number;
-
-    const sheetOffset = hasCharacterSheetForPalette(ch.palette) ? getCharacterSheetOffset(ch.palette) : null;
-    if (sheetOffset) {
-      spriteWidth = TILE_SIZE - sheetOffset.dx * 2; // symmetric around tile center
-      spriteHeight = TILE_SIZE - sheetOffset.dy;
-      drawX = offsetX + (baseX + sheetOffset.dx) * zoom;
-      drawY = offsetY + (baseY + sheetOffset.dy) * zoom;
-    } else {
-      spriteWidth = sprite[0].length;
-      spriteHeight = sprite.length;
-      drawX = offsetX + (baseX + TILE_SIZE / 2 - spriteWidth / 2) * zoom;
-      drawY = offsetY + (baseY + TILE_SIZE - spriteHeight) * zoom;
-    }
-
-    if (ch.state === CharacterState.TYPE) {
-      drawY += CHARACTER_SITTING_OFFSET_PX * zoom;
-    }
-
-    const bottomY = drawY + spriteHeight * zoom;
-    const z = bottomY + CHARACTER_Z_SORT_OFFSET;
+    const position = getCharacterWorldPosition(ch);
+    const animation: CharacterAnimation = getCharacterAnimation(ch);
+    const sheetLayout = getCharacterSheetLayout(ch.palette);
+    const bounds = getCharacterScreenBounds(ch, zoom, { x: offsetX, y: offsetY });
+    const drawX = Math.round(bounds.left);
+    const drawY = Math.round(bounds.top);
+    const bottomY = bounds.bottom;
+    const z = sheetLayout === 'pixel-agents'
+      ? offsetY + (position.y + TILE_SIZE / 2) * zoom + CHARACTER_Z_SORT_OFFSET
+      : bottomY + CHARACTER_Z_SORT_OFFSET;
 
     const outlineSprite = getOutlineSprite(sprite);
     let outlineAlpha = 0;
@@ -232,6 +206,7 @@ export function renderScene(
       sprite, x: drawX, y: drawY, z, type: 'character',
       outlineSprite, outlineAlpha,
       character: ch,
+      animation,
     });
   }
 
@@ -253,35 +228,33 @@ export function renderScene(
   drawables.sort((a, b) => a.z - b.z);
 
   for (const drawable of drawables) {
-    if (drawable.outlineSprite && drawable.outlineAlpha && drawable.outlineAlpha > 0) {
-      const outlineCanvas = getCachedSprite(drawable.outlineSprite, zoom);
-      const outlineX = drawable.x - zoom;
-      const outlineY = drawable.y - zoom;
-      ctx.save();
-      ctx.globalAlpha = drawable.outlineAlpha;
-      ctx.drawImage(outlineCanvas, outlineX, outlineY);
-      ctx.restore();
-    }
-
     if (drawable.type === 'character') {
       const ch = drawable.character;
-      // The bundled sheets contain walk frames only; use the supplied reading
-      // template when explicit tool metadata selects that animation.
-      const reading = ch?.state === CharacterState.TYPE && isReadingTool(ch.tool);
-      const pngDrawn = ch !== undefined && !reading && drawCharacterFromSheet(
+      const pngDrawn = ch !== undefined && drawCharacterFromSheet(
         ctx, ch.palette, ch.direction, ch.frameIndex,
-        drawable.x, drawable.y, zoom, ch.hueShift,
+        drawable.x, drawable.y, zoom, ch.hueShift, drawable.animation ?? 'idle',
+        drawable.outlineAlpha ?? 0,
       );
       if (!pngDrawn) {
-        if (characterAssetsReady && !_loggedCharFallback) {
-          _loggedCharFallback = true;
-          console.warn('[renderer] Character PNG draw failed for palette', ch?.palette, '— using inline sprite. hasSheet:', ch ? hasCharacterSheetForPalette(ch.palette) : 'N/A');
+        if (drawable.outlineSprite && drawable.outlineAlpha && drawable.outlineAlpha > 0) {
+          const outlineCanvas = getCachedSprite(drawable.outlineSprite, zoom);
+          ctx.save();
+          ctx.globalAlpha = drawable.outlineAlpha;
+          ctx.drawImage(outlineCanvas, drawable.x - zoom, drawable.y - zoom);
+          ctx.restore();
         }
         drawSpriteDirect(ctx, drawable.sprite, drawable.x, drawable.y, zoom);
       }
     } else if (drawable.type === 'pet') {
       ctx.drawImage(getCachedSprite(drawable.sprite, zoom), drawable.x, drawable.y);
     } else {
+      if (drawable.outlineSprite && drawable.outlineAlpha && drawable.outlineAlpha > 0) {
+        const outlineCanvas = getCachedSprite(drawable.outlineSprite, zoom);
+        ctx.save();
+        ctx.globalAlpha = drawable.outlineAlpha;
+        ctx.drawImage(outlineCanvas, drawable.x - zoom, drawable.y - zoom);
+        ctx.restore();
+      }
       // Try PNG tileset first, fall back to inline cached sprite
       const furnitureType = drawable.furnitureType;
       const tilesetDrawn = tilesetReady && furnitureType !== undefined && drawTilesetFurniture(

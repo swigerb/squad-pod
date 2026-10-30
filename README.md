@@ -10,6 +10,7 @@ Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradyga
 
 - Discover the team roster and show each visible member as a character at a desk.
 - Animate activity inferred from changes to Squad files.
+- Show six built-in character identities with authored walk, typing, and reading poses.
 - Opt in to live member tool labels and context gauges from local Copilot CLI sessions.
 - View an agent's status, current task, recent activity, and charter.
 - Design the office with floors, walls, furniture, colors, carpets, named Areas, and pets.

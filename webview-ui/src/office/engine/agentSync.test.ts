@@ -155,13 +155,13 @@ describe('OfficeState.reassignSeat swap', () => {
 });
 
 describe('sheetAppearance', () => {
-  it('keeps six palettes visually distinct with two PNG sheets', () => {
+  it('keeps six built-in palette identities distinct', () => {
     const looks = [0, 1, 2, 3, 4, 5].map((p) => {
       const a = sheetAppearance(p, 0);
       return `${a.sheetKey}:${a.hueDegrees}`;
     });
     expect(new Set(looks).size).toBe(6);
-    expect(sheetAppearance(0, 0)).toEqual({ sheetKey: 'A', hueDegrees: 0 });
+    expect(sheetAppearance(0, 0)).toEqual({ sheetKey: 'builtin:0', hueDegrees: 0 });
   });
 
   it('distinguishes wrapped appearance indices by hue', () => {

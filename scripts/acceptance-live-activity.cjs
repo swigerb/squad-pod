@@ -62,7 +62,7 @@ function assertFilesystemGuard() {
     for (const file of blocked) assert.throws(() => method(file), /must never read the real Copilot home/);
     assert.equal(calls, before, 'blocked paths must never reach the filesystem, including native realpath');
     method(path.join(extensionRoot, 'dist', 'assets', 'floors', 'floor_1.png'));
-    method(path.join(extensionRoot, 'dist', 'webview', 'assets', 'characters', 'char_employeeA.png'));
+    method(path.join(extensionRoot, 'dist', 'webview', 'assets', 'characters', 'char_0.png'));
     assert.equal(calls, before + 2, 'only known bundled asset subtrees are exempt inside an artifact home');
   }
   return { blockedPathsPerMethod: blocked.length, guardedMethods: guardedMethods.length + 1, allowedBundledRoots: 2 };
@@ -287,7 +287,7 @@ async function browserAcceptance(out) {
         const drawImage = CanvasRenderingContext2D.prototype.drawImage;
         CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
           if (this.canvas.isConnected && source instanceof HTMLCanvasElement) {
-            if (source.width === 224 && source.height === 128 && args.length === 8) {
+            if (source.width === 112 && source.height === 96 && args.length === 8) {
               window.__liveAssetProof.character = true;
             }
             if (!window.__liveAssetProof.bundledFloor && window.__expectedFloor &&
@@ -308,7 +308,7 @@ async function browserAcceptance(out) {
         };
       });
       await page.goto(baseUrl);
-      const packagedImages = ['characters/char_employeeA.png', 'characters/char_employeeB.png', 'floors/floor_1.png'];
+      const packagedImages = ['characters/char_0.png', 'characters/char_1.png', 'floors/floor_1.png'];
       for (const asset of packagedImages) {
         const resource = '/dist/webview/assets/' + asset;
         const response = await page.request.get(baseUrl + resource);
@@ -322,7 +322,7 @@ async function browserAcceptance(out) {
         await image.decode();
         return { asset, width: image.naturalWidth, height: image.naturalHeight };
       })), packagedImages);
-      assert.deepEqual(decodedAssets.map(({ width, height }) => [width, height]), [[224, 128], [224, 128], [16, 16]]);
+      assert.deepEqual(decodedAssets.map(({ width, height }) => [width, height]), [[112, 96], [112, 96], [16, 16]]);
       await page.evaluate(() => {
         for (const [name, value] of Object.entries({
           'editor-background': '#1e1e1e', foreground: '#cccccc',

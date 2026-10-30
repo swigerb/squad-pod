@@ -106,7 +106,7 @@ describe('AgentLabels over canvas characters', () => {
   it('tracks authoritative identity, selection, movement, zoom, pan and roster removal', () => {
     render();
     expect(label().style.left).toBe('190px');
-    expect(label().style.top).toBe('186px');
+    expect(label().style.top).toBe('194px');
     Object.assign(office.characters.get('homer')!, { name: 'Homer Updated', role: 'Reviewer', x: 90, y: 110 });
     office.selectedAgentId = 'homer';
     panRef.current = { x: 50, y: 60 };
@@ -115,7 +115,7 @@ describe('AgentLabels over canvas characters', () => {
     expect(label('Homer Updated').style.color).toBe('rgb(251, 191, 36)');
     render(3);
     expect(label('Homer Updated').style.left).toBe('320px');
-    expect(label('Homer Updated').style.top).toBe('316px');
+    expect(label('Homer Updated').style.top).toBe('328px');
     office.removeAgent('homer');
     frame();
     expect(host.textContent).not.toContain('Homer');

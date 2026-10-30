@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react
 import type { OfficeState } from '../engine/officeState.js';
 import type { EditorState } from '../editor/editorState.js';
 import { EditTool } from '../types.js';
+import type { Character } from '../types.js';
 import { planFurnitureMove } from '../editor/editorActions.js';
 import type { FurnitureTransformPlan } from '../editor/editorActions.js';
 import { getFurnitureFootprint } from '../layout/layoutManager.js';
@@ -9,10 +10,17 @@ import { getCatalogEntry } from '../layout/furnitureCatalog.js';
 import { startGameLoop } from '../engine/gameLoop.js';
 import { renderFrame } from '../engine/renderer.js';
 import { clampPanOffset, zoomPanAroundAnchor } from '../engine/viewport.js';
-import { updateCharacter } from '../engine/characters.js';
+import {
+  updateCharacter,
+} from '../engine/characters.js';
+import { getCharacterScreenBounds } from '../engine/characterGeometry.js';
 import { updatePet } from '../engine/petEntity.js';
 import { useHostClient } from '../../HostClientContext.js';
-import { TILE_SIZE, CHARACTER_HIT_HALF_WIDTH, CHARACTER_HIT_HEIGHT, PAN_MARGIN_FRACTION, ZOOM_SCROLL_THRESHOLD } from '../../constants.js';
+import {
+  TILE_SIZE,
+  PAN_MARGIN_FRACTION,
+  ZOOM_SCROLL_THRESHOLD,
+} from '../../constants.js';
 
 interface OfficeCanvasProps {
   officeState: OfficeState;
@@ -38,6 +46,14 @@ interface OfficeCanvasProps {
   showAreas?: boolean;
   panRef: React.RefObject<{ x: number; y: number }>;
   onDeskClick?: (agentId: string, screenX: number, screenY: number) => void;
+}
+
+export function getCharacterHitBounds(
+  character: Character,
+  zoom: number,
+  pan: { x: number; y: number },
+): { left: number; right: number; top: number; bottom: number } {
+  return getCharacterScreenBounds(character, zoom, pan);
 }
 
 export function OfficeCanvas({
@@ -317,13 +333,9 @@ export function OfficeCanvas({
         const worldY = (screenY - panRef.current!.y) / zoom;
         let clickedAgentId: string | null = null;
         for (const [id, char] of officeState.characters) {
-          const charScreenX = char.x * zoom + panRef.current!.x;
-          const charScreenY = char.y * zoom + panRef.current!.y;
-          const hitLeft = charScreenX - CHARACTER_HIT_HALF_WIDTH * zoom;
-          const hitRight = charScreenX + CHARACTER_HIT_HALF_WIDTH * zoom;
-          const hitTop = charScreenY - CHARACTER_HIT_HEIGHT * zoom;
-          const hitBottom = charScreenY;
-          if (screenX >= hitLeft && screenX <= hitRight && screenY >= hitTop && screenY <= hitBottom) {
+          const bounds = getCharacterHitBounds(char, zoom, panRef.current!);
+          if (screenX >= bounds.left && screenX <= bounds.right
+            && screenY >= bounds.top && screenY <= bounds.bottom) {
             clickedAgentId = id;
             break;
           }
@@ -444,13 +456,9 @@ export function OfficeCanvas({
 
       let hoveredId: string | null = null;
       for (const [id, char] of officeState.characters) {
-        const charScreenX = char.x * zoom + panRef.current!.x;
-        const charScreenY = char.y * zoom + panRef.current!.y;
-        const hitLeft = charScreenX - CHARACTER_HIT_HALF_WIDTH * zoom;
-        const hitRight = charScreenX + CHARACTER_HIT_HALF_WIDTH * zoom;
-        const hitTop = charScreenY - CHARACTER_HIT_HEIGHT * zoom;
-        const hitBottom = charScreenY;
-        if (screenX >= hitLeft && screenX <= hitRight && screenY >= hitTop && screenY <= hitBottom) {
+        const bounds = getCharacterHitBounds(char, zoom, panRef.current!);
+        if (screenX >= bounds.left && screenX <= bounds.right
+          && screenY >= bounds.top && screenY <= bounds.bottom) {
           hoveredId = id;
           break;
         }

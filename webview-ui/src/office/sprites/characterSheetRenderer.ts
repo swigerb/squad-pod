@@ -1,34 +1,35 @@
 /**
  * Character Sheet Renderer
  *
- * Renders animated characters from 4-row PNG sprite sheets
- * (employeeA–D).  Each sheet has the layout:
+ * Renders the six built-in Pixel Agents pose atlases and legacy 4-row
+ * external walk sheets. Built-in sheets use this layout:
  *
- *   Row 0 — Walk Up   (away from camera)
- *   Row 1 — Walk Right (profile)
- *   Row 2 — Walk Down  (toward camera)
- *   Row 3 — Walk Left  (profile)
+ *   Row 0 — Down, Row 1 — Up, Row 2 — Right (Left is flipped Right)
+ *   Cols 0–2 — walk, 3–4 — typing, 5–6 — reading
  *
- * Each row contains multiple animation frames laid out side-by-side.
- * Background is pre-removed during asset loading (see assetLoader.ts).
- * The bundled employee sheets contain only walk-cycle frames; reading
- * artwork, when supplied, is rendered from the inline sprite template.
+ * Legacy external sheets remain 7 frames × 4 direction rows at 32×32 per cell.
  */
 
 import { getCharacterSheet } from './assetLoader.js';
+import type { CharacterSheetData } from './assetLoader.js';
 import { Direction, TILE_SIZE } from '../types.js';
 import { EXTERNAL_CHARACTER_BASE, PALETTE_COUNT } from '../engine/agentSync.js';
 
-/** Map game Direction enum to sprite-sheet row index. */
-const DIRECTION_TO_ROW: Record<Direction, number> = {
+export type CharacterAnimation = 'idle' | 'walk' | 'typing' | 'reading';
+
+const LEGACY_DIRECTION_TO_ROW: Record<Direction, number> = {
   [Direction.UP]: 0,
   [Direction.RIGHT]: 1,
   [Direction.DOWN]: 2,
   [Direction.LEFT]: 3,
 };
 
-/** Map palette index (0-1) to character sheet key (A-B). */
-const PALETTE_TO_SHEET: string[] = ['A', 'B'];
+const BUILTIN_DIRECTION_TO_ROW: Record<Direction, number> = {
+  [Direction.DOWN]: 0,
+  [Direction.UP]: 1,
+  [Direction.RIGHT]: 2,
+  [Direction.LEFT]: 2,
+};
 const _loggedCharacterSheetIssues = new Set<string>();
 
 function logCharacterSheetIssueOnce(key: string, ...args: unknown[]): void {
@@ -37,16 +38,10 @@ function logCharacterSheetIssueOnce(key: string, ...args: unknown[]): void {
   console.warn(...args);
 }
 
-function getSheetKeyForPalette(palette: number): string {
-  return sheetAppearance(palette).sheetKey;
-}
-
-/** Hue offset that separates palettes sharing the same PNG sheet. */
-const SHEET_PALETTE_HUE_STEP = 120;
-
 /**
- * Resolve which PNG sheet and hue rotation render a palette/hue pair, so the
- * six logical palettes stay visually distinct with only two shipped sheets.
+ * Resolve a stable built-in sheet for each persisted palette. Higher palette
+ * cycles keep the existing hue-shift behavior; external IDs retain their own
+ * sheet key and legacy frame contract.
  */
 export function sheetAppearance(palette: number, hueShift = 0): { sheetKey: string; hueDegrees: number } {
   let p = Math.max(0, Math.floor(palette) || 0);
@@ -56,17 +51,45 @@ export function sheetAppearance(palette: number, hueShift = 0): { sheetKey: stri
     hueShift = (Math.floor(p / PALETTE_COUNT) * 45) % 360;
     p %= PALETTE_COUNT;
   }
-  const variant = Math.floor(p / PALETTE_TO_SHEET.length);
+  const variant = Math.floor(p / PALETTE_COUNT);
   return {
-    sheetKey: PALETTE_TO_SHEET[p % PALETTE_TO_SHEET.length],
-    hueDegrees: (((variant * SHEET_PALETTE_HUE_STEP + hueShift) % 360) + 360) % 360,
+    sheetKey: `builtin:${p % PALETTE_COUNT}`,
+    hueDegrees: (((variant * 45 + hueShift) % 360) + 360) % 360,
   };
 }
 
+function getSheetForPalette(palette: number): CharacterSheetData | null {
+  return getCharacterSheet(sheetAppearance(palette).sheetKey);
+}
+
 export function hasCharacterSheetForPalette(palette: number): boolean {
-  const key = getSheetKeyForPalette(palette);
-  const sheet = getCharacterSheet(key);
-  return sheet !== null;
+  return getSheetForPalette(palette) !== null;
+}
+
+export function getCharacterSheetLayout(palette: number): CharacterSheetData['layout'] | null {
+  return getSheetForPalette(palette)?.layout ?? null;
+}
+
+function frameSource(
+  sheet: CharacterSheetData,
+  direction: Direction,
+  animation: CharacterAnimation,
+  frameIndex: number,
+): { row: number; col: number; flip: boolean } | null {
+  if (sheet.layout === 'pixel-agents') {
+    const row = BUILTIN_DIRECTION_TO_ROW[direction] ?? BUILTIN_DIRECTION_TO_ROW[Direction.DOWN];
+    if (animation === 'reading') return { row, col: 5 + frameIndex % 2, flip: direction === Direction.LEFT };
+    if (animation === 'typing') return { row, col: 3 + frameIndex % 2, flip: direction === Direction.LEFT };
+    if (animation === 'walk') {
+      const walkFrames = [0, 1, 2, 1];
+      return { row, col: walkFrames[frameIndex % walkFrames.length], flip: direction === Direction.LEFT };
+    }
+    return { row, col: 0, flip: direction === Direction.LEFT };
+  }
+
+  if (animation === 'reading') return null;
+  const row = LEGACY_DIRECTION_TO_ROW[direction] ?? LEGACY_DIRECTION_TO_ROW[Direction.DOWN];
+  return { row, col: frameIndex % sheet.framesPerRow, flip: false };
 }
 
 /**
@@ -84,6 +107,8 @@ export function drawCharacterFromSheet(
   destY: number,
   zoom: number,
   hueShift = 0,
+  animation: CharacterAnimation = 'walk',
+  outlineAlpha = 0,
 ): boolean {
   const { sheetKey, hueDegrees } = sheetAppearance(palette, hueShift);
   const sheet = getCharacterSheet(sheetKey);
@@ -98,28 +123,42 @@ export function drawCharacterFromSheet(
     return false;
   }
 
-  const row = DIRECTION_TO_ROW[direction] ?? DIRECTION_TO_ROW[Direction.DOWN];
-  const col = frameIndex % sheet.framesPerRow;
+  const frame = frameSource(sheet, direction, animation, frameIndex);
+  if (!frame) return false;
 
-  const srcX = col * sheet.frameWidth;
-  const srcY = row * sheet.frameHeight;
+  const srcX = frame.col * sheet.frameWidth;
+  const srcY = frame.row * sheet.frameHeight;
 
-  // Render at the base game resolution × zoom.
-  // The sprite sheets are upscaled (e.g. 20×), so we scale back down
-  // to the game's native pixel grid for crisp integer-scaled output.
   const destW = sheet.baseWidth * zoom;
   const destH = sheet.baseHeight * zoom;
+  const drawFrame = (x: number, y: number): void => {
+    if (frame.flip) {
+      ctx.save();
+      ctx.translate(x + destW, y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(sheet.image, srcX, srcY, sheet.frameWidth, sheet.frameHeight, 0, 0, destW, destH);
+      ctx.restore();
+    } else {
+      ctx.drawImage(sheet.image, srcX, srcY, sheet.frameWidth, sheet.frameHeight, x, y, destW, destH);
+    }
+  };
 
   ctx.imageSmoothingEnabled = false;
+  if (outlineAlpha > 0) {
+    ctx.save();
+    ctx.globalAlpha = outlineAlpha;
+    ctx.filter = 'brightness(0) invert(1)';
+    drawFrame(destX - zoom, destY);
+    drawFrame(destX + zoom, destY);
+    drawFrame(destX, destY - zoom);
+    drawFrame(destX, destY + zoom);
+    ctx.restore();
+  }
   if (hueDegrees !== 0) {
     ctx.save();
     ctx.filter = `hue-rotate(${hueDegrees}deg)`;
   }
-  ctx.drawImage(
-    sheet.image,
-    srcX, srcY, sheet.frameWidth, sheet.frameHeight,
-    destX, destY, destW, destH,
-  );
+  drawFrame(destX, destY);
   if (hueDegrees !== 0) {
     ctx.restore();
   }
@@ -133,17 +172,30 @@ export function drawCharacterFromSheet(
  */
 export function getCharacterSheetFrameSize(
   palette: number,
+  animation?: CharacterAnimation,
 ): { width: number; height: number } | null {
-  const sheetKey = getSheetKeyForPalette(palette);
-  const sheet = getCharacterSheet(sheetKey);
+  const sheet = getSheetForPalette(palette);
   if (!sheet) return null;
+  if (animation === 'reading' && sheet.layout !== 'pixel-agents') return null;
   return { width: sheet.baseWidth, height: sheet.baseHeight };
 }
 
+/** Position offset from the tile-center anchor; built-ins match Pixel Agents' foot anchor. */
+export function getCharacterSheetAnchorOffset(
+  palette: number,
+  animation?: CharacterAnimation,
+): { dx: number; dy: number } | null {
+  const size = getCharacterSheetFrameSize(palette, animation);
+  if (!size) return null;
+  const layout = getCharacterSheetLayout(palette);
+  return {
+    dx: -size.width / 2,
+    dy: layout === 'pixel-agents' ? -size.height : TILE_SIZE / 2 - size.height,
+  };
+}
+
 /**
- * Get the base-pixel positioning offsets for a character frame so it
- * aligns correctly with the tile grid (horizontally centred, feet at
- * tile bottom).
+ * Get the legacy tile-origin offsets for consumers that anchor at tile top-left.
  */
 export function getCharacterSheetOffset(
   palette: number,

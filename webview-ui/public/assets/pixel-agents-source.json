@@ -10,12 +10,35 @@
   "sha256": "2a7bc1bb5e851441723d04b0860b012c75d4ff43d12281667d57d6c3b1dc37d1",
   "hashFormat": "Sorted relative POSIX filename, NUL, then raw bytes for every file under the four directories",
   "verification": "All 48 furniture/floor/wall PNG blobs match originalAssetCommit (PR117). Only COFFEE and LARGE_PLANT manifests differ at the pin; later changes are metadata, not artwork. Carpets are a separate PR316 contribution verified below. Pet art is a separate contribution trail verified below.",
+  "characters": {
+    "creator": "JIK-A-4",
+    "sourcePack": "MetroCity - Free Top Down Character Pack",
+    "creatorPage": "https://jik-a-4.itch.io/metrocity-free-topdown-character-pack",
+    "creatorPermission": "The creator describes the pack as completely free and says, \"You can use it as you wish.\"",
+    "creatorForumPost": "https://itch.io/t/3377789/metrocity-free-top-down-character-pack",
+    "attributionTerms": "The creator says credit is not necessary but would be appreciated; attribution is retained here and in THIRD_PARTY_NOTICES.md.",
+    "standardLicense": null,
+    "licenseNote": "No named standard license or explicit commercial/redistribution clause is stated. The character artwork is not claimed under the Pixel Agents repository MIT license.",
+    "upstreamRepository": "https://github.com/pixel-agents-hq/pixel-agents",
+    "upstreamCommit": "b1bafd02896d90d83457266575a1e8e5011ce997",
+    "upstreamAttribution": "https://github.com/pixel-agents-hq/pixel-agents/blob/b1bafd02896d90d83457266575a1e8e5011ce997/README.md",
+    "importMethod": "Unmodified PNG files retrieved from the upstream tree at upstreamCommit; Git blob IDs and SHA-256 values are recorded per file.",
+    "files": [
+      { "path": "characters/char_0.png", "gitBlob": "68a86c5035b77c0a2f752404080b4bfeb023fa2f", "bytes": 3956, "sha256": "9ece93c20765abb876e3dacfe01e0cd1801323eff41c1779be0c47369886c09a" },
+      { "path": "characters/char_1.png", "gitBlob": "13676875af4411e1bc85bc732a16679a82c710e3", "bytes": 5022, "sha256": "f935f033726b06f73dbbe590db5a23cfb20d2d02c1329fd5d67d57a262e9b05e" },
+      { "path": "characters/char_2.png", "gitBlob": "d07293bd08665ec1b3b4cb91a00022601d06a0fe", "bytes": 5221, "sha256": "9f63ee7be4577e1d60de3b64d198d387d1c09794bed3a608958e77c7b955575d" },
+      { "path": "characters/char_3.png", "gitBlob": "89f858c63939e8f1637e0fffef987a84e69bacc4", "bytes": 4930, "sha256": "ee5ebe0847471e4834e367f8a4108e6caf2f402ed506bbfebd90c64a43a79348" },
+      { "path": "characters/char_4.png", "gitBlob": "32dbc619a3b1f724cbf8777175efe9fab4d93a57", "bytes": 5488, "sha256": "fcf72626bbee3045d0f3e10bb87a41dab19a331d1affdfc53b483567f9c083aa" },
+      { "path": "characters/char_5.png", "gitBlob": "b5cfa27e8c4c95be748111bacfabdd1e149be052", "bytes": 5071, "sha256": "4b2c639a50e089a4e3b87be440ffb52b5c5c8cfd6473a386f325b25f99db7381" }
+    ]
+  },
   "starterLayout": {
     "path": "webview-ui/public/assets/default-layout-1.json",
     "sourceCommit": "b1bafd02896d90d83457266575a1e8e5011ce997",
     "sourceUrl": "https://github.com/pixel-agents-hq/pixel-agents/blob/b1bafd02896d90d83457266575a1e8e5011ce997/webview-ui/public/assets/default-layout-1.json",
     "license": "MIT",
     "adaptation": "The office composition, bundled asset identities, tile colors and seating positions are adapted for Squad Pod's asset namespaces and saved-layout format. The empty upper margin is trimmed; legacy tile IDs remain unchanged."
+
   },
   "carpets": {
     "introducingCommit": "7a1643fb5e7bab59e1e789fac06c0f9a2fd78d7c",

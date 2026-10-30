@@ -18,11 +18,13 @@ lines = [
     "",
 ]
 
-names = ["char_employeeA", "char_employeeB"]
+names = [f"char_{index}" for index in range(6)]
 for name in names:
     path = os.path.join(CHARS_DIR, f"{name}.png")
     img = Image.open(path).convert("RGBA")
     width, height = img.size
+    if (width, height) != (112, 96):
+        raise ValueError(f"{name}.png must be 112x96, found {width}x{height}")
     
     # Get raw RGBA bytes
     rgba_bytes = img.tobytes()
@@ -30,7 +32,7 @@ for name in names:
     # Base64 encode the raw RGBA data
     b64 = base64.b64encode(rgba_bytes).decode("ascii")
     
-    key = name.replace("char_employee", "")
+    key = name.removeprefix("char_")
     lines.append(f"// {name}: {width}×{height} = {len(rgba_bytes)} bytes RGBA")
     lines.append(f'export const CHAR_{key}_RGBA = "{b64}";')
     lines.append(f'export const CHAR_{key}_WIDTH = {width};')
@@ -42,9 +44,13 @@ lines.append("  id: string;")
 lines.append("  width: number;")
 lines.append("  height: number;")
 lines.append("  rgbaBase64: string;")
+lines.append("  layout: 'pixel-agents';")
 lines.append("}> = [")
-lines.append('  { id: "char_employeeA", width: CHAR_A_WIDTH, height: CHAR_A_HEIGHT, rgbaBase64: CHAR_A_RGBA },')
-lines.append('  { id: "char_employeeB", width: CHAR_B_WIDTH, height: CHAR_B_HEIGHT, rgbaBase64: CHAR_B_RGBA },')
+for index in range(6):
+    lines.append(
+        f'  {{ id: "char_{index}", width: CHAR_{index}_WIDTH, height: CHAR_{index}_HEIGHT, '
+        f'rgbaBase64: CHAR_{index}_RGBA, layout: "pixel-agents" }},'
+    )
 lines.append("];")
 lines.append("")
 
@@ -52,4 +58,4 @@ output = "\n".join(lines)
 with open(OUT_PATH, "w", encoding="utf-8") as f:
     f.write(output)
 print(f"Wrote {len(output)} chars to {OUT_PATH}")
-print(f"Generated {len(names)} character sheets with raw RGBA data")
+print(f"Generated {len(names)} 112x96 character sheets with raw RGBA data")
