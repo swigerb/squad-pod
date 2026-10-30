@@ -224,13 +224,16 @@ try {
   await tab.getByRole('button', { name: 'Connect read-only office' }).click();
   await tab.locator('.office-panel canvas').waitFor();
   await until(() => tab.evaluate(() => document.querySelector('[data-agent-tools="ada"]')?.textContent.includes('Reading fixture.ts')), 'reload tool replay');
+  await until(() => tab.evaluate(() => document.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow') === '80'), 'reload context replay');
+  await until(() => tab.evaluate(() => document.querySelector('[data-subagent-label]')?.textContent.includes('Fixture child')), 'reload temporary child replay');
   assert.ok(browserMessages.some(message => message.type === 'agentToolStart' && message.toolId === 'read-two'));
   assert.ok(!browserMessages.some(message => message.type === 'agentToolStart' && message.toolId === 'read-one'));
   check('reload reconstructs current tool/context without replaying completed tool history or launching a process');
   await fs.appendFile(file, line('subagent.completed', { toolCallId: 'fixture-child' }, 'fixture-instance')
     + line('subagent.completed', { toolCallId: 'fixture-run' }));
   await until(() => tab.evaluate(() => !document.querySelector('[role="progressbar"]')
-    && !document.querySelector('[data-agent-tools="ada"]')), 'live completion clears displays');
+    && !document.querySelector('[data-agent-tools="ada"]')
+    && !document.querySelector('[data-subagent-label]')), 'live completion clears displays');
   const staleFile = await session('stale-session', project, marker + running + tool('stale'), 6 * 60_000);
   // Newest directory candidate but genuinely stale event bytes.
   const time = new Date();

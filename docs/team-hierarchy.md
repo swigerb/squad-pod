@@ -56,10 +56,18 @@ unsupported; the transient view is not their implementation. A manually edited
 roster remains authoritative but is not evidence that a producer promoted a
 teammate. Issue #111 retains that disposition for user/coordinator approval.
 
-The shared webview supports the same snapshot protocol in any host. This slice
-does not enable standalone private-log reading: the default standalone observer
-still cannot produce live tasks. Separately consented standalone live observation
-is a different integration.
+The shared webview supports the same snapshot protocol in any host. Standalone
+live observation is default-off and requires local CLI consent via
+`--live-activity`; the read-only browser cannot enable session-log reads.
+Opted-in observation forwards the same bounded task/instance/selected-agent
+projection and temporary characters without promoting roster members. With no
+active owned run it follows the newest exact-canonical-workspace Squad session,
+visibly labeled as project matching rather than ownership. With `--terminals`,
+new compatible owned launches add a private server-generated `--session-id` UUID;
+while an active owned run awaits its exact fresh source, unrelated project
+sessions cannot supply fallback activity. See the [standalone channel and
+exact-owned boundary](standalone-channels.md) for read scope, fixed argv,
+sanitized-home mismatch, revocation and cleanup.
 
 Unit/host/webview/engine tests and production-browser fixtures establish the
 projection, character lifecycle, rendering and deduplication behavior. Fixtures
