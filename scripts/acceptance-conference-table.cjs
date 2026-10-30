@@ -49,6 +49,15 @@ window.acquireVsCodeApi = () => ({
 });
 </script><script nonce="fixture" type="module" src="/assets/index.js"></script></body></html>`;
 
+async function poll(page, predicate, argument, description) {
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    if (await page.evaluate(predicate, argument)) return;
+    await page.waitForTimeout(50);
+  }
+  throw new Error(`Timed out after 10000 ms waiting for ${description}`);
+}
+
 async function main() {
   const result = {
     label,
@@ -79,7 +88,8 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
     page.on('pageerror', error => result.pageErrors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
-    await page.waitForFunction(() => window.__conference.state?.draft?.furniture?.length > 20);
+    await poll(page, () => window.__conference.state?.draft?.furniture?.length > 20,
+      undefined, 'default-office fixture replay');
     await page.waitForTimeout(300);
     const geometry = await page.evaluate(({ cols, rows }) => {
       const canvas = document.querySelector('canvas');
@@ -130,7 +140,8 @@ async function main() {
       await page.evaluate(groupLayout => window.dispatchEvent(new MessageEvent('message', {
         data: { type: 'layoutLoaded', layout: groupLayout, revision: 'group-open-floor-fixture', source: 'external' },
       })), groupLayout);
-      await page.waitForFunction(() => window.__conference.state.draft.furniture.length === 5);
+      await poll(page, () => window.__conference.state.draft.furniture.length === 5,
+        undefined, 'isolated group fixture replay');
       await page.getByRole('button', { name: 'Edit Layout', exact: true }).click();
       await page.getByRole('region', { name: 'Layout editor' }).waitFor();
       await page.getByTitle('Select', { exact: true }).click();
@@ -148,8 +159,8 @@ async function main() {
       await page.mouse.down();
       await page.mouse.move(to.x, to.y, { steps: 10 });
       await page.mouse.up();
-      await page.waitForFunction(() => window.__conference.state.draft.furniture
-        .find(item => item.uid === 'conference-table').col === 9);
+      await poll(page, () => window.__conference.state.draft.furniture
+        .find(item => item.uid === 'conference-table').col === 9, undefined, 'grouped table move');
       const moved = await page.evaluate(() => window.__conference.state.draft);
       for (const original of layout.furniture.filter(item =>
         item.uid === 'conference-table' || item.uid.startsWith('computer-side-'))) {
@@ -158,21 +169,23 @@ async function main() {
       }
       for (let turn = 1; turn <= 4; turn++) {
         await page.getByTitle('Rotate (R)', { exact: true }).click();
-        await page.waitForFunction(rotation => window.__conference.state.draft.furniture
-          .find(item => item.uid === 'conference-table').rotation === rotation, (turn * 90) % 360);
+        await poll(page, rotation => window.__conference.state.draft.furniture
+          .find(item => item.uid === 'conference-table').rotation === rotation,
+        (turn * 90) % 360, `grouped table rotation ${turn}`);
         if (turn === 1) await page.screenshot({ path: path.join(output, 'after-group-rotated.png') });
       }
       const restored = await page.evaluate(() => window.__conference.state.draft);
       assert.deepEqual(restored, moved, 'four real editor rotations restore moved group and complete layout metadata');
       await page.getByRole('button', { name: /Save Layout/ }).click();
-      await page.waitForFunction(() => window.__conference.outbound.some(message => message.type === 'saveLayout'));
+      await poll(page, () => window.__conference.outbound.some(message => message.type === 'saveLayout'),
+        undefined, 'save boundary message');
       const saved = await page.evaluate(() => window.__conference.outbound.filter(message => message.type === 'saveLayout').at(-1).layout);
       assert.deepEqual(saved, moved, 'save boundary preserves complete moved group');
       await page.evaluate(saved => window.dispatchEvent(new MessageEvent('message', {
         data: { type: 'layoutLoaded', layout: saved, revision: 'conference-reloaded', source: 'external' },
       })), saved);
-      await page.waitForFunction(() => window.__conference.state.draft.furniture
-        .find(item => item.uid === 'conference-table').col === 9);
+      await poll(page, () => window.__conference.state.draft.furniture
+        .find(item => item.uid === 'conference-table').col === 9, undefined, 'external saved-layout reload');
       assert.deepEqual(await page.evaluate(() => window.__conference.state.draft), saved);
       await page.screenshot({ path: path.join(output, 'after-group-saved-reloaded.png') });
       result.groupedEditor = {
