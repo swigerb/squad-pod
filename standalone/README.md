@@ -8,8 +8,10 @@ The shared renderer can display ephemeral subtask characters from explicit
 same-session parent/instance snapshots, but this default observer does not read
 private live logs or produce those snapshots. It does not infer a durable team
 hierarchy or promote task names into roster members. See the
-[team identity contract](../docs/team-hierarchy.md); separately consented live-log
-observation is a distinct integration, not enabled by office-control or terminals.
+[team identity contract](../docs/team-hierarchy.md). Explicit local `--live-activity`
+consent enables the bounded live-log adapter, including emitted current-session
+and member runtime models with source timestamps. Office-control or terminals
+alone never enable those reads; declared model preferences are not substitutes.
 Its build copies the canonical repository LICENSE and THIRD_PARTY_NOTICES.md
 into the package root; bundled asset provenance and runtime dependency licenses
 remain intact in the installed distribution.

@@ -207,6 +207,8 @@ function mutations(out) {
       to: "if (task) { this.finish(task.agentId); return; }\n      const tool = this.tools.get(event.toolCallId);" },
     { name: 'fuzzy-attribution', file: 'copilotSessionActivity.ts',
       from: 'member.id.toLowerCase() === key', to: 'key.startsWith(member.id.toLowerCase())' },
+    { name: 'member-model-owner-bypass', file: 'copilotSessionActivity.ts',
+      from: ': this.modelAgentOwners.get(event.agentInstanceId);', to: ': undefined;' },
     { name: 'prompt-leak', file: 'copilotSessionActivity.ts',
       from: 'description: text(args.description, TASK_DESCRIPTION_DISPLAY_MAX_LENGTH)',
       to: 'description: text(args.prompt, TASK_DESCRIPTION_DISPLAY_MAX_LENGTH)' },
@@ -389,9 +391,28 @@ async function browserAcceptance(out) {
       await page.locator('#squad-pod-live-activity').click();
       await poll(page, () => document.querySelector('#squad-pod-live-activity').checked);
       await page.getByRole('button', { name: '×', exact: true }).click();
-      fixture.append(spawn() + done('member-run') + tool('read-one', 'view', { path: `C:\\private\\${secret}\\fixture.ts` }));
+      const modelTimestamp = '2026-10-30T12:34:56.000Z';
+      fixture.append(event('session.start', { selectedModel: 'fixture-root-model' }, { timestamp: modelTimestamp })
+        + spawn()
+        + event('assistant.message', { model: 'fixture-member-model', content: secret },
+          { agentId: 'internal', timestamp: modelTimestamp })
+        + done('member-run') + tool('read-one', 'view', { path: `C:\\private\\${secret}\\fixture.ts` }));
       await page.locator('[data-agent-tools="ada"]').filter({ hasText: 'Reading fixture.ts' }).waitFor();
       await page.locator('[data-agent-label="ada"] [aria-label="Active"]').waitFor();
+      await page.getByRole('button', { name: 'Squad Info', exact: true }).click();
+      const squadInfo = page.getByRole('dialog', { name: 'Squad Info' });
+      await squadInfo.locator('[aria-label="Current-session model"]').getByText('fixture-root-model').waitFor();
+      await squadInfo.getByRole('button', { name: 'Show details for Ada' }).click();
+      await squadInfo.getByText('fixture-member-model', { exact: false }).waitFor();
+      const runtimeModelText = await squadInfo.innerText();
+      assert.match(runtimeModelText, /session\.start\.selectedModel/);
+      assert.match(runtimeModelText, /assistant\.message\.model/);
+      assert.ok(runtimeModelText.includes(modelTimestamp), 'runtime model labels must include producer timestamps');
+      const runtimeModels = fixture.messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot;
+      assert.equal(runtimeModels?.session?.model, 'fixture-root-model');
+      assert.equal(runtimeModels?.members?.ada?.model, 'fixture-member-model');
+      await page.screenshot({ path: path.join(out, `runtime-model-${viewport.width}x${viewport.height}.png`) });
+      await squadInfo.getByRole('button', { name: 'Close Squad Info' }).click();
       const firstCanvas = await page.locator('canvas').first().screenshot();
       let advanced = false;
       for (let frame = 0; frame < 10 && !advanced; frame++) {
@@ -511,6 +532,7 @@ async function browserAcceptance(out) {
         viewport, errors, failedAssets, guardProof, decodedAssets, assetProof, expectedWarnings, overlaps, toolBounds,
         observedTasks: { inventoryBounds, unattributedConcurrentCalls: 3, explicitParent: true,
           metadataTruncation: true, stale: true, loss: true, error: true, reconnect: 'in-flight only' },
+        runtimeModels,
         sequentialCalls: 120, concurrentCalls: 12, confirmations: fixture.confirmations.length,
         source: fixture.messages.filter(m => m.type === 'sourceStatus').at(-1),
       }, null, 2));

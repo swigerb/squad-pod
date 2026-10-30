@@ -469,18 +469,71 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
   it('keeps auto, charter and JSON conflicts separate, refreshes on reopen, and withholds stale model replies', () => {
     const squad = path.join(fixture.workspaceRoot, '.squad');
     const charter = path.join(squad, 'agents', 'ada', 'charter.md');
+    const timestamp = '2026-10-30T12:34:56.000Z';
     fs.appendFileSync(charter, '\n## Model\n- **Preferred:** auto\n- **Rationale:** Synthetic policy\n- **Fallback:** synthetic-fallback\n');
     fs.writeFileSync(path.join(squad, 'config.json'), JSON.stringify({
       defaultModel: 'synthetic-default', agentModelOverrides: { Ada: 'synthetic-override', ada: 'not-the-name' },
     }));
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'following', sessionId: 'session' },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'session',
+        session: { model: 'session-selection', kind: 'session-selection',
+          source: 'session.start.selectedModel', timestamp },
+        members: { ada: { model: 'member-observation', kind: 'assistant-message',
+          source: 'assistant.message.model', timestamp } },
+      } });
+    });
     click('Squad Info');
     click('Show details for Ada');
     const text = memberDetail()?.textContent;
-    for (const expected of ['Current-session model: unavailable', 'Automatic selection (auto; not a concrete model)',
-      'Rationale: Synthetic policy', 'Fallback: synthetic-fallback', 'defaultModel: synthetic-default',
+    for (const expected of ['Member runtime model: member-observation', 'assistant.message.model', timestamp,
+      'Automatic selection (auto; not a concrete model)', 'Rationale: Synthetic policy',
+      'Fallback: synthetic-fallback', 'defaultModel: synthetic-default',
       'agentModelOverrides["Ada"]: synthetic-override', path.join(squad, 'config.json'),
       'not effective runtime selection']) expect(text).toContain(expected);
+    expect(card()?.textContent).toContain('Current-session model: session-selection');
     expect(text).not.toContain('not-the-name');
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'searching', sessionId: null },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'session',
+        session: { model: 'stale-model', kind: 'session-selection',
+          source: 'session.start.selectedModel', timestamp },
+        members: {},
+      } });
+    });
+    expect(card()?.textContent).toContain('Current-session model: unavailable');
+    expect(memberDetail()?.textContent).toContain('Member runtime model: unavailable');
+    act(() => {
+      deliver({ type: 'sourceStatus', status: {
+        workspaceRoot: fixture.workspaceRoot, squadDir: path.join(fixture.workspaceRoot, '.squad'),
+        teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'following', sessionId: 'new-session' },
+      } });
+      deliver({ type: 'liveModels', snapshot: {
+        sessionId: 'session',
+        session: { model: 'old-session-model', kind: 'assistant-message',
+          source: 'assistant.message.model', timestamp },
+        members: {},
+      } });
+    });
+    expect(card()?.textContent).toContain('Current-session model: unavailable');
+    act(() => deliver({ type: 'liveModels', snapshot: {
+      sessionId: 'new-session',
+      session: { model: 'new-session-model', kind: 'session-selection',
+        source: 'session.start.selectedModel', timestamp },
+      members: {},
+    } }));
+    expect(card()?.textContent).toContain('Current-session model: new-session-model');
     hold = true;
     click('Show details for Grace');
     const stale = held.at(-1)!;
@@ -494,7 +547,7 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     expect(memberDetail()?.textContent).toContain('malformed');
     expect(memberDetail()?.textContent).not.toContain('synthetic-default');
     expect(memberDetail()?.textContent).not.toContain('synthetic-override');
-    expect(memberDetail()?.textContent).toContain('Current-session model: unavailable');
+    expect(memberDetail()?.textContent).toContain('Member runtime model: unavailable');
     hold = false;
   });
 

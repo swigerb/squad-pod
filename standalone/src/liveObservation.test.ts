@@ -139,6 +139,35 @@ describe('standalone opted-in live observation', () => {
     } finally { observer.dispose(); }
   });
 
+  it('forwards emitted session/member models with source timestamps and clears them on stale source', async () => {
+    vi.useFakeTimers();
+    const { project, home, session } = fixture();
+    const timestamp = new Date().toISOString();
+    const model = (type: string, data: object) => JSON.stringify({ type, timestamp, data }) + '\n';
+    session('matching', marker + model('session.start', { selectedModel: 'fixture-session-model' })
+      + running() + tool() + model('tool.execution_complete', { toolCallId: 'read', model: 'fixture-member-model' }));
+    const observer = createObserver(project, assets, 1000, { liveActivity: true, copilotHome: home });
+    const currentModels = (messages: OutboundMessage[]) => messages.filter(m => m.type === 'liveModels').at(-1)?.snapshot;
+    let unsubscribe = observer.subscribe(() => {});
+    try {
+      const messages = await observer.snapshot();
+      validate(messages);
+      expect(currentModels(messages)).toEqual({ sessionId: 'matching',
+        session: { model: 'fixture-session-model', kind: 'session-selection',
+          source: 'session.start.selectedModel', timestamp },
+        members: { ada: { model: 'fixture-member-model', kind: 'tool-call',
+          source: 'tool.execution_complete.model', timestamp } },
+      });
+      unsubscribe();
+      unsubscribe = observer.subscribe(() => {});
+      expect(currentModels(await observer.snapshot())).toEqual(currentModels(messages));
+      await vi.advanceTimersByTimeAsync(LIVE_STALE_MS + 1000);
+      const stale = await observer.snapshot();
+      validate(stale);
+      expect(currentModels(stale)).toEqual({ sessionId: 'matching', session: null, members: {} });
+    } finally { unsubscribe(); observer.dispose(); }
+  });
+
   it('does not discover or read home sessions without the explicit host opt-in', async () => {
     const { project, home, session } = fixture();
     session('matching');
