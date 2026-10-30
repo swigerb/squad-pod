@@ -354,7 +354,8 @@ async function main() {
       try {
         const file = path.join(source.directory, mutant.file);
         const original = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
-        assert.equal([...original.matchAll(mutant.pattern)].length, 1, `${mutant.name} source mutation matches exactly once`);
+        const globalPattern = new RegExp(mutant.pattern.source, `${mutant.pattern.flags}g`);
+        assert.equal([...original.matchAll(globalPattern)].length, 1, `${mutant.name} source mutation matches exactly once`);
         fs.writeFileSync(file, original.replace(mutant.pattern, mutant.replacement));
         const testFile = path.join(root, 'webview-ui', 'node_modules', 'vitest', 'vitest.mjs');
         const result = run([
