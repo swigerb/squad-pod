@@ -201,19 +201,9 @@ or installed-VSIX acceptance; no terminal/CLI launch is executed.
 
 ### External character sheets
 
-Use **Settings > Add Asset Directory** with the same local roots used by furniture
-and pets. Add `characters/char_NAME.png` files: non-interlaced, transparent
-**224x128 PNGs**, with seven 32x32 frames per row ordered **up, right, down, left**.
-Names allow 1-80 letters, digits, underscores or hyphens, starting with a letter
-or digit. Limits are eight directories, eight sheets per directory, 32 total and
-512 KiB per file; each directory allows 256 entries, 16 attempts and 2 MiB read
-per refresh. Duplicate filenames and symlinks are rejected; Settings shows errors.
-Changes appear automatically without restarting the panel.
+Add sheets through **Settings > Add Asset Directory** at `characters/char_NAME.png`: transparent, non-interlaced **224x128 PNGs**, with seven 32x32 frames per row ordered **up, right, down, left**. Limits: eight directories, eight sheets each, 32 total and 512 KiB per file; each directory allows 256 entries, 16 attempts and 2 MiB read per refresh. Settings shows validation errors, and changes reload automatically.
 
-Existing agents keep their saved appearances. New members use unused custom
-sheets first, then bundled styles; removed sheets fall back to a stable bundled
-style. Keep folder paths and filenames unchanged to retain custom assignments.
-`characters` and `pets` are reserved folders and cannot also be furniture items.
+Existing appearances stay saved; new members use unused custom sheets before bundled styles, and missing sheets get a stable bundled fallback. Keep paths and filenames unchanged to retain assignments. `characters` and `pets` are reserved folders, not furniture items.
 
 ### Client transport foundation
 
