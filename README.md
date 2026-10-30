@@ -90,6 +90,8 @@ Open **Directories** to launch Squad in a workspace folder or a saved directory.
 
 Open **Telemetry** in the toolbar to browse observed status changes, session activity, logs, orchestration events, and decisions. The drawer also displays historical usage from the local Squad usage ledger when available, including reported token and estimated-cost totals and recent model reports. These reports are historical source data, not live context utilization or billing records.
 
+**Activity events** counts only observed events; **Clear activity** leaves recorded usage and observed tasks unchanged. Existing files are not replayed. Missing usage is not zero consumption, and enabling live CLI observation does not create a usage ledger. Source diagnostics distinguish file watching from opt-in live CLI observation; **Observation settings and consent** opens the existing Settings flow without enabling anything. Settings and live-log consent are unavailable in the read-only observer.
+
 ## Activity detection
 
 Squad Pod watches the selected project's `.squad/` files, including the roster, sessions, logs, orchestration logs, decision inbox, and agent files. It uses filesystem notifications with polling as a fallback and treats the initial scan as a baseline rather than replaying old files.
