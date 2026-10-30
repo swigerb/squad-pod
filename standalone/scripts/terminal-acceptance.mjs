@@ -231,7 +231,8 @@ try {
     assert.equal(await tab.evaluate(() => matchMedia('(max-width: 700px), (pointer: coarse)').matches), false);
     assert.equal(await tab.getByRole('button', { name: 'Edit Layout', exact: true }).count(), 1,
       'synthetic hybrid touchscreen with a fine pointer preserves desktop editor visibility');
-    assert.equal(await tab.locator('.observer-pages-track').evaluate(element => element.style.transform), 'translateX(0)');
+    assert.equal(await tab.locator('.observer-pages-track').evaluate(element =>
+      new DOMMatrixReadOnly(getComputedStyle(element).transform).isIdentity), true);
     const browserRun = received.filter(frame => frame.type === 'runs').at(-1).runs[0];
     await tab.locator('.xterm-helper-textarea').focus();
     await tab.keyboard.type('OK');
