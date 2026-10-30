@@ -510,8 +510,10 @@ describe('OfficeState rendered continuity across seat transitions', () => {
     return { office, character };
   }
 
-  function tick(office: OfficeState, character: Character, dt: number): void {
+  /** Advance one production tick and report the post-update state (widened, since the update mutates it). */
+  function tick(office: OfficeState, character: Character, dt: number): CharacterState {
     updateCharacter(character, dt, office.walkableTiles, office.seats, office.tileMap, office.blockedTiles);
+    return character.state;
   }
 
   /** Drive the production update loop, asserting continuous, collision-safe movement and no early work. */
@@ -520,13 +522,13 @@ describe('OfficeState rendered continuity across seat transitions', () => {
     const maxStep = WALK_SPEED_PX_PER_SEC * dt + 1e-9;
     let previous = getCharacterWorldPosition(character);
     for (let i = 0; i < 400 && character.state === CharacterState.WALK; i++) {
-      tick(office, character, dt);
+      const stateAfterTick = tick(office, character, dt);
       const current = getCharacterWorldPosition(character);
       expect(Math.hypot(current.x - previous.x, current.y - previous.y)).toBeLessThanOrEqual(maxStep);
       previous = current;
       const anchor = `${character.col},${character.row}`;
       if (anchor !== seatKey) expect(office.blockedTiles.has(anchor)).toBe(false);
-      if (character.state === CharacterState.TYPE) expect(anchor).toBe(seatKey);
+      if (stateAfterTick === CharacterState.TYPE) expect(anchor).toBe(seatKey);
     }
     expect(character.state).not.toBe(CharacterState.WALK);
   }
