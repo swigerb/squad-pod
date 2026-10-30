@@ -7,7 +7,7 @@ import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 const root = await fs.mkdtemp(path.join(os.tmpdir(), 'squad owned installed acceptance '));
@@ -201,7 +201,7 @@ try {
   check('observed identity rejected; explicit close cleans owned root and descendant');
 
   if (process.env.PLAYWRIGHT_MODULE) {
-    const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE);
+    const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
     browser = await chromium.launch({ headless: true, executablePath: process.env.EDGE_PATH });
     const tab = await browser.newPage({ viewport: { width: 1440, height: 960 } });
     await tab.addInitScript(() => Object.defineProperty(navigator, 'maxTouchPoints',
