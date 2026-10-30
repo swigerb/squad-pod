@@ -5,6 +5,8 @@
  * plus a hue rotation, so every client renders the same look.
  */
 
+import type { CurrentTaskSource } from '../../../../src/types.js';
+
 export const PALETTE_COUNT = 6;
 export const EXTERNAL_CHARACTER_BASE = 48 * 0x1000000;
 const HUE_STEP_DEGREES = 45;
@@ -16,6 +18,7 @@ export interface AgentSnapshot {
   name: string;
   role: string;
   currentTask?: string | null;
+  currentTaskSource?: CurrentTaskSource | null;
   paletteIndex?: number;
   seatId?: string | null;
   directoryId?: string | null;
