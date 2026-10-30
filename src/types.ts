@@ -143,8 +143,12 @@ export interface TilesetData {
 
 /** Webview-safe URI for a single custom character sprite sheet. */
 export interface CharacterAssetEntry {
-  id: string;   // e.g. "char_employeeA"
-  uri: string;  // webview-safe URI string (from webview.asWebviewUri)
+  id: string;
+  uri: string;
+  paletteIndex: number;
+  source: string;
+  file: string;
+  sha256: string;
 }
 
 // ─── Tileset Metadata (rich format from tileset-metadata.json) ───────
@@ -345,5 +349,5 @@ export type OutboundMessage =
   | { type: 'telemetryEvent'; event: TelemetryEvent }
   | { type: 'tilesetAssetsLoaded'; tilesetPngUri: string; tilesetData: TilesetData }
   | { type: 'tilesetMetadataLoaded'; tilesetPngUri: string; metadata: TilesetMetadata }
-  | { type: 'characterAssetsLoaded'; characters: CharacterAssetEntry[] }
+  | { type: 'characterAssetsLoaded'; characters: CharacterAssetEntry[]; diagnostics: string[] }
   | { type: 'noWorkspace' };
