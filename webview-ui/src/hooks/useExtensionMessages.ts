@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { OfficeLayout, ToolActivity, SquadTeamMember, TelemetryEvent } from '../office/types.js';
 import { useHostClient } from '../HostClientContext.js';
+import { connectOffice } from '../../../src/core/officeChannel.js';
 import type { AgentDetailInfo } from '../components/AgentCard.js';
 import type { SquadInfoData } from '../components/SquadInfoCard.js';
 import {
@@ -569,8 +570,7 @@ export function useExtensionMessages(
       }
     };
 
-    const unsubscribe = client.subscribe(handleMessage);
-    client.send({ type: 'webviewReady' });
+    const unsubscribe = connectOffice(client, handleMessage);
     client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
 
     return unsubscribe;
