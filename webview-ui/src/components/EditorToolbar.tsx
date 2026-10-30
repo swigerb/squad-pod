@@ -15,6 +15,7 @@ import type { ItemType } from '../office/sprites/assetLoader.js';
 import { getPetCount, getPetName, getPetSprites, getPetTypes } from '../office/sprites/petSpriteData.js';
 import type { AreaDefinition } from '../office/types.js';
 import type { DirectoryEntry } from '../../../src/types.js';
+import { DEFAULT_FLOOR_COLOR } from '../constants.js';
 
 // ─── Props ─────────────────────────────────────────────────────
 export interface EditorToolbarProps {
@@ -25,6 +26,14 @@ export interface EditorToolbarProps {
   onFloorColorChange: (color: FloorColor) => void;
   onWallColorChange: (color: FloorColor) => void;
   onFurnitureTypeChange: (type: string) => void;
+  furniturePaletteColor: FloorColor | null;
+  selectedFurnitureColor: FloorColor | null;
+  onFurniturePaletteColorChange: (color: FloorColor | null) => void;
+  onSelectedFurnitureColorChange: (color: FloorColor | null) => void;
+  onFurnitureColorPickToggle: (target: 'selected' | 'palette') => void;
+  furnitureColorPickTarget: 'selected' | 'palette' | null;
+  onColorGestureStart: () => void;
+  onColorGestureEnd: () => void;
   activePetTypes: number[];
   onPetToggle: (petType: number) => void;
   onCarpetVariantChange: (variant: number) => void;
@@ -408,11 +417,23 @@ function ColorSliders({
   color,
   onChange,
   flat = false,
+  onClear,
+  clearLabel,
+  onColorPickToggle,
+  colorPickArmed = false,
+  onGestureStart,
+  onGestureEnd,
 }: {
   label: string;
   color: FloorColor;
   onChange: (c: FloorColor) => void;
   flat?: boolean;
+  onClear?: () => void;
+  clearLabel?: string;
+  onColorPickToggle?: () => void;
+  colorPickArmed?: boolean;
+  onGestureStart?: () => void;
+  onGestureEnd?: () => void;
 }) {
   const handleChange = useCallback(
     (field: keyof FloorColor, value: number | boolean) => {
@@ -422,8 +443,41 @@ function ColorSliders({
   );
 
   return (
-    <div>
+    <div
+      data-testid={label === 'New Furniture Color' ? 'furniture-palette-color' : undefined}
+      onPointerDown={(event) => {
+        if (event.target instanceof HTMLInputElement && event.target.type === 'range') onGestureStart?.();
+      }}
+      onPointerUp={() => onGestureEnd?.()}
+      onPointerCancel={() => onGestureEnd?.()}
+      onLostPointerCapture={() => onGestureEnd?.()}
+    >
       <div style={styles.sectionLabel}>{label}</div>
+      {(onClear || onColorPickToggle) && (
+        <div style={{ ...styles.actionRow, marginBottom: '6px' }}>
+          {onClear && (
+            <button type="button" style={styles.actionBtn(false)} onClick={onClear} aria-label={clearLabel}>
+              No color
+            </button>
+          )}
+          {onColorPickToggle && (
+            <button
+              type="button"
+              style={{
+                ...styles.actionBtn(false),
+                ...(colorPickArmed ? { background: ACCENT, borderColor: ACCENT } : {}),
+              }}
+              onClick={onColorPickToggle}
+              title="Copy color from another item"
+              aria-label={`Copy color from another item to ${label}`}
+              aria-pressed={colorPickArmed}
+              data-testid={`furniture-color-pick-${label === 'New Furniture Color' ? 'palette' : 'selected'}`}
+            >
+              {colorPickArmed ? 'Cancel pick' : 'Pick color'}
+            </button>
+          )}
+        </div>
+      )}
 
       <div style={styles.sliderRow}>
         <span style={styles.sliderLabel}>H</span>
@@ -504,6 +558,14 @@ export function EditorToolbar({
   onFloorColorChange,
   onWallColorChange,
   onFurnitureTypeChange,
+  furniturePaletteColor,
+  selectedFurnitureColor,
+  onFurniturePaletteColorChange,
+  onSelectedFurnitureColorChange,
+  onFurnitureColorPickToggle,
+  furnitureColorPickTarget,
+  onColorGestureStart,
+  onColorGestureEnd,
   activePetTypes,
   onPetToggle,
   onCarpetVariantChange,
@@ -824,6 +886,15 @@ export function EditorToolbar({
       {showFurnitureOptions && (
         <div style={styles.section}>
           <div style={styles.sectionLabel}>Furniture</div>
+          <ColorSliders
+            label="New Furniture Color"
+            color={furniturePaletteColor ?? DEFAULT_FLOOR_COLOR}
+            onChange={onFurniturePaletteColorChange}
+            onClear={() => onFurniturePaletteColorChange(null)}
+            clearLabel="Use no color for new furniture"
+            onColorPickToggle={() => onFurnitureColorPickToggle('palette')}
+            colorPickArmed={furnitureColorPickTarget === 'palette'}
+          />
           <div style={styles.furnitureGrid}>
             {buildDynamicCatalog().map((entry) => (
               <button
@@ -864,6 +935,17 @@ export function EditorToolbar({
       {hasSelection && (
         <div style={styles.section}>
           <div style={styles.sectionLabel}>Selection</div>
+          <ColorSliders
+            label="Selected Furniture Color"
+            color={selectedFurnitureColor ?? DEFAULT_FLOOR_COLOR}
+            onChange={onSelectedFurnitureColorChange}
+            onClear={() => onSelectedFurnitureColorChange(null)}
+            clearLabel="Clear selected furniture color"
+            onColorPickToggle={() => onFurnitureColorPickToggle('selected')}
+            colorPickArmed={furnitureColorPickTarget === 'selected'}
+            onGestureStart={onColorGestureStart}
+            onGestureEnd={onColorGestureEnd}
+          />
           <div style={styles.actionRow}>
             <button
               style={styles.actionBtn(false, true)}

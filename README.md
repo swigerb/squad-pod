@@ -22,6 +22,7 @@ The historical office screenshot is omitted: it predates the verified redistribu
 - **Telemetry feed** — click the 📡 button to open a live stream of all Squad agent activity — status changes, sessions, logs, orchestration events, color-coded by type, timestamps, and agent names
 - **Recorded usage / model history** — the same telemetry drawer passively reads a bounded local Squad usage ledger, with freshness, coverage and explicit partial/unavailable states; historical reports never drive activity or chimes.
 - **Office layout editor** — design your office with floors, walls, furniture and named Areas using the built-in editor
+- **Furniture colors** — tint selected furniture or choose a color for new placements, clear a tint, or copy a color with the color-only picker; surface items win when they overlap furniture beneath them
 - **Decorative carpets** — three auto-tiling styles with independent main/accent colors, painted over floors without changing floor IDs or agent walkability.
 - **Animated pets** — add or remove Claudio and Gitcat in the Layout editor; pets wander, follow nearby agents, and show a timed heart when clicked. Pet IDs/types survive save, reload, import and export; asset type numbers stay stable when another pet sheet fails to load.
 - **Manifest furniture and live imports** — verified original Pixel Agents furniture/floors/walls; Settings can load local furniture manifests and pick up edits without restarting VS Code.
@@ -153,6 +154,23 @@ anchors do not move, and switching tools or leaving/reopening the editor keeps
 the current draft and undo history.
 The bottom toolbar scrolls horizontally when its buttons do not fit, keeping
 Directories, Settings and the editor toggle reachable without shifting the canvas.
+
+Furniture color sliders edit the selected item; a separate palette color is
+used only for new placements. The furniture color picker copies color metadata
+without changing the Eyedrop tool or placement tool, and each color change or
+pick is its own undo step. Uncolored furniture remains uncolored, including
+when copied. Manifest and placeholder furniture sprites are tinted before
+rotation. The production tileset-metadata rendering bypass remains inactive and
+does not receive furniture tint; renderer-level tileset tint is deferred unless
+that art path is reintroduced.
+
+For production-bundle pixel acceptance of furniture color, build the assets,
+run `node scripts/acceptance-pets.cjs --serve --furniture-color`, then run
+`node scripts/acceptance-furniture-color.cjs` in another terminal. It uses an
+existing Playwright installation and installed Microsoft Edge; it never
+downloads either. Optional `ACCEPTANCE_OUTPUT_DIR` writes pixel-proof
+screenshots and result JSON. This uses a synthetic furniture layout and mocked
+VS Code boundary, not a native VS Code host or a live Squad session.
 
 For the control hit-target regression, build production assets, run
 `npm run serve:acceptance:pets`, then run `node scripts/acceptance-controls.cjs`

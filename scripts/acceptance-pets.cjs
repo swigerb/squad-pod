@@ -15,6 +15,8 @@ const webviewScript = path.join(extensionPath, 'dist', 'webview', 'assets', 'ind
 const messages = [];
 const serveBrowser = process.argv.includes('--serve');
 const usageAcceptance = process.argv.includes('--usage');
+const furnitureColorAcceptance = process.argv.includes('--furniture-color');
+assert.ok(!furnitureColorAcceptance || serveBrowser, '--furniture-color requires --serve');
 let provider;
 let receiveMessage;
 let deactivate;
@@ -92,10 +94,24 @@ const mappedLayout = {
     [expectedDirectoryId]: ['Workspace Area'],
   },
 };
+const furnitureColorLayout = {
+  version: 2,
+  cols: 9,
+  rows: 7,
+  tiles: Array(63).fill(1),
+  furniture: [
+    { uid: 'color-desk', type: 'pa_DESK_FRONT', col: 6, row: 2, rotation: 0,
+      assetFootprint: { width: 3, height: 2 }, assetRole: 'desk' },
+    { uid: 'color-pc', type: 'pa_PC_FRONT_ON_1', col: 7, row: 2, rotation: 0,
+      assetFootprint: { width: 1, height: 2 }, color: { h: 205, s: 85, b: 5, c: 0, colorize: true } },
+    { uid: 'colorless-chair', type: 'pa_CUSHIONED_CHAIR_FRONT', col: 7, row: 5, rotation: 0,
+      assetFootprint: { width: 1, height: 1 }, assetRole: 'seat' },
+  ],
+};
 const storageValues = new Map([
   ['squad-pod.directories', [savedDirectory, unrelatedDirectory]],
   ['squad-pod.directoryLaunchHistory', [recentLaunch]],
-  ['squad-pod.layout', mappedLayout],
+  ['squad-pod.layout', furnitureColorAcceptance ? furnitureColorLayout : mappedLayout],
 ]);
 if (usageAcceptance) {
   const timestamp = '2026-10-28T15:00:00Z';
@@ -182,19 +198,21 @@ try {
   assert.equal(fixtureAgent.directoryMappingIds.includes(recentLaunch.id), false,
     'recent launch IDs are never mapping identities');
 
-  const allocateSeat = (layout) => {
-    const office = new OfficeState(layout);
-    reconcileAgents(office, [fixtureAgent]);
-    return office.characters.get(fixtureAgent.id)?.seatId;
-  };
-  assert.equal(allocateSeat(layoutMessage.layout), 'chair-saved',
-    'compiled-provider roster identity must reach the real engine and honor the saved-directory Area mapping');
-  const workspaceOnlyLayout = {
-    ...layoutMessage.layout,
-    areaMappings: { [expectedDirectoryId]: ['Workspace Area'] },
-  };
-  assert.equal(allocateSeat(workspaceOnlyLayout), 'chair-workspace',
-    'workspace-ID mappings remain compatible when no saved-ID mapping applies');
+  if (!furnitureColorAcceptance) {
+    const allocateSeat = (layout) => {
+      const office = new OfficeState(layout);
+      reconcileAgents(office, [fixtureAgent]);
+      return office.characters.get(fixtureAgent.id)?.seatId;
+    };
+    assert.equal(allocateSeat(layoutMessage.layout), 'chair-saved',
+      'compiled-provider roster identity must reach the real engine and honor the saved-directory Area mapping');
+    const workspaceOnlyLayout = {
+      ...layoutMessage.layout,
+      areaMappings: { [expectedDirectoryId]: ['Workspace Area'] },
+    };
+    assert.equal(allocateSeat(workspaceOnlyLayout), 'chair-workspace',
+      'workspace-ID mappings remain compatible when no saved-ID mapping applies');
+  }
   if (usageAcceptance) {
     const snapshot = messages.find(message => message.type === 'recordedUsage')?.snapshot;
     assert.ok(snapshot, 'compiled provider must publish recorded usage');
@@ -279,7 +297,9 @@ try {
       console.log(`Production pet browser fixture at http://127.0.0.1:${port}/ (mocked VS Code boundary; Ctrl+C to stop).`);
     });
   } else {
-    console.log('PASS compiled-provider artifact and provider-to-seat mapping smoke (mocked VS Code boundary; no native VS Code host or directory launch).');
+    console.log(furnitureColorAcceptance
+      ? 'PASS compiled-provider furniture color fixture preparation (mocked VS Code boundary; no native VS Code host or directory launch).'
+      : 'PASS compiled-provider artifact and provider-to-seat mapping smoke (mocked VS Code boundary; no native VS Code host or directory launch).');
   }
 } finally {
   deactivate?.();
