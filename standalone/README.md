@@ -3,6 +3,9 @@
 The first standalone mode is a **read-only, authenticated, loopback-only office**.
 It uses the production React/Canvas renderer and shared `HostClient` office seam.
 This is a private local package, not a published npm product.
+Its build copies the canonical repository LICENSE and THIRD_PARTY_NOTICES.md
+into the package root; bundled asset provenance and runtime dependency licenses
+remain intact in the installed distribution.
 
 ## Build and run
 

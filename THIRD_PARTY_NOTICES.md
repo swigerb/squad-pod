@@ -1,15 +1,18 @@
 # Third-party notices
 
 Squad Pod ships the following third-party code and assets. Keep this file in
-the VSIX and update it whenever a bundled asset or runtime dependency changes.
+the VSIX and the private standalone observer package, and update it whenever a
+bundled asset or runtime dependency changes. The observer build copies the
+canonical root LICENSE and this notice into its generated package root.
 
 ## Code
 
 | Component | License | Notes |
 |---|---|---|
 | [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) | MIT, Copyright (c) 2026 Pablo De Lucca | Office engine, renderer, editor, and pathfinding are adapted from Pixel Agents. Notice retained in [LICENSE](LICENSE). |
-| [React](https://github.com/facebook/react) / React DOM / Scheduler | MIT, Copyright (c) Meta Platforms, Inc. and affiliates. | Bundled into `dist/webview/assets/index.js`. |
-| [pngjs](https://github.com/pngjs/pngjs) | MIT; pngjs original work Copyright (c) 2015 Luke Page & Original Contributors; pngjs derived work Copyright (c) 2012 Kuba Niegowski | Bundled into `dist/extension.js`; PNG decoding. |
+| [React](https://github.com/facebook/react) / React DOM / Scheduler | MIT, Copyright (c) Meta Platforms, Inc. and affiliates. | Bundled into VSIX `dist/webview/assets/index.js` and standalone `dist/browser/assets/standalone-*.js`. |
+| [pngjs](https://github.com/pngjs/pngjs) | MIT; pngjs original work Copyright (c) 2015 Luke Page & Original Contributors; pngjs derived work Copyright (c) 2012 Kuba Niegowski | PNG decoding: bundled into VSIX `dist/extension.js`; installed standalone runtime dependency at `node_modules/pngjs`, retaining its complete LICENSE. |
+| [ws](https://github.com/websockets/ws) | MIT, Copyright (c) 2011 Einar Otto Stangvik; Copyright (c) 2013 Arnout Kazemier and contributors; Copyright (c) 2016 Luigi Pinca and contributors | Standalone only: installed runtime dependency at `node_modules/ws`, retaining its complete LICENSE. Not bundled into the VSIX. |
 
 The MIT permission grant, notice-retention condition and warranty disclaimer in
 [LICENSE](LICENSE) apply to the bundled MIT components above, with their respective
@@ -94,10 +97,13 @@ animated-pet implementation.
 
 `assets/pixel-agents-source.json` records both contribution trails, exact carpet
 blobs and a content hash for all 76 imported files. The VSIX carries identical copies under
-`dist/assets/` and `dist/webview/assets/`, plus this notice and LICENSE.
+`dist/assets/` and `dist/webview/assets/`, plus this notice and LICENSE. The standalone
+observer carries identical assets and provenance metadata under `dist/assets/`,
+plus this notice and LICENSE in its package root. Asset paths above refer to the
+repository source; neither distribution changes the recorded provenance.
 The unresolved `tileset_office.png` and its metadata are removed, not retained
 as a fallback. Historical `Screenshot.jpg` is excluded from the VSIX.
 
 ## Assets that are never bundled
 
-- Premium tilesets, including the Donarg/Retropi Office Interior Tileset. Users may import their own copy locally; those files must stay out of source control and the VSIX.
+- Premium tilesets, including the Donarg/Retropi Office Interior Tileset. VS Code supports importing your own copy locally; those files must stay out of source control, the VSIX and the standalone observer package.

@@ -18,3 +18,6 @@ await build({
 rmSync(new URL('dist/assets', import.meta.url), { recursive: true, force: true });
 mkdirSync(new URL('dist/assets', import.meta.url), { recursive: true });
 cpSync(new URL('../webview-ui/public/assets', import.meta.url), new URL('dist/assets', import.meta.url), { recursive: true });
+for (const name of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) {
+  cpSync(new URL(`../${name}`, import.meta.url), new URL(name, import.meta.url));
+}

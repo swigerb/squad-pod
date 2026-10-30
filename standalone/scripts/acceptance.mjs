@@ -59,6 +59,9 @@ try {
   const inventory = JSON.parse(packed)[0];
   assert.equal(inventory.name, 'squad-pod-observer');
   assert.ok(inventory.files.some(file => file.path === 'dist/cli.mjs'));
+  for (const name of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) {
+    assert.ok(inventory.files.some(file => file.path === name), `Installed tarball must include ${name}`);
+  }
   const filename = inventory.filename;
   // npm ci caches tarballs, not necessarily registry metadata. Pack the already
   // restored runtime dependencies too, so acceptance needs neither metadata nor a feed.
@@ -73,6 +76,18 @@ try {
   check('tarball installed offline into isolated path with spaces');
   const installed = path.join(install, 'node_modules', 'squad-pod-observer');
   const require = createRequire(path.join(installed, 'package.json'));
+  for (const name of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) {
+    assert.deepEqual(await fs.readFile(path.join(installed, name)),
+      await fs.readFile(path.join(packageRoot, '..', name)), `Installed ${name} must match canonical root bytes`);
+  }
+  for (const name of Object.keys(manifest.dependencies)) {
+    assert.deepEqual(await fs.readFile(path.join(path.dirname(require.resolve(`${name}/package.json`)), 'LICENSE')),
+      await fs.readFile(path.join(packageRoot, 'node_modules', name, 'LICENSE')), `Runtime ${name} must retain its complete LICENSE`);
+  }
+  assert.deepEqual(await fs.readFile(path.join(installed, 'dist', 'assets', 'pixel-agents-source.json')),
+    await fs.readFile(path.join(packageRoot, '..', 'webview-ui', 'public', 'assets', 'pixel-agents-source.json')),
+    'Installed asset provenance must match canonical bytes');
+  check('installed tarball retains exact canonical notices, dependency licenses and asset provenance');
   const { WebSocket } = require('ws');
   const env = { ...process.env, HOME: home, USERPROFILE: home, APPDATA: home, LOCALAPPDATA: home };
   child = spawn(process.execPath, [path.join(installed, 'dist', 'cli.mjs'), project, '--port', '0'], {

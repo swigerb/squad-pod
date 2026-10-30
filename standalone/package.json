@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Local read-only Squad Pod office (not published)",
   "bin": { "squad-pod-observer": "dist/cli.mjs" },
-  "files": ["dist", "README.md"],
+  "files": ["dist", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
   "engines": { "node": ">=22.13.0" },
   "scripts": {
     "build": "node build.mjs",
