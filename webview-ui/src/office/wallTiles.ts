@@ -1,6 +1,6 @@
 import type { FloorColor, SpriteData, FurnitureInstance } from './types.js';
 import { TileType, TILE_SIZE } from './types.js';
-import { getColorizedSprite, clearColorizeCache } from './colorize.js';
+import { getColorizedTileSprite, clearColorizeCache } from './colorize.js';
 
 let wallSprites: SpriteData[] = [];
 
@@ -34,10 +34,10 @@ export function getWallSprite(
   const s = row < rows - 1 && tiles[(row + 1) * cols + col] === TileType.WALL;
   const w = col > 0 && tiles[row * cols + (col - 1)] === TileType.WALL;
 
-  const bitmask = (n ? 8 : 0) | (e ? 4 : 0) | (s ? 2 : 0) | (w ? 1 : 0);
+  const bitmask = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
 
   const sprite = wallSprites[bitmask];
-  const offsetY = n ? -TILE_SIZE : 0;
+  const offsetY = TILE_SIZE - sprite.length;
 
   return { sprite, offsetY };
 }
@@ -59,12 +59,12 @@ export function getColorizedWallSprite(
   const e = col < cols - 1 && tiles[row * cols + (col + 1)] === TileType.WALL;
   const s = row < rows - 1 && tiles[(row + 1) * cols + col] === TileType.WALL;
   const w = col > 0 && tiles[row * cols + (col - 1)] === TileType.WALL;
-  const bitmask = (n ? 8 : 0) | (e ? 4 : 0) | (s ? 2 : 0) | (w ? 1 : 0);
+  const bitmask = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
 
   const cacheKey = `wall_${bitmask}_${color.h}_${color.s}_${color.b}_${color.c}_${color.colorize}`;
-  const colorizedSprite = getColorizedSprite(cacheKey, sprite, color);
+  const colorizedSprite = getColorizedTileSprite(cacheKey, sprite, color);
 
-  return { sprite: colorizedSprite, offsetY };
+  return { sprite: colorizedSprite, offsetY: TILE_SIZE - sprite.length };
 }
 
 export function getWallInstances(

@@ -15,6 +15,12 @@ describe('host-neutral layout state', () => {
         expect.objectContaining({ uid: 'desk-1', type: 'pa_DESK_FRONT', col: 2, row: 3 }),
       ]),
     });
+    expect(layout.tileColors).toMatchObject({
+      '0,1': { colorize: true },
+      '1,2': { colorize: true },
+      '11,2': { colorize: true },
+      '11,10': { colorize: true },
+    });
     expect(layout.tiles).toHaveLength(273);
     expect(layout.tiles).toEqual(createMinimalLayout().tiles);
     expect(layout.tileColors).toEqual(createMinimalLayout().tileColors);

@@ -14,6 +14,7 @@ import type {
   CharacterSpriteSet,
   LayoutData,
 } from './types.js';
+import { createDefaultOfficeLayout } from './defaultOfficeLayout.js';
 import {
   PNG_ALPHA_THRESHOLD,
   WALL_PIECE_WIDTH,
@@ -261,4 +262,13 @@ export function loadDefaultLayout(extensionPath: string): LayoutData | null {
   } catch {
     return null;
   }
+}
+
+/** Load the packaged default for explicit export, or the shared starter when no file is bundled. */
+export function loadDefaultLayoutForExport(extensionPath: string): LayoutData | null {
+  const filePath = resolveAssetPath(extensionPath, 'layout.json');
+  if (!assetExists(filePath)) {
+    return createDefaultOfficeLayout();
+  }
+  return loadDefaultLayout(extensionPath);
 }

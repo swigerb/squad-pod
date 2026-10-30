@@ -6,7 +6,8 @@ import { getFurnitureFootprint, layoutToFurnitureInstances, layoutToSeats, creat
 import { OfficeState } from '../engine/officeState.js';
 import { getColorizedFloorSprite, setFloorSprites } from '../floorTiles.js';
 import { getColorizedWallSprite, setWallSprites } from '../wallTiles.js';
-import type { OfficeLayout } from '../types.js';
+import { getColorizedSprite, getColorizedTileSprite } from '../colorize.js';
+import { TileType, type OfficeLayout } from '../types.js';
 
 const desk: ManifestFurniture = {
   type: 'pa_DESK_FRONT', label: 'Desk fixture', width: 3, height: 2,
@@ -120,5 +121,57 @@ describe('manifest catalog and non-destructive reload', () => {
     expect(wall.sprite[0][0].slice(-2)).toBe('80');
     setWallSprites(Array.from({ length: 16 }, () => [['#12345640']]));
     expect(getColorizedWallSprite([0], 1, 1, 0, 0, color).sprite).not.toBe(wall.sprite);
+  });
+
+  it('uses the upstream Colorize transform for floor and wall art without changing saved colors', () => {
+    const color = { h: 0, s: 100, b: -50, c: -50, colorize: true };
+    const floorSprite = [['#808080']];
+    const wallSprite = [['#808080']];
+    setFloorSprites([floorSprite]);
+    setWallSprites(Array.from({ length: 16 }, () => wallSprite));
+
+    expect(getColorizedFloorSprite(0, color)).toEqual([['#800000']]);
+    expect(getColorizedFloorSprite(0, color)).toEqual(
+      getColorizedTileSprite('upstream-floor-colorize', floorSprite, color),
+    );
+    expect(getColorizedWallSprite([TileType.WALL], 1, 1, 0, 0, color).sprite).toEqual([['#800000']]);
+    expect(getColorizedWallSprite([TileType.WALL], 1, 1, 0, 0, color).sprite).toEqual(
+      getColorizedTileSprite('upstream-wall-colorize', wallSprite, color),
+    );
+    expect(color).toEqual({ h: 0, s: 100, b: -50, c: -50, colorize: true });
+  });
+
+  it('preserves explicit false Colorize settings for floor and wall art', () => {
+    const color = { h: 214, s: 30, b: -43, c: -55, colorize: false };
+    const sprite = [['#a04020']];
+    setFloorSprites([sprite]);
+    setWallSprites(Array.from({ length: 16 }, () => sprite));
+
+    expect(getColorizedFloorSprite(0, color)).toEqual(
+      getColorizedSprite('saved-floor-adjust', sprite, color),
+    );
+    expect(getColorizedWallSprite([TileType.WALL], 1, 1, 0, 0, color).sprite).toEqual(
+      getColorizedSprite('saved-wall-adjust', sprite, color),
+    );
+  });
+
+  it.each([
+    ['north', 1, 1],
+    ['east', 2, 5],
+    ['south', 4, 7],
+    ['west', 8, 3],
+  ] as const)('uses the upstream wall mask and bottom anchor for a %s neighbor', (_direction, mask, neighborIndex) => {
+    const sprites = Array.from({ length: 16 }, (_, index) =>
+      Array.from({ length: 32 }, () => Array<string>(16).fill(`#${index.toString(16).padStart(2, '0').repeat(3)}`)));
+    setWallSprites(sprites);
+    const tiles = Array<number>(9).fill(TileType.FLOOR_1);
+    tiles[4] = TileType.WALL;
+    tiles[neighborIndex] = TileType.WALL;
+    const color = { h: 0, s: 0, b: 0, c: 0, colorize: true };
+
+    expect(getColorizedWallSprite(tiles, 3, 3, 1, 1, color)).toEqual({
+      sprite: getColorizedSprite(`upstream-wall-mask-${mask}`, sprites[mask], { ...color, colorize: true }),
+      offsetY: -16,
+    });
   });
 });

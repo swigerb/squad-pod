@@ -1,5 +1,5 @@
 import type { FloorColor, SpriteData } from './types.js';
-import { getColorizedSprite, clearColorizeCache } from './colorize.js';
+import { getColorizedTileSprite, clearColorizeCache } from './colorize.js';
 
 const DEFAULT_FLOOR_SPRITE: SpriteData = Array(16).fill(
   Array(16).fill('#808080')
@@ -37,7 +37,7 @@ export function getColorizedFloorSprite(
 ): SpriteData {
   const baseSprite = getFloorSprite(patternIndex);
   const cacheKey = `floor_${patternIndex}_${color.h}_${color.s}_${color.b}_${color.c}_${color.colorize}`;
-  return getColorizedSprite(cacheKey, baseSprite, color);
+  return getColorizedTileSprite(cacheKey, baseSprite, color);
 }
 
 export const WALL_COLOR = { h: 30, s: 15, b: -20, c: 0 };

@@ -10,11 +10,11 @@ const COLS = 21;
 const ROWS = 13;
 
 const TILE_COLORS: Record<number, FloorColor> = {
-  [WALL]: { h: 214, s: 30, b: -100, c: -55 },
-  [FLOOR_1]: { h: 209, s: 39, b: -25, c: -80 },
-  [FLOOR_7]: { h: 25, s: 48, b: -43, c: -88 },
-  [VOID]: { h: 214, s: 30, b: -100, c: -55 },
-  [FLOOR_9]: { h: 209, s: 0, b: -16, c: -8 },
+  [WALL]: { h: 214, s: 30, b: -100, c: -55, colorize: true },
+  [FLOOR_1]: { h: 209, s: 39, b: -25, c: -80, colorize: true },
+  [FLOOR_7]: { h: 25, s: 48, b: -43, c: -88, colorize: true },
+  [VOID]: { h: 214, s: 30, b: -100, c: -55, colorize: true },
+  [FLOOR_9]: { h: 209, s: 0, b: -16, c: -8, colorize: true },
 };
 
 function createTiles(): number[] {
