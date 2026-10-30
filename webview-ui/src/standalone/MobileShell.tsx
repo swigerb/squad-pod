@@ -12,7 +12,7 @@ const INITIAL_ACCESS: MobileTerminalAccess = {
 };
 function isMobile(): boolean {
   return (typeof window.matchMedia === 'function' &&
-    window.matchMedia('(max-width: 700px), (pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
+    window.matchMedia('(max-width: 700px), (pointer: coarse)').matches);
 }
 function requestId(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
@@ -37,7 +37,7 @@ export function MobileShell({ office, onKeyboardViewport }: MobileShellProps) {
   useEffect(() => {
     const query = typeof window.matchMedia === 'function'
       ? window.matchMedia('(max-width: 700px), (pointer: coarse)') : null;
-    const update = () => setMobile((query?.matches ?? false) || navigator.maxTouchPoints > 0);
+    const update = () => setMobile(query?.matches ?? false);
     query?.addEventListener('change', update);
     update();
     return () => query?.removeEventListener('change', update);

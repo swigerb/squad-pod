@@ -198,6 +198,26 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(host.textContent).not.toContain('Enable it in Settings');
   });
 
+  it('preserves the desktop layout editor on a hybrid fine-pointer touchscreen', async () => {
+    touchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    touchPointsDescriptor = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints');
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: () => ({
+      matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    }) });
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 10 });
+    act(() => root.unmount());
+    client = createHostClientFixture();
+    root = createRoot(host);
+    act(() => root.render(<App client={client} standalone />));
+    snapshot(imported, 'hybrid-desktop');
+    await nextFrame();
+    expect([...host.querySelectorAll('button')].map(button => button.textContent?.trim()))
+      .toContain('Edit Layout');
+    click('Edit Layout');
+    expect(host.querySelector('[role="region"][aria-label="Layout editor"]')).not.toBeNull();
+    expect(host.querySelector('.office-panel')?.hasAttribute('data-following-agent')).toBe(false);
+  });
+
   it('hides the desktop layout editor on standalone touch while keeping mobile office tools', async () => {
     touchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
     touchPointsDescriptor = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints');

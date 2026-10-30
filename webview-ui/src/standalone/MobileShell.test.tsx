@@ -260,4 +260,20 @@ describe('standalone mobile shell', () => {
     await act(async () => mediaChangeListeners.forEach(listener => listener()));
     expect(track.style.transform).toBe('translateX(0)');
   });
+
+  it('keeps hybrid fine-pointer desktop launches in the CSS desktop layout', async () => {
+    mobileMatches = false;
+    Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 10 });
+    await act(async () => root.render(<MobileShell office={<div>office</div>} />));
+    await act(async () => panel.props?.onAccessChange?.(access));
+    await act(async () => panel.props?.onLaunchRequested?.('hybrid-launch'));
+    await act(async () => panel.props?.onAccessChange?.({
+      ...access, runs: [...access.runs, { runId: second, pid: 2, state: 'running', exitCode: null }],
+    }));
+    await act(async () => panel.props?.onLaunchResult?.('hybrid-launch', { ok: true, runId: second }));
+    expect(panel.props?.selectedRunId).toBe(second);
+    expect(panel.props?.mobile).toBe(false);
+    expect(host.querySelector<HTMLElement>('.observer-pages-track')?.style.transform).toBe('translateX(0)');
+    expect(host.querySelector('.mobile-view-toggle')).toBeNull();
+  });
 });

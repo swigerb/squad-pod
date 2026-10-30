@@ -367,6 +367,15 @@ try {
     await until(async () => Math.abs((await mobileTab.locator('.observer-office-page').boundingBox()).x) <= 1,
       'office page settles before canvas touch gestures');
     const cdp = await mobileTab.context().newCDPSession(mobileTab);
+    await mobileTab.evaluate(() => {
+      window.syntheticTouchTrace = [];
+      for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
+        window.addEventListener(type, event => {
+          window.syntheticTouchTrace.push({ type, target: event.target.tagName, cancelable: event.cancelable,
+            touches: Array.from(event.touches, touch => [touch.clientX, touch.clientY]) });
+        }, { capture: true, passive: true });
+      }
+    });
     await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
     const officePanel = mobileTab.locator('.office-panel');
     const canvas = officePanel.locator('canvas');
@@ -567,6 +576,7 @@ try {
   process.exitCode = 1;
   console.error(error);
   if (artifacts && mobileTab && !mobileTab.isClosed()) {
+    report.mobileFailure = { url: mobileTab.url(), trace: await mobileTab.evaluate(() => window.syntheticTouchTrace) };
     await mobileTab.screenshot({ path: path.join(artifacts, 'mobile-failure.png'), fullPage: true });
     report.screenshots.push('mobile-failure.png');
   }

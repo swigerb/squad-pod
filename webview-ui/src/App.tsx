@@ -109,7 +109,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
     if (!standalone) { setTouchMobile(false); return; }
     const query = typeof window.matchMedia === 'function'
       ? window.matchMedia('(max-width: 700px), (pointer: coarse)') : null;
-    const update = () => setTouchMobile((query?.matches ?? false) || navigator.maxTouchPoints > 0);
+    const update = () => setTouchMobile(query?.matches ?? false);
     update();
     query?.addEventListener('change', update);
     return () => query?.removeEventListener('change', update);
