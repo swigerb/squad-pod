@@ -2,6 +2,7 @@ import { once } from 'node:events';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { request } from 'node:http';
+import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -25,10 +26,11 @@ async function fixture(withTerminals = false) {
   await writeFile(join(bundle, 'index.html'), 'synthetic');
   let terminals: OwnedRuns;
   if (withTerminals) {
-    const brokerFolder = join(root, 'broker');
-    await mkdir(brokerFolder);
+    const brokerFolder = await mkdtemp(resolve('.native-broker-'));
+    folders.push(brokerFolder);
     const script = join(root, 'synthetic fixture.mjs');
     const broker = join(brokerFolder, 'ptyHost.mjs');
+    expect(createRequire(broker).resolve('node-pty')).toBe(createRequire(import.meta.url).resolve('node-pty'));
     await build({ entryPoints: [resolve('src/fixture.ts')], outfile: script, platform: 'node', bundle: true, format: 'esm' });
     await build({ entryPoints: [resolve('src/ptyHost.ts')], outfile: broker, platform: 'node', bundle: true, packages: 'external', format: 'esm' });
     terminals = new OwnedRuns({ project: root, enabled: true, fixture: script, broker });
@@ -163,7 +165,7 @@ it('correlates a busy launch rejection and allows a later deliberate launch', as
   const firstResult = nextJson(ws, frame => frame.type === 'launchResult' && frame.requestId === 'open-first');
   ws.send(JSON.stringify({ version: 1, type: 'launch', requestId: 'open-first' }));
   const first = await firstResult;
-  expect(first).toMatchObject({ result: { ok: true } });
+  expect(first, JSON.stringify(first)).toMatchObject({ result: { ok: true } });
   const firstRunId = ((first.result as Record<string, unknown>).runId);
   expect(typeof firstRunId).toBe('string');
 
