@@ -201,6 +201,21 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     } } }))?.context).toBeUndefined();
   });
 
+  it('keeps each member context independent from coordinator and other member tools', () => {
+    session('session', marked(spawnLines() + spawnLines('grace', 'grace-run'))
+      + toolStart('ada-tool')
+      + line('tool.execution_start', { toolCallId: 'grace-tool', parentToolCallId: 'grace-run', toolName: 'edit' })
+      + done('root-coordinator') + done('ada-tool')
+      + line('tool.execution_complete', { toolCallId: 'grace-tool', toolTelemetry: { metrics: {
+        context_current_tokens: 9500, context_token_limit: 10_000,
+      } } }));
+    reader.start();
+    expect(messages.filter(m => m.type === 'agentContextUsage')).toEqual([
+      { type: 'agentContextUsage', agentId: 'ada', contextTokens: 800, maxContextTokens: 1000 },
+      { type: 'agentContextUsage', agentId: 'grace', contextTokens: 9500, maxContextTokens: 10_000 },
+    ]);
+  });
+
   it('handles partial UTF-8 lines, malformed data, oversized lines, truncation and rotation', () => {
     const file = session('session', '');
     const tail = new EventTail();

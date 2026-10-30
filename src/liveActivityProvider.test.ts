@@ -89,4 +89,16 @@ describe('consent and privacy through compiled provider (mocked VS Code)', () =>
     expect(fixture.reads).toHaveLength(readsAtDisable);
     expect(fixture.messages.filter(m => m.type === 'agentStatus').at(-1)).toMatchObject({ status: 'idle' });
   });
+
+  it('does not open a session when disabling while a consent response is pending', async () => {
+    fixture.setConsent(true);
+    fixture.send({ type: 'setLiveActivity', enabled: true });
+    fixture.send({ type: 'setLiveActivity', enabled: false });
+    await settle();
+    vi.advanceTimersByTime(6000);
+    expect(fixture.enabled).toBe(false);
+    expect(fixture.reads).toEqual([]);
+    expect(fixture.messages.filter(m => m.type === 'sourceStatus').at(-1))
+      .toMatchObject({ status: { liveActivity: { state: 'off', sessionId: null } } });
+  });
 });
