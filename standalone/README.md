@@ -171,14 +171,18 @@ eviction/slow-client overflow produces explicit resync. **Clear terminal and res
 retained history** acknowledges that earlier output/terminal state is lost; it never
 quietly launches a replacement. Scrollback is capped at 2000 lines.
 
-On touch/mobile browsers the observer has synchronized office/terminal pages,
+On narrow (700px or less) or primary-coarse-pointer browsers the observer has synchronized office/terminal pages,
 owned-run cards, an explicit launch card and edge-swipe navigation. Selecting a run
 card opens that exact owned run; changing pages never launches or terminates a
 process. Selecting an observed agent follows it with the office camera, not an
 owned terminal. Pure pinch zoom preserves follow; one/two-finger manual panning
 breaks follow. Pan distances use CSS pixels independently of screen density.
-The desktop layout editor is hidden on
-touch/mobile. The terminal includes a keyboard accessory, viewport/orientation
+The desktop layout editor is hidden in this mode; fine-pointer hybrid desktops
+keep their desktop layout even when a touchscreen is available. Start navigation
+within the 24px page-edge zone, away from controls and the terminal selection area.
+Edge may reserve the outermost screen pixels for browser Back; the installed
+emulation checks start 20px inside the page. Use the page toggle if the browser
+intercepts an edge gesture. The terminal includes a keyboard accessory, viewport/orientation
 resizing, explicit selection/copy/paste controls and a manual clipboard fallback.
 Clipboard reads happen only after the user presses Paste; plain HTTP and denied
 clipboard access use the manual fallback. Installed Edge touch emulation exercises
@@ -336,5 +340,5 @@ user/Scout-owned native and real-session plan. Its standalone observation gates
 remain pinned to its accepted baseline; this implementation's synthetic terminal
 procedures are separate. Real Squad launch and native VS Code execution remain
 user/Scout-owned. Private home-log telemetry, persistent credentials, remote
-auth/TLS and full mobile terminals remain later layers. Nothing here completes
+auth/TLS and physical-device mobile acceptance remain later layers. Nothing here completes
 or closes issues #4, #7 or #8.

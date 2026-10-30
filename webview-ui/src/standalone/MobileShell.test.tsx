@@ -215,33 +215,33 @@ describe('standalone mobile shell', () => {
   });
 
   it('settles a claimed swipe when a second finger arrives and both lift', async () => {
-      await act(async () => root.render(<MobileShell office={<div data-testid="office">office</div>} />));
-      const stage = host.querySelector<HTMLElement>('.observer-mobile-stage')!;
-      vi.spyOn(stage, 'getBoundingClientRect').mockReturnValue({
-        x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 844, width: 390, height: 844, toJSON: () => ({}),
-      } as DOMRect);
-      const target = host.querySelector('[data-testid="office"]')!;
-      const track = host.querySelector<HTMLElement>('.observer-pages-track')!;
-      for (const view of ['office', 'terminal']) {
-        if (view === 'terminal') await act(async () => button('Show terminal').click());
-        const start = touch(1, view === 'office' ? 385 : 5, 200);
-        const moved = touch(1, view === 'office' ? 305 : 85, 200);
-        const extra = touch(2, 200, 200);
-        await act(async () => {
-          dispatchTouch(target, 'touchstart', [start], [start], 10);
-          dispatchTouch(target, 'touchmove', [moved], [moved], 30);
-        });
-        expect(track.style.transition).toBe('none');
-        expect(track.style.transform).toBe(view === 'office' ? 'translateX(-80px)' : 'translateX(-310px)');
-        await act(async () => {
-          dispatchTouch(target, 'touchstart', [extra], [moved, extra], 40);
-          dispatchTouch(target, 'touchend', [moved], [extra], 50);
-          dispatchTouch(target, 'touchend', [extra], [], 60);
-        });
-        expect(stage.dataset.mobileView).toBe(view);
-        expect(track.style.transition).toBe('transform 180ms ease-out');
-        expect(track.style.transform).toBe(view === 'office' ? 'translateX(0)' : 'translateX(-50%)');
-      }
+    await act(async () => root.render(<MobileShell office={<div data-testid="office">office</div>} />));
+    const stage = host.querySelector<HTMLElement>('.observer-mobile-stage')!;
+    vi.spyOn(stage, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 844, width: 390, height: 844, toJSON: () => ({}),
+    } as DOMRect);
+    const target = host.querySelector('[data-testid="office"]')!;
+    const track = host.querySelector<HTMLElement>('.observer-pages-track')!;
+    for (const view of ['office', 'terminal']) {
+      if (view === 'terminal') await act(async () => button('Show terminal').click());
+      const start = touch(1, view === 'office' ? 385 : 5, 200);
+      const moved = touch(1, view === 'office' ? 305 : 85, 200);
+      const extra = touch(2, 200, 200);
+      await act(async () => {
+        dispatchTouch(target, 'touchstart', [start], [start], 10);
+        dispatchTouch(target, 'touchmove', [moved], [moved], 30);
+      });
+      expect(track.style.transition).toBe('none');
+      expect(track.style.transform).toBe(view === 'office' ? 'translateX(-80px)' : 'translateX(-310px)');
+      await act(async () => {
+        dispatchTouch(target, 'touchstart', [extra], [moved, extra], 40);
+        dispatchTouch(target, 'touchend', [moved], [extra], 50);
+        dispatchTouch(target, 'touchend', [extra], [], 60);
+      });
+      expect(stage.dataset.mobileView).toBe(view);
+      expect(track.style.transition).toBe('transform 180ms ease-out');
+      expect(track.style.transform).toBe(view === 'office' ? 'translateX(0)' : 'translateX(-50%)');
+    }
   });
 
   it('resets the page track on desktop and restores it when returning to mobile', async () => {

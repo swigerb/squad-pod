@@ -204,6 +204,8 @@ try {
     const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE);
     browser = await chromium.launch({ headless: true, executablePath: process.env.EDGE_PATH });
     const tab = await browser.newPage({ viewport: { width: 1440, height: 960 } });
+    await tab.addInitScript(() => Object.defineProperty(navigator, 'maxTouchPoints',
+      { configurable: true, value: 10 }));
     const errors = [];
     tab.on('pageerror', error => errors.push(error.message));
     const received = [];
@@ -226,6 +228,10 @@ try {
       return bounds && bounds.width > 0 && bounds.x >= -1 && bounds.x + bounds.width <= viewport.width + 1;
     };
     await until(desktopBounds, 'desktop office remains horizontally in bounds after correlated launch');
+    assert.equal(await tab.evaluate(() => matchMedia('(max-width: 700px), (pointer: coarse)').matches), false);
+    assert.equal(await tab.getByRole('button', { name: 'Edit Layout', exact: true }).count(), 1,
+      'synthetic hybrid touchscreen with a fine pointer preserves desktop editor visibility');
+    assert.equal(await tab.locator('.observer-pages-track').evaluate(element => element.style.transform), 'translateX(0)');
     const browserRun = received.filter(frame => frame.type === 'runs').at(-1).runs[0];
     await tab.locator('.xterm-helper-textarea').focus();
     await tab.keyboard.type('OK');
@@ -367,12 +373,22 @@ try {
     await until(async () => Math.abs((await mobileTab.locator('.observer-office-page').boundingBox()).x) <= 1,
       'office page settles before canvas touch gestures');
     const cdp = await mobileTab.context().newCDPSession(mobileTab);
+    report.touchTrace = [];
+    report.mobileNavigations = [];
+    mobileTab.on('framenavigated', frame => {
+      if (frame === mobileTab.mainFrame()) report.mobileNavigations.push(frame.url());
+    });
+    await mobileTab.exposeFunction('recordSyntheticTouch', event => report.touchTrace.push(event));
     await mobileTab.evaluate(() => {
       window.syntheticTouchTrace = [];
       for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
         window.addEventListener(type, event => {
           window.syntheticTouchTrace.push({ type, target: event.target.tagName, cancelable: event.cancelable,
             touches: Array.from(event.touches, touch => [touch.clientX, touch.clientY]) });
+          setTimeout(() => window.recordSyntheticTouch({
+            type, target: event.target.tagName, cancelable: event.cancelable, prevented: event.defaultPrevented,
+            touches: Array.from(event.touches, touch => [touch.clientX, touch.clientY]),
+          }));
         }, { capture: true, passive: true });
       }
     });
@@ -442,13 +458,15 @@ try {
     assert.equal(await mobileTab.locator('.observer-mobile-stage').getAttribute('data-mobile-view'), 'office');
     check('installed Edge second-finger interruption settles a claimed edge swipe without changing pages');
     const swipe = async (direction) => {
-      const startX = direction === 'left' ? 385 : 5;
+      const startX = direction === 'left' ? 370 : 20;
       const endX = direction === 'left' ? 160 : 230;
       const currentPage = mobileTab.locator(direction === 'left' ? '.observer-office-page' : '.observer-terminal-page');
       await until(async () => {
         const bounds = await currentPage.boundingBox();
         return bounds && Math.abs(bounds.x) <= 1;
       }, 'current page settles before the next edge swipe');
+      await mobileTab.evaluate(() => new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const surface = direction === 'left' ? canvas : mobileTab.locator('.owned-terminal > header');
       const bounds = await surface.boundingBox();
       assert.ok(bounds, 'edge swipe requires a visible non-control surface');
@@ -457,7 +475,9 @@ try {
         const element = document.elementFromPoint(x, y);
         return element && { tag: element.tagName, className: element.className, text: element.textContent?.slice(0, 100) };
       }, { x: startX, y });
-      (report.swipes ??= []).push({ direction, bounds, startX, y, hit });
+      (report.swipes ??= []).push({ direction, bounds, startX, y, hit,
+        metrics: await cdp.send('Page.getLayoutMetrics') });
+      if (artifacts) await mobileTab.screenshot({ path: path.join(artifacts, `before-swipe-${direction}.png`) });
       assert.ok(hit, 'edge swipe starts inside the visible viewport');
       assert.equal(await mobileTab.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest(
         'button, input, select, textarea, a, [role="button"], [contenteditable="true"], [data-mobile-gesture-optout]',
@@ -475,10 +495,9 @@ try {
     await swipe('left');
     await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
     await swipe('right');
+    assert.equal(mobileTab.url(), origin + '/', 'edge swipe stays on the authenticated application, never browser history');
     await mobileTab.locator('.observer-mobile-stage[data-mobile-view="office"]').waitFor();
-    await cdp.detach();
     const mobileLaunchCount = mobileSent.filter(frame => frame.type === 'launch').length;
-    await mobileTab.getByRole('button', { name: 'Show terminal', exact: true }).click();
     await mobileTab.getByRole('button', { name: 'Launch owned terminal', exact: true }).click();
     await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
     const mobileLaunch = mobileSent.filter(frame => frame.type === 'launch').at(-1);
@@ -505,6 +524,8 @@ try {
       'card and toggle navigation must not launch additional processes');
     const landscapeStart = mobileReceived.length;
     await mobileTab.setViewportSize({ width: 844, height: 390 });
+    assert.equal(await mobileTab.evaluate(() => matchMedia('(pointer: coarse)').matches), true,
+      'landscape capture remains an actual touch layout, not a narrow desktop');
     await until(() => mobileReceived.slice(landscapeStart).some(frame => frame.type === 'output' &&
       frame.data.includes('"resized":true')), 'landscape orientation resize reaches native PTY');
     const portraitStart = mobileReceived.length;
@@ -513,13 +534,23 @@ try {
       frame.data.includes('"resized":true')), 'portrait orientation resize reaches native PTY');
     if (artifacts) {
       await fs.mkdir(artifacts, { recursive: true });
+      await until(async () => Math.abs((await mobileTab.locator('.observer-terminal-page').boundingBox()).x) <= 1,
+        'portrait terminal capture waits for its settled page');
+      await mobileTab.screenshot({ path: path.join(artifacts, 'terminal-mobile-terminal.png'), fullPage: true });
       await mobileTab.getByRole('button', { name: 'Show office', exact: true }).click();
-      await mobileTab.locator('.observer-mobile-stage[data-mobile-view="office"]').waitFor();
+      await until(async () => Math.abs((await mobileTab.locator('.observer-office-page').boundingBox()).x) <= 1,
+        'portrait office capture waits for its settled page');
       await mobileTab.screenshot({ path: path.join(artifacts, 'terminal-mobile-portrait.png'), fullPage: true });
       await mobileTab.setViewportSize({ width: 844, height: 390 });
+      assert.equal(await mobileTab.evaluate(() => matchMedia('(pointer: coarse)').matches), true);
+      await until(async () => {
+        const bounds = await canvas.boundingBox();
+        return bounds && Math.abs(bounds.x) <= 1 && bounds.width === 844;
+      }, 'landscape touch canvas matches the orientation viewport');
       await mobileTab.screenshot({ path: path.join(artifacts, 'terminal-mobile-landscape.png'), fullPage: true });
-      report.screenshots.push('terminal-mobile-portrait.png', 'terminal-mobile-landscape.png');
+      report.screenshots.push('terminal-mobile-terminal.png', 'terminal-mobile-portrait.png', 'terminal-mobile-landscape.png');
     }
+    await cdp.detach();
     assert.deepEqual(mobileErrors, []);
     check('installed Edge touch emulation: mobile editor suppression, exact owned-run cards, correlated launch, edge swipes, explicit synthetic clipboard and keyboard input');
     await mobileTab.context().close();
@@ -576,7 +607,18 @@ try {
   process.exitCode = 1;
   console.error(error);
   if (artifacts && mobileTab && !mobileTab.isClosed()) {
-    report.mobileFailure = { url: mobileTab.url(), trace: await mobileTab.evaluate(() => window.syntheticTouchTrace) };
+    report.mobileFailure = { url: mobileTab.url(), state: await mobileTab.evaluate(() => ({
+      trace: window.syntheticTouchTrace,
+      viewport: { width: innerWidth, height: innerHeight, scale: visualViewport?.scale,
+        offsetLeft: visualViewport?.offsetLeft, offsetTop: visualViewport?.offsetTop },
+      elements: ['html', 'body', '#root', '.observer-mobile-stage', '.observer-pages-track',
+        '.observer-office-page', '.observer-terminal-page'].map(selector => {
+        const element = document.querySelector(selector);
+        const rect = element?.getBoundingClientRect();
+        return { selector, x: rect?.x, width: rect?.width, scrollLeft: element?.scrollLeft,
+          transform: element && getComputedStyle(element).transform };
+      }),
+    })) };
     await mobileTab.screenshot({ path: path.join(artifacts, 'mobile-failure.png'), fullPage: true });
     report.screenshots.push('mobile-failure.png');
   }

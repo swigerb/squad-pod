@@ -42,7 +42,7 @@ html, body, #root { height: 100%; margin: 0; }
   .observer-shell > header strong { font-size: 14px; }
   .observer-scope { display: none; }
   .observer-shell > details { flex: none; max-height: 18dvh; overflow: auto; }
-  .observer-mobile-stage { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  .observer-mobile-stage { flex: 1 1 auto; min-height: 0; overflow: clip; }
   .observer-pages-track { display: flex; width: 200%; height: calc(100% - 68px); }
   .observer-office-page, .observer-terminal-page { flex: 0 0 50%; width: 50%; height: 100%; min-width: 0; overflow: auto; }
   .observer-office-page main { height: 100% !important; min-height: 0; }
