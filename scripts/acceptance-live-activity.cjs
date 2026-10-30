@@ -22,6 +22,52 @@ const done = (id, tokens = 800) => event('tool.execution_complete', {
   },
 });
 
+const guardedMethods = ['openSync', 'readFileSync', 'readdirSync', 'opendirSync', 'statSync', 'lstatSync', 'existsSync', 'realpathSync'];
+function monitorFixtureFs(target, { home, extensionRoot = root, realHome = path.join(os.homedir(), '.copilot'), reads = [] }) {
+  const inside = (file, directory) => {
+    const relative = path.relative(directory, path.resolve(String(file)));
+    return relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith('..' + path.sep));
+  };
+  const bundledRoots = ['assets', path.join('webview', 'assets')].map(directory => path.join(extensionRoot, 'dist', directory));
+  const check = file => {
+    if (inside(file, home)) reads.push(String(file));
+    assert.ok(!inside(file, realHome) || bundledRoots.some(directory => inside(file, directory)),
+      'must never read the real Copilot home outside known bundled extension assets');
+  };
+  return new Proxy(target, {
+    get(fsTarget, property) {
+      const method = fsTarget[property];
+      if (!guardedMethods.includes(property)) return method;
+      const wrapped = (...args) => { check(args[0]); return method(...args); };
+      if (property === 'realpathSync') wrapped.native = (...args) => { check(args[0]); return method.native(...args); };
+      return wrapped;
+    },
+  });
+}
+
+function assertFilesystemGuard() {
+  const realHome = path.join(os.tmpdir(), 'squad-guard-home');
+  const extensionRoot = path.join(realHome, 'session-state', 'fixture', 'files', 'extension');
+  let calls = 0;
+  const fakeFs = Object.fromEntries(guardedMethods.map(method => [method, () => { calls++; }]));
+  fakeFs.realpathSync.native = () => { calls++; };
+  const guarded = monitorFixtureFs(fakeFs, { home: path.join(os.tmpdir(), 'injected-home'), extensionRoot, realHome });
+  const blocked = [
+    realHome, path.join(realHome, 'session-state', 'unrelated', 'events.jsonl'),
+    path.join(extensionRoot, 'dist', 'assets-unrelated', 'events.jsonl'),
+    path.join(extensionRoot, 'dist', 'assets', '..', '..', 'events.jsonl'),
+  ];
+  for (const method of [...guardedMethods.map(name => guarded[name]), guarded.realpathSync.native]) {
+    const before = calls;
+    for (const file of blocked) assert.throws(() => method(file), /must never read the real Copilot home/);
+    assert.equal(calls, before, 'blocked paths must never reach the filesystem, including native realpath');
+    method(path.join(extensionRoot, 'dist', 'assets', 'floors', 'floor_1.png'));
+    method(path.join(extensionRoot, 'dist', 'webview', 'assets', 'characters', 'char_employeeA.png'));
+    assert.equal(calls, before + 2, 'only known bundled asset subtrees are exempt inside an artifact home');
+  }
+  return { blockedPathsPerMethod: blocked.length, guardedMethods: guardedMethods.length + 1, allowedBundledRoots: 2 };
+}
+
 /** Only the VS Code boundary is mocked; all homes, workspaces and events are synthetic. */
 function createLiveFixture({ extensionCode, baseUrl = 'http://127.0.0.1', consent = true } = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-live-'));
@@ -91,24 +137,7 @@ function createLiveFixture({ extensionCode, baseUrl = 'http://127.0.0.1', consen
     get: (key, fallback) => values.has(key) ? values.get(key) : fallback,
     update: async (key, value) => { values.set(key, value); },
   };
-  const monitoredFs = new Proxy(fs, {
-    get(target, property) {
-      const method = target[property];
-      if (!['openSync', 'readFileSync', 'readdirSync', 'opendirSync', 'statSync', 'lstatSync', 'existsSync', 'realpathSync'].includes(property)) return method;
-      const wrapped = (...args) => {
-        const file = String(args[0]);
-        if (file.startsWith(home)) reads.push([property, file]);
-        assert.ok(!file.startsWith(path.join(os.homedir(), '.copilot')), 'must never read the real Copilot home');
-        return method(...args);
-      };
-      if (property === 'realpathSync') wrapped.native = (...args) => {
-        const file = String(args[0]);
-        assert.ok(!file.startsWith(path.join(os.homedir(), '.copilot')), 'must never resolve the real Copilot home');
-        return method.native(...args);
-      };
-      return wrapped;
-    },
-  });
+  const monitoredFs = monitorFixtureFs(fs, { home, reads });
   const compiled = { exports: {} };
   const nodeRequire = Module.createRequire(path.join(root, 'package.json'));
   const require = name => name === 'vscode' ? vscode : ['fs', 'node:fs'].includes(name) ? monitoredFs : nodeRequire(name);
@@ -194,6 +223,7 @@ function mutations(out) {
 
 async function browserAcceptance(out) {
   const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+  const guardProof = assertFilesystemGuard();
   const colorizeModule = { exports: {} };
   const colorizeCode = require('esbuild').transformSync(
     fs.readFileSync(path.join(root, 'webview-ui', 'src', 'office', 'colorize.ts'), 'utf8'),
@@ -225,12 +255,10 @@ async function browserAcceptance(out) {
       </script>`));
     } else {
       const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
-      if (process.argv.includes('--reject-builtin-assets') && pathname.startsWith('/assets/')) {
+      if (process.argv.includes('--reject-builtin-assets') && pathname.startsWith('/dist/webview/assets/characters/')) {
         response.writeHead(404); response.end(); return;
       }
-      const file = pathname.startsWith('/assets/')
-        ? path.resolve(root, 'dist', 'webview', '.' + pathname)
-        : path.resolve(root, '.' + pathname);
+      const file = path.resolve(root, '.' + pathname);
       if (!file.startsWith(path.join(root, 'dist') + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
         response.writeHead(404); response.end(); return;
       }
@@ -282,16 +310,15 @@ async function browserAcceptance(out) {
       await page.goto(baseUrl);
       const packagedImages = ['characters/char_employeeA.png', 'characters/char_employeeB.png', 'floors/floor_1.png'];
       for (const asset of packagedImages) {
-        for (const prefix of ['/assets/', '/dist/webview/assets/']) {
-          const response = await page.request.get(baseUrl + prefix + asset);
-          assert.equal(response.status(), 200, `packaged resource must be served at ${prefix + asset}`);
-          assert.deepEqual(await response.body(), fs.readFileSync(path.join(root, 'dist', 'webview', 'assets', asset)),
-            'browser resource must be the exact packaged PNG, not a synthetic substitute');
-        }
+        const resource = '/dist/webview/assets/' + asset;
+        const response = await page.request.get(baseUrl + resource);
+        assert.equal(response.status(), 200, `packaged resource must be served at ${resource}`);
+        assert.deepEqual(await response.body(), fs.readFileSync(path.join(root, 'dist', 'webview', 'assets', asset)),
+          'browser resource must be the exact packaged PNG, not a synthetic substitute');
       }
       const decodedAssets = await page.evaluate(async assets => Promise.all(assets.map(async asset => {
         const image = new Image();
-        image.src = '/assets/' + asset;
+        image.src = '/dist/webview/assets/' + asset;
         await image.decode();
         return { asset, width: image.naturalWidth, height: image.naturalHeight };
       })), packagedImages);
@@ -380,6 +407,8 @@ async function browserAcceptance(out) {
         ).map(b => [a.id, b.id]));
       });
       assert.deepEqual(overlaps, [], '2x overlays must not overlap');
+      await page.evaluate(() => { window.__liveAssetProof.character = false; window.__liveAssetProof.bundledFloor = false; });
+      await page.waitForFunction(() => window.__liveAssetProof.character && window.__liveAssetProof.bundledFloor);
       await assertAssetDiagnostics();
       await page.screenshot({ path: path.join(out, `live-${viewport.width}x${viewport.height}.png`) });
       fixture.send({ type: 'webviewReady' });
@@ -404,7 +433,7 @@ async function browserAcceptance(out) {
       assert.deepEqual(failedAssets, [], 'zero failed packaged-asset requests');
       await assertAssetDiagnostics();
       const assetProof = await page.evaluate(() => window.__liveAssetProof);
-      fs.writeFileSync(path.join(out, `browser-${viewport.width}.json`), JSON.stringify({ viewport, errors, failedAssets, decodedAssets, assetProof, expectedWarnings, overlaps, toolBounds, sequentialCalls: 120, concurrentCalls: 12, confirmations: fixture.confirmations.length, source: fixture.messages.filter(m => m.type === 'sourceStatus').at(-1) }, null, 2));
+      fs.writeFileSync(path.join(out, `browser-${viewport.width}.json`), JSON.stringify({ viewport, errors, failedAssets, guardProof, decodedAssets, assetProof, expectedWarnings, overlaps, toolBounds, sequentialCalls: 120, concurrentCalls: 12, confirmations: fixture.confirmations.length, source: fixture.messages.filter(m => m.type === 'sourceStatus').at(-1) }, null, 2));
       await page.close();
       fixture.dispose();
       fixture = undefined;
