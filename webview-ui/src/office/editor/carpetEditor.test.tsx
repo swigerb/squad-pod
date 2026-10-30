@@ -9,7 +9,7 @@ import { useEditorActions } from '../../hooks/useEditorActions.js';
 import { EditorToolbar } from '../../components/EditorToolbar.js';
 import { setCarpetSprites } from '../sprites/carpetTiles.js';
 import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
-import { applyCarpetPaint, applyCarpetErase, applyTilePaint } from './editorActions.js';
+import { applyCarpetPaint, applyCarpetErase, applyErase, applyTilePaint } from './editorActions.js';
 import { deserializeLayout, serializeLayout } from '../layout/layoutManager.js';
 import { HostClientProvider } from '../../HostClientContext.js';
 import { createHostClientFixture } from '../../__tests__/hostClientFixture.js';
@@ -140,6 +140,103 @@ describe('carpets through real canvas/editor transactions', () => {
     expect(office.layout.carpetTiles?.[8]).toBeNull();
     expect(office.layout.furniture).toEqual(before.furniture);
     expect(office.layout.tiles[8]).toBe(1);
+  });
+
+  it('erases known furniture under one stroke, preserves unknown geometry and protected layout data', () => {
+    const starting = {
+      ...structuredClone(before),
+      furniture: [
+        { uid: 'desk', type: 'desk', col: 2, row: 1, rotation: 0 },
+        { uid: 'pc', type: 'pc', col: 2, row: 1, rotation: 0 },
+        { uid: 'unknown', type: 'future-item', col: 2, row: 1, rotation: 0 },
+        { uid: 'unrelated', type: 'chair', col: 4, row: 1, rotation: 0 },
+      ],
+      tileColors: {
+        ...structuredClone(before.tileColors),
+        '3,1': { h: 120, s: 30, b: 5, c: 0 },
+      },
+      pets: [{ id: 'pet-23', petType: 23 }],
+      areas: [{ label: 'Engineering', color: '#112233' }],
+      areaTiles: Array(24).fill(null).map((value, index) => [8, 9, 10].includes(index) ? 'Engineering' : value),
+      areaMappings: { 'saved-directory': ['Engineering'] },
+      customMetadata: { retained: true, nested: ['value'] },
+    } as OfficeLayout;
+    const layoutWithCarpet = applyCarpetPaint(starting, 4, 1, {
+      variant: 2, color, accentColor,
+    });
+    const directErase = applyErase(layoutWithCarpet, 2, 1);
+    expect(directErase.furniture.find((item) => item.uid === 'unknown'))
+      .not.toBe(layoutWithCarpet.furniture.find((item) => item.uid === 'unknown'));
+    expect(layoutWithCarpet.furniture).toEqual(starting.furniture);
+    act(() => actions.receiveLayout(layoutWithCarpet, 'external', 'erase-base', 'C:\\carpet-fixture'));
+    expect(office.layout).toEqual(layoutWithCarpet);
+
+    act(() => actions.handleToolChange(EditTool.ERASE));
+    act(() => actions.handleEditorEraseAction(-1, 0));
+    mouse('mousedown', 1, 0);
+    mouse('mouseup', 1, 0);
+    expect(office.layout).toEqual(layoutWithCarpet);
+    expect(actions.canUndo).toBe(false);
+
+    mouse('mousedown', 2, 1);
+    mouse('mousemove', 3, 1);
+    mouse('mouseup', 3, 1);
+    const erased = structuredClone(office.layout);
+    expect(erased.tiles.slice(8, 10)).toEqual([TileType.VOID, TileType.VOID]);
+    expect(erased.tileColors).not.toHaveProperty('2,1');
+    expect(erased.tileColors).not.toHaveProperty('3,1');
+    expect(erased.furniture).toEqual(layoutWithCarpet.furniture.filter((item) => ['unknown', 'unrelated'].includes(item.uid)));
+    expect(erased.areaTiles?.slice(8, 10)).toEqual([null, null]);
+    expect(erased.areaTiles?.[10]).toBe('Engineering');
+    expect(erased.areas).toEqual(layoutWithCarpet.areas);
+    expect(erased.areaMappings).toEqual(layoutWithCarpet.areaMappings);
+    expect(erased.pets).toEqual(layoutWithCarpet.pets);
+    expect(erased.carpetTiles).toEqual(layoutWithCarpet.carpetTiles);
+    expect((erased as OfficeLayout & { customMetadata: unknown }).customMetadata)
+      .toEqual((layoutWithCarpet as OfficeLayout & { customMetadata: unknown }).customMetadata);
+    expect(actions.canUndo).toBe(true);
+
+    act(() => actions.handleUndo());
+    expect(office.layout).toEqual(layoutWithCarpet);
+    act(() => actions.handleRedo());
+    expect(office.layout).toEqual(erased);
+
+    const imported = deserializeLayout(serializeLayout(erased));
+    expect(imported).toEqual(erased);
+    act(() => actions.handleSave());
+    expect(client.send).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'saveLayout', layout: erased, expectedRevision: 'erase-base',
+    }));
+
+    const conflicting = structuredClone(erased);
+    conflicting.tiles[0] = TileType.FLOOR_2;
+    act(() => actions.receiveLayout(conflicting, 'external', 'newer-revision', 'C:\\carpet-fixture'));
+    expect(office.layout).toEqual(erased);
+    expect(actions.protection.state.pending[0].layout).toEqual(conflicting);
+    act(() => actions.acknowledgeSave(erased, 'stale-save'));
+    expect(actions.protection.state.revision).toBe('newer-revision');
+    const sendsBeforeBlockedSave = vi.mocked(client.send).mock.calls.length;
+    act(() => actions.handleSave());
+    expect(vi.mocked(client.send)).toHaveBeenCalledTimes(sendsBeforeBlockedSave);
+
+    act(() => actions.resolveLayout(actions.protection.state.pending[0].id, 'local'));
+    act(() => actions.handleSave());
+    expect(client.send).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'saveLayout', layout: erased, expectedRevision: 'newer-revision',
+    }));
+    act(() => actions.acknowledgeSave(erased, 'erase-saved'));
+    expect(actions.protection.state.revision).toBe('erase-saved');
+
+    act(() => actions.receiveLayout(layoutWithCarpet, 'import', null, 'C:\\carpet-fixture'));
+    expect(office.layout).toEqual(layoutWithCarpet);
+    act(() => actions.receiveLayout(imported, 'import', null, 'C:\\carpet-fixture'));
+    expect(office.layout).toEqual(layoutWithCarpet);
+    const pendingImport = actions.protection.state.pending.find((snapshot) => snapshot.source === 'import');
+    expect(pendingImport?.layout).toEqual(erased);
+    act(() => actions.resolveLayout(pendingImport!.id, 'incoming'));
+    expect(office.layout).toEqual(erased);
+    expect(actions.protection.state.revision).toBe('erase-saved');
+    expect(actions.protection.state.pending).toEqual([]);
   });
 
   it('eyedrops the actual style and both colors, rerenders the panel, and does not change history/layout', () => {

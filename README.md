@@ -625,7 +625,8 @@ Squad Pod tracks [Pixel Agents v1.5.0](https://github.com/pixel-agents-hq/pixel-
 | Editor: drag painting, one undo per gesture, safe import, atomic save | ✅ |
 | Alt-drag copy, atomic catalog desk + PC/lamp moves and rotations | ✅ |
 | Carpets | ✅ |
-| Named Areas and directory-to-Area/seat mapping | ⏳ [#7](https://github.com/swigerb/squad-pod/issues/7) |
+| Named Areas and directory-to-Area/seat mapping | ✅ Browser/provider fixtures; native VS Code host verification pending |
+| Historical `log/usage.jsonl` records | ✅ All valid rows counted without deduplication; distinct-turnId coverage only, not live context, model or hierarchy |
 | Original furniture/floors/walls; validated local furniture manifests and live reload | ✅ (static variants; real VS Code-host verification pending) |
 | Named directory management and explicit `copilot --agent squad` launch requests | ✅ Browser/unit fixtures; VS Code host verification pending |
 | Squad-history directory suggestions | ❌ No supported launch-history producer |
