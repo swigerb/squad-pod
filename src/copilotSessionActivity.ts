@@ -452,7 +452,7 @@ export class CopilotSessionActivity {
         if (observed.instanceId !== event.instanceId || observed.state !== 'running') { continue; }
         const previous = this.tasks.get(observed.toolCallId);
         if (previous && previous.agentId !== observed.agentId) {
-          if (this.runs.get(previous.agentId) === observed.toolCallId) { this.finish(previous.agentId, event.activityAt); }
+          if (this.runs.get(previous.agentId) === observed.toolCallId) { this.finish(previous.agentId); }
           this.tasks.delete(observed.toolCallId);
         }
         if (observed.agentId) {

@@ -124,6 +124,23 @@ describe('agentManager', () => {
       expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
     });
 
+    it('keeps the previous member timestamp when a live task is reassigned', () => {
+      mockReadTeamRoster.mockReturnValue([
+        makeMember('Ada', 'ada'),
+        makeMember('Grace', 'grace'),
+      ]);
+      initializeAgents('/workspace', context, webview);
+      const adaAt = Date.parse('2026-10-30T12:01:00.000Z');
+      const graceAt = Date.parse('2026-10-30T12:02:00.000Z');
+
+      setLiveAgentStatus('ada', true, 'Inspect fixture', webview, adaAt);
+      setLiveAgentStatus('ada', false, null, webview);
+      setLiveAgentStatus('grace', true, 'Inspect fixture', webview, graceAt);
+
+      expect(getAgents().get('ada')?.lastActiveAt).toBe(adaAt);
+      expect(getAgents().get('grace')?.lastActiveAt).toBe(graceAt);
+    });
+
     it('does not carry expired source hints into a newly initialized workspace with the same member', () => {
       mockReadTeamRoster.mockReturnValue([makeMember('TestBot', 'testbot')]);
       initializeAgents('/workspace-one', context, webview);

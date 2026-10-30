@@ -512,6 +512,32 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(inventory().tasks.find(row => row.toolCallId === 'child')?.state).toBe('aborted');
   });
 
+  it('does not count identity reassignment as new activity for the former member', () => {
+    const firstObservedAt = '2026-10-30T12:00:00.000Z';
+    const file = session('reassigned', marked(
+      taskCall('run', 'Ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run' }, { agentId: 'internal-run', timestamp: firstObservedAt }),
+    ));
+    reader.start();
+    fs.appendFileSync(file, line('tool.execution_start', {
+      toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view',
+    }, { timestamp: '2026-10-30T12:01:00.000Z' }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual([
+      'ada', true, 'Inspect fixture', Date.parse('2026-10-30T12:01:00.000Z'),
+    ]);
+
+    fs.appendFileSync(file, line('subagent.selected', { agentName: 'Grace' }, {
+      agentId: 'internal-run', timestamp: '2026-10-30T12:02:00.000Z',
+    }));
+    reader.poll();
+
+    expect(lifecycle.mock.calls.slice(-2)).toEqual([
+      ['ada', false, null],
+      ['grace', true, 'Inspect fixture', Date.parse('2026-10-30T12:02:00.000Z')],
+    ]);
+  });
+
   it('ends a roster run when another call for the same authoritative instance completes', () => {
     const file = session('session', marked(''));
     reader.start();
