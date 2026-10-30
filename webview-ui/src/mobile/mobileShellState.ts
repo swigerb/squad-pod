@@ -31,7 +31,8 @@ export type MobileShellEvent =
   | { type: 'disconnect' };
 export interface MobileShellStep {
   state: MobileShellState;
-  effects: ({ type: 'launch'; requestId: string } | { type: 'select'; runId: RunId | undefined })[];
+  effects: ({ type: 'launch'; requestId: string } | { type: 'select'; runId: RunId | undefined }
+    | { type: 'launchUnavailable'; message: string })[];
 }
 export const initialMobileShellState: MobileShellState = {
   view: 'office', focused: null, selectedRunId: undefined, pendingLaunch: null,
@@ -50,6 +51,9 @@ export function terminalInputBlockReason(
   return null;
 }
 
+// Adapter contract: reduce inventories and correlated launch results in received
+// order through a synchronous ref, never a lagged React render snapshot. Both
+// success and failure must carry the requestId; generic error frames are not results.
 export function reduceMobileShell(
   state: MobileShellState, event: MobileShellEvent, access: MobileTerminalAccess,
 ): MobileShellStep {
@@ -61,11 +65,17 @@ export function reduceMobileShell(
   };
   const known = (card: MobileCard | null) =>
     card?.kind === 'owned' && access.runs.some(run => run.runId === card.runId) ? card.runId : undefined;
-  const acknowledge = (pending: MobileShellState['pendingLaunch']): MobileShellStep => {
-    if (!canLaunch) return { state: { ...state, pendingLaunch: null }, effects };
+  const acknowledge = (pending: MobileShellState['pendingLaunch'], inventoryArrived = false): MobileShellStep => {
+    const selected = access.runs.some(run => run.runId === state.selectedRunId) ? state.selectedRunId : undefined;
+    const cleaned = { ...state, selectedRunId: selected };
+    if (!canLaunch) return { state: { ...cleaned, selectedRunId: select(selected), pendingLaunch: null }, effects };
     const runId = pending?.acknowledgedRunId;
     if (!runId || !access.runs.some(run => run.runId === runId)) {
-      return { state: { ...state, pendingLaunch: pending }, effects };
+      select(selected);
+      if (runId && inventoryArrived) effects.push({
+        type: 'launchUnavailable', message: 'Launched run closed or is unavailable. Launch again to start a new run.',
+      });
+      return { state: { ...cleaned, pendingLaunch: runId && inventoryArrived ? null : pending }, effects };
     }
     return {
       state: { view: 'terminal', focused: { kind: 'owned', runId },
@@ -85,7 +95,7 @@ export function reduceMobileShell(
       return acknowledge(event.result.ok
         ? { requestId: event.requestId, acknowledgedRunId: event.result.runId } : null);
     case 'runsChanged': {
-      if (state.pendingLaunch?.acknowledgedRunId) return acknowledge(state.pendingLaunch);
+      if (state.pendingLaunch?.acknowledgedRunId) return acknowledge(state.pendingLaunch, true);
       const selected = access.runs.some(run => run.runId === state.selectedRunId) ? state.selectedRunId : undefined;
       return { state: { ...state, selectedRunId: select(selected),
         pendingLaunch: canLaunch ? state.pendingLaunch : null }, effects };

@@ -141,6 +141,37 @@ describe('mobile navigation without process lifecycle side effects', () => {
     expect(opened.state.view).toBe('terminal');
     expect(opened.effects).toEqual([{ type: 'select', runId: second }]);
   });
+  it('cancels an acknowledged run missing from the next inventory and allows another launch', () => {
+    const pending = reduceMobileShell(initialMobileShellState, launch, access).state;
+    const acknowledged = reduceMobileShell(pending, {
+      type: 'launchResult', requestId: launch.requestId, result: { ok: true, runId: second },
+    }, access).state;
+    const missing = reduceMobileShell(acknowledged, { type: 'runsChanged' }, access);
+    expect(missing.state).toEqual(initialMobileShellState);
+    expect(missing.effects).toEqual([{
+      type: 'launchUnavailable', message: 'Launched run closed or is unavailable. Launch again to start a new run.',
+    }]);
+    const retry = { type: 'launch', requestId: 'viewer-a-request-2' } as const;
+    expect(reduceMobileShell(missing.state, retry, access).effects).toEqual([retry]);
+    expect(reduceMobileShell(missing.state, { type: 'runsChanged' }, launchedAccess).effects).toEqual([]);
+  });
+  it('cleans a missing selected run while awaiting acknowledged inventory and on its cancellation', () => {
+    const pending = reduceMobileShell({ ...initialMobileShellState, selectedRunId: first }, launch, access).state;
+    const empty = { ...access, runs: [] };
+    const acknowledged = reduceMobileShell(pending, {
+      type: 'launchResult', requestId: launch.requestId, result: { ok: true, runId: second },
+    }, empty);
+    expect(acknowledged.state.selectedRunId).toBeUndefined();
+    expect(acknowledged.state.pendingLaunch?.acknowledgedRunId).toBe(second);
+    expect(acknowledged.effects).toEqual([{ type: 'select', runId: undefined }]);
+    const staleSelected = { ...acknowledged.state, selectedRunId: first };
+    const cancelled = reduceMobileShell(staleSelected, { type: 'runsChanged' }, empty);
+    expect(cancelled.state).toEqual(initialMobileShellState);
+    expect(cancelled.effects).toEqual([
+      { type: 'select', runId: undefined },
+      { type: 'launchUnavailable', message: 'Launched run closed or is unavailable. Launch again to start a new run.' },
+    ]);
+  });
   it('failed launch cannot select an unrelated run, and stale results cannot complete a later intent', () => {
     const pending = reduceMobileShell(initialMobileShellState, launch, access).state;
     const failed = reduceMobileShell(pending, {
