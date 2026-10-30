@@ -34,6 +34,8 @@ The manifest describes one or more furniture sprites. For a single sprite, use:
 
 `file` is optional and defaults to `<id>.png`. `width` and `height` are image pixels; the sprite must exactly match its footprint at 16 pixels per tile.
 
+Items with `canPlaceOnSurfaces: true` belong to an overlapping desk (`category: "desks"`). The largest footprint overlap wins, with layout order breaking ties. Rendering and grouped editor moves use the same ownership: the desk draws first, then its accessories, at the desk's normal scene depth. Foreground characters and furniture can still obscure the group. No group IDs are added to saved layouts.
+
 ### Directional rotation groups
 
 Use a `group` with `groupType: "rotation"` to offer directional sprites as one furniture item. Each `asset` member needs its own `id`, image dimensions, footprint, and `orientation`. For example:
