@@ -7,6 +7,7 @@ export interface SquadTeamMember {
 }
 
 export type CurrentTaskSource = 'file' | 'live';
+export type ActivityTimeStatus = 'unobserved' | 'available' | 'clock-skew';
 
 export interface SquadAgentState {
   id: string;                    // agent slug (e.g. "homer-simpson")
@@ -17,7 +18,8 @@ export interface SquadAgentState {
   status: 'active' | 'idle' | 'waiting'; // current activity
   currentTask: string | null;    // source-observed description, not necessarily live work
   currentTaskSource?: CurrentTaskSource | null;
-  lastActiveAt: number;          // timestamp of last activity
+  lastActiveAt: number | null;    // timestamp of the last attributable live activity
+  lastActiveAtStatus: ActivityTimeStatus; // unobserved, valid source time, or ignored future time
 }
 
 export interface SquadSession {
@@ -48,7 +50,8 @@ export interface AgentDetailInfo {
   responsibilities: string | null;
   boundaries: string | null;
   recentActivity: string[];        // last 3-5 log entries mentioning this agent
-  lastActiveAt: number;
+  lastActiveAt: number | null;
+  lastActiveAtStatus: ActivityTimeStatus; // unobserved, valid source time, or ignored future time
 }
 
 export interface PersistedAgentMeta {
