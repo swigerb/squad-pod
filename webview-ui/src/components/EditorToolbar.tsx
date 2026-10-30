@@ -95,6 +95,7 @@ const FLOOR_TYPES: { type: TileType; label: string }[] = [
   { type: TileType.FLOOR_5, label: '5' },
   { type: TileType.FLOOR_6, label: '6' },
   { type: TileType.FLOOR_7, label: '7' },
+  { type: TileType.FLOOR_9, label: '9' },
 ];
 
 // Map TileType floor values to tileset-metadata item IDs for previews
@@ -194,7 +195,7 @@ const styles = {
 
   floorGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
+    gridTemplateColumns: 'repeat(8, 1fr)',
     gap: '3px',
   },
 

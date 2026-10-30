@@ -1,6 +1,7 @@
 import type { FloorColor, SpriteData } from './types.js';
 
 const colorizeCache = new Map<string, SpriteData>();
+const pixelAgentsTileCache = new Map<string, SpriteData>();
 
 export function getColorizedSprite(
   cacheKey: string,
@@ -21,6 +22,38 @@ export function getColorizedSprite(
 
 export function clearColorizeCache(): void {
   colorizeCache.clear();
+  pixelAgentsTileCache.clear();
+}
+
+export function getColorizedTileSprite(
+  cacheKey: string,
+  sprite: SpriteData,
+  color: FloorColor,
+): SpriteData {
+  if (!color.colorize) return getColorizedSprite(cacheKey, sprite, color);
+
+  const key = `pixel-agents-tile_${cacheKey}`;
+  if (pixelAgentsTileCache.has(key)) return pixelAgentsTileCache.get(key)!;
+
+  const brightness = color.b / 200;
+  const contrast = (100 + color.c) / 100;
+  const saturation = color.s / 100;
+  const result = sprite.map((row) =>
+    row.map((hex) => {
+      if (!hex) return '';
+
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      let lightness = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      lightness = 0.5 + (lightness - 0.5) * contrast + brightness;
+      lightness = Math.max(0, Math.min(1, lightness));
+
+      return hslToHex(color.h, saturation, lightness) + (hex.length === 9 ? hex.slice(7, 9) : '');
+    }),
+  );
+  pixelAgentsTileCache.set(key, result);
+  return result;
 }
 
 function colorizeSprite(sprite: SpriteData, color: FloorColor): SpriteData {

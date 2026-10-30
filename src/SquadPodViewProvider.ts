@@ -37,6 +37,7 @@ import { pickSquadWorkspace, resolveSquadDir } from './squadPaths.js';
 import {
   loadCharacterSprites,
   loadDefaultLayout,
+  loadDefaultLayoutForExport,
 } from './assetLoader.js';
 import {
   readPersistedLayout,
@@ -988,9 +989,9 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   // ─── Default Layout Export (command) ──────────────────────────
 
   async exportDefaultLayout(): Promise<void> {
-    const layout = loadDefaultLayout(this.context.extensionPath);
+    const layout = loadDefaultLayoutForExport(this.context.extensionPath);
     if (!layout) {
-      vscode.window.showWarningMessage('Squad Pod: No default layout found in extension assets.');
+      vscode.window.showWarningMessage('Squad Pod: No valid default layout found in extension assets.');
       return;
     }
 
