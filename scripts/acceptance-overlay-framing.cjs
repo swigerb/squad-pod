@@ -40,6 +40,7 @@ for(let i=0;i<8;i++){
 }
 /* transient-fixture */
 let currentZoom = 3;
+let motionEnabled = true;
 const initialLayout = JSON.stringify(office.layout);
 function Fixture(){
  const [zoom,setZoom]=useState(3),[request,setRequest]=useState();
@@ -47,6 +48,7 @@ function Fixture(){
  window.fixture = {
    sent, office, pan, setZoom,
    tick(t){
+     if(!motionEnabled) return;
      for(let i=0;i<8;i++){
        const c=office.characters.get('member-'+i);
        Object.assign(c,{x:(innerWidth/2+Math.sin(t/650+i)*140-pan.current.x)/zoom,
@@ -63,11 +65,13 @@ function Fixture(){
      return [...document.querySelectorAll('[data-agent-label], [data-subagent-label]')].map(e=>{
        const id=e.dataset.agentLabel||e.dataset.subagentLabel;
        const c=e.dataset.subagentLabel?office.subagents.get(id).character:office.characters.get(id);
-       const r=(e.closest('[data-agent-annotation]')||e).getBoundingClientRect();
+       const annotation=e.closest('[data-agent-annotation]')||e;
+       const r=annotation.getBoundingClientRect();
        const b=getCharacterScreenBounds(c,currentZoom,pan.current);
        return {id,x:r.x,y:r.y,width:r.width,height:r.height,anchor:b.top-14,
          world:{x:c.x,y:c.y},pan:{...pan.current},zoom:currentZoom,offscreen:e.textContent.includes('Off-screen'),
-         text:e.textContent,transient:!!e.dataset.subagentLabel,
+         text:e.textContent,annotationText:annotation.textContent,
+         toolBubble:!!annotation.querySelector('[data-agent-tool-bubble]'),transient:!!e.dataset.subagentLabel,
          connector:!!document.querySelector('[data-'+(e.dataset.subagentLabel?'subagent':'agent')+'-connector="'+id+'"]')};
      });
    },
@@ -76,6 +80,7 @@ function Fixture(){
      setContextUsage(office,'member-0',{contextTokens:600,maxContextTokens:1000});
    },
    resizeText(t){
+     motionEnabled=false;
      for(const [id,{character:c}] of office.subagents) {
        c.name=t%2?'Short task '+id:'Long transient task description that wraps to several lines '+id;
      }
@@ -209,20 +214,64 @@ async function main() {
             'both transient characters must stay on-screen during the motion/collision proof');
           record.measurementChanges = await page.evaluate(async () => {
             const samples=[];
-            for(let tick=0;tick<36;tick++){
-              window.fixture.resizeText(tick);
-              // Observe after React's before-paint measurement pass, on every
-              // browser frame, not only after a lane has had time to settle.
+            const committedFrame=async()=>{
               await new Promise(resolve=>requestAnimationFrame(resolve));
+              await new Promise(resolve=>setTimeout(resolve,0));
+            };
+            const capture=(tick,phase)=>{
               const labels=window.fixture.sample();
               const overlaps=labels.some((a,i)=>labels.slice(i+1).some(b=>
                 a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y));
-              samples.push({tick,labels,overlaps});
+              samples.push({tick,phase,labels,overlaps});
+            };
+            for(let tick=0;tick<36;tick++){
+              window.fixture.resizeText(tick);
+              // rAF promises resume before React's scheduler task. Hold the
+              // state until the expected DOM commit, yielding a task as well.
+              let committed=false;
+              for(let attempt=0;attempt<30;attempt++){
+                await committedFrame();
+                const labels=window.fixture.sample(),active=tick%2===0;
+                const member=labels.find(label=>label.id==='member-0');
+                const tasks=labels.filter(label=>label.transient);
+                if(tasks.every(label=>label.text.includes(active?'Long transient task description':'Short task'))
+                  && member.toolBubble===active){
+                  committed=true;
+                  break;
+                }
+              }
+              if(!committed) throw new Error('Expected text/tool state did not commit at tick '+tick);
+              capture(tick,'first-committed');
+              await committedFrame();
+              capture(tick,'next-frame');
             }
             return samples;
           });
           assert.ok(record.measurementChanges.every(sample => !sample.overlaps),
-            'member/subtask and subtask/subtask footprints must separate through frame-by-frame measurement changes');
+            'member/subtask and subtask/subtask footprints must separate in both committed-frame samples');
+          record.measuredSizes = {};
+          for (const id of ['task-0', 'task-1', 'member-0']) {
+            const states = record.measurementChanges.map(sample => ({
+              active: sample.tick % 2 === 0, ...sample.labels.find(label => label.id === id),
+            }));
+            const sizes = [...new Set(states.map(label => `${label.width}x${label.height}`))];
+            assert.ok(sizes.length >= 2, `${id} must have at least two distinct measured sizes`);
+            const active = states.filter(label => label.active);
+            const inactive = states.filter(label => !label.active);
+            assert.ok(Math.min(...active.map(label => label.height)) > Math.max(...inactive.map(label => label.height)),
+              `${id} long/active annotation must be strictly taller than its short/inactive state`);
+            if (id === 'member-0') {
+              assert.ok(active.every(label => label.toolBubble
+                && label.annotationText.includes('Read file with a measured tool footprint')),
+              'active member must render the measured tool bubble');
+              assert.ok(inactive.every(label => !label.toolBubble), 'inactive member must remove its tool bubble');
+            } else {
+              assert.ok(active.every(label => label.text.includes('Long transient task description')),
+                `${id} must actually render long text`);
+              assert.ok(inactive.every(label => label.text.includes('Short task')), `${id} must render short text`);
+            }
+            record.measuredSizes[id] = sizes;
+          }
           await page.evaluate(() => { window.fixture.pan.current.x = -4000; });
           await page.waitForTimeout(150);
           assert.ok(await page.locator('[data-agent-label]').first().textContent().then(t => t.includes('Off-screen')));
