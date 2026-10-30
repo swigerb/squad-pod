@@ -49,10 +49,11 @@ describe('read-only Copilot session metadata (synthetic homes only)', () => {
     fs.writeFileSync(path.join(root, 'session-state', 'not-a-session'), '');
     fs.symlinkSync(root, path.join(root, 'session-state', 'escape'), 'junction');
     expect(listCopilotSessions(root)).toEqual([
-      { id: 'newer', dir: newer, mtimeMs: 1700000100000 },
-      { id: 'older', dir: older, mtimeMs: 1700000000000 },
+      { id: 'newer', dir: fs.realpathSync.native(newer), mtimeMs: 1700000100000 },
+      { id: 'older', dir: fs.realpathSync.native(older), mtimeMs: 1700000000000 },
     ]);
     expect(listCopilotSessions(root, { limit: 1 })).toHaveLength(1);
+    expect(listCopilotSessions(path.join(root, 'session-state', 'escape'))).toEqual(listCopilotSessions(root));
     expect(listCopilotSessions(root, { limit: 0 })).toEqual([]);
     expect(listCopilotSessions(root, { limit: Infinity })).toEqual([]);
   });
