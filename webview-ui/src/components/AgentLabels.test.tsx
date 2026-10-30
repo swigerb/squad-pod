@@ -207,6 +207,18 @@ describe('AgentLabels over canvas characters', () => {
     expect(frames.size).toBe(0);
   });
 
+  it.each(['constructor', 'toString', '__proto__'])('reads only own tool entries for member identity %s', id => {
+    office.removeAgent('homer');
+    office.removeAgent('marge');
+    office.addAgent(id, 'Test Member', 'Developer');
+    render();
+    expect(host.querySelector('[data-agent-tools]')).toBeNull();
+    act(() => root.render(<AgentLabels officeState={office} zoom={2} panRef={panRef}
+      agentTools={Object.fromEntries([[id, [{ toolId: 'test-read', status: 'Read tool', done: false }]]])} />));
+    frame();
+    expect(host.querySelector('[data-agent-tools]')?.textContent).toContain('Read tool');
+  });
+
   it('keeps names, tools and 40x4 gauges in non-overlapping measured annotation stacks at 2x zoom', () => {
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
       return this.dataset.agentAnnotation ? 120 : this.dataset.agentLabel ? 90 : this.dataset.agentToolBubble ? 120 : 0;

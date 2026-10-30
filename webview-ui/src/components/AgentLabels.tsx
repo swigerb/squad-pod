@@ -61,7 +61,8 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, onAgen
           labelX: (bounds.left + bounds.right) / 2, labelY: bounds.top - 14,
           anchorX: (bounds.left + bounds.right) / 2, anchorY: bounds.top,
           width: element?.offsetWidth ?? 0, height: element?.offsetHeight ?? 0,
-          measured: !!element, isActive: char.active, tool: char.tool, tools: toolsRef.current[agentId] ?? [],
+          measured: !!element, isActive: char.active, tool: char.tool,
+          tools: Object.hasOwn(toolsRef.current, agentId) ? toolsRef.current[agentId] : [],
           bubbleType: char.bubbleState.type, isSelected: officeState.selectedAgentId === agentId,
           offscreen: [
             bounds.right < 0 ? 'left' : bounds.left > width ? 'right' : '',

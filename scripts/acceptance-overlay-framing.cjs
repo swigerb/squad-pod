@@ -48,7 +48,8 @@ function Fixture(){
      for(let i=0;i<8;i++){
        const c=office.characters.get('member-'+i);
        Object.assign(c,{x:(innerWidth/2+Math.sin(t/650+i)*140-pan.current.x)/zoom,
-         y:(innerHeight/2-pan.current.y)/zoom,state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
+         y:(innerHeight/2+Math.sin(t/1100+i)*24-pan.current.y)/zoom,
+         state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
      }
    },
    sample(){
@@ -128,7 +129,8 @@ async function main() {
       const context = await browser.newContext({ viewport: { width: scenario.width, height: 900 }, deviceScaleFactor: scenario.dpr });
       const page = await context.newPage();
       page.on('pageerror', error => evidence.errors.push(String(error)));
-      const record = { ...scenario, samples: [], maxLaneResidual: 0, jumpsOver50: 0, overlapSamples: 0 };
+      const record = { ...scenario, samples: [], maxLaneResidual: 0, maxWorldStep: 0,
+        maxCameraStep: 0, maxLabelStep: 0, jumpsOver50: 0, overlapSamples: 0 };
       evidence.cases.push(record);
       try {
         await page.goto(`http://127.0.0.1:${server.address().port}/?${scenario.variant}`);
@@ -145,6 +147,11 @@ async function main() {
             const last = previous.find(p => p.id === item.id);
             const residual = Math.abs((item.y - last.y) - (item.anchor - last.anchor));
             record.maxLaneResidual = Math.max(record.maxLaneResidual, residual);
+            record.maxWorldStep = Math.max(record.maxWorldStep, Math.hypot(
+              item.world.x - last.world.x, item.world.y - last.world.y));
+            record.maxCameraStep = Math.max(record.maxCameraStep, Math.hypot(
+              item.pan.x - last.pan.x, item.pan.y - last.pan.y));
+            record.maxLabelStep = Math.max(record.maxLabelStep, Math.hypot(item.x - last.x, item.y - last.y));
             if (residual > 50) record.jumpsOver50++;
           }
           if (sample.some((a, i) => sample.slice(i + 1).some(b =>
@@ -155,6 +162,7 @@ async function main() {
         await page.screenshot({ path: path.join(output, `${scenario.variant}-${scenario.width}-zoom${scenario.zoom}.png`) });
         if (scenario.variant === 'current') {
           assert.equal(record.jumpsOver50, 0, 'lane residual must not jump over50 CSSpx/100ms');
+          assert.equal(record.maxCameraStep, 0, 'fixture must isolate lane motion from camera movement');
           await page.evaluate(() => { window.fixture.pan.current.x = -4000; });
           await page.waitForTimeout(150);
           assert.ok(await page.locator('[data-agent-label]').first().textContent().then(t => t.includes('Off-screen')));
