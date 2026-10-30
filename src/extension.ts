@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 import { SquadPodViewProvider } from './SquadPodViewProvider.js';
-import { VIEW_ID, COMMAND_SHOW_PANEL, COMMAND_EXPORT_DEFAULT_LAYOUT } from './constants.js';
+import { VIEW_ID, COMMAND_SHOW_PANEL, COMMAND_EXPORT_DEFAULT_LAYOUT, CONFIG_KEY_AUTO_SHOW_PANEL } from './constants.js';
 
 let providerInstance: SquadPodViewProvider | undefined;
 
@@ -19,9 +19,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(COMMAND_SHOW_PANEL, () => {
-      vscode.commands.executeCommand(`${VIEW_ID}.focus`);
-    }),
+    vscode.commands.registerCommand(COMMAND_SHOW_PANEL, () => provider.showPanel()),
   );
 
   context.subscriptions.push(
@@ -29,6 +27,13 @@ export function activate(context: vscode.ExtensionContext) {
       provider.exportDefaultLayout();
     }),
   );
+
+  if (vscode.workspace.getConfiguration().get<boolean>(CONFIG_KEY_AUTO_SHOW_PANEL, false)) {
+    // View resolution can wait for activation; don't await focus here.
+    void provider.showPanel().catch((error: unknown) => {
+      void vscode.window.showErrorMessage(`Squad Pod could not show panel: ${String(error)}`);
+    });
+  }
 }
 
 export function deactivate() {
