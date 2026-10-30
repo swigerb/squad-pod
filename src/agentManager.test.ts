@@ -120,6 +120,11 @@ describe('agentManager', () => {
       refreshAgents('/workspace', context, webview);
       expect(getAgents().get('testbot')?.lastActiveAt).toBe(observedAt);
 
+      const completedAt = Date.parse('2026-10-30T12:35:10.000Z');
+      setLiveAgentStatus('testbot', true, 'Completed live task', webview, observedAt);
+      setLiveAgentStatus('testbot', false, null, webview, completedAt);
+      expect(getAgents().get('testbot')?.lastActiveAt).toBe(completedAt);
+
       initializeAgents('/workspace', context, webview);
       expect(getAgents().get('testbot')?.lastActiveAt).toBeNull();
     });
