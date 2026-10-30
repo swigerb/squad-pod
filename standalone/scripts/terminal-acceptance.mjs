@@ -18,6 +18,7 @@ const install = path.join(root, 'isolated install with spaces');
 const sockets = [];
 const processes = [];
 let browser;
+let mobileTab;
 const report = { platform: `${process.platform}-${process.arch}`, node: process.version,
   head: spawnSync('git', ['rev-parse', 'HEAD'], { cwd: packageRoot, encoding: 'utf8' }).stdout.trim(),
   sourceDirty: spawnSync('git', ['status', '--porcelain', '--untracked-files=no'], { cwd: packageRoot, encoding: 'utf8' }).stdout.trim(),
@@ -140,8 +141,10 @@ try {
   const cookie = await authenticate('terminal-auth', tokens[1]);
   const { WebSocket } = require('ws');
   let channel = await connect(WebSocket, origin, cookie);
-  channel.send({ type: 'launch' });
-  await until(() => channel.frames.some(frame => frame.type === 'runs' && frame.runs.length === 1), 'launch');
+  channel.send({ type: 'launch', requestId: 'native-acceptance-initial' });
+  await until(() => channel.frames.some(frame => frame.type === 'launchResult' &&
+    frame.requestId === 'native-acceptance-initial' && frame.result.ok), 'correlated initial launch result');
+  await until(() => channel.frames.some(frame => frame.type === 'runs' && frame.runs.length === 1), 'launch inventory');
   const run = channel.frames.filter(frame => frame.type === 'runs').at(-1).runs[0];
   report.run = { runId: run.runId, pid: run.pid };
   channel.send({ type: 'attach', runId: run.runId, cursor: 0 });
@@ -201,6 +204,8 @@ try {
     const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE);
     browser = await chromium.launch({ headless: true, executablePath: process.env.EDGE_PATH });
     const tab = await browser.newPage({ viewport: { width: 1440, height: 960 } });
+    await tab.addInitScript(() => Object.defineProperty(navigator, 'maxTouchPoints',
+      { configurable: true, value: 10 }));
     const errors = [];
     tab.on('pageerror', error => errors.push(error.message));
     const received = [];
@@ -217,6 +222,17 @@ try {
     await tab.getByRole('button', { name: 'Authenticate terminals', exact: true }).click();
     await tab.getByRole('button', { name: 'Launch selected project', exact: true }).click();
     await until(() => received.some(frame => frame.type === 'output' && frame.data.includes('"ready":true')), 'browser native output');
+    const desktopBounds = async () => {
+      const bounds = await tab.locator('.observer-office-page').boundingBox();
+      const viewport = tab.viewportSize();
+      return bounds && bounds.width > 0 && bounds.x >= -1 && bounds.x + bounds.width <= viewport.width + 1;
+    };
+    await until(desktopBounds, 'desktop office remains horizontally in bounds after correlated launch');
+    assert.equal(await tab.evaluate(() => matchMedia('(max-width: 700px), (pointer: coarse)').matches), false);
+    assert.equal(await tab.getByRole('button', { name: 'Edit Layout', exact: true }).count(), 1,
+      'synthetic hybrid touchscreen with a fine pointer preserves desktop editor visibility');
+    assert.equal(await tab.locator('.observer-pages-track').evaluate(element =>
+      new DOMMatrixReadOnly(getComputedStyle(element).transform).isIdentity), true);
     const browserRun = received.filter(frame => frame.type === 'runs').at(-1).runs[0];
     await tab.locator('.xterm-helper-textarea').focus();
     await tab.keyboard.type('OK');
@@ -256,18 +272,292 @@ try {
       await fs.mkdir(artifacts, { recursive: true });
       await tab.screenshot({ path: path.join(artifacts, 'terminal-desktop.png'), fullPage: true });
       report.screenshots.push('terminal-desktop.png');
-      const narrowStart = received.length;
-      await tab.setViewportSize({ width: 390, height: 844 });
-      await until(() => received.slice(narrowStart).some(frame => frame.type === 'output' && frame.data.includes('"resized":true')),
-        'narrow browser resize reaches native PTY');
-      await tab.locator('.xterm-helper-textarea').focus();
-      await tab.keyboard.type('NARROW');
-      await until(() => inputs().includes('NARROW'), 'narrow browser input applied');
-      const terminalPanel = tab.locator('.owned-terminal');
-      assert.ok((await terminalPanel.boundingBox()).width <= 390);
+    }
+    const narrowStart = received.length;
+    await tab.setViewportSize({ width: 390, height: 844 });
+    await until(() => received.slice(narrowStart).some(frame => frame.type === 'output' && frame.data.includes('"resized":true')),
+      'narrow browser resize reaches native PTY');
+    await tab.locator('.xterm-helper-textarea').focus();
+    await tab.keyboard.type('NARROW');
+    await until(() => inputs().includes('NARROW'), 'narrow browser input applied');
+    const terminalPanel = tab.locator('.owned-terminal');
+    await until(async () => {
+      const bounds = await terminalPanel.boundingBox();
+      return bounds && Math.abs(bounds.x) <= 1;
+    }, 'narrow terminal page settles horizontally in the viewport');
+    const narrowBounds = await terminalPanel.boundingBox();
+    report.narrowBounds = { viewport: tab.viewportSize(), terminal: narrowBounds,
+      layout: await tab.evaluate(() => ({
+        innerWidth, screenWidth: screen.width, mobile: matchMedia('(max-width: 700px), (pointer: coarse)').matches,
+        trackWidth: document.querySelector('.observer-pages-track').getBoundingClientRect().width,
+      })) };
+    if (artifacts) {
       await terminalPanel.screenshot({ path: path.join(artifacts, 'terminal-narrow.png') });
       report.screenshots.push('terminal-narrow.png');
     }
+    assert.ok(narrowBounds.width <= 391 && narrowBounds.x + narrowBounds.width <= 391,
+      `Narrow terminal exceeded viewport: ${JSON.stringify(report.narrowBounds)}`);
+    await tab.setViewportSize({ width: 1440, height: 960 });
+    await until(desktopBounds, 'returning from narrow to desktop resets the mobile page transform');
+    await tab.getByRole('button', { name: 'Squad Info', exact: true }).click();
+    await tab.getByRole('dialog', { name: 'Squad Info' }).waitFor();
+    await tab.getByRole('button', { name: 'Close Squad Info', exact: true }).click();
+    check('desktop office and controls stay in bounds after correlated launch and narrow-to-desktop transition');
+    mobileTab = await browser.newPage({
+      viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+    });
+    const mobileErrors = [];
+    const mobileReceived = [];
+    const mobileSent = [];
+    await mobileTab.addInitScript(() => {
+      window.syntheticClipboard = { reads: 0, writes: [] };
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+        readText: async () => {
+          window.syntheticClipboard.reads++;
+          return 'synthetic mobile paste';
+        },
+        writeText: async text => {
+          window.syntheticClipboard.writes.push(text);
+        },
+      } });
+    });
+    mobileTab.on('pageerror', error => mobileErrors.push(error.message));
+    mobileTab.on('websocket', ws => {
+      ws.on('framereceived', event => {
+        try { mobileReceived.push(JSON.parse(String(event.payload))); }
+        catch { /* Invalid frames are asserted at the client/server boundaries. */ }
+      });
+      ws.on('framesent', event => {
+        try { mobileSent.push(JSON.parse(String(event.payload))); }
+        catch { /* Non-JSON frames have separate protocol coverage. */ }
+      });
+    });
+    await mobileTab.goto(origin);
+    await mobileTab.getByLabel('Runtime credential from the observer console', { exact: true }).fill(tokens[0]);
+    await mobileTab.getByRole('button', { name: 'Connect read-only office', exact: true }).click();
+    await mobileTab.locator('.office-panel canvas').waitFor();
+    assert.equal(await mobileTab.getByRole('button', { name: 'Edit Layout', exact: true }).count(), 0,
+      'mobile must hide the desktop layout editor');
+    for (const name of ['Directories', 'Settings']) {
+      assert.equal(await mobileTab.getByRole('button', { name, exact: true }).isDisabled(), true,
+        `read-only mobile must not enable ${name}`);
+    }
+    assert.ok(await mobileTab.getByRole('button', { name: 'Squad Info', exact: true }).count());
+    await mobileTab.getByRole('button', { name: 'Show terminal', exact: true }).click();
+    await mobileTab.locator('#terminal-credential').fill(tokens[1]);
+    await mobileTab.getByRole('button', { name: 'Authenticate terminals', exact: true }).click();
+    const firstRunCard = mobileTab.locator(`button[aria-label$="process ${browserRun.pid}"]`);
+    await firstRunCard.waitFor();
+    await firstRunCard.click();
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
+    await mobileTab.locator('.terminal-screen .xterm').waitFor();
+    await mobileTab.getByText('Terminal connected. Office remains read-only.', { exact: true }).waitFor();
+    assert.equal(await mobileTab.evaluate(() =>
+      window.syntheticClipboard.reads), 0,
+    'terminal must never read clipboard automatically');
+    await mobileTab.getByRole('button', { name: 'Select all', exact: true }).click();
+    await mobileTab.getByRole('button', { name: 'Copy selection', exact: true }).click();
+    await until(async () => await mobileTab.evaluate(() =>
+      window.syntheticClipboard.writes.length) > 0,
+    'explicit synthetic copy');
+    await mobileTab.getByRole('button', { name: 'Paste', exact: true }).click();
+    await until(async () => await mobileTab.evaluate(() =>
+      window.syntheticClipboard.reads) === 1,
+    'explicit synthetic clipboard read');
+    await until(() => mobileReceived.some(frame => frame.type === 'output' &&
+      frame.data.includes('synthetic mobile paste')), 'synthetic clipboard input reaches PTY');
+    await mobileTab.getByRole('button', { name: 'Ctrl+D', exact: true }).click();
+    await until(() => mobileReceived.some(frame => frame.type === 'output' &&
+      frame.data.includes('"input":"\\u0004"')), 'mobile keyboard accessory input reaches PTY');
+    await mobileTab.getByRole('button', { name: 'Show office', exact: true }).click();
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="office"]').waitFor();
+    await until(async () => Math.abs((await mobileTab.locator('.observer-office-page').boundingBox()).x) <= 1,
+      'office page settles before canvas touch gestures');
+    const cdp = await mobileTab.context().newCDPSession(mobileTab);
+    report.touchTrace = [];
+    report.mobileNavigations = [];
+    mobileTab.on('framenavigated', frame => {
+      if (frame === mobileTab.mainFrame()) report.mobileNavigations.push(frame.url());
+    });
+    await mobileTab.exposeFunction('recordSyntheticTouch', event => report.touchTrace.push(event));
+    await mobileTab.evaluate(() => {
+      window.syntheticTouchTrace = [];
+      for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
+        window.addEventListener(type, event => {
+          window.syntheticTouchTrace.push({ type, target: event.target.tagName, cancelable: event.cancelable,
+            touches: Array.from(event.touches, touch => [touch.clientX, touch.clientY]) });
+          setTimeout(() => window.recordSyntheticTouch({
+            type, target: event.target.tagName, cancelable: event.cancelable, prevented: event.defaultPrevented,
+            touches: Array.from(event.touches, touch => [touch.clientX, touch.clientY]),
+          }));
+        }, { capture: true, passive: true });
+      }
+    });
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+    const officePanel = mobileTab.locator('.office-panel');
+    const canvas = officePanel.locator('canvas');
+    await until(() => canvas.evaluate(element =>
+      Math.abs(element.width - element.getBoundingClientRect().width * 3) <= 1),
+    'mobile canvas uses DPR 3 backing store with CSS-sized viewport');
+    const followObservedAgent = async () => {
+      await mobileTab.locator('[data-agent-label="test-agent-1"]').click();
+      await mobileTab.getByRole('button', { name: 'Close agent details', exact: true }).click();
+      await until(async () => await officePanel.getAttribute('data-following-agent') === 'test-agent-1',
+        'observed-agent selection starts office camera follow without terminal authority');
+    };
+    const touchPoints = points => points.map(([x, y], id) => ({ x, y, id, radiusX: 2, radiusY: 2, force: 1 }));
+    const canvasBounds = await canvas.boundingBox();
+    assert.ok(canvasBounds);
+    const center = { x: canvasBounds.x + canvasBounds.width / 2, y: canvasBounds.y + canvasBounds.height * 0.75 };
+    await followObservedAgent();
+    assert.equal(await mobileTab.evaluate(({ x, y }) =>
+      document.elementFromPoint(x, y)?.tagName, center), 'CANVAS',
+    'manual camera gestures start on the canvas, not an observed-agent label overlay');
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[center.x - 30, center.y], [center.x + 30, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: touchPoints([[center.x - 70, center.y], [center.x + 70, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    assert.equal(await officePanel.getAttribute('data-following-agent'), 'test-agent-1',
+      'pure pinch must preserve production camera follow');
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[center.x - 30, center.y], [center.x + 30, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: touchPoints([[center.x, center.y + 20], [center.x + 60, center.y + 20]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await until(async () => await officePanel.getAttribute('data-following-agent') === '',
+      'two-finger office translation breaks production camera follow');
+    await followObservedAgent();
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[center.x, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: touchPoints([[center.x + 30, center.y + 20]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await until(async () => await officePanel.getAttribute('data-following-agent') === '',
+      'one-finger office pan breaks production camera follow');
+    check('installed Edge DPR 3 touch: observed-agent camera follow survives pure pinch and ends on one/two-finger manual pan');
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[385, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove', touchPoints: touchPoints([[305, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart', touchPoints: touchPoints([[305, center.y], [200, center.y]]),
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await until(async () => {
+      const bounds = await mobileTab.locator('.observer-office-page').boundingBox();
+      return bounds && Math.abs(bounds.x) <= 1;
+    }, 'second finger cancels claimed edge navigation and settles original office page');
+    assert.equal(await mobileTab.locator('.observer-mobile-stage').getAttribute('data-mobile-view'), 'office');
+    check('installed Edge second-finger interruption settles a claimed edge swipe without changing pages');
+    const swipe = async (direction) => {
+      const startX = direction === 'left' ? 370 : 20;
+      const endX = direction === 'left' ? 160 : 230;
+      const currentPage = mobileTab.locator(direction === 'left' ? '.observer-office-page' : '.observer-terminal-page');
+      await until(async () => {
+        const bounds = await currentPage.boundingBox();
+        return bounds && Math.abs(bounds.x) <= 1;
+      }, 'current page settles before the next edge swipe');
+      await mobileTab.evaluate(() => new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const surface = direction === 'left' ? canvas : mobileTab.locator('.owned-terminal > header');
+      const bounds = await surface.boundingBox();
+      assert.ok(bounds, 'edge swipe requires a visible non-control surface');
+      const y = bounds.y + bounds.height / 2;
+      const hit = await mobileTab.evaluate(({ x, y }) => {
+        const element = document.elementFromPoint(x, y);
+        return element && { tag: element.tagName, className: element.className, text: element.textContent?.slice(0, 100) };
+      }, { x: startX, y });
+      (report.swipes ??= []).push({ direction, bounds, startX, y, hit,
+        metrics: await cdp.send('Page.getLayoutMetrics') });
+      if (artifacts) await mobileTab.screenshot({ path: path.join(artifacts, `before-swipe-${direction}.png`) });
+      assert.ok(hit, 'edge swipe starts inside the visible viewport');
+      assert.equal(await mobileTab.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest(
+        'button, input, select, textarea, a, [role="button"], [contenteditable="true"], [data-mobile-gesture-optout]',
+      ), { x: startX, y }), false, 'edge navigation must not start on an opted-out terminal or control');
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchStart', touchPoints: [{ x: startX, y, id: 1, radiusX: 2, radiusY: 2, force: 1 }],
+      });
+      for (const x of direction === 'left' ? [330, 260, endX] : [70, 145, endX]) {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove', touchPoints: [{ x, y, id: 1, radiusX: 2, radiusY: 2, force: 1 }],
+        });
+      }
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    };
+    await swipe('left');
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
+    await swipe('right');
+    assert.equal(mobileTab.url(), origin + '/', 'edge swipe stays on the authenticated application, never browser history');
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="office"]').waitFor();
+    const mobileLaunchCount = mobileSent.filter(frame => frame.type === 'launch').length;
+    await mobileTab.getByRole('button', { name: 'Launch owned terminal', exact: true }).click();
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
+    const mobileLaunch = mobileSent.filter(frame => frame.type === 'launch').at(-1);
+    assert.ok(mobileLaunch?.requestId);
+    await until(() => mobileReceived.some(frame => frame.type === 'launchResult' &&
+      frame.requestId === mobileLaunch.requestId && frame.result.ok), 'correlated mobile launch');
+    const mobileLaunchResult = mobileReceived.find(frame => frame.type === 'launchResult' &&
+      frame.requestId === mobileLaunch.requestId && frame.result.ok);
+    await until(() => mobileTab.locator('button[aria-label^="Owned terminal"]').count().then(count => count === 2),
+      'two owned-run cards match the registry after launch');
+    assert.equal(await mobileTab.getByRole('button', { name: 'Launch owned terminal', exact: true }).count(), 1);
+    const launchesAfter = mobileSent.filter(frame => frame.type === 'launch').length;
+    assert.equal(launchesAfter, mobileLaunchCount + 1, 'mobile launch card sends exactly one launch');
+    const mobileRun = mobileReceived.filter(frame => frame.type === 'runs').at(-1).runs
+      .find(entry => entry.runId === mobileLaunchResult.result.runId);
+    assert.ok(mobileRun, 'correlated result must appear in owned run inventory');
+    await until(() => mobileReceived.some(frame => frame.type === 'output' && frame.runId === mobileRun.runId &&
+      frame.data.includes('"ready":true')), 'mobile launch opens its exact PTY');
+    const mobileRunCard = mobileTab.locator(`button[aria-label$="process ${mobileRun.pid}"]`);
+    await mobileTab.getByRole('button', { name: 'Show office', exact: true }).click();
+    await mobileRunCard.click();
+    await mobileTab.locator('.observer-mobile-stage[data-mobile-view="terminal"]').waitFor();
+    assert.equal(mobileSent.filter(frame => frame.type === 'launch').length, launchesAfter,
+      'card and toggle navigation must not launch additional processes');
+    const landscapeStart = mobileReceived.length;
+    await mobileTab.setViewportSize({ width: 844, height: 390 });
+    assert.equal(await mobileTab.evaluate(() => matchMedia('(pointer: coarse)').matches), true,
+      'landscape capture remains an actual touch layout, not a narrow desktop');
+    await until(() => mobileReceived.slice(landscapeStart).some(frame => frame.type === 'output' &&
+      frame.data.includes('"resized":true')), 'landscape orientation resize reaches native PTY');
+    const portraitStart = mobileReceived.length;
+    await mobileTab.setViewportSize({ width: 390, height: 844 });
+    await until(() => mobileReceived.slice(portraitStart).some(frame => frame.type === 'output' &&
+      frame.data.includes('"resized":true')), 'portrait orientation resize reaches native PTY');
+    if (artifacts) {
+      await fs.mkdir(artifacts, { recursive: true });
+      await until(async () => Math.abs((await mobileTab.locator('.observer-terminal-page').boundingBox()).x) <= 1,
+        'portrait terminal capture waits for its settled page');
+      await mobileTab.screenshot({ path: path.join(artifacts, 'terminal-mobile-terminal.png'), fullPage: true });
+      await mobileTab.getByRole('button', { name: 'Show office', exact: true }).click();
+      await until(async () => Math.abs((await mobileTab.locator('.observer-office-page').boundingBox()).x) <= 1,
+        'portrait office capture waits for its settled page');
+      await mobileTab.screenshot({ path: path.join(artifacts, 'terminal-mobile-portrait.png'), fullPage: true });
+      await mobileTab.setViewportSize({ width: 844, height: 390 });
+      assert.equal(await mobileTab.evaluate(() => matchMedia('(pointer: coarse)').matches), true);
+      await until(async () => {
+        const bounds = await canvas.boundingBox();
+        return bounds && Math.abs(bounds.x) <= 1 && bounds.width === 844;
+      }, 'landscape touch canvas matches the orientation viewport');
+      await mobileTab.screenshot({ path: path.join(artifacts, 'terminal-mobile-landscape.png'), fullPage: true });
+      report.screenshots.push('terminal-mobile-terminal.png', 'terminal-mobile-portrait.png', 'terminal-mobile-landscape.png');
+    }
+    await cdp.detach();
+    assert.deepEqual(mobileErrors, []);
+    check('installed Edge touch emulation: mobile editor suppression, exact owned-run cards, correlated launch, edge swipes, explicit synthetic clipboard and keyboard input');
+    await mobileTab.context().close();
+    mobileTab = undefined;
+    channel.send({ type: 'terminate', runId: mobileRun.runId });
+    await until(() => !alive(mobileRun.pid), 'mobile acceptance PTY cleanup');
     await tab.reload();
     await tab.getByLabel('Runtime credential from the observer console', { exact: true }).fill(tokens[0]);
     await tab.getByRole('button', { name: 'Connect read-only office', exact: true }).click();
@@ -289,7 +579,9 @@ try {
   // One owned child survives viewer revocation, then shutdown reaps both.
   const registryStart = channel.frames.length;
   const previousRuns = new Set(channel.frames.filter(frame => frame.type === 'runs').at(-1)?.runs.map(run => run.runId));
-  channel.send({ type: 'launch' });
+  channel.send({ type: 'launch', requestId: 'native-acceptance-shutdown' });
+  await until(() => channel.frames.some(frame => frame.type === 'launchResult' &&
+    frame.requestId === 'native-acceptance-shutdown' && frame.result.ok), 'correlated shutdown launch result');
   await until(() => channel.frames.slice(registryStart).some(frame => frame.type === 'runs' &&
     frame.runs.some(run => !previousRuns.has(run.runId))), 'shutdown fixture');
   const shutdownRun = channel.frames.filter(frame => frame.type === 'runs').at(-1).runs.at(-1);
@@ -315,7 +607,24 @@ try {
   report.failures.push(String(error.stack ?? error));
   process.exitCode = 1;
   console.error(error);
+  if (artifacts && mobileTab && !mobileTab.isClosed()) {
+    report.mobileFailure = { url: mobileTab.url(), state: await mobileTab.evaluate(() => ({
+      trace: window.syntheticTouchTrace,
+      viewport: { width: innerWidth, height: innerHeight, scale: visualViewport?.scale,
+        offsetLeft: visualViewport?.offsetLeft, offsetTop: visualViewport?.offsetTop },
+      elements: ['html', 'body', '#root', '.observer-mobile-stage', '.observer-pages-track',
+        '.observer-office-page', '.observer-terminal-page'].map(selector => {
+        const element = document.querySelector(selector);
+        const rect = element?.getBoundingClientRect();
+        return { selector, x: rect?.x, width: rect?.width, scrollLeft: element?.scrollLeft,
+          transform: element && getComputedStyle(element).transform };
+      }),
+    })) };
+    await mobileTab.screenshot({ path: path.join(artifacts, 'mobile-failure.png'), fullPage: true });
+    report.screenshots.push('mobile-failure.png');
+  }
 } finally {
+  await mobileTab?.context().close();
   await browser?.close();
   for (const ws of sockets) ws.terminate();
   for (const child of processes) {

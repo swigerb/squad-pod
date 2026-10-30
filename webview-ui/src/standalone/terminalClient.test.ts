@@ -26,7 +26,9 @@ const output = (seq: number, data = `chunk${seq}`) => ({ ...base, type: 'output'
 const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
 function fixture(write = vi.fn(async (_data: string) => {})) {
   const sockets: Socket[] = [];
-  const callbacks: TerminalClientCallbacks = { status: vi.fn(), runs: vi.fn(), ready: vi.fn(), resync: vi.fn() };
+  const callbacks: TerminalClientCallbacks = {
+    status: vi.fn(), runs: vi.fn(), launchResult: vi.fn(), ready: vi.fn(), resync: vi.fn(),
+  };
   const display = { write, reset: vi.fn() };
   const client = createTerminalClient(display, callbacks, url => {
     expect(url).toBe('ws://127.0.0.1:1234/terminal');
@@ -47,12 +49,25 @@ afterEach(() => vi.useRealTimers());
 
 describe('owned terminal strict wire boundary', () => {
   it('accepts only fixed list/launch controls and bounded runtime-issued run records', () => {
-    expect(decodeOwnedTerminalCommand('{"version":1,"type":"launch"}')).toEqual({ version: 1, type: 'launch' });
+    expect(decodeOwnedTerminalCommand('{"version":1,"type":"launch","requestId":"viewer-a-1"}')).toEqual({
+      version: 1, type: 'launch', requestId: 'viewer-a-1',
+    });
+    expect(() => decodeOwnedTerminalCommand('{"version":1,"type":"launch"}')).toThrow();
+    expect(() => decodeOwnedTerminalCommand('{"version":1,"type":"launch","requestId":"../bad"}')).toThrow();
     expect(() => decodeOwnedTerminalCommand('{"version":1,"type":"launch","cwd":"private"}')).toThrow();
     expect(() => decodeOwnedTerminalCommand('{"version":2,"type":"list"}')).toThrow();
     expect(decodeOwnedTerminalEvent(JSON.stringify(runs))).toEqual(runs);
+    expect(decodeOwnedTerminalEvent(JSON.stringify({
+      version: 1, type: 'launchResult', requestId: 'viewer-a-1', result: { ok: true, runId: id },
+    }))).toEqual({ version: 1, type: 'launchResult', requestId: 'viewer-a-1', result: { ok: true, runId: id } });
+    expect(decodeOwnedTerminalEvent(JSON.stringify({
+      version: 1, type: 'launchResult', requestId: 'viewer-a-1', result: { ok: false, message: 'unavailable' },
+    })).type).toBe('launchResult');
     for (const invalid of [
       { ...runs, extra: true }, { ...runs, available: 'yes' },
+      { version: 1, type: 'launchResult', requestId: 'bad/request', result: { ok: true, runId: id } },
+      { version: 1, type: 'launchResult', requestId: 'ok', result: { ok: false, message: 'x'.repeat(1025) } },
+      { version: 1, type: 'launchResult', requestId: 'ok', result: { ok: true, runId: 'bad run id' } },
       { ...runs, runs: [runs.runs[0], runs.runs[0]] },
       { ...runs, runs: [{ ...runs.runs[0], pid: 0 }] },
       { ...runs, runs: [{ ...runs.runs[0], state: 'observed' }] },
@@ -68,26 +83,59 @@ describe('production owned terminal client', () => {
     const { client, socket, sockets, display, callbacks } = await selected();
     expect(sockets[0].commands()).toEqual([{ version: 1, type: 'list' }]);
     expect(socket.commands()).toEqual([{ version: 1, type: 'list' }, { ...base, type: 'attach', cursor: 0 }]);
-    client.input('blocked before replay');
+    expect(client.input('blocked before replay')).toEqual({ status: 'not-sent' });
     socket.event(runs);
     socket.event(start(0, 1)); socket.event(output(1, '\u001b[31mé中🚀')); socket.event(end(1));
     await flush();
     expect(callbacks.runs).toHaveBeenCalledWith(runs.runs, true, null);
     expect(display.write).toHaveBeenCalledExactlyOnceWith('\u001b[31mé中🚀');
-    client.input('🚀'.repeat(5000));
+    expect(client.input('🚀'.repeat(5000))).toEqual({ status: 'queued' });
     const inputs = socket.commands().filter(command => command.type === 'input');
     expect(inputs.map(command => command.data).join('')).toBe('🚀'.repeat(5000));
     expect(inputs.every(command => utf8Bytes(command.data) <= TERMINAL_LIMITS.inputBytes)).toBe(true);
-    client.input('\0'.repeat(20_000));
+    expect(client.input('\0'.repeat(20_000))).toEqual({ status: 'queued' });
     const controls = socket.commands().filter(command => command.type === 'input' && command.data.includes('\0'));
     expect(controls.map(command => command.data).join('')).toBe('\0'.repeat(20_000));
     expect(controls.every(command => utf8Bytes(JSON.stringify(command)) <= TERMINAL_LIMITS.frameBytes)).toBe(true);
-    client.resize(80, 24); client.terminate(); client.launch();
+    client.resize(80, 24); client.terminate(); client.launch('viewer-a-1');
     expect(socket.commands().slice(-3)).toEqual([
-      { ...base, type: 'resize', cols: 80, rows: 24 }, { ...base, type: 'terminate' }, { version: 1, type: 'launch' },
+      { ...base, type: 'resize', cols: 80, rows: 24 }, { ...base, type: 'terminate' },
+      { version: 1, type: 'launch', requestId: 'viewer-a-1' },
     ]);
+    expect(client.launch('../bad')).toBe(false);
     client.dispose();
     expect(socket.commands().filter(command => command.type === 'terminate')).toHaveLength(1);
+  });
+
+  it('reports blocked and partial input without retrying already queued chunks', async () => {
+    const { client, socket, callbacks } = await selected();
+    socket.event(start(0, 0)); socket.event(end(0)); await flush();
+    const chunkBytes = Math.min(TERMINAL_LIMITS.inputBytes, Math.floor((TERMINAL_LIMITS.frameBytes - 512) / 6));
+    const sentBeforeInput = socket.send.mock.calls.length;
+    Object.defineProperty(socket, 'bufferedAmount', {
+      configurable: true,
+      get: () => socket.send.mock.calls.length > sentBeforeInput ? TERMINAL_LIMITS.pendingBytes + 1 : 0,
+    });
+    expect(client.input('x'.repeat(chunkBytes + 1))).toEqual({ status: 'partial', sentCodeUnits: chunkBytes });
+    expect(client.input('blocked retry')).toEqual({ status: 'not-sent' });
+    expect(socket.commands().filter(command => command.type === 'input')).toHaveLength(1);
+    expect(callbacks.status).toHaveBeenCalledWith(expect.stringContaining('backpressured'));
+    client.dispose();
+  });
+
+  it('delivers ordered inventory then viewer-correlated success/failure results synchronously', async () => {
+    const { client, socket, callbacks } = await selected();
+    const order: string[] = [];
+    vi.mocked(callbacks.runs).mockImplementation(() => { order.push('runs'); });
+    vi.mocked(callbacks.launchResult!).mockImplementation(requestId => { order.push(`launch:${requestId}`); });
+    socket.event(runs);
+    socket.event({ version: 1, type: 'launchResult', requestId: 'viewer-a-1',
+      result: { ok: true, runId: id } });
+    socket.event({ version: 1, type: 'launchResult', requestId: 'viewer-b-1',
+      result: { ok: false, message: 'Owned action in progress.' } });
+    await flush();
+    expect(order).toEqual(['runs', 'launch:viewer-a-1', 'launch:viewer-b-1']);
+    client.dispose();
   });
 
   it('retains the same-page screen and reconnects only from the last applied write callback', async () => {
