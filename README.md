@@ -14,7 +14,7 @@ Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradyga
 - Design the office with floors, walls, furniture, colors, carpets, named Areas, and pets.
 - Manage directories and explicitly launch Squad in a new VS Code terminal.
 - Browse activity and available recorded usage in the Telemetry drawer.
-- Add local furniture and pet assets with manifests.
+- Add local furniture, pets, and character sheets.
 
 ## Requirements
 
@@ -87,7 +87,7 @@ Squad Pod watches the selected project's `.squad/` files, including the roster, 
 
 ## Custom assets
 
-Add a local furniture directory in **Settings**. Custom pet sheets can be placed in the same directory. Manifests, folder layouts, supported images, reload behavior, and import limits are described in [Custom asset manifests](docs/custom-assets.md).
+Add a local asset directory in **Settings** for furniture, pets, and character sheets. Folder layouts, supported images, reload behavior, and import limits are described in [Custom asset manifests](docs/custom-assets.md).
 
 ## Architecture
 
@@ -119,7 +119,6 @@ The original [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by 
 ## Roadmap
 
 - Show live per-tool activity and context usage.
-- Support custom character skins.
 - Visualize team ceremonies in the office.
 
 ## Credits
