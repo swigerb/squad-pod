@@ -1,5 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { OverlayLayout, type LabelBox } from './overlayLayout.js';
+import { AnnotationLayout, OverlayLayout, type LabelBox } from './overlayLayout.js';
+
+describe('ordered character annotation projection', () => {
+  it('keeps full measured stacks disjoint through horizontal and vertical crossings', () => {
+    const layout = new AnnotationLayout();
+    const anchors = Array.from({ length: 8 }, (_, i) => ({
+      id: `agent-${i}`, x: 180, y: 300, width: 140, height: 48,
+    }));
+    let previous = layout.place(anchors, 360, 800).boxes;
+    for (let tick = 0; tick < 600; tick++) {
+      anchors.forEach((anchor, i) => {
+        anchor.x = 180 + Math.sin(tick / 25 + i) * 100;
+        anchor.y = 300 + Math.sin(tick / 40 + i) * 80;
+      });
+      const { boxes, docked } = layout.place(anchors, 360, 800);
+      expect(docked).toBe(false);
+      const values = [...boxes.values()];
+      values.forEach((box, i) => {
+        if (tick > 0) expect(Math.abs(box.top - previous.get(`agent-${i}`)!.top)).toBeLessThanOrEqual(2.00001);
+        expect(box.left).toBeGreaterThanOrEqual(4);
+        expect(box.left + box.width).toBeLessThanOrEqual(356);
+        expect(box.top).toBeGreaterThanOrEqual(4);
+        expect(box.top + box.height).toBeLessThanOrEqual(796);
+        values.slice(i + 1).forEach(other =>
+          expect(box.top + box.height <= other.top || other.top + other.height <= box.top).toBe(true));
+      });
+      previous = boxes;
+    }
+  });
+
+  it('uses an explicit list when full stacks cannot fit, rather than overlapping or truncating them', () => {
+    const layout = new AnnotationLayout();
+    const anchors = Array.from({ length: 8 }, (_, i) => ({
+      id: `agent-${i}`, x: 180, y: 300, width: 140, height: 80,
+    }));
+    expect(layout.place(anchors, 360, 280).docked).toBe(true);
+    expect(layout.place(anchors, 360, 900).docked).toBe(false);
+    expect(layout.place(anchors.slice(0, 2), 360, 280).docked).toBe(false);
+  });
+});
 
 describe('persistent production overlay layout', () => {
   it('does not repack a settled collision lane when a neighbor leaves, and forgets removed identities', () => {

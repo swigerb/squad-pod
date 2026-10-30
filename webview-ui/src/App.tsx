@@ -404,7 +404,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       />
 
       <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef}
-        onAgentClick={handleDeskClick} onLocateAgent={requestCamera} />
+        agentTools={agentTools} onAgentClick={handleDeskClick} onLocateAgent={requestCamera} />
 
       <MissingSquad status={sourceStatus} />
       {readOnly && sourceStatus?.teamFound && sourceStatus.error && (
@@ -451,7 +451,6 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
 
       <ToolOverlay
         officeState={getOfficeState()}
-        agentTools={agentTools}
         zoom={editor.zoom}
         panRef={editor.panRef}
       />

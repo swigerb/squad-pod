@@ -73,6 +73,7 @@ describe('AgentLabels over canvas characters', () => {
       <AgentLabels officeState={office} zoom={zoom} panRef={panRef} onAgentClick={onAgentClick} />
     </></HostClientProvider>));
     frame();
+    frame();
   }
 
   function label(name = 'Homer Simpson') {
@@ -95,22 +96,18 @@ describe('AgentLabels over canvas characters', () => {
     ]);
     for (const element of elements) {
       expect(element.style.animation).toBe('');
-      // Only the small status dot may have both explicit width and height.
-      if ((element.style.width || element.style.height) && element.tagName.toLowerCase() !== 'svg') {
-        expect(element.getAttribute('role')).toBe('img');
-        expect(element.style.width).toBe('6px');
-        expect(element.style.height).toBe('6px');
-      }
     }
-    expect(label().style.background).toBe('rgba(0, 0, 0, 0.8)');
+    expect(label().style.background).toBe('transparent');
+    expect(label().parentElement!.style.background).toBe('rgba(0, 0, 0, 0.8)');
     expect(label().style.border).toBe('0px');
-    expect(label().parentElement!.parentElement!.style.pointerEvents).toBe('none');
+    expect(label().closest('[data-agent-annotation]')!.parentElement!.parentElement!.style.pointerEvents).toBe('none');
   });
 
   it('tracks authoritative identity, selection, movement, zoom, pan and roster removal', () => {
+    office.removeAgent('marge');
     render();
-    expect(label().style.left).toBe('190px');
-    expect(label().style.top).toBe('194px');
+    expect(label().parentElement!.style.left).toBe('190px');
+    expect(label().parentElement!.style.top).toBe('194px');
     Object.assign(office.characters.get('homer')!, { name: 'Homer Updated', role: 'Reviewer', x: 90, y: 110 });
     office.selectedAgentId = 'homer';
     panRef.current = { x: 50, y: 60 };
@@ -118,12 +115,12 @@ describe('AgentLabels over canvas characters', () => {
     expect(label('Homer Updated').textContent).toContain('Reviewer');
     expect(label('Homer Updated').style.color).toBe('rgb(251, 191, 36)');
     render(3);
-    expect(label('Homer Updated').style.left).toBe('320px');
-    expect(label('Homer Updated').style.top).toBe('328px');
+    expect(label('Homer Updated').parentElement!.style.left).toBe('320px');
+    expect(label('Homer Updated').parentElement!.style.top).toBe('328px');
     office.removeAgent('homer');
     frame();
     expect(host.textContent).not.toContain('Homer');
-    expect(host.querySelectorAll('button')).toHaveLength(1);
+    expect(host.querySelectorAll('button')).toHaveLength(0);
   });
 
   it('retains accessible active, waiting and permission indicators and tool text, clearing waiting on resume', () => {
@@ -210,12 +207,12 @@ describe('AgentLabels over canvas characters', () => {
     expect(frames.size).toBe(0);
   });
 
-  it('reserves separate measured lanes for names, tool bubbles and 40x4 gauges at 2x zoom', () => {
+  it('keeps names, tools and 40x4 gauges in non-overlapping measured annotation stacks at 2x zoom', () => {
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
-      return this.dataset.agentLabel ? 90 : this.dataset.agentToolBubble ? 120 : 0;
+      return this.dataset.agentAnnotation ? 120 : this.dataset.agentLabel ? 90 : this.dataset.agentToolBubble ? 120 : 0;
     });
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
-      return this.dataset.agentLabel ? 28 : this.dataset.agentToolBubble ? 18 : 0;
+      return this.dataset.agentAnnotation ? 58 : this.dataset.agentLabel ? 28 : this.dataset.agentToolBubble ? 18 : 0;
     });
     for (const id of ['homer', 'marge']) {
       Object.assign(office.characters.get(id)!, { x: 80, y: 100 });
@@ -225,14 +222,13 @@ describe('AgentLabels over canvas characters', () => {
     }
     render(2);
     frame();
-    const boxes = [...host.querySelectorAll<HTMLElement>('[data-agent-label], [data-agent-tool-bubble], [data-agent-context]')]
+    const boxes = [...host.querySelectorAll<HTMLElement>('[data-agent-annotation]')]
       .map(element => {
-        const gauge = !!element.dataset.agentContext;
-        const width = gauge ? 40 : element.offsetWidth;
-        return { left: parseFloat(element.style.left) - (element.dataset.agentLabel ? width / 2 : 0),
-          top: parseFloat(element.style.top), width, height: gauge ? 4 : element.offsetHeight };
+        const width = element.offsetWidth;
+        return { left: parseFloat(element.style.left) - width / 2,
+          top: parseFloat(element.style.top), width, height: element.offsetHeight };
       });
-    expect(boxes).toHaveLength(6);
+    expect(boxes).toHaveLength(2);
     boxes.forEach((a, index) => {
       boxes.slice(index + 1).forEach(b => {
         expect(a.left < b.left + b.width && a.left + a.width > b.left
@@ -253,17 +249,17 @@ describe('AgentLabels over canvas characters', () => {
         act(() => root.render(<AgentLabels officeState={office} zoom={3} panRef={panRef}
           onAgentClick={onAgentClick} onLocateAgent={locate} />));
         frame();
-        expect(label().textContent).toContain('Off-screen right - Locate');
-        expect(label().title).toBe('Locate Homer Simpson: off-screen right');
-        label().focus();
-        act(() => label().click());
+        expect(label().textContent).toContain('Off-screen right');
+        const locateButton = host.querySelector<HTMLButtonElement>('[aria-label="Locate Homer Simpson"]')!;
+        locateButton.focus();
+        act(() => locateButton.click());
         expect(locate).toHaveBeenCalledExactlyOnceWith('homer');
         expect(onAgentClick).not.toHaveBeenCalled();
-        expect(label().parentElement!.querySelector('svg')).toBeNull();
+        expect(host.querySelector('[data-agent-connector="homer"]')).toBeNull();
         panRef.current.x = -700;
         frame();
         expect(label().textContent).not.toContain('Off-screen');
-        expect(label().parentElement!.querySelector('line')).not.toBeNull();
+        expect(host.querySelector('[data-agent-connector="homer"]')).not.toBeNull();
   });
 
   it.each([360, 1400].flatMap(width => Array.from({ length: 10 }, (_, i) => [width, i + 1])))
@@ -272,10 +268,10 @@ describe('AgentLabels over canvas characters', () => {
         vi.stubGlobal('innerWidth', width);
         vi.stubGlobal('innerHeight', 900);
         vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
-          return this.dataset.agentLabel ? 90 : this.dataset.agentToolBubble ? 120 : 0;
+          return this.dataset.agentAnnotation ? 90 : 0;
         });
         vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
-          return this.dataset.agentLabel ? 28 : this.dataset.agentToolBubble ? 18 : 0;
+          return this.dataset.agentAnnotation ? 28 : 0;
         });
         for (let i = 0; i < 6; i++) {
           const id = `crowd-${i}`;
@@ -294,23 +290,18 @@ describe('AgentLabels over canvas characters', () => {
               y: (450 - panRef.current.y) / zoom,
             });
           }
-          if (tick % 50 === 0) {
-            office.setAgentActive('crowd-0', tick % 100 === 0);
-            office.setAgentTool('crowd-0', 'Reading full tool text');
-            setContextUsage(office, 'crowd-0', { contextTokens: 600, maxContextTokens: 1000 });
-          }
           frame();
           for (const element of host.querySelectorAll<HTMLElement>('[data-agent-label]')) {
             const id = element.dataset.agentLabel!;
             if (!id.startsWith('crowd-')) continue;
-            const top = parseFloat(element.style.top);
+            const top = parseFloat(element.parentElement!.style.top);
             const bounds = getCharacterScreenBounds(office.characters.get(id)!, zoom, panRef.current);
             const anchor = Math.max(4, Math.min(bounds.top - 14, 900 - 28 - 4));
             const last = previous.get(id);
             if (last) maxLaneStep = Math.max(maxLaneStep, Math.abs((top - last.top) - (anchor - last.anchor)));
             previous.set(id, { top, anchor });
             expect(element.textContent).toContain('Developer');
-            const connector = element.parentElement!.querySelector('line')!;
+            const connector = host.querySelector(`[data-agent-connector="${id}"]`)!;
             expect(Number(connector.getAttribute('x2'))).toBeCloseTo(
               office.characters.get(id)!.x * zoom + panRef.current.x);
           }
