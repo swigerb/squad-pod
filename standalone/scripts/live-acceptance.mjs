@@ -153,6 +153,7 @@ try {
   assert.equal(channel.latest('sourceStatus').status.liveActivity.state, 'off');
   assert.equal(channel.latest('existingAgents').agents[0].status, 'idle');
   assert.ok(!channel.frames.some(frame => frame.message?.type === 'agentToolStart'));
+  assert.ok(!channel.frames.some(frame => frame.message?.type === 'liveModels'));
   await stop(off);
   check('default startup stays off with no live activity from seeded home sessions');
 
@@ -251,6 +252,9 @@ try {
   await until(() => tab.evaluate(() => document.querySelector('[data-agent-tools="ada"]')?.textContent.includes('Reading fixture.ts')), 'reload tool replay');
   await until(() => tab.evaluate(() => document.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow') === '80'), 'reload context replay');
   await until(() => tab.evaluate(() => document.querySelector('[data-subagent-label]')?.textContent.includes('Fixture child')), 'reload temporary child replay');
+  await until(() => browserMessages.some(message => message.type === 'liveModels'
+    && message.snapshot.session?.model === 'fixture-session-model'
+    && message.snapshot.members.ada?.model === 'fixture-member-model'), 'reload emitted model replay');
   assert.ok(browserMessages.some(message => message.type === 'agentToolStart' && message.toolId === 'read-two'));
   assert.ok(!browserMessages.some(message => message.type === 'agentToolStart' && message.toolId === 'read-one'));
   check('reload reconstructs current tool/context without replaying completed tool history or launching a process');
@@ -268,6 +272,13 @@ try {
   await tab.getByText('Activity source diagnostics', { exact: true }).click();
   await until(() => tab.evaluate(() => document.body.textContent.includes('Live CLI observer: searching')), 'browser stale diagnostics');
   assert.equal(await tab.locator('[data-observed-task]').count(), 0);
+  assert.equal(channel.latest('liveModels').snapshot.session, null);
+  assert.deepEqual(channel.latest('liveModels').snapshot.members, {});
+  await tab.getByRole('button', { name: 'Squad Info', exact: true }).click();
+  await until(() => tab.evaluate(() => document.body.textContent.includes('No matching Copilot CLI session')
+    && !document.body.textContent.includes('fixture-session-model')
+    && !document.body.textContent.includes('fixture-member-model')), 'stale model display cleared');
+  await tab.getByRole('button', { name: 'Close Squad Info' }).click();
   if (artifacts) {
     await tab.screenshot({ path: path.join(artifacts, 'standalone-live-stale-cleared.png') });
     report.screenshots.push('standalone-live-stale-cleared.png');
