@@ -26,6 +26,7 @@ function readZipEntry(entryName) {
   assert.notEqual(endOffset, -1, 'VSIX ZIP end record must exist');
 
   const entryCount = archive.readUInt16LE(endOffset + 10);
+  const entries = [];
   let offset = archive.readUInt32LE(endOffset + 16);
   for (let index = 0; index < entryCount; index++) {
     assert.equal(archive.readUInt32LE(offset), 0x02014b50, 'ZIP central directory entry must be valid');
@@ -37,6 +38,7 @@ function readZipEntry(entryName) {
     const commentLength = archive.readUInt16LE(offset + 32);
     const localOffset = archive.readUInt32LE(offset + 42);
     const name = archive.toString('utf8', offset + 46, offset + 46 + nameLength);
+    entries.push({ name, compressedSize, uncompressedSize });
 
     if (name === entryName) {
       assert.equal(archive.readUInt32LE(localOffset), 0x04034b50, 'ZIP local file header must be valid');
@@ -52,7 +54,29 @@ function readZipEntry(entryName) {
     }
     offset += 46 + nameLength + extraLength + commentLength;
   }
+  if (entryName === undefined) return entries;
   assert.fail(`VSIX is missing ${entryName}`);
+}
+
+const inventory = readZipEntry();
+for (const entry of inventory) {
+  assert.doesNotMatch(entry.name,
+    /(?:^|\/)(?:standalone|node_modules|terminal-licenses)(?:\/|$)|node-pty|conpty|OpenConsole|TERMINAL_NOTICES|\.node$/i,
+    `VSIX must not contain standalone server/native/terminal license payload: ${entry.name}`);
+}
+for (const filename of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) {
+  const packagedName = filename === 'LICENSE' ? 'LICENSE.txt' : filename;
+  assert.deepEqual(readZipEntry(`extension/${packagedName}`), fs.readFileSync(path.join(root, filename)),
+    `VSIX ${filename} must match canonical bytes`);
+}
+console.log('PASS VSIX isolation: no standalone/native dependencies or terminal license payload; canonical notices intact');
+if (process.env.PACKAGE_ARTIFACTS) {
+  fs.mkdirSync(process.env.PACKAGE_ARTIFACTS, { recursive: true });
+  fs.writeFileSync(path.join(process.env.PACKAGE_ARTIFACTS, 'vsix-inventory.json'), JSON.stringify({
+    head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+    sha256: crypto.createHash('sha256').update(archive).digest('hex'),
+    inventory,
+  }, null, 2));
 }
 
 for (const sourcePath of manifestPaths) {

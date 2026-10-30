@@ -1,10 +1,10 @@
-# Standalone channel prerequisite
+# Standalone office and owned-terminal channels
 
-This slice supplies host-neutral office/control and terminal contracts, not a
-standalone runtime by itself. The separate [local observer package](../standalone/README.md)
-now supplies an authenticated loopback listener and production browser adapter
-for **read-only office observation only**. There is still no PTY,
-process launcher or terminal UI. The VS Code adapter continues using the same
+The host-neutral office/control and terminal contracts now back the separate
+[local standalone package](../standalone/README.md): an authenticated loopback
+listener and production browser adapter with **read-only office observation by
+default** and optional separately authorized owned PTYs/browser terminals.
+The VS Code adapter continues using the same
 typed office messages, API acquisition and recovery-state storage.
 
 ## Office/control
@@ -16,14 +16,14 @@ commands/events remain `WebviewMessage`/`OutboundMessage`; terminal messages are
 not added to that union. This is a trusted typed seam, **not** a JSON validator or
 an authenticated network boundary. The observer's isolated transport validates
 office commands before dispatch and rejects every mutation server-side; its
-browser adapter separately validates server events. This does not authorize or
-implement any terminal messages described below.
+browser adapter separately validates server events. `/office` remains read-only:
+separate terminal authority never enables unsupported office mutations.
 
 ## Terminal wire contract
 
 `src/core/terminalFrames.ts` defines strict version-1 JSON frames. Both directions
 carry an opaque runtime-issued `runId`, distinct from agent/Directory/observation
-identity. IDs are not credentials; the future server must authenticate clients and
+identity. IDs are not credentials; the server authenticates clients and
 look up owned runs in its own registry. Never accept ownership from a wire object.
 
 | Direction | Kind | Fields in addition to version/runId/type |
@@ -41,8 +41,8 @@ Use the direction-specific decoders on incoming JSON. Unknown versions, kinds,
 extra properties, malformed JSON, unsafe/fractional/negative numeric fields and
 unpaired UTF-16 surrogates are rejected explicitly. All sequences/cursors are safe
 integers. Strings preserve complete Unicode code points and terminal escapes.
-The eventual process adapter must use streaming UTF-8 decoding across byte-chunk
-boundaries and supply complete, bounded strings; history rejects oversized chunks
+The native adapter uses streaming UTF-8 decoding across byte-chunk boundaries and
+supplies complete, bounded strings; history rejects oversized chunks
 atomically rather than truncating or splitting code points.
 
 The hard ceilings are 64 KiB per serialized UTF-8 JSON frame, 16 KiB per input
@@ -78,32 +78,60 @@ queued live output and the one in-flight replay/live record or boundary. If a
 slow sink lets those exceed either cap, attach fails explicitly rather than
 promising continuity. Unstaged snapshot records remain within the separate
 captured-history bound; they do not artificially overflow the queue. A resync
-requires a fresh, deliberate recovery/clear-terminal policy in the future UI,
+requires a fresh, deliberate recovery/clear-terminal policy in the browser,
 not an automatic retry loop that silently advances the cursor.
 
 `TerminalReceiver` rejects wrong runs and invalid replay ordering, suppresses
 already-applied output, and enters a terminal resync state on a sequence gap.
-Persist its cursor only after applying returned output successfully. Reconnect
+The browser uses its asynchronous `apply` method: its cursor advances only after
+xterm's write callback succeeds and the screen generation is still current.
+Pending writes drain before an ordinary same-page reconnect. Reload has no orphaned
+cursor: authentication and reconstruction start from zero. A missing retained range
+requires explicit clear/resync from the server's earliest retained sequence minus one,
+with visible lost-history disclosure. Native output failure invalidates history and
+notifies both live attachments and subsequent reconnects with `source-error`. Reconnect
 uses the same owned run and that last successfully applied cursor; it must not
 launch another process. `owned` registry entries permit attach/input/resize/
 terminate for their matching run. `observed` entries permit none of those actions,
 even if they happen to carry a forged runId property. Dismissing an observed
 card has no process-side authority.
 
-## Remaining acceptance gates
+## Implemented runtime and remaining acceptance gates
 
-The subsequent implementation default is a separately packaged standalone
-CLI/runtime, keeping native server dependencies out of the VSIX. That is an
-implementation default, not a user-selected distribution decision. Loopback-safe
-binding, authenticated office/terminal channels, Host/Origin checks, read-only
-authorization, token storage/rotation/redaction and remote TLS/auth remain gates.
-Mobile office/terminal interactions remain a later gate, not desktop-layout touch
-parity.
+The private standalone CLI/runtime remains separately packaged, with native/server
+dependencies and terminal license payloads excluded from the VSIX. It binds only
+`127.0.0.1`. Office and terminal authentication have different runtime credentials,
+cookies and WebSocket channels (`/office` and `/terminal`); both enforce exact
+Host/Origin checks. Rotation revokes both channels and cancels pending unauthorized
+launches without terminating already-owned runs. Credentials are runtime-only; no
+tokenless or persistent-credential mode, proxy exposure or remote TLS/auth is claimed.
 
-The supported eventual launch remains `copilot --agent squad`. Current live data
-is a consented, best-effort Copilot JSONL adapter; no Squad EventBus producer is
-assumed. Shell-free Windows launch, native PTY/platform support, real Squad-session
-acceptance, Native VS Code acceptance and isolated installed-artifact checks
-remain unproven here. Deterministic in-memory tests and a packaged VSIX are not
-substitutes for those approvals. Revision-protected drafts, directories/Areas,
-usage and asset behavior are unchanged.
+`src/core/ownedTerminalProtocol.ts` adds strict fixed `list`/`launch` controls and
+bounded run-state/error events to the terminal frames above. Clients cannot supply
+an executable, argv, environment or directory. The supported launch is
+`copilot --agent squad`, with normal permissions and an allowlisted environment.
+Windows requires a real `copilot.exe`, not a `.cmd` shim; POSIX admits native binary
+headers or an explicit supported Node entry point, not execvp's implicit shell
+fallback for executable text. The canonical selected cwd is revalidated immediately
+before native launch. The README documents token/proxy/custom-CA exclusions and
+platform/toolchain limitations.
+
+Each owned run has an isolated native broker, bounded IPC, input/action/rate ceilings,
+bounded retained output and explicit close/shutdown cleanup of its native console or
+POSIX process group and ordinary descendants. Input budget is outstanding work,
+released on native adapter ack/failure, not a lifetime cap or a claim that the child
+consumed the bytes. This is not a containment sandbox for deliberately escaped
+processes. Synthetic acceptance installs the real private tarball with an empty
+home and paths containing spaces, uses actual native PTYs and production transport,
+and optionally captures installed Edge desktop/narrow browser evidence. Windows
+tests are not skipped; CI also exercises Ubuntu/macOS rather than assuming prebuild
+metadata proves support. Canonical notices and VSIX isolation are inspected.
+
+The native VS Code live-data adapter remains consented/best-effort Copilot JSONL;
+standalone office activity remains approximate project-file observation, not a
+fabricated live Squad lifecycle. No automatically started Squad EventBus producer
+is assumed. Real Squad-session and native VS Code acceptance remain user/Scout-owned
+under their separately pinned plan. Full mobile interactions, general browser office
+mutations, remote access and persistent credentials remain separate gates. Narrow
+screenshots are not full mobile parity. Revision-protected drafts, native
+directories/Areas, usage and asset behavior are unchanged.

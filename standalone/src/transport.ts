@@ -5,6 +5,8 @@ import { extname, join, resolve } from 'node:path';
 import type { Socket } from 'node:net';
 import { WebSocket, WebSocketServer } from 'ws';
 import type { OutboundMessage, WebviewMessage } from '../../src/types.js';
+import type { OwnedRuns } from './ownedRuns.js';
+import { terminalSocket } from './terminalSocket.js';
 
 export interface TransportOptions {
   port?: number;
@@ -13,6 +15,7 @@ export interface TransportOptions {
   snapshot: () => Promise<OutboundMessage[]>;
   subscribe: (listener: (messages: OutboundMessage[]) => void) => () => void;
   onRead?: (message: WebviewMessage) => Promise<OutboundMessage[]>;
+  terminals?: OwnedRuns;
 }
 
 const MAX_CONNECTIONS = 8;
@@ -131,6 +134,7 @@ function command(payload: unknown): { message?: WebviewMessage; error?: string }
 export async function startTransport(options: TransportOptions): Promise<{
   port: number;
   token: string;
+  terminalToken: string;
   rotate: () => string;
   dispose: () => Promise<void>;
 }> {
@@ -145,6 +149,9 @@ export async function startTransport(options: TransportOptions): Promise<{
   const files = await indexStatic(options.staticRoot);
   let token = credential();
   let session = credential();
+  let terminalToken = credential();
+  let terminalSession = credential();
+  let generation = 0;
   let disposed = false;
   let disposal: Promise<void> | undefined;
   let port = 0;
@@ -156,21 +163,24 @@ export async function startTransport(options: TransportOptions): Promise<{
     perMessageDeflate: false,
     clientTracking: true,
   });
+  const terminals = new WebSocketServer({
+    noServer: true, maxPayload: 64 * 1024, perMessageDeflate: false,
+  });
   const origin = () => `http://127.0.0.1:${port}`;
-  const cookieName = () => `squad_office_${port}`;
+  const cookieName = (terminal = false) => `squad_${terminal ? 'terminal' : 'office'}_${port}`;
   const validHost = (request: IncomingMessage) => {
     const host = singleHeader(request, 'host');
     // URL normalization would also accept alternative numeric IP spellings and userinfo.
     return host === `127.0.0.1:${port}`;
   };
   const validOrigin = (request: IncomingMessage) => singleHeader(request, 'origin') === origin();
-  const authenticated = (request: IncomingMessage) => {
+  const authenticated = (request: IncomingMessage, terminal = false) => {
     const header = singleHeader(request, 'cookie');
     if (!header || header.length > 4096) { return false; }
     const cookies = header.split(';').map(part => part.trim().split('='));
-    const matches = cookies.filter(([name]) => name === cookieName());
+    const matches = cookies.filter(([name]) => name === cookieName(terminal));
     return matches.length === 1 && matches[0].length === 2
-      && equalCredential(matches[0][1], session);
+      && equalCredential(matches[0][1], terminal ? terminalSession : session);
   };
   const headers = (response: ServerResponse) => {
     response.setHeader('Cache-Control', 'no-store');
@@ -193,7 +203,9 @@ export async function startTransport(options: TransportOptions): Promise<{
   const server = createServer({ maxHeaderSize: MAX_INBOUND }, (request, response) => {
     headers(response);
     if (!validHost(request)) { reply(response, 403, 'FORBIDDEN'); return; }
-    if (request.url === '/auth' && request.method === 'POST') {
+    if ((request.url === '/auth' || request.url === '/terminal-auth') && request.method === 'POST') {
+      const terminal = request.url === '/terminal-auth';
+      const startedGeneration = generation;
       if (!validOrigin(request)) { reply(response, 403, 'FORBIDDEN'); return; }
       if (singleHeader(request, 'content-type')?.toLowerCase().split(';')[0].trim() !== 'application/json') {
         reply(response, 415, 'INVALID_MESSAGE'); return;
@@ -219,14 +231,15 @@ export async function startTransport(options: TransportOptions): Promise<{
       request.once('end', () => {
         clearTimeout(timeout);
         if (size > MAX_INBOUND || disposed) { return; }
+        if (generation !== startedGeneration) { reply(response, 403, 'FORBIDDEN'); return; }
         let body: unknown;
         try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
         catch { reply(response, 400, 'INVALID_MESSAGE'); return; }
         if (!record(body) || !keys(body, ['token']) || typeof body.token !== 'string'
-          || body.token.length > 128 || !equalCredential(body.token, token)) {
+          || body.token.length > 128 || !equalCredential(body.token, terminal ? terminalToken : token)) {
           reply(response, 403, 'FORBIDDEN'); return;
         }
-        response.setHeader('Set-Cookie', `${cookieName()}=${session}; HttpOnly; SameSite=Strict; Path=/`);
+        response.setHeader('Set-Cookie', `${cookieName(terminal)}=${terminal ? terminalSession : session}; HttpOnly; SameSite=Strict; Path=/`);
         response.writeHead(204);
         response.end();
       });
@@ -252,13 +265,22 @@ export async function startTransport(options: TransportOptions): Promise<{
   });
   server.on('clientError', (_error, socket) => socket.destroy());
   server.on('upgrade', (request, socket, head) => {
-    if (disposed || request.method !== 'GET' || request.url !== '/office'
-      || !validHost(request) || !validOrigin(request) || !authenticated(request)
-      || wss.clients.size >= MAX_CONNECTIONS) {
+    const terminal = request.url === '/terminal';
+    if (disposed || request.method !== 'GET' || (request.url !== '/office' && !terminal)
+      || (terminal && !options.terminals)
+      || !validHost(request) || !validOrigin(request) || !authenticated(request, terminal)
+      || wss.clients.size + terminals.clients.size >= MAX_CONNECTIONS) {
       socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
       return;
     }
-    wss.handleUpgrade(request, socket, head, ws => wss.emit('connection', ws));
+    const target = terminal ? terminals : wss;
+    target.handleUpgrade(request, socket, head, ws => target.emit('connection', ws));
+  });
+  terminals.on('connection', ws => {
+    const admittedGeneration = generation;
+    const cleanup = terminalSocket(ws, options.terminals!, () => !disposed && generation === admittedGeneration);
+    cleanups.set(ws, cleanup);
+    ws.once('close', () => cleanups.delete(ws));
   });
   wss.on('connection', ws => {
     let active = true;
@@ -391,26 +413,36 @@ export async function startTransport(options: TransportOptions): Promise<{
     port = address.port;
   } catch (error) {
     wss.close();
+    terminals.close();
     server.close();
     throw error;
   }
   return {
     port,
     get token() { return token; },
+    get terminalToken() { return terminalToken; },
     rotate: () => {
+      generation++;
       token = credential();
       session = credential();
-      for (const ws of wss.clients) { cleanups.get(ws)?.(); ws.terminate(); }
+      terminalToken = credential();
+      terminalSession = credential();
+      for (const ws of [...wss.clients, ...terminals.clients]) { cleanups.get(ws)?.(); ws.terminate(); }
       return token;
     },
     dispose: () => {
       if (disposal) { return disposal; }
       disposed = true;
-      for (const ws of wss.clients) { cleanups.get(ws)?.(); ws.terminate(); }
+      generation++;
+      for (const ws of [...wss.clients, ...terminals.clients]) { cleanups.get(ws)?.(); ws.terminate(); }
       disposal = new Promise<void>((accept, reject) => {
         server.close(error => { if (error) { reject(error); } else { accept(); } });
         for (const socket of sockets) { socket.destroy(); }
-      }).then(() => new Promise<void>(accept => wss.close(() => accept())));
+      }).then(() => Promise.all([
+        new Promise<void>(accept => wss.close(() => accept())),
+        new Promise<void>(accept => terminals.close(() => accept())),
+        options.terminals?.dispose(),
+      ])).then(() => undefined);
       return disposal;
     },
   };

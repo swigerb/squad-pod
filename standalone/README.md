@@ -1,7 +1,8 @@
 # Squad Pod local observer
 
-The first standalone mode is a **read-only, authenticated, loopback-only office**.
+The default standalone mode is a **read-only, authenticated, loopback-only office**.
 It uses the production React/Canvas renderer and shared `HostClient` office seam.
+Optional owned terminals have separate authority; they do not enable office writes.
 This is a private local package, not a published npm product.
 Its build copies the canonical repository LICENSE and THIRD_PARTY_NOTICES.md
 into the package root; bundled asset provenance and runtime dependency licenses
@@ -20,14 +21,15 @@ node standalone\dist\cli.mjs "C:\absolute\selected project" --port 0
 
 Port `0` chooses an available port; omitting `--port` uses `3210`. The CLI
 canonicalizes the explicit absolute project path. It never opens a browser,
-discovers recent projects, installs Squad, or launches Copilot.
+discovers recent projects, installs Squad, or launches Copilot automatically.
 Open the printed `http://127.0.0.1:PORT` address manually. Paste the separate
 runtime credential from the console into the password form. Do not put it in a
 URL, take a screenshot of that console, or send it in diagnostics.
 
-Type `rotate` in the CLI console to revoke all viewers and print a new credential;
+Type `rotate` in the CLI console to revoke both channels and print new credentials;
 use **Authenticate again** in the browser. Type `quit`, press Ctrl+C, or send
 SIGTERM to dispose the server. Restarting also revokes credentials and cookies.
+Shutdown also closes owned terminals; merely disconnecting a viewer does not.
 Disconnected browsers retry office observation with their existing cookie, never
 start processes, and require authentication again after rotation/restart.
 
@@ -39,6 +41,95 @@ npm pack .\standalone --pack-destination "C:\owned output"
 npm install "C:\owned output\squad-pod-observer-0.1.0.tgz"
 node node_modules\squad-pod-observer\dist\cli.mjs "C:\absolute\selected project" --port 0
 ```
+
+## Optional owned terminals
+
+```powershell
+node standalone\dist\cli.mjs "C:\absolute\selected project" --port 0 --terminals
+```
+
+Authorize the office and terminal forms with their **different console credentials**.
+Terminal authentication is `POST /terminal-auth`; its independent HttpOnly cookie
+authorizes `/terminal`, never `/office`. Office authentication remains `POST /auth`.
+Both channels require exact Host/Origin checks. Rotation invalidates both cookies,
+detaches viewers synchronously and cancels launches still waiting for the native
+broker; it does not terminate an already-owned process. Reauthenticate after rotation.
+Credentials stay runtime-only, never in URLs, files or browser storage.
+
+**Launch selected project** runs only `copilot --agent squad`, with normal Copilot
+permission prompts. The browser cannot supply a directory, executable, arguments or
+environment. Only absolute PATH entries are searched, never cwd or PATHEXT. Windows
+requires a canonical real `copilot.exe` with an executable header; `.cmd`, PowerShell
+and shell wrappers are rejected. POSIX accepts an executable or a Node entry point
+with an exact supported Node shebang; Node entry points use the current real Node
+executable. No shell, permission bypass, `squad shell`, or hook installation is used.
+The selected canonical directory's file identity is checked again inside the native
+broker immediately before spawn. This is not a sandbox against malicious concurrent
+local filesystem replacement.
+
+The bounded environment allowlist is `PATH`, `SystemRoot`, `WINDIR`, `HOME`,
+`USERPROFILE`, `APPDATA`, `LOCALAPPDATA`, `TMPDIR`, `TMP`, `TEMP`, `LANG`, `LC_ALL`,
+`LC_CTYPE`, plus fixed `TERM=xterm-256color` and `COLORTERM=truecolor`. Windows keys
+are matched case-insensitively. Node injection variables, loader variables, GitHub
+tokens, proxy variables (`HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`) and
+custom-CA variables (`NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`, `SSL_CERT_DIR`) are not
+forwarded. Environments requiring those inherited network settings must resolve
+that limitation before real-session acceptance; no network compatibility is assumed.
+Normal Copilot permissions
+and authentication through its normal user configuration still apply; observation
+itself never reads private home logs.
+
+Each run gets an opaque random runId, independent of the roster. Select a run to
+view/input/resize, **Reconnect** to recover the same process, or **Close run...**
+and confirm to terminate/remove only that owned run. Exited runs retain bounded
+output until explicitly removed. No observed process is registered for termination.
+On Windows, each native ConPTY uses its own broker and the packaged ConPTY DLL;
+on POSIX it uses its own forkpty session/process group. Closing/shutdown cleans
+that owned console/group and normal descendants, not unrelated consoles/processes.
+Processes that deliberately escape their console/session are outside the supported
+launch contract; this is not an OS containment/security sandbox. A broker also bounds
+native-helper lifetime so helper threads cannot keep the office host alive after exit.
+
+Terminal frames reuse version 1 history/attachment/receiver contracts: 64 KiB
+serialized frames, 16 KiB input commands, 1 MiB/4096 frames retained history and
+per-viewer pending output. Native UTF-8 output is streamed, Unicode-safe and split
+before framing. IPC output is bounded at 1 MiB with native pause/resume backpressure;
+overflow or unexpected broker death invalidates continuity explicitly. At most
+8 runs, 64 commands/second/connection and 64 outstanding native actions/run are
+accepted. There is also a **1 MiB outstanding broker-input budget/run**, released
+after native adapter acknowledgment or failure; cumulative successful input is
+not capped. The acknowledgment means `node-pty.write` accepted input, not that
+the child consumed it (the public API has no input-drain acknowledgment).
+Sends/startup/cleanup have bounded timeouts. Nothing is silently
+dropped or retried as a process action.
+
+xterm renders escape sequences as terminal data, not HTML; output links cannot
+navigate the authenticated page. Input is disabled until replay finishes. The
+cursor advances only after the terminal's write callback succeeds. An ordinary
+disconnect drains pending rendered output before reconnecting; reload authenticates
+again and rebuilds from cursor zero, not an orphaned persisted cursor. History
+eviction/slow-client overflow produces explicit resync. **Clear terminal and resync
+retained history** acknowledges that earlier output/terminal state is lost; it never
+quietly launches a replacement. Scrollback is capped at 2000 lines. Narrow controls
+are usable, but full mobile gestures/keyboard/clipboard parity is not claimed.
+
+Without `--terminals`, without a supported executable, or without the optional native
+dependency, the office still works and terminal authentication shows an explicit
+unavailability reason. `--fixture` instead selects the packaged deterministic Node
+fixture through the same host/transport/PTY paths; it is an explicit synthetic
+acceptance mode, never a way for browser clients to provide executable arguments.
+
+The native dependency is official `node-pty@1.1.0`, pinned separately from the VSIX.
+Its actual tarball contains Windows x64/arm64 and macOS x64/arm64 native prebuilds,
+including the Windows ConPTY DLL/OpenConsole helper; Linux needs its source build
+and a working C++/Python/node-gyp toolchain; Linux `--ignore-scripts` installations
+have no usable PTY until the native source build is run. Windows/macOS prebuilds
+are exercised after `--ignore-scripts` installation, including executable helper
+permissions on POSIX. Windows x64 installed native acceptance
+is exercised locally. The CI matrix exercises Ubuntu, Windows and macOS native
+tests/installed fixtures; an unrun or failing platform is not an acceptance claim.
+See [standalone-only terminal notices](TERMINAL_NOTICES.md). No native/server payload
+or terminal license directory is included in the VSIX.
 
 ## What is observed
 
@@ -82,11 +173,11 @@ is persisted by the standalone adapter. VS Code draft/recovery behavior is uncha
   storage/ACL protection is **not implemented or claimed**. No Node `chmod`
   assumption is used for Windows protection. Protect the console and machine
   account; another process running as the same user is not an isolated trust boundary.
-  There is no tokenless mode, remote auth, TLS, firewall configuration or terminal authority.
+  There is no tokenless mode, remote auth, TLS or firewall configuration.
 - Direction-specific network allowlists reject unsupported versions/kinds/fields.
   Only readiness, settings reads and bounded agent-detail reads are accepted;
-  forged layout, seat, settings, directory, asset and terminal commands are
-  rejected server-side before dispatch. Invalid server event/layout/numeric
+  forged layout, seat, settings, directory, asset and terminal commands on the
+  office channel are rejected server-side before dispatch. Invalid server event/layout/numeric
   shapes are rejected by the browser adapter.
 - At most 8 TCP connections, 4 KiB inbound frames/auth bodies/headers, 8 MiB
   outbound office frames, 16 MiB queued bytes per viewer, 32 commands/second,
@@ -112,6 +203,7 @@ npm run check --prefix standalone
 npm test --prefix standalone
 npm run build --prefix standalone
 node standalone\scripts\acceptance.mjs
+npm run acceptance:terminals --prefix standalone
 npm run verify
 npm run package
 ```
@@ -128,11 +220,20 @@ probe checks exact installed source-sheet canvas pixels and legacy VOID8 transpa
 `EDGE_PATH` optionally
 selects an installed Edge executable; it installs no browsers.
 
-These are synthetic observer checks, **not** real Squad/Copilot session acceptance
+The terminal acceptance helper installs the actual tarball and official dependencies
+using the configured feed, loads a real native PTY and executes only the packaged
+fixture in an empty synthetic home/project/installation with spaces. It checks
+argv/cwd/Unicode, input/resize, reconnect/replay gaps, observed identity rejection,
+revocation and owned descendant cleanup. With the same installed Playwright/Edge
+settings it exercises production terminal controls and reload, writing screenshots,
+package inventory/hashes, source head and failure details under `TERMINAL_ARTIFACTS`.
+It downloads no browser. Both helpers remove their owned fixtures and stop hosts.
+
+These are synthetic checks, **not** real Squad/Copilot session acceptance
 or native VS Code acceptance. Follow `docs/native-acceptance.md` for the
 user/Scout-owned native and real-session plan. Its standalone observation gates
-now apply to this package's explicit selected-project/read-only mode only.
-Do not run its launch/terminal/mobile/remote gates against this observer:
-owned-process/PTY launch, live/private home logs, persistent credentials, remote
-auth/TLS and mobile terminal remain later issue #8 layers. Nothing here completes
+remain pinned to its accepted baseline; this implementation's synthetic terminal
+procedures are separate. Real Squad launch and native VS Code execution remain
+user/Scout-owned. Private home-log telemetry, persistent credentials, remote
+auth/TLS and full mobile terminals remain later layers. Nothing here completes
 or closes issues #4, #7 or #8.
