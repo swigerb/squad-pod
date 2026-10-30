@@ -104,19 +104,21 @@ updated only the root lockfile:
 | `npm-run-all` → `minimatch` → `brace-expansion` | 1.1.21 |
 | `npm-run-all` → `shell-quote` | 1.12.0 |
 
-Fresh audit results were **two high root package entries** (down from five:
-one critical, three high, one moderate) and **zero webview findings**. The remaining
-entries are `@azure/identity` 4.14.0 and its `@azure/msal-node` 6.0.1 dependency,
-both reported through [GHSA-xcx6-jx8p-x3h5](https://github.com/advisories/GHSA-xcx6-jx8p-x3h5).
-The advisory affects MSAL Node `>=5.0.0-beta.0 <7.1.0`. Available stable
-`@vscode/vsce` 4.1.0 requires Identity `^4.13.2`, while latest stable Identity
-4.14.0 requires MSAL Node `^6.0.0`; there is no compatible stable fix in those
-published ranges as checked through the configured corporate proxy. Although
-the audit reports `fixAvailable: true`, forcing MSAL Node 7 or downgrading Identity
-to 4.13.0 would violate the declared parent contracts. These findings remain
-visible and #21 stays open for a supported upstream resolution.
+The prior audit had reduced the root report from five affected package entries
+(one critical, three high, one moderate) to two high Azure Identity/MSAL entries;
+it reported zero webview findings. This follow-up resolves the remaining entries
+with a compatible lockfile refresh: `@vscode/vsce` 4.1.0
+declares `@azure/identity ^4.13.2`, and
+[@azure/identity 4.14.1](https://github.com/Azure/azure-sdk-for-js/releases/tag/%40azure%2Fidentity_4.14.1)
+(release commit `56472b9a9bcfb3b2d98a049332ebe77af2918663`) declares
+`@azure/msal-node ^7.1.0`; the lock satisfies those ranges with MSAL Node 7.1.2
+and `@azure/msal-common` 16.15.0. The linked
+[GHSA-xcx6-jx8p-x3h5](https://github.com/advisories/GHSA-xcx6-jx8p-x3h5) affects
+MSAL Node `>=5.0.0-beta.0 <7.1.0`. Fresh audits reported **zero vulnerabilities**
+for the full root dependency tree, the root production-only tree (`--omit=dev`),
+and the separate webview dependency tree.
 
-These are development-tool advisory classifications, not a demonstrated
+These were development-tool advisory classifications, not a demonstrated
 application exploit. The package command uses `--no-dependencies`; audit results
 do not establish exploitability, and a zero-finding audit is not proof of exploit
 freedom. No publishing or release operation is needed to validate a local VSIX.
