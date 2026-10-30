@@ -134,6 +134,17 @@ freedom. No publishing or release operation is needed to validate a local VSIX.
 6. Open **Settings** for sound, layout export/import, and the Debug View
 7. Open **Directories** to launch Squad in an open workspace folder or a saved directory
 
+### Panel activation preference
+
+In VS Code Settings, enable **Squad Pod: Auto Show Panel**
+(`squad-pod.autoShowPanel`) to focus the office once when the extension activates.
+It defaults to `false`; changes apply on the next extension activation.
+This preference does not itself activate the extension at startup and never
+launches Squad, a terminal, a process, server or bridge. Roster replay, recorded
+usage, activity observations and panel reload/visibility changes do not trigger
+auto-show. An already-visible office is not focused again.
+Explicit **Show Panel** and directory-launch actions remain available.
+
 While editing, zoom buttons occupy a separate top strip above the tool palette.
 The palette fits narrow panels and scrolls vertically to reach its options and
 Save/Undo actions. Outside edit mode, zoom buttons keep their vertical top-left

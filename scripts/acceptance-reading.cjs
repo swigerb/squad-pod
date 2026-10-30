@@ -107,6 +107,7 @@ function createProviderFixture() {
       executeCommand() {},
     },
     workspace: {
+      getConfiguration: () => ({ get: (_key, defaultValue) => defaultValue }),
       workspaceFolders: [{ uri: uri(workspaceRoot), name: 'Synthetic reader fixture' }],
       onDidChangeWorkspaceFolders: () => disposable,
     },

@@ -40,6 +40,7 @@ export const LAYOUT_FILE_NAME = 'layout.json';
 export const LAYOUT_FILE_POLL_INTERVAL_MS = 2000;
 
 // ─── Settings ───────────────────────────────────────────────────────
+export const CONFIG_KEY_AUTO_SHOW_PANEL = 'squad-pod.autoShowPanel';
 export const GLOBAL_KEY_SOUND_ENABLED = 'squad-pod.soundEnabled';
 export const GLOBAL_KEY_DEBUG_ENABLED = 'squad-pod.debugEnabled';
 export const GLOBAL_KEY_SHOW_AREAS = 'squad-pod.showAreas';

@@ -17,6 +17,7 @@ import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, Tele
 import {
   CUSTOM_CHAR_SPRITE_PREFIX,
   WORKSPACE_KEY_LAYOUT,
+  VIEW_ID,
 } from './constants.js';
 import { createMinimalLayout, ensureTileColors } from './core/layoutState.js';
 import {
@@ -89,6 +90,12 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
+  }
+
+  async showPanel(): Promise<void> {
+    if (!this.view?.visible) {
+      await vscode.commands.executeCommand(`${VIEW_ID}.focus`);
+    }
   }
 
   // ─── WebviewViewProvider ────────────────────────────────────────
