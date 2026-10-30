@@ -17,7 +17,7 @@ afterEach(async () => {
   for (const root of owned.splice(0)) fs.rmSync(root, { force: true, recursive: true });
 });
 function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'office control test '));
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'office control test ')));
   owned.push(root);
   fs.mkdirSync(path.join(root, '.squad'));
   fs.mkdirSync(path.join(root, 'bundle'));

@@ -258,7 +258,7 @@ describe('guarded selected-project office persistence', () => {
       // the changed identity to exercise the cleanup guard on every platform.
       vi.mocked(fs.lstatSync).mockImplementation((...args: Parameters<typeof fs.lstatSync>) => {
         const stat = originalLstat(...args);
-        if (stat && String(args[0]) === path.join(root, '.squad-pod') && typeof stat.ino === 'bigint') {
+        if (stat && String(args[0]) === path.join(store.root, '.squad-pod') && typeof stat.ino === 'bigint') {
           return Object.assign(Object.create(Object.getPrototypeOf(stat)), stat, { ino: stat.ino + 1n }) as typeof stat;
         }
         return stat;
