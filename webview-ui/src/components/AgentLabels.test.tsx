@@ -9,6 +9,7 @@ import { EditorState } from '../office/editor/editorState.js';
 import { CharacterState, TileType } from '../office/types.js';
 import { HostClientProvider } from '../HostClientContext.js';
 import { createHostClientFixture } from '../__tests__/hostClientFixture.js';
+import { setContextUsage } from '../office/toolUtils.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -203,5 +204,40 @@ describe('AgentLabels over canvas characters', () => {
     expect(frames.size).toBe(1);
     act(() => root.render(null));
     expect(frames.size).toBe(0);
+  });
+
+  it('reserves separate measured lanes for names, tool bubbles and 40x4 gauges at 2x zoom', () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentLabel ? 90 : this.dataset.agentToolBubble ? 120 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentLabel ? 28 : this.dataset.agentToolBubble ? 18 : 0;
+    });
+    for (const id of ['homer', 'marge']) {
+      Object.assign(office.characters.get(id)!, { x: 80, y: 100 });
+      office.setAgentActive(id, true);
+      office.setAgentTool(id, 'view');
+      setContextUsage(office, id, { contextTokens: 600, maxContextTokens: 1000 });
+    }
+    render(2);
+    frame();
+    const boxes = [...host.querySelectorAll<HTMLElement>('[data-agent-label], [data-agent-tool-bubble], [data-agent-context]')]
+      .map(element => {
+        const gauge = !!element.dataset.agentContext;
+        const width = gauge ? 40 : element.offsetWidth;
+        return { left: parseFloat(element.style.left) - (element.dataset.agentLabel ? width / 2 : 0),
+          top: parseFloat(element.style.top), width, height: gauge ? 4 : element.offsetHeight };
+      });
+    expect(boxes).toHaveLength(6);
+    boxes.forEach((a, index) => {
+      boxes.slice(index + 1).forEach(b => {
+        expect(a.left < b.left + b.width && a.left + a.width > b.left
+          && a.top < b.top + b.height && a.top + a.height > b.top).toBe(false);
+      });
+    });
+    expect(host.querySelectorAll('[role="progressbar"]')).toHaveLength(2);
+    office.setAgentActive('homer', false);
+    frame();
+    expect(host.querySelector('[data-agent-context="homer"]')).toBeNull();
   });
 });

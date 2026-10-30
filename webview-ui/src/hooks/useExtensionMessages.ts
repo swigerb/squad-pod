@@ -16,6 +16,7 @@ import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/t
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
 import type { OutboundMessage } from '../../../src/types.js';
+import { pruneCompletedTools, setContextUsage } from '../office/toolUtils.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
@@ -43,7 +44,7 @@ const OBSERVED_TASK_ROW_ID = '__squad-pod-observed-task';
 
 type AgentActivityMessage = Extract<OutboundMessage, {
   type: 'agentStatus' | 'agentToolStart' | 'agentToolDone' | 'agentToolsClear'
-    | 'agentToolPermission' | 'agentToolPermissionClear';
+    | 'agentToolPermission' | 'agentToolPermissionClear' | 'agentContextUsage';
 }>;
 
 function isAgentActivityMessage(message: OutboundMessage): message is AgentActivityMessage {
@@ -54,6 +55,7 @@ function isAgentActivityMessage(message: OutboundMessage): message is AgentActiv
     case 'agentToolsClear':
     case 'agentToolPermission':
     case 'agentToolPermissionClear':
+    case 'agentContextUsage':
       return true;
     default:
       return false;
@@ -117,6 +119,7 @@ export function useExtensionMessages(
   const statusesRef = useRef<Record<string, string>>({});
   const agentsRef = useRef<string[]>([]);
   const layoutReadyRef = useRef(false);
+  const runningToolsRef = useRef(new Map<string, Map<string, string>>());
 
   // Keep refs in sync with state so the message handler always sees current values
   agentsRef.current = agents;
@@ -160,6 +163,7 @@ export function useExtensionMessages(
         for (const agent of snapshot) {
           if (agent.status !== undefined || agent.currentTask !== undefined) {
             officeState.setAgentTool(agent.id, null);
+            runningToolsRef.current.delete(agent.id);
           }
         }
         const seats = officeState.getSeatAssignments();
@@ -234,6 +238,8 @@ export function useExtensionMessages(
 
         case 'agentClosed': {
           const id = message.agentId;
+          setContextUsage(getOfficeState(), id, null);
+          runningToolsRef.current.delete(id);
           agentsRef.current = agentsRef.current.filter((a) => a !== id);
           if (bufferedAgentsRef.current) {
             bufferedAgentsRef.current = bufferedAgentsRef.current.filter((a) => a.id !== id);
@@ -278,8 +284,11 @@ export function useExtensionMessages(
 
         case 'agentToolStart': {
           const id = message.agentId;
-          const toolId = message.tool ?? message.toolId;
+          const toolId = message.toolId ?? message.tool;
           const status = message.status ?? toolId;
+          const running = runningToolsRef.current.get(id) ?? new Map<string, string>();
+          running.set(toolId, message.tool);
+          runningToolsRef.current.set(id, running);
           setAgentTools((prev) => {
             const tools = (prev[id] || []).filter((tool) => tool.toolId !== OBSERVED_TASK_ROW_ID);
             const existing = tools.find((t) => t.toolId === toolId);
@@ -287,30 +296,44 @@ export function useExtensionMessages(
               existing.status = status;
               existing.done = false;
               existing.permissionWait = false;
-              return { ...prev, [id]: [...tools] };
+              return { ...prev, [id]: pruneCompletedTools(tools) };
             }
             return { ...prev, [id]: [...tools, { toolId, status, done: false }] };
           });
-          getOfficeState().setAgentTool(id, toolId);
+          getOfficeState().setAgentTool(id, message.tool ?? toolId);
           break;
         }
 
         case 'agentToolDone': {
           const id = message.agentId;
-          const toolId = message.tool ?? message.toolId;
+          const toolId = message.toolId ?? message.tool;
+          const running = runningToolsRef.current.get(id);
+          if (toolId) running?.delete(toolId);
+          getOfficeState().setAgentTool(id, [...(running?.values() ?? [])].at(-1) ?? null);
           setAgentTools((prev) => {
             const tools = prev[id] || [];
             const tool = tools.find((t) => t.toolId === toolId);
             if (tool) {
               tool.done = true;
             }
-            return { ...prev, [id]: [...tools] };
+            return { ...prev, [id]: pruneCompletedTools(tools) };
           });
+          break;
+        }
+
+        case 'agentContextUsage': {
+          const { agentId, contextTokens, maxContextTokens } = message;
+          setContextUsage(getOfficeState(), agentId,
+            contextTokens !== null && maxContextTokens !== null && Number.isFinite(contextTokens)
+              && Number.isFinite(maxContextTokens) && contextTokens >= 0 && maxContextTokens > 0
+              ? { contextTokens, maxContextTokens } : null);
           break;
         }
 
         case 'agentToolsClear': {
           const id = message.agentId;
+          runningToolsRef.current.delete(id);
+          setContextUsage(getOfficeState(), id, null);
           setAgentTools((prev) => {
             const next = { ...prev };
             delete next[id];

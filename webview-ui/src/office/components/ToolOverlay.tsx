@@ -27,7 +27,7 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
       const container = containerRef.current;
       const origin = container?.getBoundingClientRect();
       const occupied = [...(container?.parentElement?.querySelectorAll<HTMLElement>(
-        '[data-agent-label], [data-agent-tool-bubble]') ?? [])].map((element) => {
+        '[data-agent-label], [data-agent-tool-bubble], [data-agent-context]') ?? [])].map((element) => {
         const rect = element.getBoundingClientRect();
         return { left: rect.left - (origin?.left ?? 0), top: rect.top - (origin?.top ?? 0),
           width: rect.width, height: rect.height };
@@ -55,7 +55,12 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
 
   return (
     <div ref={containerRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 30 }}>
-      {toolPositions.map((pos) => (
+      {toolPositions.map((pos) => {
+        const running = pos.tools.filter(tool => !tool.done);
+        const completedSlots = Math.max(0, 5 - running.length);
+        const visible = [...running.slice(-5),
+          ...(completedSlots ? pos.tools.filter(tool => tool.done).slice(-completedSlots) : [])];
+        return (
         <div
           key={pos.agentId}
           data-agent-tools={pos.agentId}
@@ -74,8 +79,8 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
             pointerEvents: 'none',
           }}
         >
-          {pos.tools.map((tool, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {visible.map((tool) => (
+            <div key={tool.toolId} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               {tool.done ? (
                 <span style={{ color: '#4ade80' }}>✓</span>
               ) : tool.permissionWait ? (
@@ -86,8 +91,10 @@ export function ToolOverlay({ officeState, agentTools, zoom, panRef }: ToolOverl
               <span>{tool.status}</span>
             </div>
           ))}
+          {pos.tools.length > 5 && <div>+{pos.tools.length - 5} more tools</div>}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

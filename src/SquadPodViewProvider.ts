@@ -28,6 +28,8 @@ import {
   saveAgentSeats,
   getAgents,
   disposeAgentManager,
+  setLiveAgentStatus,
+  isLiveAgent,
   setExternalCharacterPalettes,
 } from './agentManager.js';
 import { startSquadWatching, type ActivitySource } from './squadWatcher.js';
@@ -72,6 +74,7 @@ import {
 } from './directories.js';
 import { launchSquadInTerminal } from './directoryLaunch.js';
 import { readRecordedUsage } from './recordedUsage.js';
+import { CopilotSessionActivity } from './copilotSessionActivity.js';
 
 export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
@@ -90,6 +93,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private directorySuggestionsRequested = false;
   private watchedRoot: string | undefined;
   private output: vscode.OutputChannel | undefined;
+  private liveActivity: CopilotSessionActivity | undefined;
+  private liveConsent = false;
+  private liveRequest = 0;
+  private livePending = false;
   private sourceStatus: SourceStatus = {
     workspaceRoot: null, squadDir: null, teamFound: false,
     observer: 'stopped', nativeWatch: false, error: null,
@@ -141,12 +148,20 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     // Teardown on view dispose
     webviewView.onDidDispose(() => this.teardown(), undefined, this.disposables);
+    vscode.workspace.onDidChangeConfiguration?.((event) => {
+      if (event.affectsConfiguration('squad-pod.liveActivity')) {
+        void this.configureLiveActivity(vscode.workspace.getConfiguration('squad-pod').get('liveActivity', false));
+      }
+    }, undefined, this.disposables);
   }
 
   // ─── Message Handling ──────────────────────────────────────────
 
   private handleWebviewMessage(message: WebviewMessage): void {
     switch (message.type) {
+      case 'setLiveActivity':
+        if (typeof message.enabled === 'boolean') {void this.configureLiveActivity(message.enabled, true);}
+        break;
       case 'webviewReady':
         this.onWebviewReady();
         break;
@@ -295,6 +310,69 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
     this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
     this.sendRecordedUsage(workspaceRoot);
+    this.liveActivity?.replay();
+    void this.configureLiveActivity(vscode.workspace.getConfiguration('squad-pod').get('liveActivity', false));
+  }
+
+  private async configureLiveActivity(enabled: boolean, writeSetting = false): Promise<void> {
+    if (enabled && this.livePending) {return;}
+    const request = ++this.liveRequest;
+    if (!enabled) {
+      this.livePending = false;
+      this.liveConsent = false;
+      this.liveActivity?.stop();
+      this.liveActivity = undefined;
+      this.sourceStatus.liveActivity = { state: 'off', sessionId: null };
+      this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
+    }
+    try {
+      if (enabled && !this.liveConsent) {
+        this.livePending = true;
+        const answer = await vscode.window.showWarningMessage(
+          'Show live Squad activity? Squad Pod will read local Copilot CLI workspace metadata and session event logs for this workspace. Only member names, short task descriptions, tool names, file basenames, command names and context counts are used. Prompts, other arguments and outputs are never displayed or stored. The session format is undocumented and best-effort.',
+          { modal: true }, 'Enable Live Activity',
+        );
+        if (request !== this.liveRequest) {return;}
+        this.livePending = false;
+        enabled = answer === 'Enable Live Activity';
+        this.liveConsent = enabled;
+        writeSetting = true;
+      }
+      if (writeSetting) {
+        await vscode.workspace.getConfiguration('squad-pod').update('liveActivity', enabled, vscode.ConfigurationTarget.Workspace);
+      }
+      if (request !== this.liveRequest || !enabled || !this.liveConsent) {
+        if (!enabled) {
+          this.sourceStatus.liveActivity = { state: 'off', sessionId: null };
+          this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
+        }
+        return;
+      }
+      if (this.liveActivity || !this.watchedRoot || !this.view) {return;}
+      const webview = this.view.webview;
+      this.liveActivity = new CopilotSessionActivity({
+        workspaceRoot: this.watchedRoot,
+        roster: () => [...getAgents().keys()].map(id => ({ id, folder: id })),
+        post: message => this.postMessage(message),
+        lifecycle: (id, active, task) => setLiveAgentStatus(id, active, task, webview),
+        status: liveActivity => {
+          this.sourceStatus = { ...this.sourceStatus, liveActivity };
+          this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
+          if (liveActivity.state === 'error') {this.log('Live activity: unable to read session metadata or events.');}
+        },
+      });
+      this.liveActivity.start();
+    } catch {
+      if (request !== this.liveRequest) {return;}
+      this.livePending = false;
+      this.liveActivity?.stop();
+      this.liveActivity = undefined;
+      this.liveConsent = false;
+      this.sourceStatus.liveActivity = { state: 'error', sessionId: null };
+      this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
+      this.log('Live activity: could not update setting or obtain consent.');
+      void vscode.window.showErrorMessage('Squad Pod could not enable live activity. Check workspace settings permissions.');
+    }
   }
 
   private sendRecordedUsage(workspaceRoot?: string): void {
@@ -310,8 +388,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         if (status.squadDir !== this.sourceStatus.squadDir) {
           this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
         }
-        this.sourceStatus = status;
-        this.postMessage({ type: 'sourceStatus', status });
+        this.sourceStatus = { ...status, liveActivity: this.sourceStatus.liveActivity };
+        this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
         if (status.error) { this.log(status.error); }
       },
       onRosterChanged: () => {
@@ -320,9 +398,11 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         const directoryIds = this.getWorkspaceDirectoryIds(workspaceRoot);
         const updated = refreshAgents(workspaceRoot, this.context, webview, directoryIds);
         sendExistingAgents(updated, this.context, webview, directoryIds);
+        this.liveActivity?.replay();
         this.emitTelemetry('log', null, null, 'Team roster updated');
       },
       onAgentActivity: (event) => {
+        if (isLiveAgent(event.agentId)) {return;}
         const agent = getAgents().get(event.agentId)
           ?? [...getAgents().values()].find(a => event.agentId.startsWith(a.id));
         const displayName = agent?.name ?? event.agentId;
@@ -346,6 +426,11 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   }
 
   private stopWatching(): void {
+    ++this.liveRequest;
+    this.livePending = false;
+    this.liveConsent = false;
+    this.liveActivity?.stop();
+    this.liveActivity = undefined;
     if (this.usageTimer) {clearInterval(this.usageTimer);}
     this.usageTimer = undefined;
     this.usageRoster = [];

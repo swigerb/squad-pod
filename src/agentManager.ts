@@ -25,6 +25,33 @@ export type AgentStatus = SquadAgentState['status'];
 let agents = new Map<string, SquadAgentState>();
 let disposed = false;
 let telemetryCounter = 0;
+const liveRuns = new Set<string>();
+
+/** Live lifecycle owns status until completion or the session reader falls back. */
+export function setLiveAgentStatus(agentId: string, active: boolean, task: string | null, webview: vscode.Webview): void {
+  if (!active) {liveRuns.delete(agentId);}
+  const agent = agents.get(agentId);
+  if (!agent) {return;}
+  cancelActivityTimer(agentId);
+  if (active) {
+    liveRuns.add(agentId);
+    agent.status = 'active';
+    agent.currentTask = task;
+    agent.lastActiveAt = Date.now();
+    postToWebview(webview, { type: 'agentToolsClear', agentId });
+    postToWebview(webview, { type: 'agentStatus', agentId, status: 'active' });
+  } else {
+    liveRuns.delete(agentId);
+    agent.currentTask = null;
+    updateAgentStatus(agentId, 'idle', null, webview);
+  }
+}
+
+export function isLiveAgent(agentId: string): boolean {
+  const resolved = resolveAgentId(agentId);
+  return resolved !== null && liveRuns.has(resolved);
+}
+
 let externalCharacterPalettes: number[] = [];
 
 /** Only future, unpersisted roster members use newly available sheets. */
@@ -211,6 +238,7 @@ export function updateAgentStatus(
 ): void {
   const agentId = resolveAgentId(rawAgentId);
   const agent = agentId ? agents.get(agentId) : undefined;
+  if (agentId && liveRuns.has(agentId)) {return;}
   if (!agentId || !agent) {
     return;
   }
@@ -334,6 +362,7 @@ export function getAgents(): Map<string, SquadAgentState> {
 /** Clean up all timers (call on view disposal or deactivation). */
 export function disposeAgentManager(): void {
   disposed = true;
+  liveRuns.clear();
   cancelAllTimers();
   agents.clear();
   externalCharacterPalettes = [];

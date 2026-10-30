@@ -10,6 +10,7 @@ Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradyga
 
 - Discover the team roster and show each visible member as a character at a desk.
 - Animate activity inferred from changes to Squad files.
+- Opt in to live member tool labels and context gauges from local Copilot CLI sessions.
 - View an agent's status, current task, recent activity, and charter.
 - Design the office with floors, walls, furniture, colors, carpets, named Areas, and pets.
 - Manage directories and explicitly launch Squad in a new VS Code terminal.
@@ -68,6 +69,8 @@ The VS Code setting **`squad-pod.autoShowPanel`** focuses the panel once when th
 
 In the office's **Settings**, sound notifications play a short chime when an active agent becomes inactive; **Debug View** opens agent and layout diagnostics; and **Show Named Areas** toggles the Area overlay. You can also add or unload local asset directories and import or export layouts.
 
+Enable **Live Activity** in Settings and accept the VS Code confirmation to turn on `squad-pod.liveActivity` (off by default). It reads local Copilot CLI session metadata and `events.jsonl` for the newest Squad session matching the observed workspace. Only exact roster members animate. Short task descriptions, tool names, file basenames, command names and context counts are used; prompts, other arguments and outputs are never displayed or stored. Turning it off stops reading and clears live displays. Settings shows whether the source is off, searching, following or unavailable.
+
 ### Launch Squad in a directory
 
 Open **Directories** to launch Squad in a workspace folder or a saved directory. Squad Pod opens a new VS Code terminal at that folder and runs `copilot --agent squad` only after you click **Launch**. Workspace trust and the Copilot CLI on `PATH` are required. Squad Pod does not launch automatically.
@@ -84,7 +87,7 @@ Squad Pod watches the selected project's `.squad/` files, including the roster, 
 
 ## Known limitations
 
-- Activity is inferred from file changes rather than a live Squad event stream. Status can be approximate; Squad Pod cannot identify the tool an agent is currently using, determine authoritative task completion, or show live context utilization.
+- File-observed activity is approximate. Opt-in live activity uses an undocumented, best-effort Copilot CLI session format, not a supported Squad event API. Unmatched members remain unattributed; stale or missing sessions fall back to file observations. Bounded scans may miss older in-flight members. Context gauges appear only when a live member's tool completion includes context metrics.
 - Directory launches do not switch the office's observed project.
 
 ## Custom assets
@@ -99,9 +102,9 @@ Add a local asset directory in **Settings** for furniture, pets, and character s
 
 ## Compared with Pixel Agents
 
-**Supported:** Squad roster discovery, file-observed activity, the animated office, layout editing, directional furniture groups, pets, local furniture assets, and explicit Squad CLI launches.
+**Supported:** Squad roster discovery, file-observed activity, opt-in live tool labels and context gauges, the animated office, layout editing, directional furniture groups, pets, local furniture assets, and explicit Squad CLI launches.
 
-**Not yet supported:** live tool and context events, a standalone browser runtime, and an embedded terminal.
+**Not yet supported:** a supported Squad event API, a standalone browser runtime, and an embedded terminal.
 
 ## How we built this
 
@@ -120,7 +123,7 @@ The original [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by 
 
 ## Roadmap
 
-- Show live per-tool activity and context usage.
+- Adopt a supported Squad event API when available.
 - Visualize team ceremonies in the office.
 
 ## Credits
