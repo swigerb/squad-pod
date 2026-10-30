@@ -268,6 +268,7 @@ export interface AgentToolStartMessage {
   type: 'agentToolStart';
   agentId: string;
   tool: string;
+  toolId?: string;
   status?: string;
 }
 
@@ -275,6 +276,7 @@ export interface AgentToolDoneMessage {
   type: 'agentToolDone';
   agentId: string;
   tool?: string;
+  toolId?: string;
 }
 
 export interface ExistingAgentsMessage {
@@ -328,10 +330,13 @@ export type OutboundMessage =
   | { type: 'layoutSaved'; layout: LayoutData; revision: string | null }
   | { type: 'layoutError'; error: string; source?: 'watcher' }
   | { type: 'manifestAssetsLoaded'; snapshot: import('./manifestAssets.js').AssetSnapshot }
+  | { type: 'squadRosterLoaded'; members: SquadTeamMember[] }
   | { type: 'characterSpritesLoaded'; sprites: CharacterSpriteSet[] }
-  | { type: 'floorTilesLoaded'; tiles: SpriteData[] }
-  | { type: 'wallTilesLoaded'; tiles: SpriteData[] }
+  | { type: 'floorTilesLoaded'; tiles?: SpriteData[]; sprites?: SpriteData[] }
+  | { type: 'wallTilesLoaded'; tiles?: SpriteData[]; sprites?: SpriteData[] }
   | { type: 'furnitureLoaded'; furniture: FurnitureAsset[] }
+  | { type: 'furnitureAssetsLoaded'; catalog?: unknown; sprites?: unknown }
+  | { type: 'assetBaseUrl'; url: string }
   | { type: 'soundEnabled'; enabled: boolean }
   | { type: 'agentDetailLoaded'; detail: AgentDetailInfo }
   | { type: 'squadInfoLoaded'; info: SquadInfoData }

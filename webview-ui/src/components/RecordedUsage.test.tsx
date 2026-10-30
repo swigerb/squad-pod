@@ -2,9 +2,11 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.js';
-import { vscode } from '../vscodeApi.js';
 import { OfficeState } from '../office/engine/officeState.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
+import type { OutboundMessage } from '../../../src/types.js';
+import { createHostClientFixture } from '../__tests__/hostClientFixture.js';
+import type { HostClientFixture } from '../__tests__/hostClientFixture.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -19,22 +21,21 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
   let host: HTMLDivElement;
   let root: Root;
   let audio: ReturnType<typeof vi.fn>;
-  const send = (snapshot: RecordedUsageSnapshot) => act(() => window.dispatchEvent(new MessageEvent('message', {
-    data: { type: 'recordedUsage', snapshot },
-  })));
+  let client: HostClientFixture;
+  const send = (snapshot: RecordedUsageSnapshot) => act(() => client.emit({ type: 'recordedUsage', snapshot } as OutboundMessage));
   beforeEach(() => {
+    client = createHostClientFixture();
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
-    vi.spyOn(vscode, 'postMessage').mockImplementation(() => {});
     audio = vi.fn();
     vi.stubGlobal('AudioContext', audio);
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
-    act(() => root.render(<App />));
-    act(() => window.dispatchEvent(new MessageEvent('message', { data: {
+    act(() => root.render(<App client={client} />));
+    act(() => client.emit({
       type: 'layoutLoaded', layout: { cols: 20, rows: 15, tiles: Array(300).fill(1), furniture: [] },
       revision: 'usage-fixture', workspaceRoot: 'usage-workspace',
-    } })));
+    } as OutboundMessage));
     act(() => [...host.querySelectorAll('button')].find(b => b.textContent === 'Telemetry')!.click());
   });
   afterEach(() => {
@@ -51,7 +52,7 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
     expect(section.textContent).toContain('coverage unavailable (0 / 0 recorded starts)');
     expect(section.textContent).toContain('runtime bus not connected');
     expect(section.textContent).toContain('Parent-child hierarchy / roster promotion: unavailable');
-    const before = vi.mocked(vscode.postMessage).mock.calls.length;
+    const before = vi.mocked(client.send).mock.calls.length;
     const addAgent = vi.spyOn(OfficeState.prototype, 'addAgent');
     send({
       ...empty, state: 'partial', diagnostic: 'Partial fixture',
@@ -70,7 +71,7 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
     expect(section.textContent).toContain('Zero is not evidence that usage was measured');
     expect(section.textContent).not.toContain('current model: unknown');
     expect(audio).not.toHaveBeenCalled();
-    expect(vi.mocked(vscode.postMessage).mock.calls).toHaveLength(before);
+    expect(vi.mocked(client.send).mock.calls).toHaveLength(before);
     expect(addAgent).not.toHaveBeenCalled();
     expect(host.textContent).toContain('Telemetry (0)');
     send({ ...empty, state: 'unavailable', sourcePath: null, diagnostic: 'No workspace selected.' });

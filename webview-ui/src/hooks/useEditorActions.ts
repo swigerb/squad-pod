@@ -8,7 +8,7 @@ import { hasCarpetVariant } from '../office/sprites/carpetTiles.js';
 import { CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR } from '../constants.js';
 import { UndoHistory } from '../office/editor/undoHistory.js';
 import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, MAX_COLS, MAX_ROWS } from '../constants.js';
-import { vscode } from '../vscodeApi.js';
+import { useHostClient } from '../HostClientContext.js';
 import { LayoutDraft } from '../office/editor/layoutDraft.js';
 import {
   addArea,
@@ -23,19 +23,20 @@ import {
 import { MAX_LAYOUT_PETS } from '../../../src/layoutValidation.js';
 import { getPetSprites } from '../office/sprites/petSpriteData.js';
 
-export function useEditorActions(getOfficeState: () => OfficeState, editorState: EditorState) {
+export function useEditorActions(getOfficeState: () => OfficeState, editorState: EditorState, recoveryState: unknown) {
+  const client = useHostClient();
   const [isEditMode, setIsEditMode] = useState(false);
   const [editorTick, setEditorTick] = useState(0);
   const [zoom, setZoom] = useState(Math.floor(ZOOM_DEFAULT_DPR_FACTOR * (window.devicePixelRatio || 1)));
   const panRef = useRef({ x: 0, y: 0 });
   const historyRef = useRef(new UndoHistory());
   const initializedRef = useRef(false);
-  const [protection] = useState(() => new LayoutDraft(vscode.getState()));
+  const [protection] = useState(() => new LayoutDraft(recoveryState));
   const persist = useCallback(() => {
     // Do not replace malformed recovery data with a success-shaped empty state.
     if (!protection.state.draft) return;
     try {
-      vscode.setState(protection.state);
+      client.setState(protection.state);
     } catch (error) {
       const message = `Recovery persistence failed: ${String(error)}. Export both versions before closing this panel.`;
       if (protection.error !== message) {
@@ -43,7 +44,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
         setEditorTick((t) => t + 1);
       }
     }
-  }, [protection]);
+  }, [client, protection]);
 
   useLayoutEffect(() => {
     if (!initializedRef.current) return;
@@ -384,11 +385,11 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
       protection.error = 'Resolve every pending layout snapshot before saving.';
     } else {
       protection.beginSave();
-      vscode.postMessage({ type: 'saveLayout', layout, expectedRevision: protection.state.revision, workspaceRoot: protection.state.workspaceRoot });
+      client.send({ type: 'saveLayout', layout, expectedRevision: protection.state.revision, workspaceRoot: protection.state.workspaceRoot });
     }
     persist();
     setEditorTick((t) => t + 1);
-  }, [getOfficeState, protection, persist]);
+  }, [client, getOfficeState, protection, persist]);
 
   const handleReset = useCallback(() => {
     const saved = protection.state.baseline;

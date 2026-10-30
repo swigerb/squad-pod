@@ -18,20 +18,67 @@ import { AssetWarnings } from './components/AssetStatus.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
 import { useEditorKeyboard } from './hooks/useEditorKeyboard.js';
 import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
-import { vscode } from './vscodeApi.js';
 import { LayoutConflict } from './components/LayoutConflict.js';
 import { DirectoryModal } from './components/DirectoryModal.js';
+import { HostClientProvider, useHostClient } from './HostClientContext.js';
+import { defaultHostClient, defaultHostError, type HostClient } from './hostClient.js';
 
 const officeStateRef = { current: null as OfficeState | null };
 const editorState = new EditorState();
+const unsupportedHostMessage = 'Squad Pod needs its supported VS Code host. Run “Squad Pod: Show Panel” from VS Code; standalone browser transport is not available in this build.';
 
 function getOfficeState(): OfficeState {
   if (!officeStateRef.current) officeStateRef.current = new OfficeState();
   return officeStateRef.current;
 }
 
-export default function App() {
-  const editor = useEditorActions(getOfficeState, editorState);
+export default function App({
+  client = defaultHostClient,
+  hostError = defaultHostError,
+}: {
+  client?: HostClient | null;
+  hostError?: string | null;
+} = {}) {
+  if (!client) {
+    return (
+      <div role="alert" style={{ padding: '24px', color: 'var(--vscode-foreground)' }}>
+        <h1>Host unavailable</h1>
+        <p>{hostError
+          ? `Squad Pod could not connect to its VS Code host: ${hostError}. ${unsupportedHostMessage}`
+          : unsupportedHostMessage}</p>
+      </div>
+    );
+  }
+  return (
+    <HostClientProvider client={client}>
+      <ConnectedApp />
+    </HostClientProvider>
+  );
+}
+
+function ConnectedApp() {
+  const client = useHostClient();
+  const [recovery] = useState(() => {
+    try {
+      return { value: client.getState(), error: null };
+    } catch (error) {
+      return { value: undefined, error: String(error) };
+    }
+  });
+  if (recovery.error !== null) {
+    return (
+      <div role="alert" style={{ padding: '24px', color: 'var(--vscode-foreground)' }}>
+        <h1>Squad Pod could not read layout recovery state</h1>
+        <p>{recovery.error}. Reopen the panel after the VS Code host is available; existing recovery data was not replaced.</p>
+      </div>
+    );
+  }
+  return <ConnectedOffice recoveryState={recovery.value} />;
+}
+
+function ConnectedOffice({ recoveryState }: { recoveryState: unknown }) {
+  const client = useHostClient();
+  const editor = useEditorActions(getOfficeState, editorState, recoveryState);
   const { recordedUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agentTools, agentStatuses, layoutReady, noWorkspace, agentDetail, setAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
     editor.receiveLayout,
@@ -57,9 +104,9 @@ export default function App() {
   );
 
   const handleDeskClick = useCallback((agentId: string, screenX: number, screenY: number) => {
-    vscode.postMessage({ type: 'requestAgentDetail', agentId });
+    client.send({ type: 'requestAgentDetail', agentId });
     setCardPosition({ x: screenX, y: screenY });
-  }, []);
+  }, [client]);
 
   const handleCloseCard = useCallback(() => {
     setAgentDetail(null);
@@ -67,16 +114,16 @@ export default function App() {
   }, [setAgentDetail]);
 
   const handleOpenSquadInfo = useCallback(() => {
-    vscode.postMessage({ type: 'openSquadInfo' });
-  }, []);
+    client.send({ type: 'openSquadInfo' });
+  }, [client]);
 
   const handleCloseSquadInfo = useCallback(() => {
     setSquadInfo(null);
   }, [setSquadInfo]);
 
   const handleViewCharter = useCallback((agentId: string) => {
-    vscode.postMessage({ type: 'openSquadAgent', agentId });
-  }, []);
+    client.send({ type: 'openSquadAgent', agentId });
+  }, [client]);
 
   const handleToggleTelemetry = useCallback(() => {
     setIsTelemetryOpen((prev) => {
@@ -94,8 +141,8 @@ export default function App() {
 
   const handleOpenDirectories = useCallback(() => {
     setIsDirectoryModalOpen(true);
-    vscode.postMessage({ type: 'getDirectories' });
-  }, []);
+    client.send({ type: 'getDirectories' });
+  }, [client]);
 
   if (!layoutReady && !noWorkspace) {
     return (

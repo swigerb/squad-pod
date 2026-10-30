@@ -1,4 +1,4 @@
-import { vscode } from '../vscodeApi.js';
+import { useHostClient } from '../HostClientContext.js';
 import type { PodSettings, SourceStatus } from '../../../src/types.js';
 import { SourceStatusView } from './SourceStatusView.js';
 import { AssetDirectories, type AssetStatusData } from './AssetStatus.js';
@@ -15,12 +15,13 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
+  const client = useHostClient();
   const handleExport = () => {
-    vscode.postMessage({ type: 'exportLayout' });
+    client.send({ type: 'exportLayout' });
   };
 
   const handleImport = () => {
-    vscode.postMessage({ type: 'importLayout' });
+    client.send({ type: 'importLayout' });
   };
 
   return (

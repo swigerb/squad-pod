@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import type { OfficeState } from '../office/engine/officeState.js';
 import type { OfficeLayout, ToolActivity, SquadTeamMember, TelemetryEvent } from '../office/types.js';
-import { vscode } from '../vscodeApi.js';
+import { useHostClient } from '../HostClientContext.js';
 import type { AgentDetailInfo } from '../components/AgentCard.js';
 import type { SquadInfoData } from '../components/SquadInfoCard.js';
 import {
@@ -15,6 +15,7 @@ import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
 import type { DirectoryCatalog, PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
+import type { OutboundMessage } from '../../../src/types.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
@@ -68,6 +69,7 @@ export function useExtensionMessages(
   onLayoutSaved?: (layout: OfficeLayout, revision: string | null) => void,
   onLayoutError?: (error: string, source?: 'watcher') => void,
 ): ExtensionMessageState {
+  const client = useHostClient();
   const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
   const [assetStatus, setAssetStatus] = useState<Pick<AssetSnapshot, 'directories' | 'diagnostics'>>({ directories: [], diagnostics: [] });
   const [settings, setSettings] = useState<PodSettings>({ soundEnabled: true, debugEnabled: false, showAreas: false });
@@ -103,20 +105,17 @@ export function useExtensionMessages(
     if (setting === 'soundEnabled') setSoundEnabled(enabled);
     const type = setting === 'soundEnabled' ? 'setSoundEnabled'
       : setting === 'debugEnabled' ? 'setDebugEnabled' : 'setShowAreas';
-    vscode.postMessage({ type, enabled });
-  }, []);
+    client.send({ type, enabled });
+  }, [client]);
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const message = event.data;
-      if (!message || typeof message.type !== 'string') return;
-
+    const handleMessage = (message: OutboundMessage) => {
       const applySnapshot = (snapshot: AgentSnapshot[]) => {
         const officeState = getOfficeState();
         reconcileAgents(officeState, snapshot);
         const seats = officeState.getSeatAssignments();
         if (snapshot.some((a) => (a.seatId ?? undefined) !== seats[a.id])) {
-          vscode.postMessage({ type: 'saveAgentSeats', seats });
+          client.send({ type: 'saveAgentSeats', seats });
         }
         const ids = snapshot.map((a) => a.id);
         agentsRef.current = ids;
@@ -317,26 +316,30 @@ export function useExtensionMessages(
 
         case 'characterSpritesLoaded': {
           const { sprites } = message;
-          setCharacterTemplates(sprites);
+          setCharacterTemplates(sprites as unknown as Parameters<typeof setCharacterTemplates>[0]);
           break;
         }
 
-        case 'furnitureLoaded':
         case 'furnitureAssetsLoaded': {
           const { catalog: _catalog, sprites: _sprites } = message;
           buildDynamicCatalog();
           break;
         }
+        case 'furnitureLoaded':
+          buildDynamicCatalog();
+          break;
 
         case 'floorTilesLoaded': {
           const tiles = message.tiles ?? message.sprites;
-          setFloorSprites(tiles);
+          if (tiles) setFloorSprites(tiles as unknown as Parameters<typeof setFloorSprites>[0]);
+          else console.error('[useExtensionMessages] floorTilesLoaded missing tiles');
           break;
         }
 
         case 'wallTilesLoaded': {
           const tiles = message.tiles ?? message.sprites;
-          setWallSprites(tiles);
+          if (tiles) setWallSprites(tiles as unknown as Parameters<typeof setWallSprites>[0]);
+          else console.error('[useExtensionMessages] wallTilesLoaded missing tiles');
           break;
         }
 
@@ -451,13 +454,13 @@ export function useExtensionMessages(
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    vscode.postMessage({ type: 'webviewReady' });
-    vscode.postMessage({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
+    const unsubscribe = client.subscribe(handleMessage);
+    client.send({ type: 'webviewReady' });
+    client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
 
-    return () => window.removeEventListener('message', handleMessage);
+    return unsubscribe;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError]);
+  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError]);
 
   return {
     recordedUsage,

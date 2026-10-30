@@ -220,9 +220,11 @@ try {
     const nonce = html.match(/<script nonce="([^"]+)"/)?.[1];
     assert.ok(nonce, 'provider HTML must nonce-gate its scripts');
     const bridge = `
-      window.__petAcceptance = { outbound: [], fixtures: ${fixtures}, replayed: false };
+      window.__petAcceptance = { outbound: [], fixtures: ${fixtures}, replayed: false, acquireCount: 0, state: undefined };
       window.__sendHost = (data) => window.dispatchEvent(new MessageEvent('message', { data }));
-      window.acquireVsCodeApi = () => ({
+      window.acquireVsCodeApi = () => {
+        window.__petAcceptance.acquireCount++;
+        return {
         postMessage(message) {
           window.__petAcceptance.outbound.push(message);
           if (message.type === 'webviewReady' && !window.__petAcceptance.replayed) {
@@ -236,9 +238,13 @@ try {
             }), 25);
           }
         },
-        getState: () => undefined,
-        setState: (value) => value,
-      });
+        getState: () => window.__petAcceptance.state,
+        setState(value) {
+          window.__petAcceptance.state = value;
+          return value;
+        },
+      };
+      };
       Math.random = () => 0;
     `;
     html = html.replace('</head>', `<script nonce="${nonce}">${bridge}</script></head>`);
