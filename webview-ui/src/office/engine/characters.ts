@@ -17,7 +17,7 @@ import {
   SEAT_REST_MIN_SEC,
   SEAT_REST_MAX_SEC
 } from '../../constants.js';
-import { findPath } from './pathfinding.js';
+import { findPath, findPathToSeat } from './pathfinding.js';
 
 export function isReadingTool(tool: string | undefined): boolean {
   if (!tool) return false;
@@ -49,6 +49,47 @@ function startWalking(ch: Character, path: Array<{ col: number; row: number }>):
   ch.direction = directionBetween(ch.col, ch.row, path[0].col, path[0].row);
   ch.frameIndex = 0;
   ch.frameTimer = 0;
+}
+
+/**
+ * Route a character to its seat without discarding a partially completed step.
+ * Mid-step characters keep `path[0]` and `moveProgress`, and the new route starts from that step,
+ * so the rendered position never jumps back to the previous tile anchor.
+ * Returns false (leaving the character untouched) when no route exists.
+ */
+export function routeToSeatPreservingStep(
+  ch: Character,
+  seatCol: number,
+  seatRow: number,
+  tileMap: number[][],
+  blockedTiles: Set<string>
+): boolean {
+  const inFlightStep = ch.state === CharacterState.WALK && ch.moveProgress > 0 ? ch.path[0] : undefined;
+  if (inFlightStep) {
+    if (inFlightStep.col === seatCol && inFlightStep.row === seatRow) {
+      ch.path = [inFlightStep];
+      return true;
+    }
+    const route = findPathToSeat(inFlightStep.col, inFlightStep.row, seatCol, seatRow, tileMap, blockedTiles);
+    if (route.length === 0) return false;
+    ch.path = [inFlightStep, ...route];
+    return true;
+  }
+  const route = findPathToSeat(ch.col, ch.row, seatCol, seatRow, tileMap, blockedTiles);
+  if (route.length === 0) return false;
+  if (ch.state === CharacterState.WALK) {
+    ch.path = route;
+    ch.moveProgress = 0;
+    ch.direction = directionBetween(ch.col, ch.row, route[0].col, route[0].row);
+  } else {
+    startWalking(ch, route);
+  }
+  return true;
+}
+
+/** True when the character is part-way between its tile anchor and `path[0]`. */
+export function isMidStep(ch: Character): boolean {
+  return ch.state === CharacterState.WALK && ch.moveProgress > 0 && ch.path.length > 0;
 }
 
 function advanceAnimation(ch: Character, dt: number, frameDuration: number, frameCount: number): void {
@@ -128,6 +169,24 @@ export function updateCharacter(
 
   switch (ch.state) {
     case CharacterState.TYPE: {
+      if (ch.active && ch.seatId) {
+        if (!mySeat) {
+          ch.state = CharacterState.IDLE;
+          ch.frameIndex = 0;
+          break;
+        }
+        if (ch.col !== mySeat.col || ch.row !== mySeat.row) {
+          const path = findPathToSeat(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
+          if (path.length > 0) {
+            startWalking(ch, path);
+          } else {
+            ch.state = CharacterState.IDLE;
+            ch.frameIndex = 0;
+          }
+          break;
+        }
+      }
+
       advanceAnimation(ch, dt, TYPE_FRAME_DURATION_SEC, 2);
 
       if (!ch.active) {
@@ -142,18 +201,22 @@ export function updateCharacter(
     }
 
     case CharacterState.IDLE: {
-      if (ch.active && mySeat) {
-        const atSeat = ch.col === mySeat.col && ch.row === mySeat.row;
-        if (!atSeat) {
-          const path = findPath(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
-          if (path.length > 0) {
-            startWalking(ch, path);
-          }
-        } else {
+      if (ch.active) {
+        if (!ch.seatId) {
           ch.state = CharacterState.TYPE;
-          ch.direction = mySeat.direction;
-          ch.frameIndex = 0;
-          ch.frameTimer = 0;
+        } else if (mySeat) {
+          const atSeat = ch.col === mySeat.col && ch.row === mySeat.row;
+          if (!atSeat) {
+            const path = findPathToSeat(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
+            if (path.length > 0) {
+              startWalking(ch, path);
+            }
+          } else {
+            ch.state = CharacterState.TYPE;
+            ch.direction = mySeat.direction;
+            ch.frameIndex = 0;
+            ch.frameTimer = 0;
+          }
         }
       } else {
         ch.wanderTimer -= dt;
@@ -226,7 +289,7 @@ export function updateCharacter(
               ch.wanderCount = 0;
               ch.wanderLimit = randomInt(WANDER_MOVES_BEFORE_REST_MIN, WANDER_MOVES_BEFORE_REST_MAX);
             } else {
-              const path = findPath(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
+              const path = findPathToSeat(ch.col, ch.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
               if (path.length > 0) {
                 startWalking(ch, path);
               } else {
@@ -245,12 +308,7 @@ export function updateCharacter(
         const destCol = ch.path.length > 0 ? ch.path[ch.path.length - 1].col : ch.col;
         const destRow = ch.path.length > 0 ? ch.path[ch.path.length - 1].row : ch.row;
         if (destCol !== mySeat.col || destRow !== mySeat.row) {
-          const inFlightStep = ch.moveProgress > 0 ? ch.path[0] : undefined;
-          const routeFrom = inFlightStep ?? { col: ch.col, row: ch.row };
-          const newPath = findPath(routeFrom.col, routeFrom.row, mySeat.col, mySeat.row, tileMap, blockedTiles);
-          if (newPath.length > 0) {
-            ch.path = inFlightStep ? [inFlightStep, ...newPath] : newPath;
-          }
+          routeToSeatPreservingStep(ch, mySeat.col, mySeat.row, tileMap, blockedTiles);
         }
       }
       break;
