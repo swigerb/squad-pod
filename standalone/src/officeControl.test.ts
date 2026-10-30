@@ -242,6 +242,7 @@ describe('separate authenticated office control', () => {
     const { root } = fixture();
     for (const message of [
       { type: 'setLiveActivity', enabled: true }, { type: 'launchDirectory', id: root, source: 'workspace' },
+      { type: 'selectCliUsage' }, { type: 'refreshCliUsage' }, { type: 'clearCliUsage' },
       { type: 'saveAgentSeats', seats: { '../outside': 'seat' } }, { type: 'importLayout', path: root },
       { type: 'setShowAreas', enabled: 'yes' }, { type: 'setShowAreas', enabled: true, path: root },
       { type: 'saveLayout', layout: { ...layout, cols: 257 }, expectedRevision: null, workspaceRoot: root },

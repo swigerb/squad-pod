@@ -147,6 +147,21 @@ describe('explicit in-memory file selection', () => {
     expect(importer.refresh(root)).toMatchObject({ state: 'error', report: null });
   });
 
+  it('clears consent explicitly and rejects a replaced workspace root even at the same path', () => {
+    const { root, file } = setup();
+    const importer = new CliUsageImport();
+    expect(importer.select(root, file).canRefresh).toBe(true);
+    expect(importer.clear()).toMatchObject({ state: 'unselected', canRefresh: false, report: null });
+    expect(importer.refresh(root).state).toBe('unselected');
+    importer.select(root, file);
+    const moved = `${root}-moved`;
+    fs.renameSync(root, moved);
+    roots.push(moved);
+    fs.mkdirSync(root);
+    fs.copyFileSync(path.join(moved, 'usage.json'), file);
+    expect(importer.refresh(root)).toMatchObject({ state: 'error', canRefresh: false, report: null });
+  });
+
   it('withholds a file that changes during the bounded descriptor read', () => {
     const { root, file } = setup();
     const importer = new CliUsageImport();
