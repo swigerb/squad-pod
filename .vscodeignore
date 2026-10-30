@@ -11,6 +11,7 @@ out/**
 **/node_modules/**
 src/**
 webview-ui/**
+standalone/**
 scripts/**
 docs/**
 *.ts

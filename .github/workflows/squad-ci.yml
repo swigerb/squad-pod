@@ -25,9 +25,10 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             webview-ui/package-lock.json
+            standalone/package-lock.json
 
       - name: Install dependencies
-        run: npm run install:all
+        run: npm run install:all && npm ci --prefix standalone
 
       - name: Lint
         run: npm run lint
@@ -40,6 +41,12 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Standalone observer types and boundary tests
+        run: npm run check --prefix standalone && npm test --prefix standalone
+
+      - name: Build and verify installed read-only observer
+        run: npm run build --prefix standalone && npm run acceptance --prefix standalone
 
       - name: Package VSIX
         run: npm run package

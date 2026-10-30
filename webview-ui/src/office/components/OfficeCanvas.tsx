@@ -23,6 +23,7 @@ import {
 } from '../../constants.js';
 
 interface OfficeCanvasProps {
+  readOnly?: boolean;
   officeState: OfficeState;
   isDebugMode?: boolean;
   onClick?: (col: number, row: number) => void;
@@ -57,6 +58,7 @@ export function getCharacterHitBounds(
 }
 
 export function OfficeCanvas({
+  readOnly = false,
   officeState,
   isDebugMode = false,
   onClick,
@@ -370,7 +372,7 @@ export function OfficeCanvas({
           
           const selected = officeState.selectedAgentId;
           const seat = seatId ? officeState.seats.find(s => s.id === seatId) : undefined;
-          if (seat && selected && seat.occupant !== selected) {
+          if (!readOnly && seat && selected && seat.occupant !== selected) {
             // A selected agent plus a click on another seat moves the agent there.
             if (officeState.reassignSeat(selected, seat.id)) {
               client.send({ type: 'saveAgentSeats', seats: officeState.getSeatAssignments() });
@@ -410,6 +412,7 @@ export function OfficeCanvas({
       zoom,
       panRef,
       onDeskClick,
+      readOnly,
     ]
   );
 

@@ -1,0 +1,19 @@
+:root {
+  color-scheme: dark;
+  --vscode-foreground: #e4e6f0;
+  --vscode-editor-background: #1e1e2e;
+  --vscode-panel-border: #64647a;
+  --vscode-button-background: #3156a0;
+  --vscode-button-foreground: #fff;
+  --vscode-button-secondaryBackground: #45455c;
+  --vscode-button-secondaryForeground: #fff;
+}
+.observer-shell { height: 100%; display: flex; flex-direction: column; color: var(--vscode-foreground); }
+.observer-shell header { padding: 8px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: #25253b; }
+.observer-shell [role="status"] { font-size: 13px; overflow-wrap: anywhere; }
+.observer-scope { margin: 0; padding: 8px 12px; font-size: 12px; border-bottom: 1px solid #64647a; }
+.observer-shell main { position: relative; flex: 1; min-height: 0; }
+.observer-shell form { margin: 24px auto; padding: 16px; max-width: 580px; overflow: auto; }
+.observer-shell input { display: block; width: 100%; box-sizing: border-box; margin: 12px 0; padding: 8px; }
+.observer-shell button { padding: 8px; }
+.observer-shell button:disabled { opacity: .45; cursor: not-allowed !important; }

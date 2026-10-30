@@ -2,6 +2,11 @@
 
 # Squad Pod
 
+**Local browser observer:** [Build/run and security instructions](standalone/README.md)
+for the private, authenticated, loopback-only read-only office. It uses the same
+production renderer, observes only an explicitly selected project, and has no
+terminal/process launcher or workspace writes. This is separate from the VSIX.
+
 **Your Squad AI team, but make it pixel art.**
 
 Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradygaster/squad) agent team into animated characters in a virtual office.

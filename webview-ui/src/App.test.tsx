@@ -90,6 +90,28 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     ]);
   });
 
+  it('disables standalone mutations without optimistic settings or seat persistence', async () => {
+    act(() => root.unmount());
+    client = createHostClientFixture();
+    vi.spyOn(client, 'setState');
+    root = createRoot(host);
+    act(() => root.render(<App client={client} readOnly />));
+    snapshot(imported, 'observer');
+    send({ type: 'existingAgents', agents: [{
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', paletteIndex: 0,
+      seatId: null, status: 'idle', currentTask: null,
+    }] });
+    await nextFrame();
+    for (const label of ['Edit Layout', 'Settings', 'Directories', 'Squad Info']) {
+      const button = [...host.querySelectorAll('button')].find(button => button.textContent === label);
+      expect(button?.disabled).toBe(true);
+      act(() => button?.click());
+    }
+    expect(host.querySelector('[data-edit-mode="true"]')).toBeNull();
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
+    expect(client.setState).not.toHaveBeenCalled();
+  });
+
   it('updates existing roster identity and restores only the observed task from snapshots', async () => {
     const roster = (name: string, role: string, currentTask: string | null, status: 'active' | 'idle') => ({
       type: 'existingAgents' as const,
