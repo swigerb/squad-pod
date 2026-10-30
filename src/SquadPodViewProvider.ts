@@ -64,6 +64,7 @@ import {
   recordDirectoryLaunch,
   resolveDirectoryMappingIds,
   sameDirectoryPath,
+  SquadDirectorySuggestions,
   validateDirectoryPath,
   writeSavedDirectories,
   type SavedDirectory,
@@ -81,6 +82,9 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   private assetWatcher: { dispose: () => void } | undefined;
   private disposables: vscode.Disposable[] = [];
   private telemetryCounter = 0;
+  private directorySuggestions = new SquadDirectorySuggestions();
+  private directoryCatalogRequest = 0;
+  private directorySuggestionsRequested = false;
   private watchedRoot: string | undefined;
   private output: vscode.OutputChannel | undefined;
   private sourceStatus: SourceStatus = {
@@ -153,11 +157,12 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'getDirectories':
+        this.directorySuggestionsRequested = true;
         this.sendDirectoryCatalog();
         break;
 
       case 'addDirectory':
-        void this.addDirectory().catch((error: unknown) => this.directoryError(error));
+        void this.addDirectory(message.path, message.name).catch((error: unknown) => this.directoryError(error));
         break;
 
       case 'updateDirectoryName':
@@ -455,13 +460,27 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       workspaceDirectories,
       savedDirectories,
       recentLaunches,
-      squadHistoryAvailable: false,
+      squadHistory: [],
     };
   }
 
   private sendDirectoryCatalog(): void {
+    const request = ++this.directoryCatalogRequest;
     try {
-      this.postMessage({ type: 'directoryCatalog', catalog: this.directoryCatalog() });
+      const catalog = this.directoryCatalog();
+      this.postMessage({ type: 'directoryCatalog', catalog });
+      if (!this.directorySuggestionsRequested) { return; }
+      const enabled = vscode.workspace.getConfiguration('squad-pod').get<boolean>('directorySuggestions', true);
+      void this.directorySuggestions.list(
+        enabled, [...catalog.workspaceDirectories, ...catalog.savedDirectories], undefined,
+        () => request === this.directoryCatalogRequest
+          && vscode.workspace.getConfiguration('squad-pod').get<boolean>('directorySuggestions', true),
+      )
+        .then((squadHistory) => {
+          if (request !== this.directoryCatalogRequest) { return; }
+          if (!vscode.workspace.getConfiguration('squad-pod').get<boolean>('directorySuggestions', true)) { return; }
+          this.postMessage({ type: 'directoryCatalog', catalog: { ...catalog, squadHistory } });
+        }).catch((error: unknown) => this.directoryError(error));
     } catch (error) {
       this.directoryError(error);
     }
@@ -484,17 +503,17 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     return directory;
   }
 
-  private async addDirectory(): Promise<void> {
+  private async addDirectory(suggestedPath?: string, suggestedName?: string): Promise<void> {
     if (readSavedDirectories(this.context.globalState).length >= 100) {
       throw new Error('At most 100 saved directories are supported.');
     }
 
-    const selection = await vscode.window.showOpenDialog({
+    const selection = suggestedPath === undefined ? await vscode.window.showOpenDialog({
       canSelectFiles: false,
       canSelectFolders: true,
       canSelectMany: false,
       openLabel: 'Add launch directory',
-    });
+    }) : [{ fsPath: suggestedPath }];
     if (!selection?.[0]) { return; }
     const directoryPath = validateDirectoryPath(selection[0].fsPath);
     if ((vscode.workspace.workspaceFolders ?? []).some((folder) => sameDirectoryPath(folder.uri.fsPath, directoryPath))) {
@@ -507,7 +526,7 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     }
 
     const defaultName = path.basename(directoryPath) || directoryPath;
-    const nameInput = await vscode.window.showInputBox({
+    const nameInput = suggestedName ?? await vscode.window.showInputBox({
       prompt: 'Name this launch directory',
       value: defaultName,
       validateInput: (value) => {

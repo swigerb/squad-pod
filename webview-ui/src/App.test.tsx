@@ -295,7 +295,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     send({
       type: 'directoryCatalog',
       catalog: {
-        workspaceDirectories: [], recentLaunches: [], squadHistoryAvailable: false,
+        workspaceDirectories: [], recentLaunches: [], squadHistory: [],
         savedDirectories: [{ id: 'saved-1', name: 'Original', path: 'C:\\Projects\\Original', valid: true }],
       },
     });
@@ -342,7 +342,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     send({
       type: 'directoryCatalog',
       catalog: {
-        workspaceDirectories: [], recentLaunches: [], squadHistoryAvailable: false,
+        workspaceDirectories: [], recentLaunches: [], squadHistory: [],
         savedDirectories: [{ id: 'saved-stable-id', name: 'Synthetic Repo', path: 'C:\\Projects\\Synthetic', valid: true }],
       },
     });
@@ -1018,12 +1018,12 @@ describe('settings and source UI with simulated host messages', () => {
         id: 'recent-1', name: 'Recently launched',
         path: 'C:\\Projects\\Recent', valid: true, lastLaunchedAt: '2026-10-29T18:00:00.000Z',
       }],
-      squadHistoryAvailable: false,
+      squadHistory: [],
     };
     send({ type: 'directoryCatalog', catalog });
     click('Directories');
     expect(client.send).toHaveBeenCalledWith({ type: 'getDirectories' });
-    expect(host.textContent).toContain('Squad history suggestions are unavailable');
+    expect(host.textContent).not.toContain('Recent Squad directories');
     expect(host.textContent).toContain('Recent launch requests below are recorded by Squad Pod');
     expect(host.textContent).toContain('Workspace & Repo');
     expect(host.textContent).toContain('Saved 34');
@@ -1049,7 +1049,7 @@ describe('settings and source UI with simulated host messages', () => {
         workspaceDirectories: [],
         savedDirectories: [{ id: 'saved-1', name: 'Original', path: 'C:\\Projects\\Original', valid: true }],
         recentLaunches: [{ id: 'recent-1', name: 'Recent', path: 'C:\\Projects\\Recent', valid: true }],
-        squadHistoryAvailable: false,
+        squadHistory: [],
       },
     });
     click('Directories');
@@ -1075,6 +1075,37 @@ describe('settings and source UI with simulated host messages', () => {
     expect(client.send).toHaveBeenLastCalledWith({ type: 'forgetDirectoryLaunch', id: 'recent-1' });
     click('Add directory');
     expect(client.send).toHaveBeenLastCalledWith({ type: 'addDirectory' });
+  });
+
+  it('fills the directory form from a suggestion without sending any save or launch request', () => {
+    load();
+    const suggestion = {
+      id: 'session:fixture', name: 'Suggested Squad',
+      path: 'C:\\Synthetic\\Suggested Squad', valid: true,
+      lastLaunchedAt: '2026-10-29T18:00:00.000Z',
+    };
+    send({
+      type: 'directoryCatalog',
+      catalog: { workspaceDirectories: [], savedDirectories: [], recentLaunches: [], squadHistory: [suggestion] },
+    });
+    click('Directories');
+    const before = vi.mocked(client.send).mock.calls.length;
+    const button = [...host.querySelectorAll('button')].find((entry) => entry.textContent === suggestion.name)!;
+    expect(button.title).toBe(suggestion.path);
+    expect(button.type).toBe('button');
+    act(() => button.click());
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Directory path"]')?.value).toBe(suggestion.path);
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Directory name"]')?.value).toBe(suggestion.name);
+    expect(client.send).toHaveBeenCalledTimes(before);
+    act(() => {
+      host.querySelector('form[aria-label="Add directory"]')!.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+    });
+    expect(client.send).toHaveBeenLastCalledWith({
+      type: 'addDirectory', path: suggestion.path, name: suggestion.name,
+    });
+    expect(vi.mocked(client.send).mock.calls.slice(before).map(([message]) => message.type)).toEqual(['addDirectory']);
   });
 
   it('reacts to later layout messages alone to show and clear missing-art warnings after ready', () => {
