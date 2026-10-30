@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.js';
 import { OfficeState } from '../office/engine/officeState.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
-import type { OutboundMessage } from '../../../src/types.js';
+import type { OutboundMessage, SourceStatus } from '../../../src/types.js';
 import { createHostClientFixture } from '../__tests__/hostClientFixture.js';
 import type { HostClientFixture } from '../__tests__/hostClientFixture.js';
 
@@ -73,9 +73,87 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
     expect(audio).not.toHaveBeenCalled();
     expect(vi.mocked(client.send).mock.calls).toHaveLength(before);
     expect(addAgent).not.toHaveBeenCalled();
-    expect(host.textContent).toContain('Telemetry (0)');
+    expect(host.textContent).toContain('Activity events (0)');
     send({ ...empty, state: 'unavailable', sourcePath: null, diagnostic: 'No workspace selected.' });
     expect(section.textContent).not.toContain('old-session');
     expect(section.textContent).toContain('No usage totals available');
+  });
+
+  const source: SourceStatus = {
+    workspaceRoot: 'C:\\fixture', squadDir: 'C:\\fixture\\.squad', teamFound: true,
+    observer: 'watching', nativeWatch: false, error: null, liveActivity: { state: 'off', sessionId: null },
+  };
+  it('keeps empty guidance and missing-ledger guidance outside diagnostics and opens consent settings without enabling', () => {
+    send(empty);
+    act(() => client.emit({ type: 'sourceStatus', status: source }));
+    const guidance = [...host.querySelectorAll('div')].find(e => e.textContent?.startsWith('No activity events observed'))!;
+    expect(guidance.closest('details')).toBeNull();
+    expect(host.querySelector('[aria-label="Recorded Squad usage"] h3')!.closest('details')).toBeNull();
+    expect(host.textContent).toContain('not recorded zero consumption');
+    expect(host.textContent).toContain('File observer: Watching (polling)');
+    expect(host.textContent).toContain('Live CLI observer: off');
+    const before = vi.mocked(client.send).mock.calls.length;
+    act(() => [...host.querySelectorAll('button')].find(b => b.textContent === 'Observation settings and consent')!.click());
+    expect(host.querySelector('#squad-pod-live-activity')).not.toBeNull();
+    expect(vi.mocked(client.send).mock.calls).toHaveLength(before);
+  });
+
+  it.each(['searching', 'following', 'error'] as const)('reports live %s without changing file observation', state => {
+    act(() => client.emit({ type: 'sourceStatus', status: { ...source, liveActivity: { state, sessionId: null } } }));
+    const status = host.querySelector('[aria-label="Squad source status"]')!;
+    expect(status.textContent).toContain(`Live CLI observer: ${state}`);
+    expect(status.textContent).toContain('File observer: Watching (polling)');
+  });
+
+  it('shows absent sources as unavailable rather than off or searching', () => {
+    act(() => client.emit({ type: 'sourceStatus', status: {
+      ...source, squadDir: null, observer: 'stopped', liveActivity: undefined,
+    } }));
+    expect(host.textContent).toContain('File observer: Unavailable');
+    expect(host.textContent).toContain('Live CLI observer: Unavailable');
+  });
+
+  it('allows scrolling empty activity to read usage and diagnostics', () => {
+    send(empty);
+    const content = host.querySelector<HTMLElement>('[aria-label="Telemetry content"]')!;
+    Object.defineProperties(content, { scrollHeight: { value: 1000 }, clientHeight: { value: 200 } });
+    act(() => {
+      content.scrollTop = 120;
+      content.dispatchEvent(new Event('scroll'));
+    });
+    expect(content.scrollTop).toBe(120);
+  });
+
+  it('counts a newly observed fixture event and clears only activity, retaining a valid historical report', () => {
+    const historical: RecordedUsageSnapshot = {
+      ...empty, state: 'ready', usageRecords: 1,
+      totals: { inputTokens: 1400, outputTokens: 400, estimatedCost: 0.02 },
+      history: [{
+        sessionId: 'fixture-historical', turnId: 'old-turn', agentName: 'Fixture agent',
+        rosterName: null, attribution: 'unattributed', model: 'fixture-model',
+        timestamp: '2026-10-28T10:00:00Z', inputTokens: 1400, outputTokens: 400, estimatedCost: 0.02,
+      }],
+    };
+    send(historical);
+    expect(host.textContent).toContain('Activity events (0)');
+    const usage = host.querySelector('[aria-label="Recorded Squad usage"]')!.textContent;
+    act(() => client.emit({ type: 'telemetryEvent', event: {
+      id: 'fixture-new', timestamp: Date.now(), category: 'log', summary: 'Fixture evidence: new file event',
+      agentId: null, agentName: null, detail: null,
+    } }));
+    expect(host.textContent).toContain('Activity events (1)');
+    expect(host.textContent).toContain('Fixture evidence: new file event');
+    act(() => [...host.querySelectorAll('button')].find(b => b.textContent === 'Clear activity')!.click());
+    expect(host.textContent).toContain('Activity events (0)');
+    expect(host.textContent).not.toContain('Fixture evidence: new file event');
+    expect(host.querySelector('[aria-label="Recorded Squad usage"]')!.textContent).toBe(usage);
+  });
+
+  it('degrades visibly in the read-only observer without sending an unsupported settings action', () => {
+    act(() => root.render(<App client={client} readOnly />));
+    expect(host.textContent).toContain('Settings and live-log consent are unavailable in this read-only observer');
+    expect(host.textContent).toContain('Live CLI observer: Unavailable in the read-only observer');
+    expect([...host.querySelectorAll('button')].some(b => b.textContent === 'Observation settings and consent')).toBe(false);
+    expect(vi.mocked(client.send).mock.calls.some(([message]) => message.type === 'setLiveActivity')).toBe(false);
   });
 });
