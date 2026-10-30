@@ -38,6 +38,7 @@ import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
 import { getColorizedFloorSprite } from '../floorTiles.js';
 import type { CarpetTile } from '../types.js';
+import { isReadingTool } from './characters.js';
 import { renderCarpetLayer } from '../sprites/carpetRenderer.js';
 import { wallColorToHex, getColorizedWallSprite, hasWallSprites } from '../wallTiles.js';
 import { areCharacterAssetsReady, areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
@@ -263,8 +264,10 @@ export function renderScene(
 
     if (drawable.type === 'character') {
       const ch = drawable.character;
-      // Try PNG sprite sheet first, fall back to inline
-      const pngDrawn = ch !== undefined && drawCharacterFromSheet(
+      // The bundled sheets contain walk frames only; use the supplied reading
+      // template when explicit tool metadata selects that animation.
+      const reading = ch?.state === CharacterState.TYPE && isReadingTool(ch.tool);
+      const pngDrawn = ch !== undefined && !reading && drawCharacterFromSheet(
         ctx, ch.palette, ch.direction, ch.frameIndex,
         drawable.x, drawable.y, zoom, ch.hueShift,
       );
@@ -331,7 +334,8 @@ function getCharacterSprite(
   sprites: { walk: Record<Direction, SpriteData[]>; typing: Record<Direction, SpriteData[]>; reading: Record<Direction, SpriteData[]> }
 ): SpriteData {
   if (ch.state === CharacterState.TYPE) {
-    const frames = sprites.typing[ch.direction] || sprites.typing[Direction.DOWN];
+    const spriteSet = isReadingTool(ch.tool) ? sprites.reading : sprites.typing;
+    const frames = spriteSet[ch.direction] || spriteSet[Direction.DOWN];
     return frames[ch.frameIndex % frames.length];
   } else if (ch.state === CharacterState.WALK) {
     const frames = sprites.walk[ch.direction] || sprites.walk[Direction.DOWN];
