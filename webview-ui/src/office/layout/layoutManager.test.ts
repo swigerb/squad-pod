@@ -205,38 +205,40 @@ describe('layoutManager', () => {
   });
 
   describe('createDefaultLayout', () => {
-    it('creates valid layout with walls around edges', () => {
+    it('creates the source-faithful office layout with intact walls, floors and void', () => {
       const layout = createDefaultLayout();
 
-      expect(layout.cols).toBeGreaterThan(0);
-      expect(layout.rows).toBeGreaterThan(0);
+      expect(layout.cols).toBe(21);
+      expect(layout.rows).toBe(13);
       expect(layout.tiles.length).toBe(layout.cols * layout.rows);
 
       const tileMap = layoutToTileMap(layout);
 
-      // Check corners are walls
-      expect(tileMap[0][0]).toBe(TileType.WALL);
-      expect(tileMap[0][layout.cols - 1]).toBe(TileType.WALL);
-      expect(tileMap[layout.rows - 1][0]).toBe(TileType.WALL);
-      expect(tileMap[layout.rows - 1][layout.cols - 1]).toBe(TileType.WALL);
-
-      // Check center is floor
-      const centerRow = Math.floor(layout.rows / 2);
-      const centerCol = Math.floor(layout.cols / 2);
-      expect(tileMap[centerRow][centerCol]).not.toBe(TileType.WALL);
+      expect(tileMap[0].every((tile) => tile === TileType.VOID)).toBe(true);
+      expect(tileMap[1].slice(0, 20).every((tile) => tile === TileType.WALL)).toBe(true);
+      expect(tileMap[1][20]).toBe(TileType.VOID);
+      expect(tileMap[2][10]).toBe(TileType.WALL);
+      expect(tileMap[5][10]).toBe(TileType.FLOOR_1);
+      expect(tileMap[10][10]).toBe(TileType.WALL);
+      expect(tileMap[10][18]).toBe(TileType.FLOOR_9);
+      expect(tileMap[12].every((tile) => tile === TileType.VOID)).toBe(true);
+      expect(layout.tiles.filter((tile) => tile === TileType.FLOOR_7)).not.toHaveLength(0);
     });
 
-    it('creates layout with some furniture', () => {
+    it('creates the reference furniture with explicit footprints and four conference seats', () => {
       const layout = createDefaultLayout();
 
-      expect(layout.furniture.length).toBeGreaterThan(0);
-    });
-
-    it('creates layout with tile colors', () => {
-      const layout = createDefaultLayout();
-
-      expect(layout.tileColors).toBeDefined();
-      expect(Object.keys(layout.tileColors!).length).toBeGreaterThan(0);
+      expect(layout.furniture).toHaveLength(36);
+      expect(new Set(layout.furniture.map((item) => item.uid)).size).toBe(36);
+      expect(layout.furniture.every((item) => item.assetFootprint
+        && item.col >= 0 && item.row >= 0
+        && item.col + item.assetFootprint.width <= layout.cols
+        && item.row + item.assetFootprint.height <= layout.rows)).toBe(true);
+      expect(layoutToSeats(layout.furniture).map((seat) => seat.id)).toEqual([
+        'chair-left-1', 'chair-left-2', 'chair-right-1', 'chair-right-2',
+        'bench-1', 'bench-2',
+      ]);
+      expect(layout.tileColors).toHaveProperty('0,0');
     });
 
     describe('pet layout compatibility', () => {

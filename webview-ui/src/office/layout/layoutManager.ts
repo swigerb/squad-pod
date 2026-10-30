@@ -4,14 +4,12 @@ import {
   Seat,
   PlacedFurniture,
   Direction,
-  TileType,
   SpriteData,
   TILE_SIZE,
 } from '../types.js';
-import { DEFAULT_COLS, DEFAULT_ROWS, DEFAULT_FLOOR_COLOR } from '../../constants.js';
 import { getCatalogEntry, createPlaceholderSprite } from './furnitureCatalog.js';
 import { getItemById } from '../sprites/assetLoader.js';
-import { defaultFurniture } from '../../../../src/defaultFurniture.js';
+import { createDefaultOfficeLayout } from '../../../../src/defaultOfficeLayout.js';
 import { isValidCarpetLayer } from '../../../../src/carpetValidation.js';
 import { isValidLayout } from '../../../../src/layoutValidation.js';
 import { getColorizedSprite } from '../colorize.js';
@@ -55,34 +53,7 @@ function colorizableSprite(sprite: SpriteData): SpriteData {
 }
 
 export function createDefaultLayout(): OfficeLayout {
-  const tiles: number[] = [];
-  for (let row = 0; row < DEFAULT_ROWS; row++) {
-    for (let col = 0; col < DEFAULT_COLS; col++) {
-      if (row === 0 || row === DEFAULT_ROWS - 1 || col === 0 || col === DEFAULT_COLS - 1) {
-        tiles.push(TileType.WALL);
-      } else {
-        tiles.push(TileType.FLOOR_1);
-      }
-    }
-  }
-
-  const furniture = defaultFurniture();
-
-  const tileColors = new Map<string, typeof DEFAULT_FLOOR_COLOR>();
-  for (let row = 0; row < DEFAULT_ROWS; row++) {
-    for (let col = 0; col < DEFAULT_COLS; col++) {
-      tileColors.set(`${col},${row}`, { ...DEFAULT_FLOOR_COLOR });
-    }
-  }
-
-  return {
-    cols: DEFAULT_COLS,
-    rows: DEFAULT_ROWS,
-    tiles,
-    furniture,
-    pets: [],
-    tileColors: Object.fromEntries(tileColors)
-  };
+  return createDefaultOfficeLayout();
 }
 
 export function layoutToTileMap(layout: OfficeLayout): number[][] {

@@ -3,29 +3,27 @@ import type { LayoutData } from '../types.js';
 import { createMinimalLayout, ensureTileColors } from './layoutState.js';
 
 describe('host-neutral layout state', () => {
-  it('creates the same renderable 20x15 fallback layout', () => {
+  it('creates the same source-faithful office used by the webview', () => {
     const layout = createMinimalLayout();
 
     expect(layout).toMatchObject({
       version: 2,
-      cols: 20,
-      rows: 15,
+      cols: 21,
+      rows: 13,
       furniture: expect.arrayContaining([
-        expect.objectContaining({ uid: 'desk-1', col: 4, row: 3 }),
-        expect.objectContaining({ uid: 'chair-1', col: 5, row: 5 }),
+        expect.objectContaining({ uid: 'conference-table', type: 'pa_TABLE_FRONT', col: 4, row: 7 }),
+        expect.objectContaining({ uid: 'desk-1', type: 'pa_DESK_FRONT', col: 2, row: 3 }),
       ]),
     });
-    expect(layout.tiles).toHaveLength(300);
-    for (let row = 0; row < layout.rows; row++) {
-      for (let col = 0; col < layout.cols; col++) {
-        const isWall = row === 0 || row === layout.rows - 1 || col === 0 || col === layout.cols - 1;
-        const index = row * layout.cols + col;
-        expect(layout.tiles[index]).toBe(isWall ? 0 : 1);
-        expect(layout.tileColors?.[`${col},${row}`]).toEqual(
-          isWall ? { h: 20, s: 30, b: -25, c: 0 } : { h: 35, s: 40, b: 15, c: 0 },
-        );
-      }
-    }
+    expect(layout.tileColors).toMatchObject({
+      '0,1': { colorize: true },
+      '1,2': { colorize: true },
+      '11,2': { colorize: true },
+      '11,10': { colorize: true },
+    });
+    expect(layout.tiles).toHaveLength(273);
+    expect(layout.tiles).toEqual(createMinimalLayout().tiles);
+    expect(layout.tileColors).toEqual(createMinimalLayout().tileColors);
   });
 
   it('fills only missing or empty tile colors using each tile value', () => {

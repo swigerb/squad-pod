@@ -10,6 +10,8 @@ All notable changes to Squad Pod are documented here.
 - Furniture groups now support directional rotation and mirrored views, with one palette entry per group, preserved tint and seat assignments, and one undo step per turn.
 
 ### Changed
+- Fresh offices use a source-backed Pixel Agents starter; **Export Default Layout** also offers it when no layout file is bundled. Import stages a draft until explicit Save; editor Reset still restores the saved baseline.
+- Floor/wall rendering with Colorize enabled now uses the source-compatible color transform, including existing `colorize: true` settings. Stored color values, Colorize-disabled behavior and furniture tint remain unchanged; wall atlas masks and 32-pixel bottom anchoring are corrected.
 - Reserved `characters` and `pets` folders are excluded from furniture imports.
 - Explicit supported reading-tool metadata now selects authored reading poses from the same 16x32 built-in sheets used for walking and typing, instead of falling back to differently shaped inline art.
 - Replaced the unresolved office tileset and inline furniture art with the source-pinned original Pixel Agents furniture/floor/wall bundle (MIT, Pablo De Lucca). The historical screenshot is excluded from the VSIX. Legacy layout IDs/geometry remain intact as explicit missing-art markers; no automatic reset or remap occurs.

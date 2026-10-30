@@ -35,7 +35,7 @@ import {
 } from '../../constants.js';
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
-import { getColorizedFloorSprite } from '../floorTiles.js';
+import { getColorizedFloorSprite, hasFloorSprites } from '../floorTiles.js';
 import type { CarpetTile } from '../types.js';
 import { getCharacterAnimation, getCharacterWorldPosition, isReadingTool } from './characters.js';
 import { getCharacterScreenBounds } from './characterGeometry.js';
@@ -100,13 +100,13 @@ export function renderTileGrid(
     console.log('[renderer] First tile render snapshot', getAssetLoadSnapshot());
   }
 
-   if (tilesetReady && !_loggedPngReady) {
-     _loggedPngReady = true;
-     console.log('[renderer] ✅ Tileset PNG path ready — using metadata tiles', getAssetLoadSnapshot());
-   } else if (!tilesetReady && !_loggedTilesetWaiting) {
-     _loggedTilesetWaiting = true;
-     console.log('[renderer] ⏳ Tileset PNG path not ready yet — using fallback tiles', getAssetLoadSnapshot());
-   }
+  if (tilesetReady && !_loggedPngReady) {
+    _loggedPngReady = true;
+    console.log('[renderer] ✅ Tileset PNG path ready — metadata fallback available', getAssetLoadSnapshot());
+  } else if (!tilesetReady && !_loggedTilesetWaiting) {
+    _loggedTilesetWaiting = true;
+    console.log('[renderer] ⏳ Tileset PNG path not ready yet — using bundled/color fallbacks', getAssetLoadSnapshot());
+  }
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -116,15 +116,16 @@ export function renderTileGrid(
       const x = offsetX + col * TILE_SIZE * zoom;
       const y = offsetY + row * TILE_SIZE * zoom;
 
-      // Prefer tileset PNG tiles when loaded
-      if (tilesetReady && drawTilesetTile(ctx, tile, x, y, zoom)) {
-        continue;
-      }
-
-      // One-time diagnostic if PNG path is ready but drawTilesetTile returned false
-      if (tilesetReady && !_loggedPngFallback) {
-        _loggedPngFallback = true;
-        console.warn('[renderer] ⚠️ Tileset PNG path is ready but drawTilesetTile returned false for tile type', tile, getAssetLoadSnapshot());
+      // Prefer the bundled Pixel Agents floor/wall atlases over the generic metadata tiles.
+      const hasBundledTileArt = tile === TileType.WALL ? hasWallSprites() : hasFloorSprites();
+      if (!hasBundledTileArt && tilesetReady) {
+        if (drawTilesetTile(ctx, tile, x, y, zoom)) {
+          continue;
+        }
+        if (!_loggedPngFallback) {
+          _loggedPngFallback = true;
+          console.warn('[renderer] ⚠️ Tileset PNG path is ready but drawTilesetTile returned false for tile type', tile, getAssetLoadSnapshot());
+        }
       }
 
       // Fall back to colored rendering
