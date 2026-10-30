@@ -539,7 +539,9 @@ spent or reserved, preventing repeated corrupt PNGs from bypassing decode caps.
 
 Roots cannot borrow each other's allowances: an oversized import cannot starve
 another root or the originals. Within each root, folders are processed in
-lexicographic order, each manifest atomically. An over-budget manifest receives
+lexicographic order. Malformed nested groups are diagnosed and skipped without
+discarding independent valid siblings; tree work limits remain manifest-wide.
+PNG decoding and budget reservation remain atomic per manifest. An over-budget manifest receives
 a path-specific warning and is not claimed loaded; smaller later manifests can
 still fit unused capacity. When a read/enumeration allowance is exhausted,
 remaining affected manifests each receive warnings. Split large collections
@@ -564,6 +566,54 @@ Nine floor PNGs are included; the existing seven floor slots use the first seven
 without changing tile IDs (legacy tile 8 remains VOID). The single bundled wall
 set is active. External floor/wall/character packs are not supported.
 Bundled and custom pets use the separately documented manifest and provenance checks above.
+
+### Furniture rotation groups
+
+Furniture manifests support `groupType` (`rotation`, `state`, `animation`),
+`rotationScheme` (`2-way`, `3-way-mirror`, `4-way`), `orientation` (`front`,
+`right`, `back`, `left`, `side`), `mirrorSide` (boolean), `state` (`on`, `off`)
+and `frame` (integer 0–63). Groups inherit orientation, state and rotation scheme
+into their leaves; the host supplies a namespaced `groupId` derived from the
+manifest id. Existing 128-node, depth-under-8 and 64-member bounds still apply.
+
+Rotation groups with at least two usable orientations show one palette entry:
+the front variant, or the first available orientation if front is missing.
+Labels strip upstream's trailing ` - Front - Off`, ` - Front` or ` - Off`.
+Rotate / **R** cycles **front → right → back → left** through available variants.
+`side` means right; `mirrorSide: true` on a side leaf adds a horizontally
+mirrored `<leaf-id>:left` variant with the same footprint. A `2-way` group uses
+only front and right. Every original leaf id remains addressable in saved
+layouts, even when hidden from the palette.
+
+Grouped rotation changes the saved type and footprint with `rotation: 0`,
+preserving uid, tint and seat-assignment identity. Bounds, walls and collisions
+are rechecked; surface riders keep their positions and must fit fully on the
+new desk surface, otherwise rotation is rejected visibly. Each accepted turn
+is one undo/redo step. Ungrouped assets and legacy placeholders retain their
+geometric rotation. No layout version change or automatic saved-layout migration
+is performed; already-saved geometric angles are retained until an explicit
+group rotation. Removed art and changed footprints retain existing unavailable
+asset diagnostics instead of substituting another piece.
+
+**Deliberate differences from Pixel Agents stable v1.5.0:** state pairs,
+animation playback and occupied-PC on-state switching are deferred. `state`
+and `frame` are retained but not acted on; on-state leaves remain resolvable
+but do not join rotation cycles. Completed rotation groups hide all companion
+leaves from the palette, including scheme-excluded/on-state leaves; incomplete
+groups remain independent. Partial groups without front use a deterministic
+representative rather than showing multiple entries. Squad Pod's bounded local
+directory format, exact sprite/footprint dimensions, stable namespaces and
+conservative placement validation remain unchanged. Mirroring is baked into
+the catalog sprite before tint rather than deferred to the renderer.
+
+Hand-run production-bundle acceptance (requires locally available Playwright
+and Edge): `node scripts/acceptance-furniture-groups.cjs`. Use `--negative` for
+the explicit pre-feature baseline `949972fc94558bbf0efd041174259f4df3dfc29f`
+(fetch it first; `ACCEPTANCE_BASELINE_REF` overrides it), or `--mutations` for
+four single-substitution mutants in disposable source copies of HEAD.
+Set `ACCEPTANCE_OUTPUT_DIR` for screenshots and JSON/log evidence. The harness
+owns an ephemeral loopback server and closes only its own server/browser.
+Its synthetic host fixture is not native VS Code or real Squad evidence.
 
 ## Telemetry Feed
 

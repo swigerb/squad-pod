@@ -1,7 +1,7 @@
 import { OfficeLayout, TileType, FloorColor, PlacedFurniture, CarpetTile } from '../types.js';
 import { EditorState, UndoEntry } from './editorState.js';
 import { UNDO_STACK_MAX_SIZE } from '../../constants.js';
-import { getCatalogEntry } from '../layout/furnitureCatalog.js';
+import { getAssetProblem, getCatalogEntry, getRotatedType, isRotatable } from '../layout/furnitureCatalog.js';
 import { getFurnitureFootprint } from '../layout/layoutManager.js';
 import { isValidCarpetTile } from '../../../../src/carpetValidation.js';
 
@@ -118,6 +118,32 @@ export function planFurnitureRotate(layout: OfficeLayout, uid: string): Furnitur
   const item = layout.furniture.find((f) => f.uid === uid);
   const footprint = item && getFurnitureFootprint(item);
   if (!item || !footprint) return { items: [], error: 'Cannot rotate furniture with unknown dimensions.' };
+  const nextType = getRotatedType(item.type);
+  if (nextType) {
+    const problem = getAssetProblem(item);
+    if (problem) return { items: [], error: problem };
+    const entry = getCatalogEntry(nextType);
+    if (!entry) return { items: [], error: `Unavailable asset: ${nextType}` };
+    const rotated: PlacedFurniture = {
+      ...item, type: nextType, rotation: 0,
+      assetFootprint: { width: entry.width, height: entry.height },
+    };
+    delete rotated.assetRole;
+    if (entry.isDesk) rotated.assetRole = 'desk';
+    else if (entry.category === 'chairs' && entry.width === 1 && entry.height === 1) rotated.assetRole = 'seat';
+    // Variant artwork need not be a geometric quarter-turn. Riders retain their positions,
+    // but must still fit completely on the replacement surface.
+    const riders = getSurfaceRiders(layout, uid);
+    for (const rider of riders) {
+      const size = getFurnitureFootprint(rider);
+      if (!entry.isDesk || !size || rider.col < item.col || rider.row < item.row
+        || rider.col + size.width > item.col + entry.width || rider.row + size.height > item.row + entry.height) {
+        return { items: [], error: 'Surface riders must fit entirely on the rotated desk.' };
+      }
+    }
+    const items = [rotated, ...riders];
+    return { items, error: groupPlacementError(layout, items, false) };
+  }
   const items = [
     { ...item, rotation: ((item.rotation || 0) + 90) % 360 },
     ...getSurfaceRiders(layout, uid).map((rider) => {
@@ -234,7 +260,7 @@ export function applyFurniturePlace(
     type,
     col,
     row,
-    rotation,
+    rotation: isRotatable(type) ? 0 : rotation,
     ...(color ? { color: { ...color } } : {}),
   };
   const entry = getCatalogEntry(type);
