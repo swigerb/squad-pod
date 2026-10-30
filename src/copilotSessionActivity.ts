@@ -26,6 +26,7 @@ export interface LiveEvent {
   squad: boolean;
   agentScoped: boolean;
   agentInstanceId: string;
+  instanceId?: string;
   selectedAgentName?: string;
   modelObservation?: RuntimeModelObservation;
   identityOmitted?: boolean;
@@ -53,11 +54,17 @@ export function parseLiveEvent(line: string): LiveEvent | null {
     agentScoped: Object.hasOwn(envelope, 'agentId') && envelope.agentId !== null && envelope.agentId !== undefined,
     agentInstanceId: taskIdentity(envelope.agentId),
   };
-  if (type === 'subagent.selected') {event.selectedAgentName = text(data.agentName, 80);}
+  event.instanceId = taskIdentity(envelope.agentId) || undefined;
+  if (type === 'subagent.selected' && event.instanceId) {
+    event.selectedAgentName = taskIdentity(data.agentName) || undefined;
+  }
+  if (type === 'subagent.completed' && data.cancelled === true) { event.type = 'subagent.aborted'; }
   const callBearing = ['subagent.started', 'subagent.completed', 'subagent.failed', 'subagent.aborted',
     'tool.execution_start', 'tool.execution_complete'].includes(type);
-  event.identityOmitted = callBearing && (!event.toolCallId
-    || (data.parentToolCallId !== undefined && data.parentToolCallId !== null && !event.parentToolCallId));
+  event.identityOmitted = (callBearing && (!event.toolCallId
+    || (data.parentToolCallId !== undefined && data.parentToolCallId !== null && !event.parentToolCallId)))
+    || (envelope.agentId !== undefined && envelope.agentId !== null && !event.instanceId)
+    || (type === 'subagent.selected' && !!event.instanceId && !event.selectedAgentName);
   if (type === 'tool.execution_start') {
     const args = object(data.arguments);
     if (toolName === 'task') {
@@ -246,7 +253,7 @@ export class CopilotSessionActivity {
   private lastBytesAt = 0;
   private lastSize = -1;
   private stale = false;
-  private tasks = new Map<string, { agentId: string; description: string }>();
+  private tasks = new Map<string, { agentId: string; description: string; instanceId?: string }>();
   private runs = new Map<string, string>();
   private tools = new Map<string, { agentId: string; toolName: string; label: string }>();
   private toolOwners = new Map<string, string | null>();
@@ -394,9 +401,29 @@ export class CopilotSessionActivity {
 
   private accept(event: LiveEvent): void {
     const duplicateTask = !!event.task && this.observedTasks.has(event.toolCallId);
-    const attribution = event.task?.agent_type === 'general-purpose'
-      ? exactLiveAgent(event.task.name, this.options.roster()) : null;
+    const attribution = event.selectedAgentName
+      ? exactLiveAgent(event.selectedAgentName, this.options.roster())
+      : event.task?.agent_type === 'general-purpose'
+        ? exactLiveAgent(event.task.name, this.options.roster()) : null;
     if (this.session) { this.observedTasks.accept(event, this.session.id, attribution); }
+    if (event.selectedAgentName && event.instanceId) {
+      for (const observed of this.observedTasks.snapshot(this.session?.id ?? null).tasks) {
+        if (observed.instanceId !== event.instanceId || observed.state !== 'running') { continue; }
+        const previous = this.tasks.get(observed.toolCallId);
+        if (previous && previous.agentId !== observed.agentId) {
+          if (this.runs.get(previous.agentId) === observed.toolCallId) { this.finish(previous.agentId); }
+          this.tasks.delete(observed.toolCallId);
+        }
+        if (observed.agentId) {
+          this.tasks.set(observed.toolCallId, { agentId: observed.agentId, description: observed.description,
+            instanceId: observed.instanceId });
+          this.startRun(observed.agentId, observed.toolCallId, observed.description);
+          this.rememberModelOwner(event.instanceId, observed.agentId);
+        } else {
+          this.clearInstanceModelOwner(event.instanceId);
+        }
+      }
+    }
     if (!event.toolCallId || duplicateTask) {
       this.acceptModelEvent(event, this.tasks.get(event.toolCallId));
       return;
@@ -407,19 +434,27 @@ export class CopilotSessionActivity {
         this.tasks.set(event.toolCallId, { agentId, description: event.task.description });
       }
     }
+    if (event.type === 'subagent.started' && !this.tasks.has(event.toolCallId)) {
+      const observed = this.observedTasks.snapshot(this.session?.id ?? null).tasks
+        .find(row => row.toolCallId === event.toolCallId);
+      if (observed?.agentId && observed.state === 'running') {
+        this.tasks.set(event.toolCallId, { agentId: observed.agentId, description: observed.description,
+          instanceId: observed.instanceId });
+      }
+    }
     const task = this.tasks.get(event.toolCallId);
     if (event.type === 'subagent.started' && task) {
-      if (this.runs.get(task.agentId) === event.toolCallId) {
-        this.acceptModelEvent(event, task);
-        return;
-      }
-      if (this.runs.has(task.agentId)) {this.clearDisplays(task.agentId);}
-      this.runs.set(task.agentId, event.toolCallId);
-      this.lifecycle(task.agentId, true, task.description);
-      this.telemetry(task.agentId, 'Live member started');
+      task.instanceId = this.observedTasks.snapshot(this.session?.id ?? null).tasks
+        .find(row => row.toolCallId === event.toolCallId)?.instanceId ?? event.instanceId;
+      this.startRun(task.agentId, event.toolCallId, task.description);
+      if (task.instanceId) {this.rememberModelOwner(task.instanceId, task.agentId);}
     } else if (['subagent.completed', 'subagent.failed', 'subagent.aborted'].includes(event.type)) {
-      if (task && this.runs.get(task.agentId) === event.toolCallId) {this.finish(task.agentId);}
-      this.tasks.delete(event.toolCallId);
+      const instanceId = task?.instanceId ?? event.instanceId;
+      for (const [id, ended] of this.tasks) {
+        if (id !== event.toolCallId && (!instanceId || ended.instanceId !== instanceId)) { continue; }
+        if (this.runs.get(ended.agentId) === id) { this.finish(ended.agentId); }
+        this.tasks.delete(id);
+      }
     } else if (event.type === 'tool.execution_start') {
       const parent = this.tasks.get(event.parentToolCallId);
       const scopedOwner = event.agentScoped ? this.modelAgentOwners.get(event.agentInstanceId) : undefined;
@@ -462,6 +497,14 @@ export class CopilotSessionActivity {
       return;
     }
     this.acceptModelEvent(event, this.tasks.get(event.toolCallId));
+  }
+
+  private startRun(agentId: string, toolCallId: string, description: string): void {
+    if (this.runs.get(agentId) === toolCallId) { return; }
+    if (this.runs.has(agentId)) { this.clearDisplays(agentId); }
+    this.runs.set(agentId, toolCallId);
+    this.lifecycle(agentId, true, description);
+    this.telemetry(agentId, 'Live member started');
   }
 
   private finish(agentId: string): void {

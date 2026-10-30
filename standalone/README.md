@@ -4,6 +4,12 @@ The default standalone mode is a **read-only, authenticated, loopback-only offic
 It uses the production React/Canvas renderer and shared `HostClient` office seam.
 Optional owned terminals have separate authority; they do not enable office writes.
 This is a private local package, not a published npm product.
+The shared renderer can display ephemeral subtask characters from explicit
+same-session parent/instance snapshots, but this default observer does not read
+private live logs or produce those snapshots. It does not infer a durable team
+hierarchy or promote task names into roster members. See the
+[team identity contract](../docs/team-hierarchy.md); separately consented live-log
+observation is a distinct integration, not enabled by office-control or terminals.
 Its build copies the canonical repository LICENSE and THIRD_PARTY_NOTICES.md
 into the package root; bundled asset provenance and runtime dependency licenses
 remain intact in the installed distribution.

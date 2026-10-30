@@ -18,7 +18,7 @@ const line = (type: string, data: object, envelope = {}) => JSON.stringify({ typ
 export const spawnLines = (name = 'ada', task = 'run') =>
   line('tool.execution_start', { toolName: 'task', toolCallId: task,
     arguments: { name, agent_type: 'general-purpose', mode: 'background', description: 'Build tests', prompt: secret } })
-  + line('subagent.started', { toolCallId: task, agentName: 'general-purpose' }, { agentId: 'internal-id' });
+  + line('subagent.started', { toolCallId: task, agentName: 'general-purpose' }, { agentId: `internal-${task}` });
 
 describe('read-only Copilot live activity with synthetic homes', () => {
   let home: string;
@@ -265,6 +265,38 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     });
   });
 
+  it('joins delayed selected-agent ownership only through a retained running call instance', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const file = session('late-selection', marked(
+      line('session.start', { selectedModel: 'root-model' }, { timestamp })
+      + taskCall('child', 'unknown', 'explore', 'parent')
+      + line('subagent.started', { toolCallId: 'child', model: 'child-model' },
+        { agentId: 'child-instance', timestamp })
+      + line('subagent.selected', { agentName: 'grace' }, { agentId: 'child-instance', timestamp })
+      + line('assistant.message', { model: 'grace-actual', content: secret },
+        { agentId: 'child-instance', timestamp }),
+    ));
+    reader.start();
+    const models = () => messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot;
+    expect(models()).toMatchObject({
+      session: { model: 'root-model' },
+      members: { grace: { model: 'grace-actual', source: 'assistant.message.model' } },
+    });
+    expect(inventory().tasks).toContainEqual(expect.objectContaining({
+      toolCallId: 'child', state: 'running', agentId: 'grace', instanceId: 'child-instance',
+    }));
+    expect(lifecycle).toHaveBeenCalledWith('grace', true, 'Inspect fixture');
+
+    fs.appendFileSync(file, line('subagent.selected', { agentName: 'grace' },
+      { agentId: 'unretained-instance', timestamp })
+      + line('assistant.message', { model: 'unrelated-model', content: secret },
+        { agentId: 'unretained-instance', timestamp }));
+    reader.poll();
+    expect(models()?.session?.model).toBe('root-model');
+    expect(models()?.members.grace?.model).toBe('grace-actual');
+    expect(models()?.members).not.toHaveProperty('unknown');
+  });
+
   it('bounds root tool ownership and withholds model events after owner eviction', () => {
     const timestamp = '2026-10-30T12:34:56.000Z';
     const rootCalls = Array.from({ length: 2049 }, (_, index) => {
@@ -394,6 +426,45 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(lifecycle.mock.calls).toEqual([['ada', true, 'Build tests'], ['ada', false, null]]);
     expect(messages.filter(m => m.type === 'agentContextUsage').at(-1))
       .toMatchObject({ contextTokens: null, maxContextTokens: null });
+  });
+
+  it('links custom selection to a running instance, never its display name, and routes lifecycle to the existing roster', () => {
+    const file = session('session', marked(spawnLines()));
+    reader.start();
+    lifecycle.mockClear();
+    fs.appendFileSync(file, taskCall('child', 'grace', 'explore', 'run')
+      + line('subagent.started', { toolCallId: 'child', agentName: 'explore' }, { agentId: 'instance' }));
+    reader.poll();
+    expect(inventory().tasks.find(row => row.toolCallId === 'child')?.agentId).toBeNull();
+    expect(lifecycle).not.toHaveBeenCalled();
+    fs.appendFileSync(file, line('subagent.selected', { agentName: 'grace', agentDisplayName: 'Ada' }, { agentId: 'instance' }));
+    reader.poll();
+    expect(inventory().tasks.find(row => row.toolCallId === 'child')).toMatchObject({
+      instanceId: 'instance', selectedAgentName: 'grace', agentId: 'grace',
+    });
+
+    expect(lifecycle.mock.calls).toEqual([['grace', true, 'Inspect fixture']]);
+    fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'child', cancelled: true }, { agentId: 'instance' }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual(['grace', false, null]);
+    expect(inventory().tasks.find(row => row.toolCallId === 'child')?.state).toBe('aborted');
+  });
+
+  it('ends a roster run when another call for the same authoritative instance completes', () => {
+    const file = session('session', marked(''));
+    reader.start();
+    fs.appendFileSync(file, taskCall('one', 'ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'one' }, { agentId: 'same-instance' })
+      + taskCall('alias', 'ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'alias' }, { agentId: 'same-instance' }));
+    reader.poll();
+    fs.appendFileSync(file, line('subagent.completed', { toolCallId: 'one' }));
+    reader.poll();
+    expect(lifecycle.mock.calls.at(-1)).toEqual(['ada', false, null]);
+    expect(inventory().tasks.every(row => row.state === 'completed')).toBe(true);
+    lifecycle.mockClear();
+    reader.replay();
+    expect(lifecycle).not.toHaveBeenCalled();
   });
 
   it('silently seeds only in-flight state, never replaying completed history on enable, reload or rotation', () => {
