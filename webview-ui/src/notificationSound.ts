@@ -6,10 +6,22 @@ import {
 } from './constants.js';
 
 let audioContext: AudioContext | null = null;
-let soundEnabled = true;
+let soundEnabled = false;
+const scheduledNotes = new Set<{ oscillator: OscillatorNode; gainNode: GainNode }>();
 
 export function setSoundEnabled(enabled: boolean): void {
   soundEnabled = enabled;
+  if (!enabled && audioContext) {
+    const now = audioContext.currentTime;
+    for (const note of scheduledNotes) {
+      note.gainNode.gain.cancelScheduledValues(now);
+      note.gainNode.gain.setValueAtTime(0, now);
+      note.oscillator.stop(now);
+      note.oscillator.disconnect();
+      note.gainNode.disconnect();
+      scheduledNotes.delete(note);
+    }
+  }
 }
 
 export function isSoundEnabled(): boolean {
@@ -21,6 +33,13 @@ function playNote(frequency: number, startTime: number, duration: number): void 
 
   const oscillator = audioContext.createOscillator();
   const gainNode = audioContext.createGain();
+  const note = { oscillator, gainNode };
+  scheduledNotes.add(note);
+  oscillator.onended = () => {
+    scheduledNotes.delete(note);
+    oscillator.disconnect();
+    gainNode.disconnect();
+  };
 
   oscillator.connect(gainNode);
   gainNode.connect(audioContext.destination);
@@ -57,6 +76,8 @@ export function playDoneSound(): void {
 }
 
 export function unlockAudio(): void {
+  if (!soundEnabled) return;
+
   if (!audioContext) {
     audioContext = new AudioContext();
   }
