@@ -15,9 +15,19 @@ await build({
   format: 'esm', bundle: true, packages: 'external',
   banner: { js: '#!/usr/bin/env node' },
 });
+await build({
+  absWorkingDir: fileURLToPath(new URL('.', import.meta.url)),
+  entryPoints: ['src/fixture.ts', 'src/ptyHost.ts'], outdir: 'dist', outExtension: { '.js': '.mjs' }, platform: 'node',
+  format: 'esm', bundle: true, packages: 'external',
+});
 rmSync(new URL('dist/assets', import.meta.url), { recursive: true, force: true });
 mkdirSync(new URL('dist/assets', import.meta.url), { recursive: true });
 cpSync(new URL('../webview-ui/public/assets', import.meta.url), new URL('dist/assets', import.meta.url), { recursive: true });
 for (const name of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) {
   cpSync(new URL(`../${name}`, import.meta.url), new URL(name, import.meta.url));
+}
+mkdirSync(new URL('dist/terminal-licenses', import.meta.url), { recursive: true });
+for (const [component, filename] of [['xterm', 'xterm-LICENSE'], ['addon-fit', 'addon-fit-LICENSE']]) {
+  cpSync(new URL(`../webview-ui/node_modules/@xterm/${component}/LICENSE`, import.meta.url),
+    new URL(`dist/terminal-licenses/${filename}`, import.meta.url));
 }

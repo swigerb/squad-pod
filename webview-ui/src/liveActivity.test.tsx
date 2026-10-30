@@ -157,7 +157,7 @@ describe('live tools and context through the App boundary', () => {
     expect(section.textContent).toContain('not durable membership or recorded usage');
     expect(host.querySelectorAll('[data-agent-label]')).toHaveLength(1);
     expect(host.querySelector('[data-agent-tools]')).toBeNull();
-    act(() => [...host.querySelectorAll('button')].find(item => item.textContent === 'Clear')!.click());
+    act(() => [...host.querySelectorAll('button')].find(item => item.textContent === 'Clear activity')!.click());
     expect(section.querySelectorAll('[data-observed-task]')).toHaveLength(3);
   });
 

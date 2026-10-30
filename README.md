@@ -5,7 +5,8 @@
 **Local browser observer:** [Build/run and security instructions](standalone/README.md)
 for the private, authenticated, loopback-only read-only office. It uses the same
 production renderer, observes only an explicitly selected project, and has no
-terminal/process launcher or workspace writes. This is separate from the VSIX.
+workspace writes. Optional owned terminals use separate authentication and
+`copilot --agent squad`; observation stays read-only. This is separate from the VSIX.
 
 **Your Squad AI team, but make it pixel art.**
 
@@ -90,6 +91,8 @@ Open **Directories** to launch Squad in a workspace folder or a saved directory.
 
 Open **Telemetry** in the toolbar to browse observed status changes, session activity, logs, orchestration events, and decisions. The drawer also displays historical usage from the local Squad usage ledger when available, including reported token and estimated-cost totals and recent model reports. These reports are historical source data, not live context utilization or billing records.
 
+**Activity events** counts only observed events; **Clear activity** leaves recorded usage and observed tasks unchanged. Existing files are not replayed. Missing usage is not zero consumption, and enabling live CLI observation does not create a usage ledger. Source diagnostics distinguish file watching from opt-in live CLI observation; **Observation settings and consent** opens the existing Settings flow without enabling anything. Settings and live-log consent are unavailable in the read-only observer.
+
 ## Activity detection
 
 Squad Pod watches the selected project's `.squad/` files, including the roster, sessions, logs, orchestration logs, decision inbox, and agent files. It uses filesystem notifications with polling as a fallback and treats the initial scan as a baseline rather than replaying old files.
@@ -117,7 +120,8 @@ Add a local asset directory in **Settings** for furniture, pets, and character s
 
 **Supported:** Squad roster discovery, file-observed activity, opt-in live tool labels and context gauges, the animated office, layout editing, directional furniture groups, pets, local furniture assets, and explicit Squad CLI launches.
 
-**Not yet supported:** a supported Squad event API, a standalone browser runtime, and an embedded terminal.
+**Not yet supported:** a supported Squad event API, general browser office mutations,
+remote access, and full mobile terminal parity.
 
 ## How we built this
 
