@@ -148,6 +148,15 @@ in-flight calls, not completed history. Source status, tools, context gauges,
 runtime models and transient tasks are visible to observation-only viewers without browser consent controls.
 Restart without the flag to turn live reads off.
 
+Source-grounded task bubbles use only fixed phrases from those existing current
+task/tool projections; they do not copy descriptions, arguments, filenames or
+outputs. **Task bubbles: On/Off** is a view-local, keyboard-accessible toggle
+available even to read-only viewers. It sends no host command and grants no
+settings/control/consent authority. Suppression leaves permission/wait/tool/context
+signals intact. Disconnect invalidates the task snapshot until fresh metadata
+arrives. Explicit inter-agent dialogue/handoffs remain unsupported; see the
+[pinned producer and privacy boundary](../docs/task-bubbles.md).
+
 `--live-activity` grants **no** launch, attach, input, termination, settings or
 filesystem-write authority. `/office` remains read-only. With no active owned
 terminal, diagnostics label the source **matching-project**, not exact ownership.

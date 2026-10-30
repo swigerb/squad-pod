@@ -142,6 +142,11 @@ describe('source-grounded summaries through the production App', () => {
     act(() => toggle.click());
     await frame();
     expect(bubble()).not.toBeNull();
+    send({ type: 'agentToolPermissionClear', agentId: 'ada' });
+    send({ type: 'agentStatus', agentId: 'ada', status: 'waiting', currentTask: secret, currentTaskSource: 'live' });
+    await frame();
+    expect(bubble()).toBeNull();
+    expect(host.querySelector('[data-agent-label="ada"] [aria-label="Waiting"]')).not.toBeNull();
     tasks([]);
     await frame();
     expect(bubble()).toBeNull();
