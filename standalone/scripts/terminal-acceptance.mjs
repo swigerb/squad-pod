@@ -237,8 +237,8 @@ try {
     const squadInfo = tab.getByRole('dialog', { name: 'Squad Info' });
     await squadInfo.waitFor();
     await squadInfo.getByRole('button', { name: 'Show details for TestBot', exact: true }).click();
-    await squadInfo.getByText(/Observed status:/).waitFor();
-    await squadInfo.getByText(/Observed task:/).waitFor();
+    await squadInfo.getByText('Observed status: idle', { exact: true }).waitFor();
+    await squadInfo.getByText('Observed activity: No current task observed.', { exact: true }).waitFor();
     await squadInfo.getByText(/Recent activity \(from workspace activity logs/).waitFor();
     await squadInfo.getByText('Charter content is unavailable.', { exact: false }).waitFor();
     assert.equal(await squadInfo.getByRole('button', { name: 'Open charter', exact: true }).isDisabled(), true);
