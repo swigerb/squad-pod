@@ -97,9 +97,13 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     root = createRoot(host);
     act(() => root.render(<App client={client} readOnly />));
     snapshot(imported, 'observer');
+    send({ type: 'sourceStatus', status: {
+      workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad',
+      teamFound: true, observer: 'watching', nativeWatch: false, error: null,
+    } });
     send({ type: 'existingAgents', agents: [{
       id: 'test-agent-1', name: 'TestBot', role: 'Developer', paletteIndex: 0,
-      seatId: null, status: 'idle', currentTask: null,
+      seatId: null, status: 'idle', currentTask: 'Approximate observed activity',
     }] });
     await nextFrame();
     for (const label of ['Edit Layout', 'Settings', 'Directories']) {
@@ -114,6 +118,20 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(host.querySelector('[data-edit-mode="true"]')).toBeNull();
     expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
     expect(client.setState).not.toHaveBeenCalled();
+    const detailToggle = host.querySelector<HTMLButtonElement>('[aria-label="Show details for TestBot"]');
+    expect(detailToggle).not.toBeNull();
+    act(() => detailToggle?.click());
+    send({ type: 'agentDetailLoaded', detail: {
+      id: 'test-agent-1', name: 'TestBot', role: 'Developer', workspaceRoot: 'workspace-A',
+      status: 'active', currentTask: 'Approximate observed activity', charterSummary: null,
+      charterContent: null, charterStatus: 'unavailable', expertise: null,
+      responsibilities: null, boundaries: null, recentActivity: [], lastActiveAt: 0,
+    } });
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Charter content is unavailable.');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('unavailable in the read-only observer');
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual([
+      'webviewReady', 'requestAgentDetail',
+    ]);
     click('Telemetry');
     expect(host.textContent).toContain('Live transient tasks are unavailable in the read-only observer.');
     expect(host.textContent).not.toContain('Enable it in Settings');
