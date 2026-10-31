@@ -1,0 +1,58 @@
+{
+  "runId": "20261031T135929Z-fresh-25a14517",
+  "verifiedAtUtc": "2026-10-31T14:11:04.100Z",
+  "cases": 27,
+  "groups": 512,
+  "atomicRows": 1932,
+  "uniqueAtomicIds": 1932,
+  "exactlyOneParent": true,
+  "indexEntries": 7,
+  "localHashesMatch": true,
+  "automatedRedactionScan": "No configured sensitive-path/token patterns found; media still needs visual review.",
+  "remote": {
+    "commit": "4dd7146d110544b63466d71816c1c35d6fc75eb3",
+    "allPublishedFilesReadBack": true,
+    "verified": [
+      {
+        "path": "report.md",
+        "bytes": 4321,
+        "sha256": "9f355d546575914eb483ffa97657a9c44bc065199331b9ff070ebc692f01020e"
+      },
+      {
+        "path": "run-manifest.json",
+        "bytes": 6320,
+        "sha256": "97c75d089c6b2b0bb6c4e15d446bfaf426d9e90edbebd3d7bb1bd2ba047c9f33"
+      },
+      {
+        "path": "case-ledger.json",
+        "bytes": 782477,
+        "sha256": "28b29b0dc369766cf1f777103b49f9e4a8e004d064b565019ef574fcfa6d3e8a"
+      },
+      {
+        "path": "case-ledger-atomic.json",
+        "bytes": 2129064,
+        "sha256": "b337254397f32963045e961b624f5c20f13e1b0dda04ac335643b0936d078166"
+      },
+      {
+        "path": "standalone-setup.json",
+        "bytes": 962,
+        "sha256": "ad978957d0911c372949e414ac539181b21290c018200a66b4dbae672c8a32b2"
+      },
+      {
+        "path": "observations.jsonl",
+        "bytes": 708,
+        "sha256": "d8a0a1755a5646568b49a4d3478247029fef5c2132fdab54c8378e13799927e9"
+      },
+      {
+        "path": "evidence/logs/candidate-inventory.json",
+        "bytes": 1856,
+        "sha256": "84f940d79d217ea7540352b304e8b7ad031bf2e37665f53b8653779a3820d701"
+      },
+      {
+        "path": "evidence-index.json",
+        "bytes": 71222,
+        "sha256": "52941ac150b820bafd0299bdecd95fd6f147e479060ca9a379c9f3f3b8b72702"
+      }
+    ]
+  }
+}

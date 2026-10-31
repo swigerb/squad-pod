@@ -1,0 +1,312 @@
+{
+  "basedOnCommit": "a85ce4cd530d08edb367f6264e42c7efca9f1383",
+  "generatedAtUtc": "2026-10-31T15:23:54.129Z",
+  "publishedLedgerUnchanged": true,
+  "interpretation": "27 scenarios, not 1932 independent defects. Statement splitting includes setup, cleanup, repeated requirements and list-number fragments. No automatic PASS promotion.",
+  "blockedReasons": {
+    "NOT YET EXECUTED": 1869,
+    "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.": 20,
+    "PARTIAL: one-minute recording produced; deliberate seat move through corners not yet executed.": 1
+  },
+  "cases": [
+    {
+      "id": "N-01",
+      "title": "Install, activate, and reload",
+      "status": "INCOMPLETE",
+      "passStatements": 2,
+      "unresolvedStatements": 23,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 23
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "N-02",
+      "title": "Roster identity, appearance, and seats",
+      "status": "INCOMPLETE",
+      "passStatements": 1,
+      "unresolvedStatements": 41,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 41
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "N-03",
+      "title": "Click, keyboard, details, and charter",
+      "status": "INCOMPLETE",
+      "passStatements": 15,
+      "unresolvedStatements": 90,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 90
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "N-04",
+      "title": "Startup history and source selection",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 37,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 37
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "N-05",
+      "title": "Default-off consent, off clearing, and privacy",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 34,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 34
+      },
+      "authorityNote": "Do not enable live log reads. Visible setting/consent behavior does not prove internal absence of reads."
+    },
+    {
+      "id": "N-06",
+      "title": "Settings and notification sound",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 28,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 28
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "D-01",
+      "title": "Add, edit, validate, and suggest directories",
+      "status": "INCOMPLETE",
+      "passStatements": 4,
+      "unresolvedStatements": 30,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 30
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "D-02",
+      "title": "Trust and PATH failures",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 21,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 21
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "D-03",
+      "title": "Explicit real launch and terminal ownership",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 30,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 30
+      },
+      "authorityNote": "REAL producer execution excluded from this run; fixture evidence cannot substitute."
+    },
+    {
+      "id": "R-01",
+      "title": "Producer discovery and exact workspace attribution",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 29,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 29
+      },
+      "authorityNote": "REAL producer execution excluded from this run; fixture evidence cannot substitute."
+    },
+    {
+      "id": "R-02",
+      "title": "Continuous activity, completion, wait, and fallback",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 33,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 33
+      },
+      "authorityNote": "REAL producer execution excluded from this run; fixture evidence cannot substitute."
+    },
+    {
+      "id": "R-03",
+      "title": "Tools, read-versus-work poses, context, and privacy",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 58,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 58
+      },
+      "authorityNote": "REAL producer execution excluded from this run; fixture evidence cannot substitute."
+    },
+    {
+      "id": "R-04",
+      "title": "Unknown identities, collisions, and session replacement",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 38,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 38
+      },
+      "authorityNote": "REAL producer execution excluded from this run; fixture evidence cannot substitute."
+    },
+    {
+      "id": "R-05",
+      "title": "Actual recorded usage and correct comparison scope",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 91,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 91
+      },
+      "authorityNote": "REAL producer execution excluded from this run; fixture evidence cannot substitute."
+    },
+    {
+      "id": "R-06",
+      "title": "Observed transient tasks, explicit links, and clearing",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 122,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 122
+      },
+      "authorityNote": "REAL producer execution excluded from this run; fixture evidence cannot substitute."
+    },
+    {
+      "id": "U-01",
+      "title": "Missing source, partial data, and no deduplication",
+      "status": "INCOMPLETE",
+      "passStatements": 1,
+      "unresolvedStatements": 104,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 104
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "L-01",
+      "title": "Saved layout, cache, and reload",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 26,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 26
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "L-02",
+      "title": "Starter export, import draft, Save, and Reset",
+      "status": "INCOMPLETE",
+      "passStatements": 1,
+      "unresolvedStatements": 77,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 57,
+        "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.": 20
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "L-03",
+      "title": "Dirty drafts, external conflicts, and recovery",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 31,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 31
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "L-04",
+      "title": "Save races, malformed input, and workspace protection",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 39,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 39
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "L-05",
+      "title": "Floors, walls, carpets, and Areas",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 35,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 35
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "L-06",
+      "title": "Furniture, transforms, states, and history",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 35,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 35
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "L-07",
+      "title": "Local assets, character stability, and pets",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 34,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 34
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "V-01",
+      "title": "Desktop, narrow panel, and natural movement",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 93,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 92,
+        "PARTIAL: one-minute recording produced; deliberate seat move through corners not yet executed.": 1
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "F-01",
+      "title": "Conditional durable hierarchy, model observation, and teammate deduplication",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 114,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 114
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    },
+    {
+      "id": "F-02",
+      "title": "Standalone observer, owned terminals, and other runtimes",
+      "status": "INCOMPLETE",
+      "passStatements": 18,
+      "unresolvedStatements": 569,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 569
+      },
+      "authorityNote": "Mixed scope: read-only fixture observation allowed; control and synthetic terminals require separate authority; physical devices and REAL launches excluded."
+    },
+    {
+      "id": "X-01",
+      "title": "Stop, preserve, and clean up",
+      "status": "INCOMPLETE",
+      "passStatements": 0,
+      "unresolvedStatements": 28,
+      "unresolvedReasons": {
+        "NOT YET EXECUTED": 28
+      },
+      "authorityNote": "Only already approved isolated native/fixture actions; preserve all variant-specific prerequisites."
+    }
+  ]
+}

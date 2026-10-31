@@ -1,0 +1,6 @@
+{
+  "atUtc": "2026-10-31T15:37:05.523Z",
+  "reason": "Initial explicit inventory omitted the existing Scribe charter; no charter writes occurred.",
+  "file": ".squad\\agents\\scribe\\charter.md",
+  "sha256": "536f4ce0dccab25f0363898481e599e2bc908de574ffdb0474bfac0aeba80c46"
+}

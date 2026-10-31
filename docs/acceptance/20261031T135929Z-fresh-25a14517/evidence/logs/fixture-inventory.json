@@ -1,0 +1,53 @@
+{
+  "createdAtUtc": "2026-10-31T14:12:29.544Z",
+  "fixtureOnly": true,
+  "expectedVisible": [
+    "ada",
+    "bea"
+  ],
+  "expectedHidden": [
+    "scribe",
+    "ralph"
+  ],
+  "selectedProject": "project-A",
+  "files": [
+    {
+      "alias": "project-A/acceptance-input.txt",
+      "bytes": 65,
+      "sha256": "b3234cb30971702c78a94a7626b0f66410aeaaeceefc7ddffa7c435a7cc2f6c4"
+    },
+    {
+      "alias": "project-A/.squad/team.md",
+      "bytes": 358,
+      "sha256": "05ccbe8a7d825ba47800450539406f4973c4713b923925928eee2a8a1ae729ac"
+    },
+    {
+      "alias": "project-A/.squad/sessions/historical.json",
+      "bytes": 179,
+      "sha256": "93919ab34b71d7d82e4367da434c192cc9ec75328e1d215f7ae6a283edcb32e3"
+    },
+    {
+      "alias": "project-A/.squad/agents/ada/charter.md",
+      "bytes": 208,
+      "sha256": "c8452453d79b14e2511aab5221356726d81061187ece1a20944bb8f921ab04e8"
+    },
+    {
+      "alias": "project-A/.squad/agents/scribe/charter.md",
+      "bytes": 33,
+      "sha256": "536f4ce0dccab25f0363898481e599e2bc908de574ffdb0474bfac0aeba80c46"
+    },
+    {
+      "alias": "project-B/.squad/team.md",
+      "bytes": 147,
+      "sha256": "e9565db43184e873058b97122f4b539bb80d3e4948499d80c6565b34973c788b"
+    },
+    {
+      "alias": "legacy-project/.ai-team/team.md",
+      "bytes": 149,
+      "sha256": "519178c6ff51ef115cbbfa85f32c38e400a677ba7ded446e0ff419985af91703"
+    }
+  ],
+  "scriptSha256": "b81fededf70c3e858ca38944b044715973747fb073ce2e62bd247d9edc6d511b",
+  "trusted": false,
+  "note": "Trust has not been granted or bypassed."
+}

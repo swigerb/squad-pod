@@ -1,0 +1,31 @@
+{
+  "utc": "2026-10-31T14:44:16.770Z",
+  "evidenceClass": [
+    "BROWSER",
+    "FIXTURE"
+  ],
+  "text": "×\nSquad Team\n👥 2 agents\n🟢 0 active\nCurrent-session model: unavailable\nLive Activity is off; approve the session-log scope and restart the local CLI with --live-activity. It cannot be enabled from the browser.\n🏢 Team Members\n👤\nAdaDeveloper\n⚪\n🧪\nBeaTester\n⚪\nObserved status: idle\nObserved activity: No current task observed.\nLast attributable live activity: Activity time unavailable\nMember runtime model: unavailable\nLive Activity is off; approve the session-log scope and restart the local CLI with --live-activity. It cannot be enabled from the browser.\nHistorical model reports remain historical. Runtime selection, emitted assistant models, and declared metadata are separate sources.\nDeclared model metadata (not effective runtime selection):\nDeclared model metadata is unavailable in the read-only observer.\nCharter summary (from charter.md):\nCharter content is unavailable.\nRecent activity (from workspace activity logs; no timestamps supplied):\nNo recent activity entries observed.\nCharter source text\nOpen charter\nOpening a charter in the editor is unavailable in the read-only observer.",
+  "privatePathVisible": false,
+  "buttons": [
+    {
+      "text": "×",
+      "ariaLabel": "Close Squad Info",
+      "disabled": false
+    },
+    {
+      "text": "👤AdaDeveloper⚪",
+      "ariaLabel": "Show details for Ada",
+      "disabled": false
+    },
+    {
+      "text": "🧪BeaTester⚪",
+      "ariaLabel": "Hide details for Bea",
+      "disabled": false
+    },
+    {
+      "text": "Open charter",
+      "ariaLabel": null,
+      "disabled": true
+    }
+  ]
+}

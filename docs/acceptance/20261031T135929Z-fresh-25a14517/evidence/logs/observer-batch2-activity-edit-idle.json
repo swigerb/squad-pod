@@ -1,0 +1,79 @@
+{
+  "evidenceClass": [
+    "BROWSER",
+    "FIXTURE"
+  ],
+  "method": "Live DOM samples every five seconds after editing the authored fixture; no writes/clicks during interval",
+  "samples": [
+    {
+      "utc": "2026-10-31T14:46:21.373Z",
+      "elapsedMs": 0,
+      "activeCount": 1,
+      "expandedMemberStatus": "active",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:46:26.378Z",
+      "elapsedMs": 5005,
+      "activeCount": 1,
+      "expandedMemberStatus": "active",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:46:31.379Z",
+      "elapsedMs": 10006,
+      "activeCount": 1,
+      "expandedMemberStatus": "active",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:46:36.387Z",
+      "elapsedMs": 15014,
+      "activeCount": 1,
+      "expandedMemberStatus": "active",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:46:41.388Z",
+      "elapsedMs": 20015,
+      "activeCount": 1,
+      "expandedMemberStatus": "active",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:46:46.389Z",
+      "elapsedMs": 25016,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:46:51.389Z",
+      "elapsedMs": 30016,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:46:56.389Z",
+      "elapsedMs": 35016,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:47:01.395Z",
+      "elapsedMs": 40022,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:47:06.406Z",
+      "elapsedMs": 45033,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    }
+  ]
+}

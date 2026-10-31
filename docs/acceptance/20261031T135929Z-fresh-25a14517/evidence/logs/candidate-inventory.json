@@ -1,0 +1,51 @@
+{
+  "runId": "20261031T135929Z-fresh-25a14517",
+  "capturedAtUtc": "2026-10-31T14:04:11.081Z",
+  "evidenceClass": "PREPARATION",
+  "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+  "productTree": "e8bc96dc315b46d9926a0065a132e3d63636580c",
+  "planSha": "0c22cffded2985370a80158d6bc252effa16c01c",
+  "planDocumentSha256": "82b2ab59ae8d8592e17cf3ddfb2a990cbf87452c779f21ab0dd102ec9add7fa4",
+  "ci": {
+    "runId": 41173070887,
+    "event": "push",
+    "headSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "conclusion": "success",
+    "classification": "Historical build/fixture provenance only; not fresh native or REAL evidence."
+  },
+  "packages": [
+    {
+      "role": "VSIX",
+      "artifactId": 13031881538,
+      "artifactName": "squad-pod-vsix",
+      "file": "squad-pod-0.1.0.vsix",
+      "bytes": 578477,
+      "sha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "installedComparison": {
+        "status": "NOT EXECUTED",
+        "files": null
+      }
+    },
+    {
+      "role": "STANDALONE",
+      "artifactId": 13031892507,
+      "artifactName": "owned-terminal-windows-latest",
+      "file": "squad-pod-observer-0.1.0.tgz",
+      "bytes": 423982,
+      "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "installedComparison": {
+        "status": "NOT EXECUTED",
+        "files": null
+      }
+    }
+  ],
+  "ciTerminalReportProjection": {
+    "head": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "sourceDirty": "",
+    "failures": [],
+    "tarballSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+    "warning": "Historical CI fixture context only; no old checks imported."
+  },
+  "readOnlyVerification": "Full downloaded bytes hashed with SHA-256; expected sizes and hashes matched exactly.",
+  "installedComparison": "NOT EXECUTED"
+}

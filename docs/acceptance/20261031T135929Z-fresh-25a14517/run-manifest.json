@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 1,
+  "runId": "20261031T135929Z-fresh-25a14517",
+  "status": "BATCH 3 LOCAL HANDOFF CORRECTION AND PARTIAL NATIVE CHECKPOINT",
+  "createdAtUtc": "2026-10-31T14:04:11.081Z",
+  "startUtc": "2026-10-31T13:59:29.243Z",
+  "testingStopUtc": "2026-10-31T15:44:29.243Z",
+  "hardStopUtc": "2026-10-31T15:59:29.243Z",
+  "executor": "Scout",
+  "humanApprover": "repository owner",
+  "plan": {
+    "sha": "0c22cffded2985370a80158d6bc252effa16c01c",
+    "path": "docs/native-acceptance.md",
+    "sha256": "82b2ab59ae8d8592e17cf3ddfb2a990cbf87452c779f21ab0dd102ec9add7fa4"
+  },
+  "product": {
+    "sha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "tree": "e8bc96dc315b46d9926a0065a132e3d63636580c",
+    "gitObjectVerified": true,
+    "rebuilt": false,
+    "localMembershipFixExcluded": "2522124e48b46a702427692869470680e832351e",
+    "installedIdentity": "VERIFIED: 188 VSIX payload files and 102 standalone payload files matched"
+  },
+  "evidenceBranch": "acceptance/20261031T135929Z-fresh-25a14517",
+  "baseBranch": "master",
+  "repositoryHeadAtPreparation": "0c22cffded2985370a80158d6bc252effa16c01c",
+  "ci": {
+    "runId": 41173070887,
+    "event": "push",
+    "headSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "conclusion": "success",
+    "classification": "Historical build/fixture provenance only; not fresh native or REAL evidence."
+  },
+  "packages": [
+    {
+      "role": "VSIX",
+      "artifactId": 13031881538,
+      "artifactName": "squad-pod-vsix",
+      "file": "squad-pod-0.1.0.vsix",
+      "bytes": 578477,
+      "sha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "installedComparison": {
+        "status": "VERIFIED",
+        "files": 188,
+        "reference": "evidence/logs/installed-identity.json"
+      }
+    },
+    {
+      "role": "STANDALONE",
+      "artifactId": 13031892507,
+      "artifactName": "owned-terminal-windows-latest",
+      "file": "squad-pod-observer-0.1.0.tgz",
+      "bytes": 423982,
+      "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "installedComparison": {
+        "status": "VERIFIED",
+        "files": 102,
+        "reference": "evidence/logs/installed-identity.json"
+      }
+    }
+  ],
+  "runtime": {
+    "os": "Windows 10.0.26300.0",
+    "architecture": "x64",
+    "node": "26.13.0",
+    "npm": "11.20.0",
+    "vscode": {
+      "version": "1.144.0",
+      "commit": "2c33b50b16c472efe58357d1d2a8a5414bc23fbf",
+      "architecture": "x64"
+    },
+    "git": "2.56.0.windows.3",
+    "dependencyFeed": "configured corporate npm feed; no public-registry requests",
+    "copilotCli": "NOT EXECUTED; no REAL producer launch authorized",
+    "workspaceAgentTemplate": "NOT EXECUTED; disposable authored fixtures planned",
+    "browser": "Edge 156.0.0.0; read-only BROWSER/FIXTURE observations completed in Batch 2, not full standalone acceptance.",
+    "nodePty": "1.1.0; Windows official prebuild loaded; no source rebuild",
+    "conPty": "conpty.dll/OpenConsole.exe file version 1.23.2510.08001"
+  },
+  "isolatedAliases": {
+    "userData": "isolated-user-data",
+    "extensions": "isolated-extensions",
+    "projectA": "project-A",
+    "projectB": "project-B",
+    "cliHome": "fixture-only-cli-home",
+    "standaloneInstall": "observer-install"
+  },
+  "authorization": {
+    "source": "CURRENT_USER_REQUEST",
+    "approvedAtUtc": "2026-10-31T13:59:29.243Z",
+    "maxMinutes": 120,
+    "aiSpendLimit": 0,
+    "reserveFinalMinutes": 15,
+    "native": "Exact installed VSIX in isolated VS Code with disposable fixtures only",
+    "observation": "Exact standalone package, explicit disposable project; human enters credentials privately",
+    "officeControl": "Separate opt-in/authentication; writes restricted to disposable selected-project files",
+    "terminal": "Synthetic --fixture only; separate human authentication",
+    "publication": "Reviewed redacted run files and selected media in swigerb/squad-pod dedicated branch/draft PR to master; duplicate-aware redacted defects",
+    "mandatoryPublicationConfirmation": "Batch 1 and Batch 2 approved and published; user requested Batch 3 publication, exact-content preview confirmation pending.",
+    "prohibited": [
+      "REAL AI launches",
+      "paid producer tasks",
+      "physical devices",
+      "normal profiles",
+      "personal workspaces",
+      "private logs",
+      "credential capture",
+      "permission changes",
+      "deployment",
+      "merging",
+      "issue closure",
+      "github/awesome-copilot writes",
+      "registry.npmjs.org requests"
+    ],
+    "stopConditions": [
+      "privacy exposure",
+      "data loss",
+      "unintended launch",
+      "writes outside disposable scope",
+      "wrong-member attribution",
+      "deadline"
+    ]
+  },
+  "evidenceClasses": {
+    "NATIVE": "Installed extension in desktop VS Code",
+    "REAL": "Actual approved producer emission; forbidden in this run",
+    "FIXTURE": "Deliberately authored data or --fixture synthetic terminal",
+    "BROWSER": "Browser observation; emulation never establishes physical-device evidence",
+    "PREPARATION": "Read-only provenance/administrative evidence, not acceptance"
+  },
+  "history": {
+    "status": "MISSING HISTORICAL EVIDENCE",
+    "oldRowsRecovered": 0,
+    "originalIdMappingPreserved": false,
+    "contextHandoff": "36d6697874fe4cb3e94deb8c62ba4397508de7e3",
+    "separatedCandidates": [
+      "0988f272da855c3b1158b5ca110f5c8614cc4279",
+      "e9fde5616f0a85c9aa5c2238b5e8ec169b383e25",
+      "25a14517f894f10e2e8169612499a04f8bcb49ce"
+    ],
+    "importedHistoricalObservations": 0
+  },
+  "counts": {
+    "cases": 27,
+    "sourceAndUserGroups": 296,
+    "commonDefinitions": 8,
+    "commonApplications": 216,
+    "totalGroups": 512,
+    "atomicRows": 1932,
+    "byOutcome": {
+      "BLOCKED": 1890,
+      "PASS": 42
+    },
+    "byObservedEvidenceClass": {
+      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1890,
+      "NATIVE+FIXTURE": 21,
+      "BROWSER+FIXTURE": 21
+    }
+  },
+  "cleanup": {
+    "retained": [
+      "isolated native VS Code host",
+      "observation-only standalone server and private console",
+      "run-owned package installations, fixtures, baselines and private raw media"
+    ],
+    "deletionApproved": false,
+    "credentials": "Never captured; human authenticated read-only; deliberate full page reload later returned to login; terminal/control authentication unused.",
+    "latestNative": {
+      "originalLayoutRestoredByteForByte": true,
+      "changedLayoutRetained": true,
+      "editorClosed": true,
+      "dialogsClosed": true,
+      "originalProjectFilesUnchangedExceptIntentionalLiveOff": true,
+      "retainedCatalogEntry": "Batch3 smoke B (run-owned project B), not launched; retained for review, not deleted",
+      "workspaceLiveActivity": false,
+      "directorySuggestions": false,
+      "privateLogsReadInThisContinuation": false,
+      "runningProcesses": {
+        "observedAtUtc": "2026-10-31T15:40:20.1697256Z",
+        "native": {
+          "alias": "isolated-native-vscode",
+          "running": true,
+          "exactOwnedPidCheckedPrivately": true,
+          "windowTitleMatchesOwnedAcceptanceHost": true
+        },
+        "observer": {
+          "alias": "observer-server-A",
+          "running": true,
+          "loopbackListenerPresent": true,
+          "exactOwnedPidCheckedPrivately": true
+        },
+        "stopped": false,
+        "deletionPerformed": false,
+        "limitation": "Point-in-time process check, not an assurance of continued operation or current browser authentication."
+      },
+      "filesDeleted": false
+    }
+  },
+  "signoff": {
+    "native": "PENDING HUMAN ACCEPTANCE",
+    "real": "BLOCKED - NOT AUTHORIZED",
+    "standalone": "PENDING HUMAN ACCEPTANCE"
+  },
+  "remoteCheckpoint": {
+    "verifiedCommit": "a85ce4cd530d08edb367f6264e42c7efca9f1383",
+    "draftPr": "https://github.com/swigerb/squad-pod/pull/141",
+    "closingIssuesReferences": [],
+    "readbackReceipt": "evidence/logs/published-batch-2-readback-a85ce4cd530d08edb367f6264e42c7efca9f1383.json",
+    "filesReadBack": 47,
+    "newBatch": "LOCAL Batch 3 pending exact-content publication confirmation"
+  },
+  "prTemplate": "No repository PR template present at preparation HEAD; inherited owner template endpoint returned 404.",
+  "automationSafety": "No labels, assignees, review requests or AI workflow dispatch. Product code is unchanged. Evidence publication may trigger existing repository CI; CI is not native acceptance.",
+  "media": {
+    "screenshots": 11,
+    "recording": "evidence/recordings/native-idle-motion.mp4",
+    "durationSeconds": 60.002,
+    "rawDetailsScreenshot": "WITHHELD: private fixture absolute paths; no public screenshot evidence for that detail view",
+    "batch3ScreenshotLimitations": "Two reviewed native screenshots, not full seat/motion/pixel acceptance. See batch-3 summary."
+  },
+  "updatedAtUtc": "2026-10-31T15:42:39.490Z",
+  "batch2": {
+    "summary": "evidence/logs/batch-2-summary.json",
+    "addedPasses": 37,
+    "baselineRestored": true,
+    "nativeWindowRestored": true,
+    "noFullCaseAcceptance": true
+  },
+  "batch3": {
+    "summary": "evidence/logs/batch-3-summary.json",
+    "caseTriage": "evidence/logs/batch-3-case-triage.json",
+    "atomicOutcomesChanged": false,
+    "priorPassLinksRepaired": [
+      "N-03-S016-A006",
+      "F-02-S019-A007"
+    ],
+    "noFullCaseAcceptance": true
+  }
+}

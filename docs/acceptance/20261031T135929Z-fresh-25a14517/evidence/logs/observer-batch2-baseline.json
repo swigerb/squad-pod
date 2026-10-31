@@ -1,0 +1,40 @@
+{
+  "capturedAtUtc": "2026-10-31T14:42:43.580Z",
+  "files": [
+    {
+      "path": ".squad-pod/layout.json",
+      "bytes": 38649,
+      "sha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13"
+    },
+    {
+      "path": ".squad/agents/ada/charter.md",
+      "bytes": 208,
+      "sha256": "c8452453d79b14e2511aab5221356726d81061187ece1a20944bb8f921ab04e8"
+    },
+    {
+      "path": ".squad/agents/scribe/charter.md",
+      "bytes": 33,
+      "sha256": "536f4ce0dccab25f0363898481e599e2bc908de574ffdb0474bfac0aeba80c46"
+    },
+    {
+      "path": ".squad/sessions/historical.json",
+      "bytes": 179,
+      "sha256": "93919ab34b71d7d82e4367da434c192cc9ec75328e1d215f7ae6a283edcb32e3"
+    },
+    {
+      "path": ".squad/team.md",
+      "bytes": 358,
+      "sha256": "05ccbe8a7d825ba47800450539406f4973c4713b923925928eee2a8a1ae729ac"
+    },
+    {
+      "path": ".vscode/settings.json",
+      "bytes": 40,
+      "sha256": "fd197e6a077f4cafa1e6aa411e0f12a56f9d9811ccb3a89673e61b352c9f09aa"
+    },
+    {
+      "path": "acceptance-input.txt",
+      "bytes": 65,
+      "sha256": "b3234cb30971702c78a94a7626b0f66410aeaaeceefc7ddffa7c435a7cc2f6c4"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "runId": "20261031T135929Z-fresh-25a14517",
+  "recordedAtUtc": "2026-10-31T14:25:49.970Z",
+  "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+  "evidenceClasses": [
+    "NATIVE",
+    "FIXTURE"
+  ],
+  "cold": {
+    "commandUtc": "2026-10-31T14:13:46.773Z",
+    "visibleMemberSlugs": [
+      "ada",
+      "bea"
+    ],
+    "squadInfoCount": 2,
+    "activeCount": 0
+  },
+  "recreated": {
+    "commandUtc": "2026-10-31T14:16:34.863Z",
+    "command": "Developer: Reload Webviews",
+    "hostLifetime": "Same extension host as cold open; no host termination/start between these actions",
+    "squadInfoCount": 2,
+    "activeCount": 0,
+    "visibleMemberSlugs": [
+      "ada",
+      "bea"
+    ]
+  },
+  "fullReload": {
+    "commandUtc": "2026-10-31T14:17:04.957Z",
+    "command": "Developer: Reload Window",
+    "hostLifetime": "Old extension host exited; a new extension host started",
+    "squadInfoCount": 2,
+    "activeCount": 0,
+    "visibleMemberSlugs": [
+      "ada",
+      "bea"
+    ]
+  },
+  "hostDiagnosticProjection": [
+    {
+      "sourceLocalTime": "2026-10-31 15:13:10.681",
+      "event": "host-A started"
+    },
+    {
+      "sourceLocalTime": "2026-10-31 15:17:03.500",
+      "event": "host-A exited with code 0"
+    },
+    {
+      "sourceLocalTime": "2026-10-31 15:17:04.810",
+      "event": "host-B started"
+    }
+  ],
+  "sourceClockNote": "Native diagnostic local clock is retained as local text, not mislabeled UTC. UTC action timestamps are independently recorded in native-actions.jsonl.",
+  "savedStateRead": {
+    "method": "Read-only SQLite query for exact squad-pod.squad-pod key in isolated profile only",
+    "agents": {
+      "ada": {
+        "palette": 0,
+        "seatId": "chair-left-1"
+      },
+      "bea": {
+        "palette": 1,
+        "seatId": "chair-left-2"
+      }
+    },
+    "seats": {
+      "ada": "chair-left-1",
+      "bea": "chair-left-2"
+    },
+    "limitation": "The exact seat map was read around the full-reload sequence, not captured at every earlier boundary. Full seat-preservation subchecks remain blocked."
+  },
+  "conclusion": "Membership count rendered correctly in these observed attempts only. Not proof of a replay fix. Local fix 2522124e is excluded."
+}
