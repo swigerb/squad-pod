@@ -380,11 +380,15 @@ async function main() {
           assert.ok(proof.every(label=>!label.whiteLeader),'normal labels must have no long white leader line');
           const sparse=proof.filter(label=>label.id==='member-0'||label.id==='member-1');
           assert.equal(sparse.length,2);
-          assert.equal(sparse[0].y,sparse[1].y,'sparse same-row labels must retain a shared floating anchor');
+          assert.ok(sparse.every(label=>!label.docked
+            &&Math.abs(label.y+label.height-(window.fixture.bounds(label.id).top-8))<2
+            &&Math.abs(label.x+label.width/2-
+              (window.fixture.bounds(label.id).left+window.fixture.bounds(label.id).right)/2)<=12),
+          'sparse same-row labels must float near each character anchor');
           assert.ok(sparse[0].x+sparse[0].width<=sparse[1].x||sparse[1].x+sparse[1].width<=sparse[0].x,
             'sparse same-row label rectangles must remain disjoint');
           record.measuredGeometryProof={labels:proof.length,spriteOverlaps:0,whiteLeaderLines:0};
-          record.sparseSameRowProof={labels:sparse.length,sharedTop:sparse[0].y};
+          record.sparseSameRowProof={labels:sparse.length,tops:sparse.map(label=>label.y)};
           await page.screenshot({ path: path.join(output, 'after-wide-1280x900.png') });
           await page.evaluate(() => window.fixture.toolbarEdgeProof());
           await page.waitForFunction(() => document.querySelector('[data-label-dock="true"]'));
