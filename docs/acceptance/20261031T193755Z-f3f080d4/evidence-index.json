@@ -5,12 +5,12 @@
   "entries": [
     {
       "relativePath": "behavioral-matrix.json",
-      "bytes": 9838,
-      "sha256": "2f720d0063b1f648b1be90904f62fa21c3e0e6aab4611429562e41c7e1c1f068",
+      "bytes": 14547,
+      "sha256": "a01f8bf9afacc2d0cc3087f5c1a5b295157dc21f6efa09d7aace2139d031abad",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.778Z",
-      "fileTimestampUtc": "2026-10-31T19:43:00.774Z",
+      "indexedUtc": "2026-10-31T20:43:05.594Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.956Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [],
       "atomicIds": [],
@@ -18,12 +18,12 @@
     },
     {
       "relativePath": "case-ledger-atomic.json",
-      "bytes": 2185173,
-      "sha256": "ee47b3e6a7b5a4e59d5f4a828c96ffe66e0fa4a1d4b244a4c1d1509cdfe26b50",
+      "bytes": 2196558,
+      "sha256": "e839c773a2ab6fa84a6b821e5e51373e4e87cc708b5c8a345b7c40dd0fb57158",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.781Z",
-      "fileTimestampUtc": "2026-10-31T19:43:00.771Z",
+      "indexedUtc": "2026-10-31T20:43:05.597Z",
+      "fileTimestampUtc": "2026-10-31T20:43:05.493Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [],
       "atomicIds": [],
@@ -31,12 +31,64 @@
     },
     {
       "relativePath": "case-ledger.json",
-      "bytes": 729818,
-      "sha256": "0ff998dcb1f7b238766222bc4ad90cdd5caed338293903f24dc8df311c6909d9",
+      "bytes": 735228,
+      "sha256": "eb2e02897238d654d9bd31108ce6f0340555cfe29f4ce6a13a1e20d500f21b45",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.783Z",
-      "fileTimestampUtc": "2026-10-31T19:43:00.765Z",
+      "indexedUtc": "2026-10-31T20:43:05.599Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.954Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "checkpoints/batch-1-local-receipt.json",
+      "bytes": 422,
+      "sha256": "04fd5881ec5b2f53534780f35b91020755b2a91d23c44d247b65c3e54ef933e5",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.600Z",
+      "fileTimestampUtc": "2026-10-31T20:13:27.148Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "checkpoints/batch-2-local-receipt.json",
+      "bytes": 487,
+      "sha256": "e5b9e12927ca42d345ecd3d884922f3ca8d4e19848c3b57ca4e450902d021aef",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.601Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.957Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "checkpoints/publication-9f50d9354793.json",
+      "bytes": 270,
+      "sha256": "250b4b98937c0e3408e8fe13cf744507f57607d0cecd090ebcb736752583ce15",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.602Z",
+      "fileTimestampUtc": "2026-10-31T19:56:59.439Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "checkpoints/readback-9f50d9354793.json",
+      "bytes": 438,
+      "sha256": "c49ae3dbb8d658467220324e1a61c983825a8aaadb8b78b0ac9c1bc7e20fb4fa",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.603Z",
+      "fileTimestampUtc": "2026-10-31T19:57:07.112Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [],
       "atomicIds": [],
@@ -48,7 +100,7 @@
       "sha256": "81d70a35d53a5bbba2289f03a0524f83d49a13a8dbcad1684aed7462493d8ab3",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.784Z",
+      "indexedUtc": "2026-10-31T20:43:05.604Z",
       "fileTimestampUtc": "2026-10-31T19:43:00.752Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [
@@ -58,12 +110,25 @@
       "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
     },
     {
+      "relativePath": "evidence/logs/helper-project-b-panel-closed.json",
+      "bytes": 1397,
+      "sha256": "5b138f6485130162ee7b723ff8d4313676b8567ab43d86e15c1740328f571788",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.605Z",
+      "fileTimestampUtc": "2026-10-31T20:07:51.072Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
       "relativePath": "evidence/logs/installed-payload.json",
       "bytes": 56369,
       "sha256": "104961e0cc3135d6707294d16af5ef7f7a6868661f8bb6941cc84eeab412330c",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.786Z",
+      "indexedUtc": "2026-10-31T20:43:05.606Z",
       "fileTimestampUtc": "2026-10-31T19:40:54.600Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [
@@ -78,7 +143,7 @@
       "sha256": "bb82b01345040c3192e8c5d8227cb868e745a8893dddfccad84aeca523c3ead4",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.788Z",
+      "indexedUtc": "2026-10-31T20:43:05.607Z",
       "fileTimestampUtc": "2026-10-31T19:43:00.747Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [
@@ -88,12 +153,1549 @@
       "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
     },
     {
+      "relativePath": "evidence/logs/native-batch-2-host.json",
+      "bytes": 861,
+      "sha256": "a8835d1433e7a0257e1417dee484ae754111c4caefefe2583dc0db84b64c68dc",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.608Z",
+      "fileTimestampUtc": "2026-10-31T20:34:38.309Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03",
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-batch-2-process-safety.json",
+      "bytes": 752,
+      "sha256": "99426e42688c975dac1d4b291d12bc578f4f7c630b5e4a46da3131e2d433600f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.608Z",
+      "fileTimestampUtc": "2026-10-31T20:37:23.858Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-05",
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [
+        "N-05-S001-A002",
+        "N-05-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-batch-2-seats.json",
+      "bytes": 1673,
+      "sha256": "86165d92337b70628158d61835125101bf7b32c96f770d99732a472dc6e18299",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.609Z",
+      "fileTimestampUtc": "2026-10-31T20:35:06.285Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-cold-content.json",
+      "bytes": 11050,
+      "sha256": "6eba28c8cd1f65f7b92509728aadc21a27e07603a3b61b51b46dde5574edf5bd",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.610Z",
+      "fileTimestampUtc": "2026-10-31T19:58:33.501Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-cold-fitted-office.json",
+      "bytes": 10916,
+      "sha256": "af567f89cb42bf206f2c29f02b00723c4282327c10bc233f9f043c0cda7a35b8",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.611Z",
+      "fileTimestampUtc": "2026-10-31T20:01:29.829Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-cold-host-roles-redacted.json",
+      "bytes": 859,
+      "sha256": "59955b8cff37766f3c7088c9620e0c943b13820c7cf703e1849ceb663aa6be2f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.612Z",
+      "fileTimestampUtc": "2026-10-31T20:02:51.997Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-cold-processes.json",
+      "bytes": 1155,
+      "sha256": "d8e90136751935ab7036f1e4daba5e70d0ad3294f57202f8db4c3ed50d988b42",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.613Z",
+      "fileTimestampUtc": "2026-10-31T19:57:43.947Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-cold-saved-seats.json",
+      "bytes": 1047,
+      "sha256": "0bcdd7b5ceec6bafeb4c3d7e1099a9f97490be0284f2376639c9b53c43b601c1",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.614Z",
+      "fileTimestampUtc": "2026-10-31T20:01:29.993Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-cold-shell.json",
+      "bytes": 8728,
+      "sha256": "7e31deb851f8211a5920d345d6e7b4b580d37384f864f6d87b671badc1da7362",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.615Z",
+      "fileTimestampUtc": "2026-10-31T19:57:26.826Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-cold-squad-info.json",
+      "bytes": 13186,
+      "sha256": "e75e56e858fff1fde84a8b38d695cafc76a3bf36d9b8347c92279a97102fae45",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.616Z",
+      "fileTimestampUtc": "2026-10-31T19:59:46.209Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directories-after-reload.json",
+      "bytes": 18456,
+      "sha256": "05edb3ec279653ca369fcd6fab9676ac1fe23214a355515352981b273b4fa254",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.617Z",
+      "fileTimestampUtc": "2026-10-31T20:34:35.414Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "D-01"
+      ],
+      "atomicIds": [
+        "D-01-S002-A004",
+        "D-01-S002-A005"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directories-help-open.json",
+      "bytes": 18309,
+      "sha256": "e4f01f0f67dac4111c24ff9c81b16d48ebff079a10c8c5d15f00df41557db377",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.618Z",
+      "fileTimestampUtc": "2026-10-31T20:28:49.035Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directories-initial.json",
+      "bytes": 16473,
+      "sha256": "67eb0fdb45c3cdfc50c25efe670118d83f59d2d9325cca040a90a5024a64312f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.619Z",
+      "fileTimestampUtc": "2026-10-31T20:28:10.612Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "D-01"
+      ],
+      "atomicIds": [
+        "D-01-S002-A004",
+        "D-01-S002-A005"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directory-b-ready.json",
+      "bytes": 18378,
+      "sha256": "c5d63318c4376d7a508fdc670f5ec4d33b408399ef753cf96f775bd3dd3f156e",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.620Z",
+      "fileTimestampUtc": "2026-10-31T20:28:49.494Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "D-01"
+      ],
+      "atomicIds": [
+        "D-01-S002-A004",
+        "D-01-S002-A005"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directory-b-renamed.json",
+      "bytes": 21264,
+      "sha256": "63fbd43602fa8f12f7fd38af8f212b35ad9ef1418f3140f23ffe94940351be37",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.621Z",
+      "fileTimestampUtc": "2026-10-31T20:29:29.190Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "D-01"
+      ],
+      "atomicIds": [
+        "D-01-S002-A004",
+        "D-01-S002-A005"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directory-b-saved.json",
+      "bytes": 18379,
+      "sha256": "f0bdb639942d19ea3d2ee0520fcdb9b53c340f51894187b43e0847004c916c55",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.622Z",
+      "fileTimestampUtc": "2026-10-31T20:29:01.387Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directory-duplicate-a.json",
+      "bytes": 21156,
+      "sha256": "3502b349ec78ffb3ff84cf438b2e8a02019faf21142dc12fcc88fca71fc696a6",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.623Z",
+      "fileTimestampUtc": "2026-10-31T20:29:01.743Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "D-01"
+      ],
+      "atomicIds": [
+        "D-01-S002-A004",
+        "D-01-S002-A005"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directory-file-rejected.json",
+      "bytes": 21529,
+      "sha256": "49da5c9977c90d4a7c7f4865009e8c2a9b6fc46aeaaebd789da04b99ba3920d7",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.623Z",
+      "fileTimestampUtc": "2026-10-31T20:29:28.523Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "D-01"
+      ],
+      "atomicIds": [
+        "D-01-S002-A004",
+        "D-01-S002-A005"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directory-initial.json",
+      "bytes": 13463,
+      "sha256": "5b0b150ce56f343949233444ea4cc8a1d2930a58fc722c014e076f94097197b1",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.624Z",
+      "fileTimestampUtc": "2026-10-31T20:08:50.599Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directory-missing-rejected.json",
+      "bytes": 21529,
+      "sha256": "e76acc5f98702f15c8643fc74c62483ccc4578584e64f0eede578d8c15bd550c",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.625Z",
+      "fileTimestampUtc": "2026-10-31T20:29:27.819Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "D-01"
+      ],
+      "atomicIds": [
+        "D-01-S002-A004",
+        "D-01-S002-A005"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directory-suggestions-off.json",
+      "bytes": 16243,
+      "sha256": "06212465f99f693b9b2deec7d39bc1ed49041e29294150738de192bbd900538c",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.626Z",
+      "fileTimestampUtc": "2026-10-31T20:32:17.297Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-05"
+      ],
+      "atomicIds": [
+        "N-05-S001-A002",
+        "N-05-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-directory-suggestions-workspace-off.json",
+      "bytes": 16238,
+      "sha256": "80ae45320e917dcd3c867794f2989ca013358f8d990f2a36df44b2561f9e2174",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.627Z",
+      "fileTimestampUtc": "2026-10-31T20:32:44.974Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-05"
+      ],
+      "atomicIds": [
+        "N-05-S001-A002",
+        "N-05-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-full-reload-command.json",
+      "bytes": 9107,
+      "sha256": "816824b9b05bb247bb4816834d732331484d429dac3490af6bac063248edff5f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.628Z",
+      "fileTimestampUtc": "2026-10-31T20:05:36.976Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-full-reload-host.json",
+      "bytes": 860,
+      "sha256": "6a97755ffd82d4e194cdbcfab3edbc2b83a3a44f02e90f96388c8e3cef357ea8",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.629Z",
+      "fileTimestampUtc": "2026-10-31T20:06:21.357Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01"
+      ],
+      "atomicIds": [
+        "N-01-S002-A003",
+        "N-01-S003-A001",
+        "N-01-S003-A003"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-full-reload-info-settled.json",
+      "bytes": 11185,
+      "sha256": "78e9a244f7338125758f254f2a8e989e998a4d06468619ade5e69e9e4fb879bc",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.630Z",
+      "fileTimestampUtc": "2026-10-31T20:06:42.369Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01"
+      ],
+      "atomicIds": [
+        "N-01-S002-A003",
+        "N-01-S003-A001",
+        "N-01-S003-A003"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-full-reload-info.json",
+      "bytes": 10897,
+      "sha256": "130c20b949a0ea2888e7aa5603d86e26297afba22821ef8e390b3728c1736efb",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.631Z",
+      "fileTimestampUtc": "2026-10-31T20:06:18.633Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-full-reload-seats.json",
+      "bytes": 1047,
+      "sha256": "03018eb29ccffa353540d20a5e6aa62054e97c5412801a5ab1599358094a98c7",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.632Z",
+      "fileTimestampUtc": "2026-10-31T20:06:18.937Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01"
+      ],
+      "atomicIds": [
+        "N-01-S002-A003",
+        "N-01-S003-A001",
+        "N-01-S003-A003"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-after-reload-disk.json",
+      "bytes": 586,
+      "sha256": "4c72361e84eb469796e2f67f1b668fc867bf5c229184c8ec6963547b56c8cec5",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.633Z",
+      "fileTimestampUtc": "2026-10-31T20:34:35.926Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-after-save-helper-block.json",
+      "bytes": 21553,
+      "sha256": "191239ff7a385d8f671aa7bcbc324132a179781ef3a99434bb3abf2bb2f30fa1",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.634Z",
+      "fileTimestampUtc": "2026-10-31T20:33:59.736Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03",
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-baseline-disk.json",
+      "bytes": 666,
+      "sha256": "29f1f69e385c9130587a355bb0e2b0502425787dbcaf348f29abaa5c9cd63836",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.635Z",
+      "fileTimestampUtc": "2026-10-31T20:33:39.635Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-editor-initial.json",
+      "bytes": 21545,
+      "sha256": "669cc580858b1df81a6bb8b55a6b8f3181bf189652e789d15ab9ec777fcd0d05",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.636Z",
+      "fileTimestampUtc": "2026-10-31T20:32:45.476Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-expanded-draft-disk.json",
+      "bytes": 586,
+      "sha256": "6ab5ac03dae5b93528ebc21759e87ce7b53bfb7610ce38a00b345fdd3102998e",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.637Z",
+      "fileTimestampUtc": "2026-10-31T20:33:39.901Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-expanded-draft.json",
+      "bytes": 21553,
+      "sha256": "26e7ed4d7c6c74d9375c6550bf1d1a65a2176d9eee1a783039afd9e833f726c4",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.637Z",
+      "fileTimestampUtc": "2026-10-31T20:33:39.804Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-expanded-saved-disk.json",
+      "bytes": 586,
+      "sha256": "3b86c907ceee06e01acdf945af19c2ead1f84b51e42be87f4b3d4b5d50dbb236",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.638Z",
+      "fileTimestampUtc": "2026-10-31T20:34:10.850Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-expanded-saved.json",
+      "bytes": 21545,
+      "sha256": "ce0f0d00dd13eed0f2b034532307c727516e2c9c92ef122e4d2a88a19a4ae50e",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.639Z",
+      "fileTimestampUtc": "2026-10-31T20:34:10.929Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-reset-disk.json",
+      "bytes": 586,
+      "sha256": "8a2181f94c7c0467668e890f52bd57526461c919ac362cb8949bdec4bf350e38",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.640Z",
+      "fileTimestampUtc": "2026-10-31T20:33:40.447Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-layout-reset.json",
+      "bytes": 21545,
+      "sha256": "fe6ae1ecd4ba38910e41386d998871b4930bfa5e9032c49790d7bebfaf053c87",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.641Z",
+      "fileTimestampUtc": "2026-10-31T20:33:40.384Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-live-confirmation-settled.json",
+      "bytes": 10325,
+      "sha256": "c8aeee575485116ece6f6b65b6868f85ced8b831ec23082ea53f7dffc84ca7de",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.642Z",
+      "fileTimestampUtc": "2026-10-31T20:29:43.148Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-live-confirmation.json",
+      "bytes": 10325,
+      "sha256": "cb4bbf5edcf04e21a4ec393a9a193330d07126feb7651dd718afb7910fac4814",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.642Z",
+      "fileTimestampUtc": "2026-10-31T20:29:29.919Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-members-after-layout-reload.json",
+      "bytes": 14501,
+      "sha256": "a36d4123d71598b7f72a8b77b60402aef93ffcbad9e60c0ec796d7ac8503b9fe",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.643Z",
+      "fileTimestampUtc": "2026-10-31T20:34:35.683Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-panel-cold.json",
+      "bytes": 654,
+      "sha256": "7ffd680e393813091102db6ed2a8e3798dafe9c51ef3eadd63557e958bfe745f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.644Z",
+      "fileTimestampUtc": "2026-10-31T19:57:56.345Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-panel-open-shell.json",
+      "bytes": 11410,
+      "sha256": "316000400233a5c74da604a2619f6007a9b1e48ef62ae8e1599349884ea3ddb2",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.645Z",
+      "fileTimestampUtc": "2026-10-31T19:57:56.267Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-a-return-host.json",
+      "bytes": 859,
+      "sha256": "37a1a20ba81ea5ef1017dc65636bf2a121d8cc75d323a3e97d0ba223068cdf29",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.646Z",
+      "fileTimestampUtc": "2026-10-31T20:08:50.268Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-a-return-info.json",
+      "bytes": 11182,
+      "sha256": "0c412dd7a7702c8030da86ca95aa6e397e4f084e77e6722d802446a930d6e9b5",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.647Z",
+      "fileTimestampUtc": "2026-10-31T20:08:47.551Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-a-return-seats.json",
+      "bytes": 1673,
+      "sha256": "8b2cfe588b850daecf13f49fcd85a5f16aad536566831010ab5f18d79b6c02fa",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.648Z",
+      "fileTimestampUtc": "2026-10-31T20:08:47.879Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-a-return-shell.json",
+      "bytes": 8301,
+      "sha256": "322e4191106cdc5b8bf1960814b128f12af4451255717feaff782e4d220618e3",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.649Z",
+      "fileTimestampUtc": "2026-10-31T20:08:34.068Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-b-host.json",
+      "bytes": 857,
+      "sha256": "0dbb4a1de5898b7583e5b5911da76b6fd66b171971e38e1bd3ca895db3c7ec7b",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.650Z",
+      "fileTimestampUtc": "2026-10-31T20:07:15.458Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-b-open-content.json",
+      "bytes": 10148,
+      "sha256": "c81e3e2f184023f0caf9fce1fb3e77248431bb5b02c5f2bdd15cf08e14bfb26f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.651Z",
+      "fileTimestampUtc": "2026-10-31T20:08:05.677Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-b-open-host.json",
+      "bytes": 857,
+      "sha256": "44219c26e154731689d0d7cbe62064b8b02cbf88da6fdd5dc4a308860f55026c",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.651Z",
+      "fileTimestampUtc": "2026-10-31T20:08:10.042Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-b-open-info.json",
+      "bytes": 12043,
+      "sha256": "b6c74ff13159d02dc08d4bcb54fa7347f015fb698a3e01bc4ba82a0900f66752",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.652Z",
+      "fileTimestampUtc": "2026-10-31T20:08:07.371Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-b-open-seats.json",
+      "bytes": 1673,
+      "sha256": "c839f5293b4d6fff3ccc8520b260e156837a5470758f04d05f358ff2c008c536",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.653Z",
+      "fileTimestampUtc": "2026-10-31T20:08:07.660Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-b-seats.json",
+      "bytes": 1162,
+      "sha256": "18bbbdb2aefe85cee884c661d9f027484e24a2e895d271d161a014b72a9c8457",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.654Z",
+      "fileTimestampUtc": "2026-10-31T20:07:13.025Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-b-shell.json",
+      "bytes": 8162,
+      "sha256": "cd0f2335aadb262167bdfceaf0257248067884a35168ed1e2cdacf79a8f258ec",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.655Z",
+      "fileTimestampUtc": "2026-10-31T20:07:11.338Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-project-switch-actions.jsonl",
+      "bytes": 476,
+      "sha256": "6c0dd45da76fed2a80c10f37c75b5049e8b3e17d666250fc493a4d02ffa3fc95",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.655Z",
+      "fileTimestampUtc": "2026-10-31T20:08:28.762Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recovery-after-escape.json",
+      "bytes": 12975,
+      "sha256": "6713a76e394234d62859a8250d5d848e49fd1402b36e4b411c5d91d7ffda2321",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.656Z",
+      "fileTimestampUtc": "2026-10-31T20:25:02.037Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recovery-foreground-restored.json",
+      "bytes": 9027,
+      "sha256": "701da9db4aa65376ec993c8129f9ab75a445ab39ff37f2d7aeb943688a932047",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.657Z",
+      "fileTimestampUtc": "2026-10-31T20:25:59.493Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recovery-host.json",
+      "bytes": 859,
+      "sha256": "a02986205cdb2e86518e22c23e21208410f98477f98f45150ae532062d522fdb",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.658Z",
+      "fileTimestampUtc": "2026-10-31T20:23:37.786Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recovery-info.json",
+      "bytes": 12975,
+      "sha256": "a37c2faa8115c58e03edfc4a33eb8b685c6609586ab609b2bbcb20a81d84e789",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.658Z",
+      "fileTimestampUtc": "2026-10-31T20:24:10.868Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recovery-maximized.json",
+      "bytes": 12978,
+      "sha256": "fa8d3e8bcb019ca0741e1193fd186c24b3cecce80d7c92f6c16de0a722351dc9",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.659Z",
+      "fileTimestampUtc": "2026-10-31T20:26:58.318Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recovery-seats.json",
+      "bytes": 1673,
+      "sha256": "517ca3505774b06326889b285284fd81723b79dba23439cd229bee97272c664a",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.660Z",
+      "fileTimestampUtc": "2026-10-31T20:24:11.094Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recovery-workbench.json",
+      "bytes": 19015,
+      "sha256": "df378c9d023bdebdb304c89ccaf8d6f498c876e0749ca4bf82c427af9305bec6",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.661Z",
+      "fileTimestampUtc": "2026-10-31T20:25:23.522Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-1-command.json",
+      "bytes": 9148,
+      "sha256": "d7201b91078726fefad474e81c9665d74063ede805ca7b936369552d121d2aac",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.662Z",
+      "fileTimestampUtc": "2026-10-31T20:02:53.178Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-1-comparison.json",
+      "bytes": 2373,
+      "sha256": "a8c8d6371f7540beb0c0dc0fb680b4fab52990087f83df09d595ca236d7f7b09",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.663Z",
+      "fileTimestampUtc": "2026-10-31T20:04:41.061Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-1-host.json",
+      "bytes": 859,
+      "sha256": "88616e39bdcec76410cfc10a8ef41e4e2c4f8c4cdffa6fe22098dead1e1a8068",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.664Z",
+      "fileTimestampUtc": "2026-10-31T20:03:41.825Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-1-info.json",
+      "bytes": 13195,
+      "sha256": "5d0af3f89ee4d234a1c38c3284735c20a536ba3eb2b2c2cccfae664eaadb6e8f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.665Z",
+      "fileTimestampUtc": "2026-10-31T20:03:39.016Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-1-seats.json",
+      "bytes": 1047,
+      "sha256": "869ed64f1c0a7fad53ddf2ffd315139f0294549cad01b081bac96f841de5b199",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.666Z",
+      "fileTimestampUtc": "2026-10-31T20:03:39.358Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-2-comparison.json",
+      "bytes": 2373,
+      "sha256": "afe7bcd1fdfaedaa77234dea490d74d54e2efc8efd885142d526c54992b3700a",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.667Z",
+      "fileTimestampUtc": "2026-10-31T20:04:47.320Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-2-host.json",
+      "bytes": 859,
+      "sha256": "3eb29a884d5a8ccd2e9fb813364c040b4aeb040d8f8ced940ec57b5f8b3fb012",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.668Z",
+      "fileTimestampUtc": "2026-10-31T20:04:47.272Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-2-info.json",
+      "bytes": 13195,
+      "sha256": "d13b85674bd8aafe5371d6bad7642789c86435299e3632e4537e0756547cacb2",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.669Z",
+      "fileTimestampUtc": "2026-10-31T20:04:44.574Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-2-seats.json",
+      "bytes": 1047,
+      "sha256": "de4ef9474c47820d798c05e945d2d3705f821cada3e1675194db540e00d4c236",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.670Z",
+      "fileTimestampUtc": "2026-10-31T20:04:44.884Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-3-comparison.json",
+      "bytes": 2373,
+      "sha256": "56bc9bce4e211e50704de26c37f7b2e678c9f912353a56bf60682bfaf636b296",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.670Z",
+      "fileTimestampUtc": "2026-10-31T20:05:36.008Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-3-host.json",
+      "bytes": 859,
+      "sha256": "b8fdf877bb1bb1063cbc526008986af7d928e76b9626a1b89956d4779143a85b",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.671Z",
+      "fileTimestampUtc": "2026-10-31T20:05:35.966Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-3-info.json",
+      "bytes": 13191,
+      "sha256": "ba9683b2dafea689b5da5fa02aeb082f9e201e43dcf743357f5b401a1dbed54b",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.672Z",
+      "fileTimestampUtc": "2026-10-31T20:05:33.263Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-recreate-3-seats.json",
+      "bytes": 1047,
+      "sha256": "b67bc3eaccc7cb667d6b22fcb352f54d66c6c2b0176197901d6d2d7d59a2db1f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.673Z",
+      "fileTimestampUtc": "2026-10-31T20:05:33.565Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-settings-after-live-cancel.json",
+      "bytes": 18266,
+      "sha256": "a04c861a9207e6888d5a1aace209ba5d660e2d2888d5ca078e75e2146f8f6f6a",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.674Z",
+      "fileTimestampUtc": "2026-10-31T20:31:30.262Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-05"
+      ],
+      "atomicIds": [
+        "N-05-S001-A002",
+        "N-05-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-settings-before-live-cancel.json",
+      "bytes": 18267,
+      "sha256": "de8b8a7feaeea70097dc34c072900019a85e7da7810873ff38fa2deaa7ce09e9",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.675Z",
+      "fileTimestampUtc": "2026-10-31T20:29:29.745Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-05"
+      ],
+      "atomicIds": [
+        "N-05-S001-A002",
+        "N-05-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-settings-root-alias.json",
+      "bytes": 14464,
+      "sha256": "e7ed2ebf7b4c36d1760a96d82e1e39886d7e869376bfc0a76de0663d4739c0fe",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.676Z",
+      "fileTimestampUtc": "2026-10-31T20:02:52.176Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-settings-search-inspection.json",
+      "bytes": 19015,
+      "sha256": "0a20af4f262728867fb5d3f1aaa2a35dcafb6820aa65911b27c23970aaaa93ee",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.677Z",
+      "fileTimestampUtc": "2026-10-31T20:13:27.388Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-settings-ui-command.json",
+      "bytes": 10042,
+      "sha256": "6d4a9f984c5f6fdf01e25defcc3e5c5be6fe322d90c3331787cd1d2076fbfe8c",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.678Z",
+      "fileTimestampUtc": "2026-10-31T20:10:16.554Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-settings-visible.json",
+      "bytes": 16776,
+      "sha256": "e2d4b1c32f9391c3395281a1b7483bf514db56c2d48b2571c2f7650087630d01",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.680Z",
+      "fileTimestampUtc": "2026-10-31T20:27:23.158Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-show-panel-palette.json",
+      "bytes": 9581,
+      "sha256": "f3be5e3f38dd786a04a191a164e19be3bacfc6fcb86b739c39565a7e953852c4",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.681Z",
+      "fileTimestampUtc": "2026-10-31T19:57:41.436Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-ui-actions.jsonl",
+      "bytes": 22570,
+      "sha256": "34bab6efe221ab782b4ecf618b9e882f7cd0dfc7bf99ac4883da2dccbd6f68dd",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.682Z",
+      "fileTimestampUtc": "2026-10-31T20:34:35.598Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-02",
+        "N-01",
+        "D-01",
+        "L-01",
+        "L-02",
+        "L-03"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007",
+        "N-01-S002-A003",
+        "N-01-S003-A001",
+        "N-01-S003-A003",
+        "D-01-S002-A004",
+        "D-01-S002-A005",
+        "L-01-S002-A001",
+        "L-01-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-vscode-settings-search.json",
+      "bytes": 21525,
+      "sha256": "c8b8ff0cb9e4bff1df5f815b6fcb342eff9d03b3263a0dfeb5152cfcc36d7654",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.683Z",
+      "fileTimestampUtc": "2026-10-31T20:31:31.708Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-wide-content.json",
+      "bytes": 10892,
+      "sha256": "59944aa472cc07b841b06c190a2fb3b33970d845ecf6052722764094c8071b02",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.684Z",
+      "fileTimestampUtc": "2026-10-31T19:58:33.765Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-window-actions.jsonl",
+      "bytes": 931,
+      "sha256": "fc3badfc65c590c7a65cc2c3fc5993e58242471458e05c45b424e9f8a6044b19",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.684Z",
+      "fileTimestampUtc": "2026-10-31T20:32:16.699Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-05"
+      ],
+      "atomicIds": [
+        "N-05-S001-A002",
+        "N-05-S002-A002"
+      ],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-workspace-settings-ui.json",
+      "bytes": 18650,
+      "sha256": "2f488873c0aca736c4d88834d1254400d18115cc1dc302b6f908f65422078d5d",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.686Z",
+      "fileTimestampUtc": "2026-10-31T20:10:17.915Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/reviewed-media-selection.json",
+      "bytes": 4745,
+      "sha256": "d80d0844253c693a1c0ba7ab671797c4837293c2425b6fe72f7630a15c6e21d4",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.687Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.856Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [
+        "N-01",
+        "N-02",
+        "X-01"
+      ],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/screenshots/native-cold-squad-info.png",
+      "bytes": 177875,
+      "sha256": "06f89c2baed64115bf76c23bdc66d396a7f2458a026e087120f5659f797dc796",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.688Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.619Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/screenshots/native-directory-suggestions-workspace-off.png",
+      "bytes": 86779,
+      "sha256": "79e5f6e3f959a84301cc4a66bd84c8481db92f671fc2930864922f3cd9c2b5b4",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.689Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.784Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/screenshots/native-full-reload-info-settled.png",
+      "bytes": 159942,
+      "sha256": "c886830d1c7fe77480fdb679076677573ec226a35e3fe3ee1117e80f9badb415",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.689Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.675Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/screenshots/native-layout-expanded-saved.png",
+      "bytes": 234423,
+      "sha256": "7ef2c2c744dd4efa62b29ee6c1043f4166c02c65c56865b9b815781999b43f4c",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.690Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.845Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
+      "relativePath": "evidence/screenshots/native-project-b-open-info.png",
+      "bytes": 172441,
+      "sha256": "73a772c05be9d15a1f6bdd054113ea12629fd534d38f2053d1fcab5ab511de3d",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T20:43:05.691Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.735Z",
+      "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
+      "caseIds": [],
+      "atomicIds": [],
+      "review": "Reviewed synthetic/public data only; no credentials, private paths, producer identifiers, signed URLs or alias map."
+    },
+    {
       "relativePath": "frozen-candidate.json",
       "bytes": 2360,
       "sha256": "8e2377912e55bf40d7b6d594537d76d51051b78444f759b7305615878067e600",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.789Z",
+      "indexedUtc": "2026-10-31T20:43:05.693Z",
       "fileTimestampUtc": "2026-10-31T19:43:00.744Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [],
@@ -102,12 +1704,12 @@
     },
     {
       "relativePath": "observations.jsonl",
-      "bytes": 935,
-      "sha256": "73bc0a550bc01c0b37083e4ceadbd511028c69df94fab55feda402852b19fb13",
+      "bytes": 17741,
+      "sha256": "3d51cfb2efa2ee3af80ed8c1c858355b44ab907cea208086ba134eb96311aeae",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.789Z",
-      "fileTimestampUtc": "2026-10-31T19:43:00.775Z",
+      "indexedUtc": "2026-10-31T20:43:05.694Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.921Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [],
       "atomicIds": [],
@@ -115,12 +1717,12 @@
     },
     {
       "relativePath": "report.md",
-      "bytes": 3809,
-      "sha256": "ce53c318decb4b66770e35f6a3e90e742f509237f38fafc70256a546582fd772",
+      "bytes": 10519,
+      "sha256": "422cb5e7e1a2ffca2c361d488ed4f17de312e32f780de8e24e95bb0ca9be82eb",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.790Z",
-      "fileTimestampUtc": "2026-10-31T19:43:00.775Z",
+      "indexedUtc": "2026-10-31T20:43:05.695Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.960Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [],
       "atomicIds": [],
@@ -128,12 +1730,12 @@
     },
     {
       "relativePath": "run-manifest.json",
-      "bytes": 5050,
-      "sha256": "de10802f0abd3b02cd0fd7b2453ee1cec001ab938df6c538589f0778d56a62b6",
+      "bytes": 6227,
+      "sha256": "15eb7508f66b4601b017f606dcc371192f36f709ec49a2c94e442d12fe6027aa",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T19:43:00.791Z",
-      "fileTimestampUtc": "2026-10-31T19:43:00.753Z",
+      "indexedUtc": "2026-10-31T20:43:05.696Z",
+      "fileTimestampUtc": "2026-10-31T20:38:49.957Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [],
       "atomicIds": [],
@@ -145,7 +1747,7 @@
       "sha256": "67c5ffc2403b65de4451d68d344232dd4fcbd63d28608028ce151828108d3731",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "indexedUtc": "2026-10-31T19:43:00.792Z",
+      "indexedUtc": "2026-10-31T20:43:05.697Z",
       "fileTimestampUtc": "2026-10-31T19:43:00.774Z",
       "timestampMeaning": "Local artifact modification time, not an invented UI capture time",
       "caseIds": [],

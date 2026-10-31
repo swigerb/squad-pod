@@ -1,0 +1,20 @@
+{
+  "utc": "2026-10-31T20:38:49.906Z",
+  "runId": "20261031T193755Z-f3f080d4",
+  "observationsAdded": [
+    "OBS-0008",
+    "OBS-0009",
+    "OBS-0010",
+    "OBS-0011"
+  ],
+  "atomicOutcomes": {
+    "PASS": 8,
+    "FAIL": 0,
+    "BLOCKED": 1924,
+    "NOT-PRODUCED": 0
+  },
+  "remoteHeadBeforePublication": "9f50d9354793907f28f0fefd3f84a0c5e0e5f3ec",
+  "publicationStatus": "NOT YET PUBLISHED",
+  "testingStopUtc": "2026-10-31T21:22:55.466Z",
+  "hardStopUtc": "2026-10-31T21:37:55.466Z"
+}

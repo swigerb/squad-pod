@@ -1,0 +1,77 @@
+{
+  "utc": "2026-10-31T20:38:49.854791+00:00",
+  "runId": "20261031T193755Z-f3f080d4",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "evidenceClass": "NATIVE",
+  "selection": [
+    {
+      "file": "evidence/screenshots/native-cold-squad-info.png",
+      "sourceBasename": "native-cold-squad-info.png",
+      "sourceSha256": "d34294216c55dbb6e4c537f39a90c76c3e3183748b08b580296cbc8817f48c4f",
+      "sha256": "06f89c2baed64115bf76c23bdc66d396a7f2458a026e087120f5659f797dc796",
+      "sourceFileModifiedUtc": "2026-10-31T19:59:46.455165+00:00",
+      "timestampMeaning": "Original local screenshot file modification time, not an invented capture time",
+      "transformation": "Resize reviewed actual workbench screenshot to 1000 pixels wide; no synthetic rendering",
+      "review": "Individually visually reviewed: synthetic offices/members and public UI only; no private paths, unrelated windows or authentication",
+      "publicationApproval": "PENDING"
+    },
+    {
+      "file": "evidence/screenshots/native-full-reload-info-settled.png",
+      "sourceBasename": "native-full-reload-info-settled.png",
+      "sourceSha256": "b52c90543a4c4a06c9ce6223b6057e0869e8fc88a45696196b0186183ce7362a",
+      "sha256": "c886830d1c7fe77480fdb679076677573ec226a35e3fe3ee1117e80f9badb415",
+      "sourceFileModifiedUtc": "2026-10-31T20:06:42.558068+00:00",
+      "timestampMeaning": "Original local screenshot file modification time, not an invented capture time",
+      "transformation": "Resize reviewed actual workbench screenshot to 1000 pixels wide; no synthetic rendering",
+      "review": "Individually visually reviewed: synthetic offices/members and public UI only; no private paths, unrelated windows or authentication",
+      "publicationApproval": "PENDING"
+    },
+    {
+      "file": "evidence/screenshots/native-project-b-open-info.png",
+      "sourceBasename": "native-project-b-open-info.png",
+      "sourceSha256": "e1049e81242a22d5b3de3842d2007a6dfdc9da1706f686530f2583b8e503e324",
+      "sha256": "73a772c05be9d15a1f6bdd054113ea12629fd534d38f2053d1fcab5ab511de3d",
+      "sourceFileModifiedUtc": "2026-10-31T20:08:07.574460+00:00",
+      "timestampMeaning": "Original local screenshot file modification time, not an invented capture time",
+      "transformation": "Resize reviewed actual workbench screenshot to 1000 pixels wide; no synthetic rendering",
+      "review": "Individually visually reviewed: synthetic offices/members and public UI only; no private paths, unrelated windows or authentication",
+      "publicationApproval": "PENDING"
+    },
+    {
+      "file": "evidence/screenshots/native-directory-suggestions-workspace-off.png",
+      "sourceBasename": "native-directory-suggestions-workspace-off.png",
+      "sourceSha256": "a5a3005228a82a126730c56416c3ea4e7bb5bf243ecb3faae88ecef4933041bc",
+      "sha256": "79e5f6e3f959a84301cc4a66bd84c8481db92f671fc2930864922f3cd9c2b5b4",
+      "sourceFileModifiedUtc": "2026-10-31T20:32:45.205846+00:00",
+      "timestampMeaning": "Original local screenshot file modification time, not an invented capture time",
+      "transformation": "Resize reviewed actual workbench screenshot to 1000 pixels wide; no synthetic rendering",
+      "review": "Individually visually reviewed: synthetic offices/members and public UI only; no private paths, unrelated windows or authentication",
+      "publicationApproval": "PENDING"
+    },
+    {
+      "file": "evidence/screenshots/native-layout-expanded-saved.png",
+      "sourceBasename": "native-layout-expanded-saved.png",
+      "sourceSha256": "a9d1fe295b2a59e20b7ced9fef556cce3302a0bbf82fe34061af05232c9ffa0b",
+      "sha256": "7ef2c2c744dd4efa62b29ee6c1043f4166c02c65c56865b9b815781999b43f4c",
+      "sourceFileModifiedUtc": "2026-10-31T20:34:11.162281+00:00",
+      "timestampMeaning": "Original local screenshot file modification time, not an invented capture time",
+      "transformation": "Resize reviewed actual workbench screenshot to 1000 pixels wide; no synthetic rendering",
+      "review": "Individually visually reviewed: synthetic offices/members and public UI only; no private paths, unrelated windows or authentication",
+      "publicationApproval": "PENDING"
+    }
+  ],
+  "excluded": [
+    {
+      "file": "native-recreation-contact-sheet.png",
+      "reason": "Visually reviewed and entirely black; local-only capture limitation"
+    },
+    {
+      "file": "native-recreation-idle-24s.mp4",
+      "reason": "Not reviewed/selected; not evidence of native control actions"
+    },
+    {
+      "file": "native-settings-visible.png",
+      "reason": "Original contains a local directory path; retained locally, not selected"
+    }
+  ]
+}

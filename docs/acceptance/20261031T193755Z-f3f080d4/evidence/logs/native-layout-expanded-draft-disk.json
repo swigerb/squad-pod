@@ -1,0 +1,25 @@
+{
+  "utc": "2026-10-31T20:33:39.899Z",
+  "runId": "20261031T193755Z-f3f080d4",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "evidenceClass": "NATIVE",
+  "supplementaryEvidence": "Read-only named synthetic saved-layout file",
+  "project": "PROJECT_A",
+  "exists": true,
+  "bytes": 38649,
+  "sha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+  "dimensions": {
+    "cols": 21,
+    "rows": 13
+  },
+  "furnitureCount": 36,
+  "topLevelKeys": [
+    "cols",
+    "furniture",
+    "pets",
+    "rows",
+    "tileColors",
+    "tiles",
+    "version"
+  ]
+}

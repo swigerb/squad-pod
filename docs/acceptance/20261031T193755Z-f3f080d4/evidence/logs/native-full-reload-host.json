@@ -1,0 +1,40 @@
+{
+  "utc": "2026-10-31T20:06:21.3418446+00:00",
+  "runId": "20261031T193755Z-f3f080d4",
+  "inputMethod": "VS Code --status under the explicit isolated directories; only allowlisted role/PID fields retained, no command lines",
+  "extensionHostPid": 99876,
+  "roles": [
+    {
+      "pid": 61060,
+      "role": "code"
+    },
+    {
+      "pid": 27184,
+      "role": "utility-network-service"
+    },
+    {
+      "pid": 48340,
+      "role": "shared-process"
+    },
+    {
+      "pid": 91076,
+      "role": "window [1] (office-A (Workspace) - Visual Studio Code)"
+    },
+    {
+      "pid": 97388,
+      "role": "window"
+    },
+    {
+      "pid": 99876,
+      "role": "extension-host [1]"
+    },
+    {
+      "pid": 107752,
+      "role": "gpu-process"
+    },
+    {
+      "pid": 108124,
+      "role": "file-watcher [1]"
+    }
+  ]
+}

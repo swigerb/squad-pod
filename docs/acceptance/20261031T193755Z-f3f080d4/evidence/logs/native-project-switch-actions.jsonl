@@ -1,0 +1,2 @@
+{"utc":"2026-10-31T20:07:06.0953515+00:00","inputMethod":"Native VS Code CLI --reuse-window with both explicit isolation directories; actual window project switch, no webview state injection","from":"WORKSPACE_A","to":"WORKSPACE_B","realTaskLaunch":false}
+{"utc":"2026-10-31T20:08:28.7489970+00:00","inputMethod":"Native VS Code CLI --reuse-window with both explicit isolation directories; actual window switch","from":"WORKSPACE_B","to":"WORKSPACE_A","realTaskLaunch":false}

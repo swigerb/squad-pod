@@ -1,0 +1,428 @@
+{
+  "utc": "2026-10-31T20:25:59.493Z",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+  "evidenceClass": "NATIVE",
+  "inputMethod": "Read-only rendered DOM observation of the actual isolated installed native host",
+  "targetKind": "workbench",
+  "snapshot": {
+    "title": "office-A (Workspace) - Visual Studio Code",
+    "width": 1440,
+    "height": 900,
+    "activeElement": {
+      "tag": "BODY",
+      "role": null,
+      "label": ""
+    },
+    "text": "File\nEdit\nSelection\nView\nGo\nRun\nTerminal\nHelp\noffice-A (Workspace)\n1\n1\nProblems\nOutput\nDebug Console\nTerminal\nPorts\nSquad Pod\n 0 \n 0",
+    "controls": [
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "Go Back (Alt+LeftArrow)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          413.72918701171875,
+          6.5,
+          22,
+          22
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "Go Forward (Alt+RightArrow)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          439.72918701171875,
+          6.5,
+          22,
+          22
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "button",
+        "text": "office-A (Workspace)",
+        "label": null,
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          472.3958435058594,
+          6.5,
+          547.1979370117188,
+          22
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "Customize Layout...",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          1198,
+          6.5,
+          22,
+          22
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "Toggle Primary Side Bar (Ctrl+B)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          1224,
+          6.5,
+          22,
+          22
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "Toggle Panel (Ctrl+J)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          1250,
+          6.5,
+          22,
+          22
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "Toggle Secondary Side Bar (Ctrl+Alt+B)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          1276,
+          6.5,
+          22,
+          22
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "",
+        "label": "",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          7.6666669845581055,
+          38.66666793823242,
+          36,
+          36
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "",
+        "label": "",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          7.6666669845581055,
+          82.66667175292969,
+          36,
+          36
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "",
+        "label": "",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          7.6666669845581055,
+          126.66667175292969,
+          36,
+          36
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "",
+        "label": "",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          7.6666669845581055,
+          170.6666717529297,
+          36,
+          36
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "1",
+        "label": "Extensions (Ctrl+Shift+X) - Sign in required to access marketplace",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          7.6666669845581055,
+          214.6666717529297,
+          36,
+          36
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "button",
+        "text": "1",
+        "label": "Accounts - Sign in to access Marketplace",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          7.6666669845581055,
+          783.6666870117188,
+          36,
+          36
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "button",
+        "text": "",
+        "label": "Manage",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          7.6666669845581055,
+          827.6666870117188,
+          36,
+          36
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "Problems",
+        "label": "",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          54.66666793823242,
+          35.66666793823242,
+          73.72917175292969,
+          32
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "Output",
+        "label": "",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          128.39584350585938,
+          35.66666793823242,
+          60.96875,
+          32
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "Debug Console",
+        "label": "Debug Console (Ctrl+Shift+Y)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          189.36459350585938,
+          35.66666793823242,
+          108.23958587646484,
+          32
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "Terminal",
+        "label": "",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          297.60418701171875,
+          35.66666793823242,
+          68.33333587646484,
+          32
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "Ports",
+        "label": "",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          365.9375,
+          35.66666793823242,
+          48.864585876464844,
+          32
+        ]
+      },
+      {
+        "tag": "LI",
+        "role": "tab",
+        "text": "Squad Pod",
+        "label": "",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          414.8020935058594,
+          35.66666793823242,
+          81.82292175292969,
+          32
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "Maximize Panel",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          1383.3333740234375,
+          40.66666793823242,
+          22,
+          22
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "Hide Panel (Ctrl+J)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          1409.3333740234375,
+          40.66666793823242,
+          22,
+          22
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "remote",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          12,
+          874,
+          28,
+          24
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": " 0 \n 0",
+        "label": "No Problems",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          43,
+          874,
+          64.8125,
+          24
+        ]
+      },
+      {
+        "tag": "A",
+        "role": "button",
+        "text": "",
+        "label": "Notifications",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "box": [
+          1400,
+          874,
+          28,
+          24
+        ]
+      }
+    ],
+    "frames": [
+      {
+        "title": "",
+        "name": "NATIVE_FRAME_ID"
+      }
+    ],
+    "canvases": []
+  }
+}

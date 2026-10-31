@@ -1,0 +1,94 @@
+{
+  "utc": "2026-10-31T20:04:41.059Z",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+  "boundary": "recreate-1",
+  "expected": {
+    "selectedProject": "Synthetic Office A",
+    "visibleMembers": 4,
+    "active": 0,
+    "hiddenAuxiliary": [
+      "Scribe",
+      "Ralph"
+    ],
+    "extensionHostPid": 69488,
+    "savedValues": {
+      "squad-pod.agents": {
+        "ada": {
+          "palette": 0,
+          "seatId": "chair-left-1"
+        },
+        "basil": {
+          "palette": 1,
+          "seatId": "chair-left-2"
+        },
+        "cedar": {
+          "palette": 2,
+          "seatId": "chair-right-1"
+        },
+        "dahlia": {
+          "palette": 3,
+          "seatId": "chair-right-2"
+        }
+      },
+      "squad-pod.agentSeats": {
+        "ada": "chair-left-1",
+        "basil": "chair-left-2",
+        "cedar": "chair-right-1",
+        "dahlia": "chair-right-2"
+      }
+    }
+  },
+  "observed": {
+    "selectedProjectPresent": true,
+    "visibleMemberCount": 4,
+    "visibleMembers": [
+      "Ada",
+      "Basil",
+      "Cedar",
+      "Dahlia"
+    ],
+    "fourAgentSummary": true,
+    "zeroActiveSummary": true,
+    "backgroundServices": [
+      "Scribe",
+      "Ralph"
+    ],
+    "extensionHostPid": 69488,
+    "savedValues": {
+      "squad-pod.agents": {
+        "ada": {
+          "palette": 0,
+          "seatId": "chair-left-1"
+        },
+        "basil": {
+          "palette": 1,
+          "seatId": "chair-left-2"
+        },
+        "cedar": {
+          "palette": 2,
+          "seatId": "chair-right-1"
+        },
+        "dahlia": {
+          "palette": 3,
+          "seatId": "chair-right-2"
+        }
+      },
+      "squad-pod.agentSeats": {
+        "ada": "chair-left-1",
+        "basil": "chair-left-2",
+        "cedar": "chair-right-1",
+        "dahlia": "chair-right-2"
+      }
+    }
+  },
+  "outcome": "PASS",
+  "evidenceClass": "NATIVE",
+  "supplementaryEvidence": "Read-only owned persistence and process identity",
+  "limitation": "This comparison verifies rendered membership/details and saved identity; canvas visual equivalence requires separate reviewed actual screenshots, not DOM inference.",
+  "references": [
+    "native-recreate-1-info.json",
+    "native-recreate-1-seats.json",
+    "native-recreate-1-host.json"
+  ]
+}

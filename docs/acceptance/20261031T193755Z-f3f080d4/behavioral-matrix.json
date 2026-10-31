@@ -1,7 +1,7 @@
 {
   "runId": "20261031T193755Z-f3f080d4",
   "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
-  "generatedUtc": "2026-10-31T19:43:00.759Z",
+  "generatedUtc": "2026-10-31T20:38:49.906Z",
   "rollupRule": "A successful variant does not pass an entire combined subcheck. Shared requirements stay BLOCKED until every applicable asserted variant has adequate direct evidence.",
   "inheritedPasses": 0,
   "variants": [
@@ -17,9 +17,18 @@
       ],
       "expected": "Profile/workspace/folder values, explicit fixture roots and actual native UI; no internal no-read claim.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "reason": "PARTIAL: configured live/suggestions off independently observed; product default-off and internal reads remain unproved.",
+      "observationIds": [
+        "OBS-0008"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-settings-before-live-cancel.json",
+        "evidence/logs/native-settings-after-live-cancel.json",
+        "evidence/logs/native-directory-suggestions-off.json",
+        "evidence/logs/native-directory-suggestions-workspace-off.json",
+        "evidence/logs/native-window-actions.jsonl",
+        "evidence/logs/native-batch-2-process-safety.json"
+      ]
     },
     {
       "id": "membership-cold",
@@ -32,10 +41,17 @@
         "N-02-S003-A007"
       ],
       "expected": "Cold native open; compare all IDs/count, auxiliary members, status, project and seat map.",
-      "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0002"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-cold-squad-info.json",
+        "evidence/logs/native-cold-saved-seats.json",
+        "evidence/logs/native-cold-host-roles-redacted.json"
+      ]
     },
     {
       "id": "membership-recreate-1",
@@ -48,10 +64,18 @@
         "N-02-S003-A007"
       ],
       "expected": "First host-surviving panel recreation; capture the same full comparison.",
-      "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0003"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-recreate-1-info.json",
+        "evidence/logs/native-recreate-1-seats.json",
+        "evidence/logs/native-recreate-1-host.json",
+        "evidence/logs/native-recreate-1-comparison.json"
+      ]
     },
     {
       "id": "membership-recreate-2",
@@ -64,10 +88,18 @@
         "N-02-S003-A007"
       ],
       "expected": "Second host-surviving panel recreation; capture the same full comparison.",
-      "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0004"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-recreate-2-info.json",
+        "evidence/logs/native-recreate-2-seats.json",
+        "evidence/logs/native-recreate-2-host.json",
+        "evidence/logs/native-recreate-2-comparison.json"
+      ]
     },
     {
       "id": "membership-recreate-3",
@@ -80,10 +112,18 @@
         "N-02-S003-A007"
       ],
       "expected": "Third host-surviving panel recreation; capture ordering and the same full comparison.",
-      "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0005"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-recreate-3-info.json",
+        "evidence/logs/native-recreate-3-seats.json",
+        "evidence/logs/native-recreate-3-host.json",
+        "evidence/logs/native-recreate-3-comparison.json"
+      ]
     },
     {
       "id": "membership-host-reload",
@@ -96,10 +136,17 @@
         "N-01-S003-A003"
       ],
       "expected": "Full window/extension-host reload, with before/after owned host identity and same roster/project/seat comparison.",
-      "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0006"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-full-reload-info-settled.json",
+        "evidence/logs/native-full-reload-seats.json",
+        "evidence/logs/native-full-reload-host.json"
+      ]
     },
     {
       "id": "membership-project-switch",
@@ -112,10 +159,20 @@
         "N-02-S003-A007"
       ],
       "expected": "Switch between explicit synthetic A and B, then return; stop on wrong attribution.",
-      "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0007"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-project-a-return-info.json",
+        "evidence/logs/native-project-a-return-seats.json",
+        "evidence/logs/native-project-a-return-host.json",
+        "evidence/logs/native-project-b-open-info.json",
+        "evidence/logs/native-project-b-open-seats.json",
+        "evidence/logs/native-project-b-open-host.json"
+      ]
     },
     {
       "id": "native-export-new",
@@ -185,9 +242,24 @@
       ],
       "expected": "UI edit/save/reload with actual saved disk bytes and separately evaluated canvas equivalence.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "reason": "PARTIAL: actual Save and disk hash across reload observed; complete canvas/color/metadata equivalence remains.",
+      "observationIds": [
+        "OBS-0010"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-layout-baseline-disk.json",
+        "evidence/logs/native-layout-expanded-draft-disk.json",
+        "evidence/logs/native-layout-expanded-draft.json",
+        "evidence/logs/native-layout-reset-disk.json",
+        "evidence/logs/native-layout-reset.json",
+        "evidence/logs/native-layout-after-save-helper-block.json",
+        "evidence/logs/native-layout-expanded-saved-disk.json",
+        "evidence/logs/native-layout-expanded-saved.json",
+        "evidence/logs/native-layout-after-reload-disk.json",
+        "evidence/logs/native-members-after-layout-reload.json",
+        "evidence/logs/native-batch-2-host.json",
+        "evidence/logs/native-ui-actions.jsonl"
+      ]
     },
     {
       "id": "layout-reset-cancel-recovery",
@@ -203,9 +275,24 @@
       ],
       "expected": "Dirty Reset, cancellation and recovery with before/after bytes; do not collapse variants.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "reason": "PARTIAL: simple draft Reset keeps saved bytes; pending external/conflict/recovery variants remain.",
+      "observationIds": [
+        "OBS-0010"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-layout-baseline-disk.json",
+        "evidence/logs/native-layout-expanded-draft-disk.json",
+        "evidence/logs/native-layout-expanded-draft.json",
+        "evidence/logs/native-layout-reset-disk.json",
+        "evidence/logs/native-layout-reset.json",
+        "evidence/logs/native-layout-after-save-helper-block.json",
+        "evidence/logs/native-layout-expanded-saved-disk.json",
+        "evidence/logs/native-layout-expanded-saved.json",
+        "evidence/logs/native-layout-after-reload-disk.json",
+        "evidence/logs/native-members-after-layout-reload.json",
+        "evidence/logs/native-batch-2-host.json",
+        "evidence/logs/native-ui-actions.jsonl"
+      ]
     },
     {
       "id": "synthetic-seat-arrival",
@@ -275,9 +362,20 @@
       ],
       "expected": "Browse/manual disclosure, validation, rename, Change folder, reload, footer and no unintended Launch.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED IN THIS RUN",
-      "observationIds": [],
-      "evidenceRefs": []
+      "reason": "PARTIAL: native add/rename/validation/reload observed; picker/Change folder/narrow/long-list/keyboard variants remain.",
+      "observationIds": [
+        "OBS-0009"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-directories-initial.json",
+        "evidence/logs/native-directory-b-ready.json",
+        "evidence/logs/native-directory-duplicate-a.json",
+        "evidence/logs/native-directory-missing-rejected.json",
+        "evidence/logs/native-directory-file-rejected.json",
+        "evidence/logs/native-directory-b-renamed.json",
+        "evidence/logs/native-directories-after-reload.json",
+        "evidence/logs/native-ui-actions.jsonl"
+      ]
     },
     {
       "id": "keyboard-and-source-warnings",

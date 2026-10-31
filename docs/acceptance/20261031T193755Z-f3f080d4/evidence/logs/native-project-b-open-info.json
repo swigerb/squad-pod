@@ -1,0 +1,444 @@
+{
+  "utc": "2026-10-31T20:08:07.370Z",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+  "evidenceClass": "NATIVE",
+  "inputMethod": "Read-only rendered DOM observation of the actual isolated installed native host",
+  "targetKind": "webview",
+  "snapshot": {
+    "title": "Squad Pod",
+    "width": 1383,
+    "height": 800,
+    "activeElement": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Close Squad Info"
+    },
+    "text": "Fit office\n+\n−\nHide office labels\n\nOffice labels (list, not character positions)\n\nIris\nArchitect\nLocate character\nJasper\nDeveloper\nLocate character\nKestrel\nTester\nLocate character\nTask bubbles: On\nSquad Info\nTelemetry\nEdit Layout\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics\n×\nSynthetic Office B\n👥 3 agents\n🟢 0 active\nCurrent-session model: unavailable\nLive Activity is off; enable it to observe runtime model events.\n📂 Project\nDisposable synthetic acceptance fixture. No AI tasks, real producer or customer data.\n🏢 Team Members\n🏗️\nIrisArchitect\n⚪\n👤\nJasperDeveloper\n⚪\n🧪\nKestrelTester\n⚪\n🔇 Background Services\n📋 Scribe\n🔄 Ralph",
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Fit office",
+        "label": "Fit and center office",
+        "title": "Fit and center office (large layouts use minimum zoom)",
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          36,
+          16,
+          96.02083587646484,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "+",
+        "label": "Zoom in",
+        "title": null,
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          36,
+          52,
+          32,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "−",
+        "label": "Zoom out",
+        "title": null,
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          36,
+          88,
+          32,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Hide office labels",
+        "label": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          1239.3021240234375,
+          16,
+          160.03125,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Iris\nArchitect",
+        "label": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          1223.03125,
+          97.33333587646484,
+          48.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Iris",
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          1175.3333740234375,
+          126,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Jasper\nDeveloper",
+        "label": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          1222.53125,
+          155.33334350585938,
+          49.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Jasper",
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          1175.3333740234375,
+          184,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Kestrel\nTester",
+        "label": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          1219.2396240234375,
+          213.33334350585938,
+          56.208335876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Kestrel",
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          1175.3333740234375,
+          242,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Task bubbles: On",
+        "label": null,
+        "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          346.10418701171875,
+          761,
+          156.8229217529297,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Squad Info",
+        "label": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          510.9270935058594,
+          761,
+          110.02083587646484,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Telemetry",
+        "label": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          628.9479370117188,
+          761,
+          102.21875,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Edit Layout",
+        "label": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          739.1666870117188,
+          761,
+          117.82292175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Directories",
+        "label": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          864.9896240234375,
+          761,
+          109.82292175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Settings",
+        "label": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          982.8125,
+          761,
+          94.41667175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Clear activity",
+        "label": null,
+        "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          1247.260498046875,
+          756,
+          109.75,
+          20.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "✕",
+        "label": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          1365.010498046875,
+          756,
+          26.322917938232422,
+          20.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Select CLI usage JSON...",
+        "label": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          32,
+          1066,
+          192.1666717529297,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Refresh selected export",
+        "label": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": true,
+        "box": [
+          232.1666717529297,
+          1066,
+          184.96875,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Forget export",
+        "label": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": true,
+        "box": [
+          425.13543701171875,
+          1066,
+          112.95833587646484,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Observation settings and consent",
+        "label": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "disabled": false,
+        "box": [
+          32,
+          1185.3333740234375,
+          228.5729217529297,
+          18
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "×",
+        "label": "Close Squad Info",
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          851.6666870117188,
+          180.1666717529297,
+          28,
+          28
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "🏗️\nIrisArchitect\n⚪",
+        "label": "Show details for Iris",
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          513.6666870117188,
+          414.5,
+          356,
+          36.66666793823242
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "👤\nJasperDeveloper\n⚪",
+        "label": "Show details for Jasper",
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          513.6666870117188,
+          457.16668701171875,
+          356,
+          36.66666793823242
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "🧪\nKestrelTester\n⚪",
+        "label": "Show details for Kestrel",
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "disabled": false,
+        "box": [
+          513.6666870117188,
+          499.8333435058594,
+          356,
+          36.66666793823242
+        ]
+      }
+    ],
+    "frames": [],
+    "canvases": [
+      {
+        "width": 2075,
+        "height": 1200
+      }
+    ]
+  }
+}
