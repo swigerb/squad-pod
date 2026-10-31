@@ -389,6 +389,7 @@ describe('AgentLabels over canvas characters', () => {
         expect(host.querySelector('[data-agent-connector="homer"]')).not.toBeNull();
   });
 
+  // Windows CI measured 1.2-6.1s per case, exceeding the 5s default under runner contention.
   it.each([360, 1400].flatMap(width => Array.from({ length: 10 }, (_, i) => [width, i + 1])))
       ('bounds collision-lane changes over 60s in a %spx panel at zoom %s (CSS pixels, DPR 1.5)', (width, zoom) => {
         vi.stubGlobal('devicePixelRatio', 1.5);
@@ -476,5 +477,5 @@ describe('AgentLabels over canvas characters', () => {
         expect(maxLaneStep, `width=${width}, zoom=${zoom}: worst lane ${JSON.stringify(worstLane)}`)
           .toBeLessThanOrEqual(12.000001);
         expect(panRef.current).toEqual({ x: 30, y: 40 });
-  });
+  }, 20_000);
 });
