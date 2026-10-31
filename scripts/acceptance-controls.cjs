@@ -263,7 +263,8 @@ async function main() {
           await hitClick(page.getByRole('button', { name: 'Directories', exact: true }), 'Directories alongside editor');
           const dialog = page.getByRole('dialog', { name: 'Launch directory' });
           await dialog.waitFor();
-          const savedDirectoryRow = dialog.getByLabel('Name for Synthetic alternate project').locator('xpath=../../..');
+          await dialog.getByLabel('Manage directory actions for Synthetic alternate project').click();
+          const savedDirectoryRow = dialog.locator('[data-directory-row="00000000-0000-4000-8000-000000000001"]');
           await hitClick(savedDirectoryRow.getByRole('button', { name: 'Launch Synthetic alternate project', exact: true }), 'Explicit saved-directory Launch request');
           const launch = await page.evaluate(() => window.__petAcceptance.outbound.filter((m) => m.type === 'launchDirectory').at(-1));
           assert.deepEqual(launch, { type: 'launchDirectory', id: '00000000-0000-4000-8000-000000000001', source: 'saved' });

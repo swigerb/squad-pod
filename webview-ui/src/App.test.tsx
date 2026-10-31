@@ -624,6 +624,8 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       },
     });
     click('Directories');
+    const manage = host.querySelector<HTMLElement>('[aria-label="Manage directory actions for Original"]')!;
+    act(() => manage.click());
     const input = host.querySelector<HTMLInputElement>('input[aria-label="Name for Original"]')!;
     input.focus();
     for (const options of [
@@ -641,11 +643,11 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Native rename');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    click('Save name');
+    click('Rename');
     expect(client.send).toHaveBeenLastCalledWith({
       type: 'updateDirectoryName', id: 'saved-1', name: 'Native rename',
     });
-    click('Close');
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Close directories"]')!.click());
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
     expect(persisted!.draft!.furniture).toEqual([]);
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
@@ -1348,7 +1350,8 @@ describe('settings and source UI with simulated host messages', () => {
     click('Directories');
     expect(client.send).toHaveBeenCalledWith({ type: 'getDirectories' });
     expect(host.textContent).not.toContain('Recent Squad directories');
-    expect(host.textContent).toContain('Recent launch requests below are recorded by Squad Pod');
+    expect(host.textContent).toContain('Recent launch requests are recorded when the command is submitted');
+    expect(host.textContent).toContain('do not prove the CLI started');
     expect(host.textContent).toContain('Workspace & Repo');
     expect(host.textContent).toContain('Saved 34');
     expect(host.textContent).toContain('Recently launched');
@@ -1363,6 +1366,7 @@ describe('settings and source UI with simulated host messages', () => {
 
     send({ type: 'directoryError', error: 'Copilot CLI not found on PATH.' });
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('not found on PATH');
+    expect(host.querySelector('[role="alert"] details')?.textContent).toContain('Copilot CLI not found on PATH.');
   });
 
   it('routes saved-directory edits, folder changes, removals, and recent-record forgetting to the host', () => {
@@ -1377,13 +1381,15 @@ describe('settings and source UI with simulated host messages', () => {
       },
     });
     click('Directories');
+    const manage = host.querySelector<HTMLElement>('[aria-label="Manage directory actions for Original"]')!;
+    act(() => manage.click());
     const input = host.querySelector<HTMLInputElement>('input[aria-label="Name for Original"]')!;
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Renamed');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
     const buttons = [...host.querySelectorAll('button')];
-    const saveName = buttons.find((button) => button.textContent === 'Save name')!;
+    const saveName = buttons.find((button) => button.textContent === 'Rename')!;
     act(() => saveName.click());
     expect(client.send).toHaveBeenLastCalledWith({
       type: 'updateDirectoryName', id: 'saved-1', name: 'Renamed',
@@ -1391,14 +1397,62 @@ describe('settings and source UI with simulated host messages', () => {
     const changeFolder = buttons.find((button) => button.textContent === 'Change folder')!;
     act(() => changeFolder.click());
     expect(client.send).toHaveBeenLastCalledWith({ type: 'changeDirectoryPath', id: 'saved-1' });
-    const remove = buttons.find((button) => button.textContent === 'Remove')!;
+    const remove = buttons.find((button) => button.getAttribute('aria-label') === 'Remove Original')!;
     act(() => remove.click());
     expect(client.send).toHaveBeenLastCalledWith({ type: 'removeDirectory', id: 'saved-1' });
-    const forget = buttons.find((button) => button.textContent === 'Forget')!;
+    const forget = buttons.find((button) => button.textContent === 'Forget request')!;
     act(() => forget.click());
     expect(client.send).toHaveBeenLastCalledWith({ type: 'forgetDirectoryLaunch', id: 'recent-1' });
-    click('Add directory');
+    click('Browse for a directory');
     expect(client.send).toHaveBeenLastCalledWith({ type: 'addDirectory' });
+  });
+
+  it('keeps invalid-directory reasons with their row and preserves manual drafts for unassociated host errors', () => {
+    load();
+    send({
+      type: 'directoryCatalog',
+      catalog: {
+        workspaceDirectories: [{
+          id: 'workspace:missing', name: 'Unavailable',
+          path: 'C:\\Synthetic\\Unavailable', valid: false,
+          error: 'Directory does not exist or cannot be accessed: C:\\Synthetic\\Unavailable',
+        }],
+        savedDirectories: [],
+        recentLaunches: [],
+        squadHistory: [],
+      },
+    });
+    click('Directories');
+    const row = host.querySelector<HTMLElement>('[data-directory-row="workspace:missing"]')!;
+    const launch = row.querySelector<HTMLButtonElement>('[aria-label="Launch Unavailable"]')!;
+    expect(row.textContent).toContain('Unavailable');
+    expect(row.textContent).toContain('missing or cannot be accessed');
+    expect(launch.disabled).toBe(true);
+    expect(launch.getAttribute('aria-describedby')).toBe(
+      `${row.querySelector('.directory-status')?.id} ${row.querySelector('.directory-row__reason')?.id}`,
+    );
+    const errorDetails = row.querySelector<HTMLDetailsElement>('.directory-row__error')!;
+    expect(errorDetails.open).toBe(false);
+    act(() => errorDetails.querySelector('summary')!.click());
+    expect(errorDetails.open).toBe(true);
+    expect(errorDetails.textContent).toContain('C:\\Synthetic\\Unavailable');
+
+    act(() => host.querySelector<HTMLElement>('.directory-manual > summary')!.click());
+    const path = host.querySelector<HTMLInputElement>('[aria-label="Directory path"]')!;
+    const name = host.querySelector<HTMLInputElement>('[aria-label="Directory name"]')!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(path, 'C:\\Synthetic\\Draft');
+      path.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, 'Draft folder');
+      name.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    send({ type: 'directoryError', error: 'Unassociated failure at C:\\Synthetic\\Draft' });
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Directory path"]')?.value).toBe('C:\\Synthetic\\Draft');
+    expect(host.querySelector<HTMLInputElement>('[aria-label="Directory name"]')?.value).toBe('Draft folder');
+    const globalError = host.querySelector<HTMLElement>('[role="alert"]')!;
+    expect(globalError.textContent).toContain('Directory action needs attention');
+    expect(globalError.querySelector('details')?.open).toBe(false);
+    expect(globalError.textContent).toContain('Unassociated failure at C:\\Synthetic\\Draft');
   });
 
   it('fills the directory form from a suggestion without sending any save or launch request', () => {
@@ -1413,6 +1467,7 @@ describe('settings and source UI with simulated host messages', () => {
       catalog: { workspaceDirectories: [], savedDirectories: [], recentLaunches: [], squadHistory: [suggestion] },
     });
     click('Directories');
+    act(() => host.querySelector<HTMLElement>('.directory-manual > summary')!.click());
     const before = vi.mocked(client.send).mock.calls.length;
     const button = [...host.querySelectorAll('button')].find((entry) => entry.textContent === suggestion.name)!;
     expect(button.title).toBe(suggestion.path);
@@ -1422,7 +1477,7 @@ describe('settings and source UI with simulated host messages', () => {
     expect(host.querySelector<HTMLInputElement>('[aria-label="Directory name"]')?.value).toBe(suggestion.name);
     expect(client.send).toHaveBeenCalledTimes(before);
     act(() => {
-      host.querySelector('form[aria-label="Add directory"]')!.dispatchEvent(
+      host.querySelector('form[aria-label="Manual directory entry"]')!.dispatchEvent(
         new Event('submit', { bubbles: true, cancelable: true }),
       );
     });
@@ -1430,6 +1485,61 @@ describe('settings and source UI with simulated host messages', () => {
       type: 'addDirectory', path: suggestion.path, name: suggestion.name,
     });
     expect(vi.mocked(client.send).mock.calls.slice(before).map(([message]) => message.type)).toEqual(['addDirectory']);
+  });
+
+  it('moves focus into the directory dialog, contains keyboard focus, and restores the opener on Escape', () => {
+    load();
+    const opener = [...host.querySelectorAll('button')].find((button) => button.textContent === 'Directories')!;
+    opener.focus();
+    act(() => opener.click());
+    const dialog = host.querySelector<HTMLElement>('[role="dialog"]')!;
+    const browse = host.querySelector<HTMLButtonElement>('[aria-label="Browse for a directory"]')!;
+    const manualSummary = host.querySelector<HTMLElement>('.directory-manual > summary')!;
+    const close = host.querySelector<HTMLButtonElement>('[aria-label="Close directories"]')!;
+    expect(document.activeElement).toBe(browse);
+
+    close.focus();
+    act(() => {
+      close.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+    });
+    expect(document.activeElement).toBe(manualSummary);
+    manualSummary.focus();
+    act(() => {
+      manualSummary.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    });
+    expect(document.activeElement).toBe(close);
+    act(() => {
+      dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    });
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it('keeps manual directory entry open and usable when browsing is unavailable in standalone', () => {
+    act(() => root.unmount());
+    root = createRoot(host);
+    act(() => root.render(<App client={client} standalone />));
+    send({ type: 'noWorkspace' });
+    click('Manage / Launch Directories');
+
+    expect(host.querySelector('[aria-label="Browse for a directory"]')).toBeNull();
+    expect(host.querySelector('form[aria-label="Manual directory entry"]')).not.toBeNull();
+    const path = host.querySelector<HTMLInputElement>('[aria-label="Directory path"]')!;
+    const name = host.querySelector<HTMLInputElement>('[aria-label="Directory name"]')!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(path, 'C:\\Synthetic\\Manual');
+      path.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, 'Manual folder');
+      name.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => {
+      host.querySelector('form[aria-label="Manual directory entry"]')!.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+    });
+    expect(client.send).toHaveBeenLastCalledWith({
+      type: 'addDirectory', path: 'C:\\Synthetic\\Manual', name: 'Manual folder',
+    });
   });
 
   it('reacts to later layout messages alone to show and clear missing-art warnings after ready', () => {
