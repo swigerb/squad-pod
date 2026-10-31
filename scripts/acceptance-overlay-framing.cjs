@@ -107,7 +107,7 @@ function Fixture(){
      for(let i=0;i<2;i++) {
        tools['member-'+i]=[];
        Object.assign(office.characters.get('member-'+i),{
-       x:(i%2?innerWidth-90:90)-pan.current.x,
+       x:300+i*400-pan.current.x,
        y:220-pan.current.y,
        state:CharacterState.IDLE,path:[],wanderTimer:1000000,active:false});
      }
