@@ -373,12 +373,13 @@ export function useExtensionMessages(
             const tools = (prev[id] || []).filter((tool) => tool.toolId !== OBSERVED_TASK_ROW_ID);
             const existing = tools.find((t) => t.toolId === toolId);
             if (existing) {
+              existing.toolName = message.tool;
               existing.status = status;
               existing.done = false;
               existing.permissionWait = false;
               return { ...prev, [id]: pruneCompletedTools(tools) };
             }
-            return { ...prev, [id]: [...tools, { toolId, status, done: false }] };
+            return { ...prev, [id]: [...tools, { toolId, toolName: message.tool, status, done: false }] };
           });
           getOfficeState().setAgentTool(id, message.tool ?? toolId);
           break;
@@ -577,6 +578,8 @@ export function useExtensionMessages(
             setLiveModels(null);
           }
           if (previousLiveSession !== nextLiveSession) {
+            setObservedTasks(null);
+            getOfficeState().setObservedTasks(null);
             setLiveModels(null);
           }
           sourceStatusRef.current = message.status;

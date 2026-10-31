@@ -173,12 +173,16 @@ try {
   const tab = await context.newPage();
   const browserErrors = [];
   const browserMessages = [];
+  const browserSent = [];
   function watch(page) {
     page.on('pageerror', error => browserErrors.push(error.message));
-    page.on('websocket', ws => ws.on('framereceived', event => {
-      const frame = JSON.parse(String(event.payload));
-      if (frame.message) browserMessages.push(frame.message);
-    }));
+    page.on('websocket', ws => {
+      ws.on('framereceived', event => {
+        const frame = JSON.parse(String(event.payload));
+        if (frame.message) browserMessages.push(frame.message);
+      });
+      ws.on('framesent', event => browserSent.push(String(event.payload)));
+    });
   }
   watch(tab);
   await tab.goto(host.origin);
@@ -228,6 +232,21 @@ try {
   assert.ok(!JSON.stringify(browserMessages).includes(secret));
   assert.ok(!(await tab.locator('body').innerText()).includes(secret));
   await tab.getByRole('button', { name: /^Telemetry/ }).click();
+  await until(() => tab.evaluate(() =>
+    document.querySelector('[data-agent-task-bubble="ada"]')?.textContent === 'CLI tool: Reading a file'), 'fixed source-labeled task bubble');
+  const taskBubble = tab.locator('[data-agent-task-bubble="ada"]');
+  assert.equal(await taskBubble.getAttribute('role'), 'note');
+  assert.equal(await taskBubble.getAttribute('aria-label'), 'Ada: CLI tool: Reading a file');
+  const sentBeforeToggle = browserSent.length;
+  await tab.getByRole('button', { name: 'Task bubbles: On', exact: true }).focus();
+  await tab.keyboard.press('Space');
+  await until(() => tab.evaluate(() => !document.querySelector('[data-agent-task-bubble]')), 'viewer suppression');
+  assert.equal(await tab.locator('[data-agent-tools="ada"]').count(), 1);
+  assert.equal(await tab.locator('[role="progressbar"]').count(), 1);
+  assert.equal(browserSent.length, sentBeforeToggle, 'viewer suppression sends no office/control/consent command');
+  await tab.getByRole('button', { name: 'Task bubbles: Off', exact: true }).click();
+  await taskBubble.waitFor();
+  check('read-only viewer keyboard suppression changes no host authority, project setting, tool or context signal');
   await until(() => tab.evaluate(() => {
     const gauge = document.querySelector('[role="progressbar"]')?.getBoundingClientRect();
     const child = document.querySelector('[data-subagent-label]')?.getBoundingClientRect();
@@ -259,6 +278,8 @@ try {
   await tab.locator('.office-panel canvas').waitFor();
   await until(() => tab.evaluate(() => document.querySelector('[data-agent-tools="ada"]')?.textContent.includes('Reading fixture.ts')), 'reload tool replay');
   await until(() => tab.evaluate(() => document.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow') === '80'), 'reload context replay');
+  await until(() => tab.evaluate(() =>
+    document.querySelector('[data-agent-task-bubble="ada"]')?.textContent === 'CLI tool: Reading a file'), 'reload current task bubble');
   await until(() => tab.evaluate(() => document.querySelector('[data-subagent-label]')?.textContent.includes('Fixture child')), 'reload temporary child replay');
   await until(() => browserMessages.some(message => message.type === 'liveModels'
     && message.snapshot.session?.model === 'fixture-session-model'
@@ -270,6 +291,7 @@ try {
     + line('subagent.completed', { toolCallId: 'fixture-run' }));
   await until(() => tab.evaluate(() => !document.querySelector('[role="progressbar"]')
     && !document.querySelector('[data-agent-tools="ada"]')
+    && !document.querySelector('[data-agent-task-bubble]')
     && !document.querySelector('[data-subagent-label]')), 'live completion clears displays');
   const staleFile = await session('stale-session', project, marker + running + tool('stale'), 6 * 60_000);
   // Newest directory candidate but genuinely stale event bytes.
@@ -280,6 +302,7 @@ try {
   await tab.getByText('Activity source diagnostics', { exact: true }).click();
   await until(() => tab.evaluate(() => document.body.textContent.includes('Live CLI observer: searching')), 'browser stale diagnostics');
   assert.equal(await tab.locator('[data-observed-task]').count(), 0);
+  assert.equal(await tab.locator('[data-agent-task-bubble]').count(), 0);
   assert.equal(channel.latest('liveModels').snapshot.session, null);
   assert.deepEqual(channel.latest('liveModels').snapshot.members, {});
   await tab.getByRole('button', { name: 'Squad Info', exact: true }).click();

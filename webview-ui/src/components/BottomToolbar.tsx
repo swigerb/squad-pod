@@ -1,4 +1,5 @@
 import { useHostClient } from '../HostClientContext.js';
+import { TaskBubbleToggle } from './TaskBubbleToggle.js';
 
 interface BottomToolbarProps {
   readOnly?: boolean;
@@ -12,9 +13,11 @@ interface BottomToolbarProps {
   isTelemetryOpen: boolean;
   onToggleTelemetry: () => void;
   telemetryCount: number;
+  taskBubblesEnabled?: boolean;
+  onTaskBubblesChange?: (enabled: boolean) => void;
 }
 
-export function BottomToolbar({ readOnly = false, nativeUnavailable = false, hideEditor = false, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, onOpenSettings, isTelemetryOpen, onToggleTelemetry, telemetryCount }: BottomToolbarProps) {
+export function BottomToolbar({ readOnly = false, nativeUnavailable = false, hideEditor = false, isEditMode, onToggleEditMode, onOpenSquadInfo, onOpenDirectories, onOpenSettings, isTelemetryOpen, onToggleTelemetry, telemetryCount, taskBubblesEnabled = true, onTaskBubblesChange }: BottomToolbarProps) {
   const client = useHostClient();
 
   const handleSquadInfo = () => {
@@ -48,6 +51,7 @@ export function BottomToolbar({ readOnly = false, nativeUnavailable = false, hid
           zIndex: 50,
         }}
       >
+        {onTaskBubblesChange && <TaskBubbleToggle enabled={taskBubblesEnabled} onChange={onTaskBubblesChange} />}
         <button
           onClick={handleSquadInfo}
           style={{

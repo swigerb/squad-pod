@@ -167,6 +167,7 @@ export function createBrowserClient(
       if (socket !== current) return;
       socket = undefined;
       preferencesRevision = undefined;
+      emit({ type: 'observedTasks', snapshot: { sessionId: null, tasks: [], limited: false } });
       if (inFlight !== undefined) {
         inFlight = undefined;
         failure('Disconnected before save acknowledgement. Draft retained; inspect saved state before deliberately retrying.');
