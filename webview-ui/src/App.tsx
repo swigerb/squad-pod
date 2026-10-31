@@ -306,6 +306,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
             catalog={directoryCatalog}
             error={directoryError}
             notice={directoryNotice}
+            browseAvailable={!standalone}
             onClose={() => setIsDirectoryModalOpen(false)}
           />
         )}
@@ -504,6 +505,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
           catalog={directoryCatalog}
           error={directoryError}
           notice={directoryNotice}
+          browseAvailable={!standalone}
           onClose={() => setIsDirectoryModalOpen(false)}
         />
       )}

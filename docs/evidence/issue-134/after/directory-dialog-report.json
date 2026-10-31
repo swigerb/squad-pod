@@ -1,0 +1,168 @@
+{
+  "head": "9da1daa54a02c8147d2fe579cbbbf22c969e8d8d",
+  "limitation": "Production webview with synthetic catalog and mocked host; not native VS Code or real Copilot CLI evidence.",
+  "cases": [
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "pageErrors": [],
+      "assertions": [
+        "dialog content remains left-aligned over the centered no-workspace view",
+        "10 chips with full-path titles; Enter and Space fill the manual form without any host message",
+        "manual save sends only addDirectory; no automatic launch",
+        "invalid folder has row-level status and reason; Launch is disabled",
+        "Manage actions on the last saved row remain reachable inside the scrollable list"
+      ],
+      "captures": [
+        {
+          "mode": "invalid",
+          "file": "directory-dialog-invalid-1280x900.png",
+          "geometry": {
+            "left": 260,
+            "right": 1020,
+            "top": 202,
+            "bottom": 698,
+            "dialogWidth": 758,
+            "dialogScrollWidth": 758,
+            "listWidth": 722,
+            "listScrollWidth": 722
+          }
+        },
+        {
+          "mode": "workspace",
+          "file": "directory-dialog-workspace-1280x900.png",
+          "geometry": {
+            "left": 260,
+            "right": 1020,
+            "top": 243.5,
+            "bottom": 656.5,
+            "dialogWidth": 758,
+            "dialogScrollWidth": 758,
+            "listWidth": 722,
+            "listScrollWidth": 722
+          }
+        },
+        {
+          "mode": "saved",
+          "file": "directory-dialog-saved-1280x900.png",
+          "geometry": {
+            "left": 260,
+            "right": 1020,
+            "top": 45,
+            "bottom": 855,
+            "dialogWidth": 758,
+            "dialogScrollWidth": 758,
+            "listWidth": 722,
+            "listScrollWidth": 722
+          }
+        },
+        {
+          "mode": "empty",
+          "file": "directory-dialog-empty-1280x900.png",
+          "geometry": {
+            "left": 260,
+            "right": 1020,
+            "top": 259.5,
+            "bottom": 640.5,
+            "dialogWidth": 758,
+            "dialogScrollWidth": 758,
+            "listWidth": 722,
+            "listScrollWidth": 722
+          }
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 640
+      },
+      "pageErrors": [],
+      "assertions": [
+        "dialog content remains left-aligned over the centered no-workspace view",
+        "10 chips with full-path titles; Enter and Space fill the manual form without any host message",
+        "manual save sends only addDirectory; no automatic launch",
+        "invalid folder has row-level status and reason; Launch is disabled",
+        "collapsed Add footer, Browse, and manual-entry disclosure remain visible with 12 saved rows",
+        "Manage actions on the last saved row remain reachable inside the scrollable list",
+        "narrow manual entry, 10 suggestions, expanded row/global error details and preserved draft fit without horizontal overflow"
+      ],
+      "captures": [
+        {
+          "mode": "invalid",
+          "file": "directory-dialog-invalid-360x640.png",
+          "geometry": {
+            "left": 8,
+            "right": 352,
+            "top": 12,
+            "bottom": 628,
+            "dialogWidth": 342,
+            "dialogScrollWidth": 342,
+            "listWidth": 314,
+            "listScrollWidth": 314
+          }
+        },
+        {
+          "mode": "workspace",
+          "file": "directory-dialog-workspace-360x640.png",
+          "geometry": {
+            "left": 8,
+            "right": 352,
+            "top": 73,
+            "bottom": 567,
+            "dialogWidth": 342,
+            "dialogScrollWidth": 342,
+            "listWidth": 314,
+            "listScrollWidth": 314
+          }
+        },
+        {
+          "mode": "saved",
+          "file": "directory-dialog-saved-360x640.png",
+          "geometry": {
+            "left": 8,
+            "right": 352,
+            "top": 8,
+            "bottom": 632,
+            "dialogWidth": 342,
+            "dialogScrollWidth": 342,
+            "listWidth": 314,
+            "listScrollWidth": 314
+          }
+        },
+        {
+          "mode": "empty",
+          "file": "directory-dialog-empty-360x640.png",
+          "geometry": {
+            "left": 8,
+            "right": 352,
+            "top": 107.5,
+            "bottom": 532.5,
+            "dialogWidth": 342,
+            "dialogScrollWidth": 342,
+            "listWidth": 314,
+            "listScrollWidth": 314
+          }
+        },
+        {
+          "mode": "manual-stress",
+          "file": "directory-dialog-manual-stress-360x640.png",
+          "geometry": {
+            "left": 8,
+            "right": 352,
+            "top": 8,
+            "bottom": 632,
+            "dialogWidth": 342,
+            "dialogScrollWidth": 342,
+            "footerWidth": 314,
+            "footerScrollWidth": 314,
+            "listWidth": 314,
+            "listScrollWidth": 314
+          }
+        }
+      ]
+    }
+  ]
+}

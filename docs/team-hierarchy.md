@@ -36,11 +36,13 @@ promoted. Unknown/non-general-purpose calls remain unattributed unless a matchin
 custom-selection event supplies authoritative identity.
 
 Temporary characters inherit a hue-shifted parent appearance, occupy free floor
-near that member, and show a dashed link and **Subtask / Parent** label. Nested
-calls link to their nearest observed roster ancestor; they do not imply durable
-reporting lines. They have no seat, details/charter action, appearance preference
-or layout persistence. If no floor is available, the task remains in Telemetry
-without a character. Roster names, roles, seats and appearance stay authoritative.
+near that member, and show a **Subtask / Parent** label. Nested calls link to their
+nearest observed roster ancestor; they do not imply durable reporting lines.
+There is no default line from a label to a character; a small pointer appears only
+when modest crowding displaces a label. They have no seat, details/charter action,
+appearance preference or layout persistence. If no floor is available, the task
+remains in Telemetry without a character. Roster names, roles, seats and appearance
+stay authoritative.
 
 Completion, failure, cancellation, ended/missing parents, session changes,
 source loss/error, five-minute source staleness, and disabling observation remove
