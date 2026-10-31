@@ -1,0 +1,51 @@
+{
+  "atUtc": "2026-10-31T15:39:20.924Z",
+  "files": [
+    {
+      "file": ".squad\\team.md",
+      "exists": true,
+      "bytes": 358,
+      "sha256": "05ccbe8a7d825ba47800450539406f4973c4713b923925928eee2a8a1ae729ac"
+    },
+    {
+      "file": ".squad\\sessions\\historical.json",
+      "exists": true,
+      "bytes": 179,
+      "sha256": "93919ab34b71d7d82e4367da434c192cc9ec75328e1d215f7ae6a283edcb32e3"
+    },
+    {
+      "file": ".squad\\agents\\ada\\charter.md",
+      "exists": true,
+      "bytes": 208,
+      "sha256": "c8452453d79b14e2511aab5221356726d81061187ece1a20944bb8f921ab04e8"
+    },
+    {
+      "file": ".squad\\agents\\bea\\charter.md",
+      "exists": false
+    },
+    {
+      "file": ".squad\\agents\\scribe\\charter.md",
+      "exists": true,
+      "bytes": 33,
+      "sha256": "536f4ce0dccab25f0363898481e599e2bc908de574ffdb0474bfac0aeba80c46"
+    },
+    {
+      "file": ".squad-pod\\layout.json",
+      "exists": true,
+      "bytes": 38740,
+      "sha256": "d0771b09f63d3d7332f70702591d3acc1fe16c63217dba9016975f6f32f6c870"
+    },
+    {
+      "file": ".vscode\\settings.json",
+      "exists": true,
+      "bytes": 41,
+      "sha256": "8b7dd995f95ba135b1809d2e775995a4a902e1718281510e54da52188ef84310"
+    },
+    {
+      "file": "acceptance-input.txt",
+      "exists": true,
+      "bytes": 65,
+      "sha256": "b3234cb30971702c78a94a7626b0f66410aeaaeceefc7ddffa7c435a7cc2f6c4"
+    }
+  ]
+}

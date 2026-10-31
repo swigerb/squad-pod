@@ -1,3 +1,37 @@
+# Current checkpoint: Batch 3
+
+**Partial native evidence and corrected handoff. Not release acceptance or human sign-off. This new batch is local pending exact-content publication approval.**
+
+Latest remotely read-back head: `a85ce4cd530d08edb367f6264e42c7efca9f1383`, draft PR #141. [Subsequent Batch 2 readback receipt](evidence/logs/published-batch-2-readback-a85ce4cd530d08edb367f6264e42c7efca9f1383.json) preserves all 47 retrieved files without changing earlier receipts. Product remains `25a14517`; plan remains `0c22cff`; membership fix `2522124` remains excluded.
+
+## Coverage, not a defect count
+
+There are **27 scenarios**, represented by **1,932 statement atoms**, including setup, cleanup, repeated requirements and list-number fragments. Outcomes remain **42 PASS / 1,890 BLOCKED**; no new PASS rows are inferred from partial observations. This ratio is not a release-readiness percentage.
+
+Of the unresolved rows, **1,869 say NOT YET EXECUTED**, **20 share the native Save As input blocker**, and **one records an incomplete motion demonstration**. Scope exclusions are separately described in the [case-level triage](evidence/logs/batch-3-case-triage.json); not-run is not automatically runnable or authorized.
+
+## New native observations
+
+- Directory form prevented an empty name, saved one run-owned project-B entry, rejected duplicate paths, and showed errors for missing/file paths without extra entries. The entry survived host reload; no Launch was clicked and recent requests stayed zero.
+- Layout draft expansion did not write disk. Explicit Save settled at **22x13**, from **21x13**, and its exact bytes survived host reload. A subsequent unsaved expansion was Reset; its dirty marker cleared without changing the saved file. Original layout bytes were restored and the edited file retained.
+- Workspace live observation was unexpectedly enabled despite user-profile false. It was disabled through the native control and remained off after reload. Cause and prior read scope remain unknown; no default-off/no-read/privacy certification is claimed.
+
+[Bounded observations, limitations and cleanup](evidence/logs/batch-3-summary.json) | [Actual native action records](evidence/logs/batch-3-native-actions.json) | [Original layout](evidence/logs/batch-3-layout-baseline.json) | [Saved layout](evidence/logs/batch-3-layout-saved.json)
+
+The early post-Save read was premature; both early and settled evidence are retained. The helper also corrected an implicit text-input selector and the dirty Save label. These are not new confirmed product defects.
+
+## Handoff corrections and remaining work
+
+Current installation/authentication/browser fields now distinguish completed read-only observations from login after full-page reload and unexecuted office-control/terminal modes. Screenshot inventory is **11**. PASS rows `N-03-S016-A006` and `F-02-S019-A007` now cite the existing restoration/check observations at lines 10-13 of the fixture action log, in addition to the baseline. Existing IDs and outcomes are preserved.
+
+Native export still needs human-driven input and actual output-byte evidence. Full layout/recovery, seats, labels, narrow controls, REAL producer and physical-device coverage remain incomplete or excluded. Minimum-version and claimed-platform installed-extension coverage are separate release gaps.
+
+Native execution ended at **15:40:25.972Z**, before the original **15:44:29.243Z** testing cutoff. Original hard stop remains **15:59:29.243Z**. The original layout is restored, editor/dialogs closed, live observation intentionally off, and one synthetic catalog entry retained. [Owned-process observation](evidence/logs/batch-3-process-state.json) found the native host and read-only server running at the recorded time; no shutdown or deletion was performed.
+
+## Historical checkpoints
+
+The following Batch 2 and Batch 1 text is retained unchanged as historical context. Its local/pending-publication language does not describe the current published Batch 2 head.
+
 # Fresh Squad Pod acceptance: 20261031T135929Z-fresh-25a14517
 
 **Latest local checkpoint: Batch 2. Not completed acceptance or human sign-off. Publication approval pending.**

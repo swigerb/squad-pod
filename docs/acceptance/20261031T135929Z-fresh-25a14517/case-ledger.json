@@ -3825,7 +3825,8 @@
           "evidenceRefs": [
             "evidence/logs/observer-batch2-ada-details.json",
             "evidence/logs/observer-batch2-bea-details.json",
-            "evidence/logs/observer-batch2-baseline.json"
+            "evidence/logs/observer-batch2-baseline.json",
+            "evidence/logs/observer-batch2-fixture-actions.jsonl"
           ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
@@ -3836,7 +3837,17 @@
               "FIXTURE"
             ],
             "rule": "Modes are alternatives or combined provenance, not interchangeable proofs. REAL variants remain forbidden."
-          }
+          },
+          "evidenceObservations": [
+            {
+              "atomicId": "N-03-S016-A006",
+              "path": "evidence/logs/observer-batch2-fixture-actions.jsonl",
+              "lines": [
+                10,
+                13
+              ]
+            }
+          ]
         },
         {
           "id": "N-03-S017",
@@ -4782,6 +4793,13 @@
           },
           "commonRequirementId": "C-08"
         }
+      ],
+      "supplementalEvidence": [
+        {
+          "path": "evidence/logs/batch-3-summary.json",
+          "classification": "Partial observations only; existing atomic outcomes unchanged",
+          "detail": "evidence/logs/batch-3-native-actions.json"
+        }
       ]
     },
     {
@@ -5182,6 +5200,13 @@
             "rule": "Modes are alternatives or combined provenance, not interchangeable proofs. REAL variants remain forbidden."
           },
           "commonRequirementId": "C-08"
+        }
+      ],
+      "supplementalEvidence": [
+        {
+          "path": "evidence/logs/batch-3-summary.json",
+          "classification": "Partial observations only; existing atomic outcomes unchanged",
+          "detail": "evidence/logs/batch-3-native-actions.json"
         }
       ]
     },
@@ -5985,6 +6010,13 @@
             "rule": "Modes are alternatives or combined provenance, not interchangeable proofs. REAL variants remain forbidden."
           },
           "commonRequirementId": "C-08"
+        }
+      ],
+      "supplementalEvidence": [
+        {
+          "path": "evidence/logs/batch-3-summary.json",
+          "classification": "Partial observations only; existing atomic outcomes unchanged",
+          "detail": "evidence/logs/batch-3-native-actions.json"
         }
       ]
     },
@@ -11148,6 +11180,13 @@
           },
           "commonRequirementId": "C-08"
         }
+      ],
+      "supplementalEvidence": [
+        {
+          "path": "evidence/logs/batch-3-summary.json",
+          "classification": "Partial observations only; existing atomic outcomes unchanged",
+          "detail": "evidence/logs/batch-3-native-actions.json"
+        }
       ]
     },
     {
@@ -11842,6 +11881,13 @@
             "rule": "Modes are alternatives or combined provenance, not interchangeable proofs. REAL variants remain forbidden."
           },
           "commonRequirementId": "C-08"
+        }
+      ],
+      "supplementalEvidence": [
+        {
+          "path": "evidence/logs/batch-3-summary.json",
+          "classification": "Partial observations only; existing atomic outcomes unchanged",
+          "detail": "evidence/logs/batch-3-native-actions.json"
         }
       ]
     },
@@ -16153,7 +16199,8 @@
           "outcome": "BLOCKED",
           "reason": "PARTIAL: other statements remain unexecuted or incomplete",
           "evidenceRefs": [
-            "evidence/logs/observer-batch2-baseline.json"
+            "evidence/logs/observer-batch2-baseline.json",
+            "evidence/logs/observer-batch2-fixture-actions.jsonl"
           ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
@@ -16164,7 +16211,17 @@
               "FIXTURE"
             ],
             "rule": "Modes are alternatives or combined provenance, not interchangeable proofs. REAL variants remain forbidden."
-          }
+          },
+          "evidenceObservations": [
+            {
+              "atomicId": "F-02-S019-A007",
+              "path": "evidence/logs/observer-batch2-fixture-actions.jsonl",
+              "lines": [
+                10,
+                13
+              ]
+            }
+          ]
         },
         {
           "id": "F-02-S020",
@@ -18715,6 +18772,13 @@
             "rule": "Modes are alternatives or combined provenance, not interchangeable proofs. REAL variants remain forbidden."
           },
           "commonRequirementId": "C-08"
+        }
+      ],
+      "supplementalEvidence": [
+        {
+          "path": "evidence/logs/batch-3-summary.json",
+          "classification": "Partial observations only; existing atomic outcomes unchanged",
+          "detail": "evidence/logs/batch-3-native-actions.json"
         }
       ]
     }

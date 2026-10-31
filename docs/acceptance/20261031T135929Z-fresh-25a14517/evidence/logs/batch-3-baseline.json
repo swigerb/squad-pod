@@ -1,0 +1,50 @@
+{
+  "startedAtUtc": "2026-10-31T15:23:54.118Z",
+  "nativeActionStartUtc": "2026-10-31T15:21:39.539Z",
+  "publishedCommit": "a85ce4cd530d08edb367f6264e42c7efca9f1383",
+  "testingStopUtc": "2026-10-31T15:44:29.243Z",
+  "hardStopUtc": "2026-10-31T15:59:29.243Z",
+  "files": [
+    {
+      "file": ".squad\\team.md",
+      "exists": true,
+      "bytes": 358,
+      "sha256": "05ccbe8a7d825ba47800450539406f4973c4713b923925928eee2a8a1ae729ac"
+    },
+    {
+      "file": ".squad\\sessions\\historical.json",
+      "exists": true,
+      "bytes": 179,
+      "sha256": "93919ab34b71d7d82e4367da434c192cc9ec75328e1d215f7ae6a283edcb32e3"
+    },
+    {
+      "file": ".squad\\agents\\ada\\charter.md",
+      "exists": true,
+      "bytes": 208,
+      "sha256": "c8452453d79b14e2511aab5221356726d81061187ece1a20944bb8f921ab04e8"
+    },
+    {
+      "file": ".squad\\agents\\bea\\charter.md",
+      "exists": false
+    },
+    {
+      "file": ".squad-pod\\layout.json",
+      "exists": true,
+      "bytes": 38649,
+      "sha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13"
+    },
+    {
+      "file": ".vscode\\settings.json",
+      "exists": true,
+      "bytes": 40,
+      "sha256": "fd197e6a077f4cafa1e6aa411e0f12a56f9d9811ccb3a89673e61b352c9f09aa"
+    },
+    {
+      "file": "acceptance-input.txt",
+      "exists": true,
+      "bytes": 65,
+      "sha256": "b3234cb30971702c78a94a7626b0f66410aeaaeceefc7ddffa7c435a7cc2f6c4"
+    }
+  ],
+  "warning": "Workspace liveActivity was true at discovery. Do not restore enabled observation during cleanup."
+}

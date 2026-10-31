@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T135929Z-fresh-25a14517",
-  "status": "BATCH 2 LOCAL CHECKPOINT - PARTIAL NATIVE AND READ-ONLY BROWSER EXECUTION",
+  "status": "BATCH 3 LOCAL HANDOFF CORRECTION AND PARTIAL NATIVE CHECKPOINT",
   "createdAtUtc": "2026-10-31T14:04:11.081Z",
   "startUtc": "2026-10-31T13:59:29.243Z",
   "testingStopUtc": "2026-10-31T15:44:29.243Z",
@@ -73,7 +73,7 @@
     "dependencyFeed": "configured corporate npm feed; no public-registry requests",
     "copilotCli": "NOT EXECUTED; no REAL producer launch authorized",
     "workspaceAgentTemplate": "NOT EXECUTED; disposable authored fixtures planned",
-    "browser": "NOT EXECUTED",
+    "browser": "Edge 156.0.0.0; read-only BROWSER/FIXTURE observations completed in Batch 2, not full standalone acceptance.",
     "nodePty": "1.1.0; Windows official prebuild loaded; no source rebuild",
     "conPty": "conpty.dll/OpenConsole.exe file version 1.23.2510.08001"
   },
@@ -96,7 +96,7 @@
     "officeControl": "Separate opt-in/authentication; writes restricted to disposable selected-project files",
     "terminal": "Synthetic --fixture only; separate human authentication",
     "publication": "Reviewed redacted run files and selected media in swigerb/squad-pod dedicated branch/draft PR to master; duplicate-aware redacted defects",
-    "mandatoryPublicationConfirmation": "Batch 1 exact commit approved and published; Batch 2 exact-content approval pending",
+    "mandatoryPublicationConfirmation": "Batch 1 and Batch 2 approved and published; user requested Batch 3 publication, exact-content preview confirmation pending.",
     "prohibited": [
       "REAL AI launches",
       "paid producer tasks",
@@ -164,7 +164,37 @@
       "run-owned package installations, fixtures, baselines and private raw media"
     ],
     "deletionApproved": false,
-    "credentials": "Never captured; human authenticated read-only; deliberate full page reload later returned to login; terminal/control authentication unused."
+    "credentials": "Never captured; human authenticated read-only; deliberate full page reload later returned to login; terminal/control authentication unused.",
+    "latestNative": {
+      "originalLayoutRestoredByteForByte": true,
+      "changedLayoutRetained": true,
+      "editorClosed": true,
+      "dialogsClosed": true,
+      "originalProjectFilesUnchangedExceptIntentionalLiveOff": true,
+      "retainedCatalogEntry": "Batch3 smoke B (run-owned project B), not launched; retained for review, not deleted",
+      "workspaceLiveActivity": false,
+      "directorySuggestions": false,
+      "privateLogsReadInThisContinuation": false,
+      "runningProcesses": {
+        "observedAtUtc": "2026-10-31T15:40:20.1697256Z",
+        "native": {
+          "alias": "isolated-native-vscode",
+          "running": true,
+          "exactOwnedPidCheckedPrivately": true,
+          "windowTitleMatchesOwnedAcceptanceHost": true
+        },
+        "observer": {
+          "alias": "observer-server-A",
+          "running": true,
+          "loopbackListenerPresent": true,
+          "exactOwnedPidCheckedPrivately": true
+        },
+        "stopped": false,
+        "deletionPerformed": false,
+        "limitation": "Point-in-time process check, not an assurance of continued operation or current browser authentication."
+      },
+      "filesDeleted": false
+    }
   },
   "signoff": {
     "native": "PENDING HUMAN ACCEPTANCE",
@@ -172,25 +202,38 @@
     "standalone": "PENDING HUMAN ACCEPTANCE"
   },
   "remoteCheckpoint": {
-    "verifiedCommit": "f455459b30ec2ae1dd4d76e99dcc745262189d77",
+    "verifiedCommit": "a85ce4cd530d08edb367f6264e42c7efca9f1383",
     "draftPr": "https://github.com/swigerb/squad-pod/pull/141",
     "closingIssuesReferences": [],
-    "newBatch": "PENDING publication confirmation"
+    "readbackReceipt": "evidence/logs/published-batch-2-readback-a85ce4cd530d08edb367f6264e42c7efca9f1383.json",
+    "filesReadBack": 47,
+    "newBatch": "LOCAL Batch 3 pending exact-content publication confirmation"
   },
   "prTemplate": "No repository PR template present at preparation HEAD; inherited owner template endpoint returned 404.",
-  "automationSafety": "Evidence commits use [skip ci]; no labels, assignees, review requests or AI workflow dispatch. Product code is unchanged.",
+  "automationSafety": "No labels, assignees, review requests or AI workflow dispatch. Product code is unchanged. Evidence publication may trigger existing repository CI; CI is not native acceptance.",
   "media": {
-    "screenshots": 5,
+    "screenshots": 11,
     "recording": "evidence/recordings/native-idle-motion.mp4",
     "durationSeconds": 60.002,
-    "rawDetailsScreenshot": "WITHHELD: private fixture absolute paths; no public screenshot evidence for that detail view"
+    "rawDetailsScreenshot": "WITHHELD: private fixture absolute paths; no public screenshot evidence for that detail view",
+    "batch3ScreenshotLimitations": "Two reviewed native screenshots, not full seat/motion/pixel acceptance. See batch-3 summary."
   },
-  "updatedAtUtc": "2026-10-31T15:02:28.993Z",
+  "updatedAtUtc": "2026-10-31T15:42:39.490Z",
   "batch2": {
     "summary": "evidence/logs/batch-2-summary.json",
     "addedPasses": 37,
     "baselineRestored": true,
     "nativeWindowRestored": true,
+    "noFullCaseAcceptance": true
+  },
+  "batch3": {
+    "summary": "evidence/logs/batch-3-summary.json",
+    "caseTriage": "evidence/logs/batch-3-case-triage.json",
+    "atomicOutcomesChanged": false,
+    "priorPassLinksRepaired": [
+      "N-03-S016-A006",
+      "F-02-S019-A007"
+    ],
     "noFullCaseAcceptance": true
   }
 }

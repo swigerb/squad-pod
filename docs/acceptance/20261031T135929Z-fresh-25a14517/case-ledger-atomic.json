@@ -2768,6 +2768,36 @@
       "evidenceRefs": [
         {
           "path": "evidence/logs/observer-batch2-baseline.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-fixture-actions.jsonl",
+          "lines": [
+            10,
+            13
+          ],
+          "observations": [
+            {
+              "line": 10,
+              "utc": "2026-10-31T14:49:35.360Z",
+              "action": "restore"
+            },
+            {
+              "line": 11,
+              "utc": "2026-10-31T14:50:04.645Z",
+              "action": "check"
+            },
+            {
+              "line": 12,
+              "utc": "2026-10-31T14:57:16.248Z",
+              "action": "check"
+            },
+            {
+              "line": 13,
+              "utc": "2026-10-31T14:58:22.613Z",
+              "action": "check"
+            }
+          ],
+          "purpose": "Restore after-array and subsequent full-baseline checks, including saved layout bytes; supplements the before-state reference."
         }
       ],
       "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
@@ -26419,6 +26449,36 @@
       "evidenceRefs": [
         {
           "path": "evidence/logs/observer-batch2-baseline.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-fixture-actions.jsonl",
+          "lines": [
+            10,
+            13
+          ],
+          "observations": [
+            {
+              "line": 10,
+              "utc": "2026-10-31T14:49:35.360Z",
+              "action": "restore"
+            },
+            {
+              "line": 11,
+              "utc": "2026-10-31T14:50:04.645Z",
+              "action": "check"
+            },
+            {
+              "line": 12,
+              "utc": "2026-10-31T14:57:16.248Z",
+              "action": "check"
+            },
+            {
+              "line": 13,
+              "utc": "2026-10-31T14:58:22.613Z",
+              "action": "check"
+            }
+          ],
+          "purpose": "Restore after-array and subsequent full-baseline checks, including saved layout bytes; supplements the before-state reference."
         }
       ],
       "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",

@@ -1,0 +1,18 @@
+{
+  "observedAtUtc": "2026-10-31T15:40:20.1697256Z",
+  "native": {
+    "alias": "isolated-native-vscode",
+    "running": true,
+    "exactOwnedPidCheckedPrivately": true,
+    "windowTitleMatchesOwnedAcceptanceHost": true
+  },
+  "observer": {
+    "alias": "observer-server-A",
+    "running": true,
+    "loopbackListenerPresent": true,
+    "exactOwnedPidCheckedPrivately": true
+  },
+  "stopped": false,
+  "deletionPerformed": false,
+  "limitation": "Point-in-time process check, not an assurance of continued operation or current browser authentication."
+}
