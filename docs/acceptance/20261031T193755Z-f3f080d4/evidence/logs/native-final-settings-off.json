@@ -1,0 +1,585 @@
+{
+  "utc": "2026-10-31T21:00:23.661Z",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+  "evidenceClass": "NATIVE",
+  "inputMethod": "Read-only rendered DOM observation of the actual isolated installed native host",
+  "targetKind": "webview",
+  "snapshot": {
+    "title": "Squad Pod",
+    "width": 1383,
+    "height": 800,
+    "activeElement": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": null
+    },
+    "text": "Fit office\n+\n−\nAda\nArchitect\nBasil\nDeveloper\nCedar\nReviewer\nDahlia\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nEdit Layout\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics\nSettings\n×\nSound Notifications\nShow Named Areas\nDebug View\nLive Activity (opt-in)\n\nLive source: off. Reads local Copilot CLI session metadata for this workspace after confirmation.\n\nSquad source\nTeam file: Found\nDirectory: RUN_ROOT\\isolation\\project-A\\.squad\nFile observer: Watching (native watch + polling)\nLive CLI observer: off\n\nFile observations are activity hints, not authoritative lifecycle, tool or context events.\n\nEventBus / WebSocket bridge: Not connected (no producer).\nLocal furniture assets\n\nChanges reload automatically. Removing a directory does not delete files or layout items.\n\nAdd Asset Directory\n\nAutomatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code's normal terminal and Copilot permission prompts. Live tools and context use an undocumented, best-effort Copilot CLI session format.\n\nLayout\nExport Layout\nImport Layout",
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Fit office",
+        "label": "Fit and center office",
+        "placeholder": null,
+        "title": "Fit and center office (large layouts use minimum zoom)",
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          36,
+          16,
+          96.02083587646484,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "+",
+        "label": "Zoom in",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          36,
+          52,
+          32,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "−",
+        "label": "Zoom out",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          36,
+          88,
+          32,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Ada\nArchitect",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          778.5677490234375,
+          367,
+          48.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Basil\nDeveloper",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          255.359375,
+          175,
+          48.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Cedar\nReviewer",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          978.0625,
+          367,
+          43.208335876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Dahlia\nTester",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          542.859375,
+          481,
+          49.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Task bubbles: On",
+        "placeholder": null,
+        "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          346.10418701171875,
+          761,
+          156.8229217529297,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Squad Info",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          510.9270935058594,
+          761,
+          110.02083587646484,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Telemetry",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          628.9479370117188,
+          761,
+          102.21875,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Edit Layout",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          739.1666870117188,
+          761,
+          117.82292175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Directories",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          864.9896240234375,
+          761,
+          109.82292175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Settings",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          982.8125,
+          761,
+          94.41667175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Clear activity",
+        "placeholder": null,
+        "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1247.260498046875,
+          756,
+          109.75,
+          20.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "✕",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1365.010498046875,
+          756,
+          26.322917938232422,
+          20.666667938232422
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Usage coverage and source diagnostics",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          953.3333740234375,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Recent historical reports (0 of 0, newest first; at most 40)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          971.3333740234375,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Select CLI usage JSON...",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1066,
+          192.1666717529297,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Refresh selected export",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": true,
+        "visibleAtCenter": false,
+        "box": [
+          232.1666717529297,
+          1066,
+          184.96875,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Forget export",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": true,
+        "visibleAtCenter": false,
+        "box": [
+          425.13543701171875,
+          1066,
+          112.95833587646484,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "CLI import provenance and limits",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1152.666748046875,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Observation settings and consent",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1185.3333740234375,
+          228.5729217529297,
+          18
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Activity source diagnostics",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1245.3333740234375,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "×",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          896.9896240234375,
+          72.5,
+          20.010417938232422,
+          22.666667938232422
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "text": "",
+        "placeholder": null,
+        "title": null,
+        "type": "checkbox",
+        "checked": true,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          896,
+          114.16667175292969,
+          18,
+          18
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "text": "",
+        "placeholder": null,
+        "title": null,
+        "type": "checkbox",
+        "checked": false,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          896,
+          154.1666717529297,
+          18,
+          18
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "text": "",
+        "placeholder": null,
+        "title": null,
+        "type": "checkbox",
+        "checked": false,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          896,
+          194.1666717529297,
+          18,
+          18
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "text": "",
+        "placeholder": null,
+        "title": null,
+        "type": "checkbox",
+        "checked": false,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          901,
+          234.1666717529297,
+          13,
+          13
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Add Asset Directory",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          466.3333435058594,
+          552.1666870117188,
+          168.03125,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Export Layout",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          466.3333435058594,
+          698.1666870117188,
+          221.33334350585938,
+          29.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Import Layout",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          695.6666870117188,
+          698.1666870117188,
+          221.33334350585938,
+          29.33333396911621
+        ]
+      }
+    ],
+    "frames": [],
+    "canvases": [
+      {
+        "width": 2075,
+        "height": 1200
+      }
+    ]
+  }
+}

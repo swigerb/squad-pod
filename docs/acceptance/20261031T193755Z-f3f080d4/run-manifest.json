@@ -1,12 +1,13 @@
 {
   "runId": "20261031T193755Z-f3f080d4",
-  "status": "NATIVE BATCH 2 LOCAL CHECKPOINT; AWAITING EXACT EVIDENCE PUBLICATION APPROVAL",
-  "checkpointUtc": "2026-10-31T20:38:49.906Z",
+  "status": "BOUNDED NATIVE RUN ENDED; ACCEPTANCE INCOMPLETE; BATCH 3 LOCAL CANDIDATE AWAITING PUBLICATION APPROVAL",
+  "checkpointUtc": "2026-10-31T21:04:43.174Z",
   "clock": {
     "startUtc": "2026-10-31T19:37:55.466Z",
     "testingStopUtc": "2026-10-31T21:22:55.466Z",
     "hardStopUtc": "2026-10-31T21:37:55.466Z",
-    "runtimeStartedUtc": "2026-10-31T19:57:23.522Z"
+    "runtimeStartedUtc": "2026-10-31T19:57:23.522Z",
+    "runtimeEndedUtc": "2026-10-31T21:01:43.2046423+00:00"
   },
   "executor": "Agent-driven native UI tester and delegated technical reviewer, not a human",
   "humanAcceptance": "PENDING",
@@ -129,19 +130,14 @@
     "draftPrUrl": "https://github.com/swigerb/squad-pod/pull/146"
   },
   "cleanup": {
-    "ownedProcesses": [
-      {
-        "rootPid": 61060,
-        "selectedWorkspace": "WORKSPACE_A",
-        "extensionHostPidAtLastObservation": 103220
-      }
-    ],
+    "ownedProcesses": [],
     "retained": [
       "Frozen packages",
       "Fresh isolated VSIX and synthetic fixtures",
       "Evidence"
     ],
-    "awaitingPermission": []
+    "awaitingPermission": [],
+    "batch3Receipt": "evidence/logs/native-batch-3-cleanup.json"
   },
   "batch1": {
     "observedVariants": 6,
@@ -165,6 +161,29 @@
     "retainedSyntheticCatalog": "Recovered B renamed -> PROJECT_B",
     "retainedSyntheticLayout": "22x13",
     "baselineBackup": "LOCAL_ONLY_PRIVATE/layout-baseline.json",
+    "unexpectedProducerPresent": false
+  },
+  "batch3": {
+    "observations": [
+      "OBS-0012",
+      "OBS-0013",
+      "OBS-0014",
+      "OBS-0015"
+    ],
+    "atomicOutcomes": {
+      "PASS": 22,
+      "FAIL": 0,
+      "BLOCKED": 1910,
+      "NOT-PRODUCED": 0
+    },
+    "batch2PublishedCommit": "e9a05f953c4a363f8aa8cfad053e71ad758c19e8",
+    "exportsAttempted": true,
+    "approvedNativeBaselineRestored": true,
+    "baselineSha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+    "retainedSyntheticLayout": "21x13",
+    "newReviewedImages": 4,
+    "publicationApproved": false,
+    "nativeHostClosedNormally": true,
     "unexpectedProducerPresent": false
   }
 }

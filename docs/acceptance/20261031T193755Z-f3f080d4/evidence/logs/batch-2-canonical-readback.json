@@ -1,0 +1,18 @@
+{
+  "runId": "20261031T193755Z-f3f080d4",
+  "verifiedCommit": "e9a05f953c4a363f8aa8cfad053e71ad758c19e8",
+  "verifiedUtc": "2026-10-31T20:51:21.333Z",
+  "canonicalGitBlobBytes": true,
+  "files": 109,
+  "indexedHashesAndReferencesVerified": true,
+  "cases": 27,
+  "atomicIds": 1932,
+  "commonDefinitions": 8,
+  "exactlyOnceMapping": true,
+  "observations": 11,
+  "atomicOutcomes": {
+    "BLOCKED": 1924,
+    "PASS": 8
+  },
+  "selfCommitNotClaimed": true
+}

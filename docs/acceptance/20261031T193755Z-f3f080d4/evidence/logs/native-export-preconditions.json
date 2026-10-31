@@ -1,0 +1,29 @@
+{
+  "recordedUtc": "2026-10-31T21:04:43.174Z",
+  "runId": "20261031T193755Z-f3f080d4",
+  "recordType": "RETAINED_AGENT_EXECUTION_ACCOUNT",
+  "approvalRef": "evidence/logs/batch-2-human-approval.json",
+  "actualDialog": "Windows native #32770, native Edit filename controls 1001 and 1148, native Button controls",
+  "inputMethod": "Agent-driven CDP command selection and owned foreground-checked Windows pointer/keyboard; no application-state injection",
+  "initialLocationCategory": "OTHER",
+  "initialSuggestedFilename": "squad-pod-layout",
+  "interception": false,
+  "interceptionSource": "Scout m_get_settings inspected during the export phase; unchanged",
+  "simplifiedDialogExplicitConfiguration": "Not separately inspected; actual native Windows dialog was directly observed",
+  "scope": "Local isolated file workspace and exact four approved targets; no REAL producer, normal profile or test driver stub",
+  "priorExistence": {
+    "native-default-new.json": false,
+    "native-settings-new.json": false,
+    "native-cancel.json": false,
+    "native-default-overwrite.json": "Absent initially; deliberately copied from native Settings export before overwrite"
+  },
+  "absenceMethod": "Exact target checks guarded each shell submission; recorded here after execution, not a fabricated contemporaneous filesystem-monitor log",
+  "cancelledTargetStayedAbsent": true,
+  "helperBlockers": [
+    "Default-export notification covered the Settings webview click; hit-testing rejected input and retained actual screenshot.",
+    "Two UI Automation Export Layout labels (native Button and underlying web control) blocked submission. Native #32770 dialog ancestry was then explicitly inspected and foregrounded; no guessed click was sent.",
+    "Packaged sourcemap lacks sourcesContent; expected-byte comparison used a bounded, individually inspected pure generator from the packaged bundle instead.",
+    "A read-only variant-list projection had a syntax error; it did not execute application code or change evidence."
+  ],
+  "limitations": "No normal-directory-navigation comparison, human-input comparison, induced dialog/write error, recovery export or full canvas equivalence. New-file successes do not resolve the historical anomaly in #123."
+}

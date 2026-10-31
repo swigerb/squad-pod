@@ -1,0 +1,59 @@
+{
+  "utc": "2026-10-31T20:57:41.883Z",
+  "runId": "20261031T193755Z-f3f080d4",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "evidenceClass": "NATIVE",
+  "supplementaryEvidence": "Read-only exact approved output files and saved office; pure packaged starter generator is an offline expected-byte reference, not runtime behavioral proof",
+  "bundledReference": {
+    "extensionSha256": "622fa32cba1e28dc5720be5d3676fa475ec81a45b5010330a509b8d13aa4e478",
+    "generatorSha256": "1091ba8e9480cf1e824a36bde6ebb1cbd6e2f90601ca9bb122abc35430070918",
+    "expectedSerializedSha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+    "bytes": 38649
+  },
+  "savedOfficeSha256": "d0771b09f63d3d7332f70702591d3acc1fe16c63217dba9016975f6f32f6c870",
+  "outputs": [
+    {
+      "target": "native-default-new.json",
+      "exists": true,
+      "bytes": 38649,
+      "sha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+      "dimensions": {
+        "cols": 21,
+        "rows": 13
+      },
+      "furnitureCount": 36,
+      "equalsBundledStarterSerialization": true,
+      "equalsPersistedOfficeSerialization": false
+    },
+    {
+      "target": "native-settings-new.json",
+      "exists": true,
+      "bytes": 38740,
+      "sha256": "d0771b09f63d3d7332f70702591d3acc1fe16c63217dba9016975f6f32f6c870",
+      "dimensions": {
+        "cols": 22,
+        "rows": 13
+      },
+      "furnitureCount": 36,
+      "equalsBundledStarterSerialization": false,
+      "equalsPersistedOfficeSerialization": true
+    },
+    {
+      "target": "native-default-overwrite.json",
+      "exists": true,
+      "bytes": 38649,
+      "sha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+      "dimensions": {
+        "cols": 21,
+        "rows": 13
+      },
+      "furnitureCount": 36,
+      "equalsBundledStarterSerialization": true,
+      "equalsPersistedOfficeSerialization": false
+    },
+    {
+      "target": "native-cancel.json",
+      "exists": false
+    }
+  ]
+}

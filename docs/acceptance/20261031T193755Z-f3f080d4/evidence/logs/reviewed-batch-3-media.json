@@ -1,0 +1,62 @@
+{
+  "runId": "20261031T193755Z-f3f080d4",
+  "images": [
+    {
+      "file": "evidence/screenshots/native-export-baseline.png",
+      "captureUtc": "2026-10-31T20:53:25.786Z",
+      "captureMethod": "Actual installed Electron workbench/webview screenshot; not a mocked host",
+      "originalSize": [
+        2160,
+        1350
+      ],
+      "publishedCandidateWidth": 1000,
+      "sha256": "d809822ced6b44569af27f928c4872a0b3f9ce4bc856eb96d991465d4d0a4421",
+      "review": "Individually visually reviewed actual native synthetic office; no private path, credential, customer or producer data visible",
+      "humanPublicationSelection": "PENDING"
+    },
+    {
+      "file": "evidence/screenshots/native-default-export-office.png",
+      "captureUtc": "2026-10-31T20:53:54.773Z",
+      "captureMethod": "Actual installed Electron workbench/webview screenshot; not a mocked host",
+      "originalSize": [
+        2160,
+        1350
+      ],
+      "publishedCandidateWidth": 1000,
+      "sha256": "bd815a5952bbe2e135c0e49288f3587f7bf3b4482d7894dde1fa3fd7ff04168d",
+      "review": "Individually visually reviewed actual native synthetic office; no private path, credential, customer or producer data visible",
+      "humanPublicationSelection": "PENDING"
+    },
+    {
+      "file": "evidence/screenshots/native-baseline-draft-editor.png",
+      "captureUtc": "2026-10-31T20:59:19.125Z",
+      "captureMethod": "Actual installed Electron workbench/webview screenshot; not a mocked host",
+      "originalSize": [
+        2160,
+        1350
+      ],
+      "publishedCandidateWidth": 1000,
+      "sha256": "73e6f4e5cf9b74e41ac783f18098ec60bbd4e0e120ec9c016d3a6f64d30d25db",
+      "review": "Individually visually reviewed actual native synthetic office; no private path, credential, customer or producer data visible",
+      "humanPublicationSelection": "PENDING"
+    },
+    {
+      "file": "evidence/screenshots/native-restored-baseline-office.png",
+      "captureUtc": "2026-10-31T20:59:51.610Z",
+      "captureMethod": "Actual installed Electron workbench/webview screenshot; not a mocked host",
+      "originalSize": [
+        2160,
+        1350
+      ],
+      "publishedCandidateWidth": 1000,
+      "sha256": "e51d80db9a167bae2381f5549e5f8206df59ce6fcc05a24b4b1f593742114de1",
+      "review": "Individually visually reviewed actual native synthetic office; no private path, credential, customer or producer data visible",
+      "humanPublicationSelection": "PENDING"
+    }
+  ],
+  "excluded": [
+    "Settings-overlay capture containing a local path",
+    "All unselected raw media, black contact sheet and unreviewed idle video"
+  ],
+  "limitation": "Static agent-reviewed images are not motion evidence or complete canvas/color/metadata equivalence."
+}

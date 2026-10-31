@@ -1,3 +1,29 @@
+# Current Batch 3 checkpoint
+
+**Acceptance remains incomplete: 22 PASS / 0 FAIL / 1,910 BLOCKED / 0 NOT-PRODUCED single requirements. All 27 overall cases remain BLOCKED.** Original 1,932 IDs and eight common definitions are unchanged. Agent-driven native evidence, not human acceptance.
+
+Run `20261031T193755Z-f3f080d4`; product `f3f080d4ce7bec009df2c62648f4ad0c4ea505a6`. Runtime ended normally at `2026-10-31T21:01:43.2046423+00:00`, before the unchanged testing cutoff `2026-10-31T21:22:55.466Z` and hard stop `2026-10-31T21:37:55.466Z`. Zero test-launched AI spending. No product changes, merges, issue closures, REAL producers or standalone authentication.
+
+## Published versus local evidence
+
+Batch 2's exact 109-file/five-image frozen candidate was approved and published at [`e9a05f953c4a`](https://github.com/swigerb/squad-pod/commit/e9a05f953c4a363f8aa8cfad053e71ad758c19e8) on draft [PR 146](https://github.com/swigerb/squad-pod/pull/146). [Human approval](evidence/logs/batch-2-human-approval.json) and [canonical readback](evidence/logs/batch-2-canonical-readback.json) supersede the publication-pending statements in historical snapshots below. **Batch 3 and four newly reviewed images are local only, awaiting separate exact publication approval.**
+
+## New direct observations
+
+Default and Settings native new-file exports succeeded at distinct approved absent absolute targets without overwrite confirmation. [Exact outputs](evidence/exports) and [byte comparisons](evidence/logs/native-exports-after-overwrite.json) show starter 21x13 versus persisted custom 22x13. Only the designated existing disposable copy prompted [Confirm Save As](evidence/logs/native-overwrite-confirmations.jsonl); approved replacement changed that copy, not the office. Default cancellation wrote nothing. Initial native location was OTHER, suggested basename squad-pod-layout. These successes do not diagnose or close #123.
+
+Approved baseline restoration used native Import Layout, inspected the dirty draft, Reset, a second Import and explicit Save. Saved office stayed 22x13 until Save, then regained the exact original 21x13 hash `cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13`, retained after native reload. The selected retained backup was byte-identical to the starter output, but was not the newly exported filename; that literal variant remains BLOCKED.
+
+The export notification covering Settings and ambiguous native/web Export Layout labels blocked helper input. Actual native dialog ancestry was inspected before correcting the local driver. These are retained helper limitations, not product defects. No warning was blindly accepted. [Preconditions/limits](evidence/logs/native-export-preconditions.json) explicitly retain the lack of separate simplified-setting inspection, dirty Settings export, normal navigation, human-input comparison, induced error/recovery tests and complete canvas equivalence.
+
+## Final safe state and media
+
+[Normal owned-host cleanup](evidence/logs/native-batch-3-cleanup.json) closed PID 61060 after case dialogs and saved baseline; no recorded owned descendants remained. [Final settings](evidence/logs/native-final-settings-off.json) showed live off, [catalog](evidence/logs/native-final-directories.json) retained renamed B and zero launch requests, [saved seats](evidence/logs/native-batch-3-seats.json) were retained, and [child-only safety inventory](evidence/logs/native-batch-3-process-safety.json) found no producer. Files and original backup remain intact. The unchanged watchdog is still registered. Process evidence is not a file-read or billing audit.
+
+Four individually reviewed native screenshots, resized to 1000 pixels wide, are [selected for human publication review](evidence/logs/reviewed-batch-3-media.json): pre-export office, completed Default export office, imported dirty baseline editor, restored baseline office after reload. All unselected raw media, Settings image containing a local path, black contact sheet and unreviewed idle video remain excluded. Static images do not prove motion or full canvas equivalence.
+
+## Earlier report text (historical checkpoints only)
+
 # Current batch 2 checkpoint
 
 **Acceptance remains incomplete.** Current single-atom totals: **8 PASS / 0 FAIL / 1924 BLOCKED / 0 NOT-PRODUCED**, retaining all 1,932 IDs, 27 cases and eight common definitions. Six earlier bounded membership variants remain observed; no combined case passes are inferred.

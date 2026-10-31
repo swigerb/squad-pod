@@ -1,0 +1,22 @@
+{
+  "utc": "2026-10-31T21:01:43.2046423+00:00",
+  "runId": "20261031T193755Z-f3f080d4",
+  "status": "OWNED_NATIVE_HOST_CLOSED_NORMALLY",
+  "inputMethod": "Normal CloseMainWindow request on the exact owned process identity, after approved baseline Save/reload and closed case dialogs",
+  "closedRootPid": 61060,
+  "remainingOwnedProcesses": [],
+  "filesDeleted": false,
+  "syntheticBaseline": "21x13",
+  "baselineSha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+  "retained": [
+    "Original packages",
+    "Isolated profile/extensions",
+    "Synthetic fixtures and renamed B catalog entry",
+    "Original baseline backup",
+    "Three named native exports",
+    "All evidence and excluded media"
+  ],
+  "testLaunchedAiSpend": 0,
+  "hardStopUtc": "2026-10-31T21:37:55.466Z",
+  "watchdog": "Original detached watchdog remains registered and will record the already-stopped host at the unchanged hard stop."
+}
