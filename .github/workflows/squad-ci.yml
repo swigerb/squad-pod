@@ -39,6 +39,9 @@ jobs:
       - name: Unit tests
         run: npm run test:all
 
+      - name: Evidence index verifier tests
+        run: node --test scripts/verify-acceptance-index.test.cjs
+
       - name: Build
         run: npm run build
 
