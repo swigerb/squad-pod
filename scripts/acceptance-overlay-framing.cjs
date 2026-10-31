@@ -105,7 +105,7 @@ function Fixture(){
      setZoom(1);
      for(let i=0;i<8;i++) Object.assign(office.characters.get('member-'+i),{
        x:(i%2?innerWidth-90:90)-pan.current.x,
-       y:180+(i<2?0:Math.floor(i/2)*160+(i%2)*40)-pan.current.y,
+       y:220+(i<2?0:Math.floor(i/2)*160+(i%2)*40)-pan.current.y,
        state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
      refreshFixture(value=>value+1);
    },
