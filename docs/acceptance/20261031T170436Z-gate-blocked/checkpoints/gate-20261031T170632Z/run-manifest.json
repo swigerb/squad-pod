@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "runId": "20261031T170436Z-gate-blocked",
+  "status": "BLOCKED",
+  "checkpointUtc": "2026-10-31T17:06:32.190Z",
+  "clock": {
+    "startUtc": "2026-10-31T17:04:36.279Z",
+    "startBasis": "Conservative clock anchored to receipt of the authorized directive.",
+    "testingStopUtc": "2026-10-31T18:49:36.279Z",
+    "hardStopUtc": "2026-10-31T19:04:36.279Z",
+    "runtimeTestingStartedUtc": null,
+    "candidateGateStoppedUtc": "2026-10-31T17:06:32.190Z",
+    "clockContinuesDuringHumanWait": true,
+    "extensionAuthorized": false
+  },
+  "plan": {
+    "sourceSha": "0c22cffded2985370a80158d6bc252effa16c01c",
+    "url": "https://github.com/swigerb/squad-pod/blob/0c22cffded2985370a80158d6bc252effa16c01c/docs/native-acceptance.md"
+  },
+  "candidate": {
+    "frozenRecordUrl": null,
+    "productSha": null,
+    "productTree": null,
+    "ciRunId": null,
+    "vsix": null,
+    "standalone": null,
+    "includedFixIds": null,
+    "excludedFixIds": null,
+    "selectedMembershipFixId": null,
+    "installedPayloadVerified": false
+  },
+  "historicalPlanCandidate": {
+    "applicability": "Historical only, as explicitly designated by the directive. Not selected for this run.",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "productTree": "e8bc96dc315b46d9926a0065a132e3d63636580c",
+    "ciRunId": "41173070887",
+    "vsix": {
+      "artifactName": "squad-pod-vsix",
+      "artifactId": "13031881538",
+      "filename": "squad-pod-0.1.0.vsix",
+      "bytes": 578477,
+      "sha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad"
+    },
+    "standalone": {
+      "artifactName": "owned-terminal-windows-latest",
+      "artifactId": "13031892507",
+      "filename": "squad-pod-observer-0.1.0.tgz",
+      "bytes": 423982,
+      "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a"
+    },
+    "identityVerification": "Documented values only; no package or installed payload was examined."
+  },
+  "historicalEvidence": {
+    "sourceSha": "a6047b4dad447092de57342f131090c7dedac208",
+    "url": "https://github.com/swigerb/squad-pod/tree/a6047b4dad447092de57342f131090c7dedac208/docs/acceptance/20261031T135929Z-fresh-25a14517",
+    "pr": "https://github.com/swigerb/squad-pod/pull/141",
+    "newCandidatePassesCarriedForward": 0,
+    "historicalLedgerRebuilt": false,
+    "lostArtifactSearchPerformed": false
+  },
+  "gate": {
+    "outcome": "BLOCKED",
+    "reason": "The directive supplies a pinned plan and historical evidence, but no distinct frozen candidate record for the new pass or selected membership fix. No latest build may be substituted.",
+    "requiredRecord": [
+      "Full product commit SHA and tree SHA",
+      "Exact CI run",
+      "Both package artifact names and IDs",
+      "Extracted package filenames, byte counts and SHA-256 values",
+      "Source plan",
+      "Explicit included and excluded fix IDs",
+      "Selected membership fix identity and inclusion"
+    ]
+  },
+  "execution": {
+    "packageDownloadPerformed": false,
+    "installationPerformed": false,
+    "nativeOrBrowserRuntimeTestingPerformed": false,
+    "settingsInspectionPerformed": false,
+    "effectiveIsolationEstablished": false,
+    "humanAuthenticationPerformed": false,
+    "officeControlWritesPerformed": false,
+    "syntheticTerminalsLaunched": 0,
+    "realProducerLaunches": 0,
+    "testLaunchedAiSpend": 0,
+    "dependencyInstallationPerformed": false,
+    "productCodeChangesPerformed": false,
+    "newNativeEvidenceProduced": false,
+    "runtimeMediaProduced": false
+  },
+  "publication": {
+    "authorizedRepository": "swigerb/squad-pod",
+    "authorizedBase": "master",
+    "draftPrUrl": null,
+    "pushedSha": null,
+    "verifiedRemoteSha": null,
+    "status": "NOT PUBLISHED",
+    "reason": "Candidate-gate checkpoint only; frozen record is required before preparing the scoped acceptance ledgers and publishing the pre-testing checkpoint."
+  },
+  "cleanup": {
+    "runOwnedRetainedHostsServersHelpers": [],
+    "runOwnedSyntheticTerminals": [],
+    "retainedArtifacts": [
+      "run-manifest.json",
+      "report.md"
+    ],
+    "cleanupAwaitingPermission": [],
+    "otherSessionsProcessesInspectedOrTerminated": false
+  },
+  "humanAcceptance": "PENDING"
+}

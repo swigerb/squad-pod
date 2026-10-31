@@ -1,0 +1,189 @@
+{
+  "runId": "20261031T170436Z-gate-blocked",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "excludesIndexItself": true,
+  "entries": [
+    {
+      "relativePath": "behavioral-matrix.json",
+      "bytes": 10042,
+      "sha256": "55cf107572c903ff308e22bc60a5d7f1002cc79ff606e99d9b27484694a14a2d",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:24:11.250Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "case-ledger-atomic.json",
+      "bytes": 2194859,
+      "sha256": "772271303903c9c13fa7a2852b0bccf3f4374c8770182d34faf3b3ab3be2587f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:24:11.253Z",
+      "caseIds": [
+        "N-01",
+        "N-02",
+        "N-03",
+        "N-04",
+        "N-05",
+        "N-06",
+        "D-01",
+        "D-02",
+        "D-03",
+        "R-01",
+        "R-02",
+        "R-03",
+        "R-04",
+        "R-05",
+        "R-06",
+        "U-01",
+        "L-01",
+        "L-02",
+        "L-03",
+        "L-04",
+        "L-05",
+        "L-06",
+        "L-07",
+        "V-01",
+        "F-01",
+        "F-02",
+        "X-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "case-ledger.json",
+      "bytes": 729193,
+      "sha256": "c4686b9d6459343a742afb20ba3a432b9b48040be409df5a9796de2441f25ea8",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:24:11.255Z",
+      "caseIds": [
+        "N-01",
+        "N-02",
+        "N-03",
+        "N-04",
+        "N-05",
+        "N-06",
+        "D-01",
+        "D-02",
+        "D-03",
+        "R-01",
+        "R-02",
+        "R-03",
+        "R-04",
+        "R-05",
+        "R-06",
+        "U-01",
+        "L-01",
+        "L-02",
+        "L-03",
+        "L-04",
+        "L-05",
+        "L-06",
+        "L-07",
+        "V-01",
+        "F-01",
+        "F-02",
+        "X-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "checkpoints/gate-20261031T170632Z/report.md",
+      "bytes": 2459,
+      "sha256": "42855f50a7122d843c685a7e6bf659f585b1ec07d19b4224e3b2825aa5ba7e46",
+      "productSha": null,
+      "packageSha256": null,
+      "indexedUtc": "2026-10-31T17:24:11.256Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "IMMUTABLE EARLIER GATE CHECKPOINT; CANDIDATE NOT THEN SUPPLIED",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "checkpoints/gate-20261031T170632Z/run-manifest.json",
+      "bytes": 4350,
+      "sha256": "3490d7826061edce055b13c0e212a3d3371f5982460949f5e9a65072d05cec15",
+      "productSha": null,
+      "packageSha256": null,
+      "indexedUtc": "2026-10-31T17:24:11.257Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "IMMUTABLE EARLIER GATE CHECKPOINT; CANDIDATE NOT THEN SUPPLIED",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "frozen-candidate.json",
+      "bytes": 2555,
+      "sha256": "e3755b18605d56d91d1cd85f17a689a76dfbdeedf599b88d683df0b844e1c8d1",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:24:11.258Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "observations.jsonl",
+      "bytes": 928,
+      "sha256": "48cfacdfa7feb6faa21a3503d583117ba92d32aa6eea7a325b321b56a1e49771",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:24:11.259Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "report.md",
+      "bytes": 4383,
+      "sha256": "bdcccdc044b8dfa1760e50d6595fb8a2e24e51344aa5d209b6fba615066eddac",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:24:11.259Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "run-manifest.json",
+      "bytes": 8207,
+      "sha256": "1e4f7e872c0d250b11777a005acb7fc6c2726005c514d0d3cf5ef155267af52d",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:24:11.261Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "standalone-setup.json",
+      "bytes": 993,
+      "sha256": "c6988e54919138fe119e90402c882812987bd687d14dd1d8274b5ab0407bff3f",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:24:11.262Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    }
+  ]
+}

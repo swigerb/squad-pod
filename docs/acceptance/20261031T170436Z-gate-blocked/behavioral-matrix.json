@@ -1,0 +1,355 @@
+{
+  "runId": "20261031T170436Z-gate-blocked",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "generatedUtc": "2026-10-31T17:24:11.245Z",
+  "rollupRule": "A successful variant does not pass an entire combined subcheck. Shared requirements stay BLOCKED until every applicable asserted variant has adequate direct evidence.",
+  "inheritedPasses": 0,
+  "variants": [
+    {
+      "id": "P0-effective-settings",
+      "caseIds": [
+        "N-05"
+      ],
+      "atomicIds": [
+        "N-05-S001-A002",
+        "N-05-S002-A001",
+        "N-05-S004-A003"
+      ],
+      "expected": "Profile/workspace/folder values, explicit fixture roots and actual native UI; no internal no-read claim.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "membership-cold",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "Cold native open; compare all IDs/count, auxiliary members, status, project and seat map.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "membership-recreate-1",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "First host-surviving panel recreation; capture the same full comparison.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "membership-recreate-2",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "Second host-surviving panel recreation; capture the same full comparison.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "membership-recreate-3",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "Third host-surviving panel recreation; capture ordering and the same full comparison.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "membership-host-reload",
+      "caseIds": [
+        "N-01"
+      ],
+      "atomicIds": [
+        "N-01-S002-A003",
+        "N-01-S003-A001",
+        "N-01-S003-A003"
+      ],
+      "expected": "Full window/extension-host reload, with before/after owned host identity and same roster/project/seat comparison.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "membership-project-switch",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "Switch between explicit synthetic A and B, then return; stop on wrong attribution.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "native-export-new",
+      "caseIds": [
+        "L-02"
+      ],
+      "atomicIds": [
+        "L-02-S001-A002",
+        "L-02-S002-A001",
+        "L-02-S002-A002",
+        "L-02-S002-A008",
+        "L-02-S003-A001"
+      ],
+      "expected": "Real native dialog, unique initially absent target, output bytes/hash/parse and unchanged saved baseline.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "native-export-overwrite",
+      "caseIds": [
+        "L-02"
+      ],
+      "atomicIds": [
+        "L-02-S001-A002",
+        "L-02-S002-A001",
+        "L-02-S002-A002",
+        "L-02-S002-A008",
+        "L-02-S003-A001"
+      ],
+      "expected": "Distinct disposable preexisting target, human-approved native overwrite and before/after bytes/hash.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "native-export-cancel",
+      "caseIds": [
+        "L-02"
+      ],
+      "atomicIds": [
+        "L-02-S001-A002",
+        "L-02-S002-A001",
+        "L-02-S002-A002",
+        "L-02-S002-A008",
+        "L-02-S003-A001"
+      ],
+      "expected": "Native cancellation; prove disposable target and saved-office baseline unchanged.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "layout-save-reload",
+      "caseIds": [
+        "L-01"
+      ],
+      "atomicIds": [
+        "L-01-S001-A003",
+        "L-01-S002-A001",
+        "L-01-S002-A002",
+        "L-01-S002-A003",
+        "L-01-S002-A004"
+      ],
+      "expected": "UI edit/save/reload with actual saved disk bytes and separately evaluated canvas equivalence.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "layout-reset-cancel-recovery",
+      "caseIds": [
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-03-S001-A002",
+        "L-03-S002-A003",
+        "L-03-S002-A005",
+        "L-03-S003-A002",
+        "L-03-S003-A004"
+      ],
+      "expected": "Dirty Reset, cancellation and recovery with before/after bytes; do not collapse variants.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "synthetic-seat-arrival",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S002-A003",
+        "N-02-S002-A004",
+        "N-02-S003-A003",
+        "N-02-S003-A004",
+        "N-02-S003-A005"
+      ],
+      "expected": "Labeled synthetic arrival and saved assignments against the approved actual starter map.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "wide-office-controls",
+      "caseIds": [
+        "V-01"
+      ],
+      "atomicIds": [
+        "V-01-S001-A001",
+        "V-01-S002-A001",
+        "V-01-S002-A007",
+        "V-01-S003-A003",
+        "V-01-S003-A004"
+      ],
+      "expected": "Wide labels/list/Hide/Locate/Fit plus a bounded action clip, not a static-only claim.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "narrow-office-controls",
+      "caseIds": [
+        "V-01"
+      ],
+      "atomicIds": [
+        "V-01-S001-A001",
+        "V-01-S002-A001",
+        "V-01-S002-A007",
+        "V-01-S003-A003",
+        "V-01-S003-A004"
+      ],
+      "expected": "Resize, explicitly Fit office again, inspect all relevant narrow controls and clip the claimed behavior.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "directory-controls",
+      "caseIds": [
+        "D-01"
+      ],
+      "atomicIds": [
+        "D-01-S002-A002",
+        "D-01-S002-A003",
+        "D-01-S002-A004",
+        "D-01-S002-A005",
+        "D-01-S002-A006"
+      ],
+      "expected": "Browse/manual disclosure, validation, rename, Change folder, reload, footer and no unintended Launch.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "keyboard-and-source-warnings",
+      "caseIds": [
+        "U-01"
+      ],
+      "atomicIds": [
+        "U-01-S003-A001",
+        "U-01-S003-A002",
+        "U-01-S003-A003",
+        "U-01-S003-A008",
+        "U-01-S003-A009"
+      ],
+      "expected": "Native keyboard/focus and distinct missing/partial source warnings.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "standalone-readonly",
+      "caseIds": [
+        "F-02"
+      ],
+      "atomicIds": [
+        "F-02-S001-A001",
+        "F-02-S001-A003",
+        "F-02-S002-A001",
+        "F-02-S003-A002",
+        "F-02-S003-A003"
+      ],
+      "expected": "Only after human observation authentication, attempt negative writes through visible browser UI.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "standalone-office-conflict",
+      "caseIds": [
+        "F-02"
+      ],
+      "atomicIds": [
+        "F-02-S001-A001",
+        "F-02-S001-A003",
+        "F-02-S002-A001",
+        "F-02-S003-A002",
+        "F-02-S003-A003"
+      ],
+      "expected": "Separately human-authenticated/approved selected-project office-control revision/conflict variants.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "standalone-fixture-terminals",
+      "caseIds": [
+        "F-02"
+      ],
+      "atomicIds": [
+        "F-02-S001-A001",
+        "F-02-S002-A001",
+        "F-02-S003-A002",
+        "F-02-S003-A004",
+        "F-02-S003-A005"
+      ],
+      "expected": "Separately authenticated --fixture terminals: lifecycle/output/resize/reconnect/stop; no actual agent.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "observationIds": [],
+      "evidenceRefs": []
+    }
+  ]
+}

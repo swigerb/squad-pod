@@ -1,0 +1,27 @@
+{
+  "runId": "20261031T170436Z-gate-blocked",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "package": {
+    "artifactName": "owned-terminal-windows-latest",
+    "artifactId": "13049980047",
+    "filename": "squad-pod-observer-0.1.0.tgz",
+    "bytes": 423982,
+    "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a"
+  },
+  "state": "NOT LAUNCHED",
+  "installedPayloadVerified": false,
+  "observationAuthenticated": false,
+  "officeControlEnabled": false,
+  "officeControlAuthenticated": false,
+  "terminalAuthorityEnabled": false,
+  "terminalAuthorityAuthenticated": false,
+  "liveActivity": false,
+  "configuredLogRoot": "FIXTURE_CLI_HOME",
+  "selectedProject": null,
+  "authCaptured": false,
+  "realProducerLaunches": 0,
+  "fixtureTerminalsLaunched": 0,
+  "physicalDeviceAcceptance": "BLOCKED - EXCLUDED",
+  "actualCliExportAcceptance": "BLOCKED - NO EXPLICITLY SELECTED SANITIZED REAL FILE",
+  "durableHierarchyPromotion": "BLOCKED - UNSUPPORTED"
+}
