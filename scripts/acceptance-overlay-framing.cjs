@@ -65,7 +65,8 @@ function Fixture(){
    sample(){
      return [...document.querySelectorAll('[data-agent-label], [data-subagent-label]')].map(e=>{
        const id=e.dataset.agentLabel||e.dataset.subagentLabel;
-       const c=e.dataset.subagentLabel?office.subagents.get(id).character:office.characters.get(id);
+       const c=e.dataset.subagentLabel?office.subagents.get(id)?.character:office.characters.get(id);
+       if(!c) return null;
        const annotation=e.closest('[data-agent-annotation]')||e;
        const r=annotation.getBoundingClientRect();
        const b=getCharacterScreenBounds(c,currentZoom,pan.current);
@@ -81,7 +82,7 @@ function Fixture(){
          toolBubble:!!annotation.querySelector('[data-agent-tool-bubble]'),transient:!!e.dataset.subagentLabel,
          docked,spriteOverlap,associationCue:!!document.querySelector('[data-agent-association="'+id+'"]'),
          whiteLeader:!!document.querySelector('line[data-agent-connector],line[data-subagent-connector]')};
-     });
+     }).filter(Boolean);
    },
    active(){
      office.setAgentActive('member-0',true); office.setAgentTool('member-0','Read file');
