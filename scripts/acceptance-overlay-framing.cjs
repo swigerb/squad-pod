@@ -44,6 +44,7 @@ let motionEnabled = true;
 const initialLayout = JSON.stringify(office.layout);
 function Fixture(){
  const [zoom,setZoom]=useState(3),[request,setRequest]=useState();
+ const [,refreshFixture]=useState(0);
  currentZoom=zoom;
  window.fixture = {
    sent, office, pan, setZoom,
@@ -106,6 +107,7 @@ function Fixture(){
        x:(i%2?innerWidth-90:90)-pan.current.x,
        y:180+(i<2?0:Math.floor(i/2)*160+(i%2)*40)-pan.current.y,
        state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
+     refreshFixture(value=>value+1);
    },
    toolbarEdgeProof(){
      motionEnabled=false;
@@ -115,6 +117,7 @@ function Fixture(){
        x:(i%2?innerWidth-90:90)-pan.current.x,
        y:(i===0?60:180+Math.floor(i/2)*160+(i%2)*40)-pan.current.y,
        state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
+     refreshFixture(value=>value+1);
    },
    bounds(id){ return getCharacterScreenBounds(office.characters.get(id),currentZoom,pan.current); },
    unchanged:()=>JSON.stringify(office.layout)===initialLayout
