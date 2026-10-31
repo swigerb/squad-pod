@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "runId": "20261031T135929Z-fresh-25a14517",
+  "status": "INITIAL CHECKPOINT - ACCEPTANCE NOT EXECUTED",
+  "createdAtUtc": "2026-10-31T14:04:11.081Z",
+  "startUtc": "2026-10-31T13:59:29.243Z",
+  "testingStopUtc": "2026-10-31T15:44:29.243Z",
+  "hardStopUtc": "2026-10-31T15:59:29.243Z",
+  "executor": "Scout",
+  "humanApprover": "repository owner",
+  "plan": {
+    "sha": "0c22cffded2985370a80158d6bc252effa16c01c",
+    "path": "docs/native-acceptance.md",
+    "sha256": "82b2ab59ae8d8592e17cf3ddfb2a990cbf87452c779f21ab0dd102ec9add7fa4"
+  },
+  "product": {
+    "sha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "tree": "e8bc96dc315b46d9926a0065a132e3d63636580c",
+    "gitObjectVerified": true,
+    "rebuilt": false,
+    "localMembershipFixExcluded": "2522124e48b46a702427692869470680e832351e",
+    "installedIdentity": "NOT EXECUTED"
+  },
+  "evidenceBranch": "acceptance/20261031T135929Z-fresh-25a14517",
+  "baseBranch": "master",
+  "repositoryHeadAtPreparation": "0c22cffded2985370a80158d6bc252effa16c01c",
+  "ci": {
+    "runId": 41173070887,
+    "event": "push",
+    "headSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "conclusion": "success",
+    "classification": "Historical build/fixture provenance only; not fresh native or REAL evidence."
+  },
+  "packages": [
+    {
+      "role": "VSIX",
+      "artifactId": 13031881538,
+      "artifactName": "squad-pod-vsix",
+      "file": "squad-pod-0.1.0.vsix",
+      "bytes": 578477,
+      "sha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "installedComparison": {
+        "status": "NOT EXECUTED",
+        "files": null
+      }
+    },
+    {
+      "role": "STANDALONE",
+      "artifactId": 13031892507,
+      "artifactName": "owned-terminal-windows-latest",
+      "file": "squad-pod-observer-0.1.0.tgz",
+      "bytes": 423982,
+      "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "installedComparison": {
+        "status": "NOT EXECUTED",
+        "files": null
+      }
+    }
+  ],
+  "runtime": {
+    "os": "Windows",
+    "architecture": "x64",
+    "node": "26.13.0",
+    "npm": "11.20.0",
+    "vscode": {
+      "version": "1.144.0",
+      "commit": "2c33b50b16c472efe58357d1d2a8a5414bc23fbf",
+      "architecture": "x64"
+    },
+    "git": "2.56.0.windows.3",
+    "dependencyFeed": "configured corporate npm feed; no public-registry requests",
+    "copilotCli": "NOT EXECUTED; no REAL producer launch authorized",
+    "workspaceAgentTemplate": "NOT EXECUTED; disposable authored fixtures planned",
+    "browser": "NOT EXECUTED",
+    "nodePty": "NOT EXECUTED"
+  },
+  "isolatedAliases": {
+    "userData": "isolated-user-data",
+    "extensions": "isolated-extensions",
+    "projectA": "project-A",
+    "projectB": "project-B",
+    "cliHome": "fixture-only-cli-home",
+    "standaloneInstall": "observer-install"
+  },
+  "authorization": {
+    "source": "CURRENT_USER_REQUEST",
+    "approvedAtUtc": "2026-10-31T13:59:29.243Z",
+    "maxMinutes": 120,
+    "aiSpendLimit": 0,
+    "reserveFinalMinutes": 15,
+    "native": "Exact installed VSIX in isolated VS Code with disposable fixtures only",
+    "observation": "Exact standalone package, explicit disposable project; human enters credentials privately",
+    "officeControl": "Separate opt-in/authentication; writes restricted to disposable selected-project files",
+    "terminal": "Synthetic --fixture only; separate human authentication",
+    "publication": "Reviewed redacted run files and selected media in swigerb/squad-pod dedicated branch/draft PR to master; duplicate-aware redacted defects",
+    "mandatoryPublicationConfirmation": "PENDING exact-content preview",
+    "prohibited": [
+      "REAL AI launches",
+      "paid producer tasks",
+      "physical devices",
+      "normal profiles",
+      "personal workspaces",
+      "private logs",
+      "credential capture",
+      "permission changes",
+      "deployment",
+      "merging",
+      "issue closure",
+      "github/awesome-copilot writes",
+      "registry.npmjs.org requests"
+    ],
+    "stopConditions": [
+      "privacy exposure",
+      "data loss",
+      "unintended launch",
+      "writes outside disposable scope",
+      "wrong-member attribution",
+      "deadline"
+    ]
+  },
+  "evidenceClasses": {
+    "NATIVE": "Installed extension in desktop VS Code",
+    "REAL": "Actual approved producer emission; forbidden in this run",
+    "FIXTURE": "Deliberately authored data or --fixture synthetic terminal",
+    "BROWSER": "Browser observation; emulation never establishes physical-device evidence",
+    "PREPARATION": "Read-only provenance/administrative evidence, not acceptance"
+  },
+  "history": {
+    "status": "MISSING HISTORICAL EVIDENCE",
+    "oldRowsRecovered": 0,
+    "originalIdMappingPreserved": false,
+    "contextHandoff": "36d6697874fe4cb3e94deb8c62ba4397508de7e3",
+    "separatedCandidates": [
+      "0988f272da855c3b1158b5ca110f5c8614cc4279",
+      "e9fde5616f0a85c9aa5c2238b5e8ec169b383e25",
+      "25a14517f894f10e2e8169612499a04f8bcb49ce"
+    ],
+    "importedHistoricalObservations": 0
+  },
+  "counts": {
+    "cases": 27,
+    "sourceAndUserGroups": 296,
+    "commonDefinitions": 8,
+    "commonApplications": 216,
+    "totalGroups": 512,
+    "atomicRows": 1932,
+    "byOutcome": {
+      "BLOCKED": 1932
+    },
+    "byObservedEvidenceClass": {
+      "NONE_NOT_EXECUTED": 1932
+    }
+  },
+  "cleanup": {
+    "testProcessesStarted": 0,
+    "retained": [
+      "isolated evidence clone",
+      "verified candidate downloads",
+      "private preparation scripts"
+    ],
+    "deletionApproved": false
+  },
+  "signoff": {
+    "native": "PENDING HUMAN ACCEPTANCE",
+    "real": "BLOCKED - NOT AUTHORIZED",
+    "standalone": "PENDING HUMAN ACCEPTANCE"
+  },
+  "remoteCheckpoint": "NOT PUBLISHED - mandatory preview confirmation pending",
+  "prTemplate": "No repository PR template present at preparation HEAD; inherited owner template endpoint returned 404.",
+  "automationSafety": "Evidence commits use [skip ci]; no labels, assignees, review requests or AI workflow dispatch. Product code is unchanged.",
+  "media": {
+    "screenshots": "NOT PRODUCED - tests not executed",
+    "recording": "NOT PRODUCED - tests not executed",
+    "emptyDirectories": "Created locally; Git does not track empty directories. No fake media/placeholder files."
+  }
+}
