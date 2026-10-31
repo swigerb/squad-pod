@@ -462,12 +462,12 @@ describe('AgentLabels over canvas characters', () => {
             if (!text?.includes('Developer')) expect(text, `${context}: role text`).toContain('Developer');
             const x2 = connector!.getAttribute('x2');
             const expectedX = character.x * zoom + panRef.current.x;
-            if (x2 === null || !Number.isFinite(Number(x2)) || Math.abs(Number(x2) - expectedX) >= 0.005) {
+            if (x2 === null || !Number.isFinite(Number(x2)) || !(Math.abs(Number(x2) - expectedX) < 0.005)) {
               expect(x2, `${context}: connector x2 attribute`).not.toBeNull();
               expect(Number(x2), `${context}: connector x2 alignment`).toBeCloseTo(expectedX);
             }
             const y2 = connector!.getAttribute('y2');
-            if (y2 === null || !Number.isFinite(Number(y2)) || Math.abs(Number(y2) - bounds.top) >= 0.005) {
+            if (y2 === null || !Number.isFinite(Number(y2)) || !(Math.abs(Number(y2) - bounds.top) < 0.005)) {
               expect(y2, `${context}: connector y2 attribute`).not.toBeNull();
               expect(Number(y2), `${context}: connector y2 alignment`).toBeCloseTo(bounds.top);
             }
