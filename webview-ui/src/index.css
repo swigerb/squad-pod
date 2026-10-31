@@ -470,7 +470,7 @@ html, body, #root {
   grid-template-columns: minmax(0, 1fr) max-content;
   align-items: center;
   gap: 8px 12px;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   max-height: min(42vh, 320px);
   overflow: auto;

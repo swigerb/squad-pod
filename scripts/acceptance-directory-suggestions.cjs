@@ -169,6 +169,35 @@ const server = http.createServer((request, response) => {
           } else if (mode === 'workspace') {
             assert.equal(await dialog.getByRole('button', { name: 'Launch Workspace fixture', exact: true }).isEnabled(), true);
           } else if (mode === 'saved') {
+            if (viewport.width === 360) {
+              const footerVisibility = await dialog.evaluate((element) => {
+                const footer = element.querySelector('.directory-add');
+                const browse = footer?.querySelector('[aria-label="Browse for a directory"]');
+                const manual = footer?.querySelector('.directory-manual');
+                const summary = manual?.querySelector('summary');
+                const footerBounds = footer?.getBoundingClientRect();
+                const browseBounds = browse?.getBoundingClientRect();
+                const summaryBounds = summary?.getBoundingClientRect();
+                const fullyInsideFooterAndViewport = (bounds) => (
+                  !!bounds && !!footerBounds
+                  && bounds.width > 0 && bounds.height > 0
+                  && bounds.top >= footerBounds.top && bounds.bottom <= footerBounds.bottom
+                  && bounds.top >= 0 && bounds.bottom <= window.innerHeight
+                );
+                return {
+                  collapsed: manual instanceof HTMLDetailsElement && !manual.open,
+                  footerVisible: !!footerBounds && footerBounds.top >= 0 && footerBounds.bottom <= window.innerHeight,
+                  browseVisible: fullyInsideFooterAndViewport(browseBounds),
+                  manualDisclosureVisible: fullyInsideFooterAndViewport(summaryBounds),
+                };
+              });
+              assert.equal(footerVisibility.collapsed, true, 'manual entry must be collapsed in the long-list state');
+              assert.equal(footerVisibility.footerVisible, true, 'the Add footer must remain in the viewport');
+              assert.equal(footerVisibility.browseVisible, true, 'Browse must remain visible without locator auto-scroll');
+              assert.equal(footerVisibility.manualDisclosureVisible, true,
+                'the manual-entry disclosure must remain visible without locator auto-scroll');
+              record.assertions.push('collapsed Add footer, Browse, and manual-entry disclosure remain visible with 12 saved rows');
+            }
             const lastSavedRow = dialog.locator('[data-directory-row="saved:fixture:11"]');
             await lastSavedRow.scrollIntoViewIfNeeded();
             const manage = dialog.getByLabel('Manage directory actions for Saved fixture 11');
