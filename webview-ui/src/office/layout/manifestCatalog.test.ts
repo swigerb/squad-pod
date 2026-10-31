@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import * as path from 'path';
 import type { ManifestFurniture } from '../../../../src/manifestAssets.js';
+import { loadAssetSnapshot } from '../../../../src/manifestAssets.js';
 import { buildDynamicCatalog, getAssetProblem, getCatalogEntry } from './furnitureCatalog.js';
 import { applyFurniturePlace, planFurnitureMove, planFurnitureRotate } from '../editor/editorActions.js';
 import { getFurnitureFootprint, layoutToFurnitureInstances, layoutToSeats, createDefaultLayout } from './layoutManager.js';
@@ -7,7 +9,7 @@ import { OfficeState } from '../engine/officeState.js';
 import { getColorizedFloorSprite, setFloorSprites } from '../floorTiles.js';
 import { getColorizedWallSprite, setWallSprites } from '../wallTiles.js';
 import { getColorizedSprite, getColorizedTileSprite } from '../colorize.js';
-import { TileType, type OfficeLayout } from '../types.js';
+import { Direction, TileType, type OfficeLayout } from '../types.js';
 
 const desk: ManifestFurniture = {
   type: 'pa_DESK_FRONT', label: 'Desk fixture', width: 3, height: 2,
@@ -86,10 +88,21 @@ describe('manifest catalog and non-destructive reload', () => {
   });
 
   it('uses the verified starter only for fresh offices and retains seat assignments across catalog refresh', () => {
-    const chair = { ...desk, type: 'pa_CUSHIONED_CHAIR_FRONT', width: 1, height: 1, isDesk: false, category: 'chairs' };
-    buildDynamicCatalog([desk, chair]);
+    const snapshot = loadAssetSnapshot(path.resolve('public', 'assets'));
+    expect(snapshot.diagnostics).toEqual([]);
+    expect(snapshot.furniture.find((item) => item.type === 'pa_WOODEN_CHAIR_SIDE')).toMatchObject({
+      width: 1, height: 2, backgroundTiles: 1,
+    });
+    buildDynamicCatalog(snapshot.furniture);
     const layout = createDefaultLayout();
-    expect(layoutToSeats(layout.furniture)).toHaveLength(6);
+    expect(layoutToSeats(layout.furniture)).toEqual([
+      { id: 'chair-left-1', col: 3, row: 10, direction: Direction.RIGHT },
+      { id: 'chair-left-2', col: 3, row: 8, direction: Direction.RIGHT },
+      { id: 'chair-right-1', col: 7, row: 8, direction: Direction.LEFT },
+      { id: 'chair-right-2', col: 7, row: 10, direction: Direction.LEFT },
+      { id: 'bench-1', col: 3, row: 5, direction: Direction.UP },
+      { id: 'bench-2', col: 7, row: 5, direction: Direction.UP },
+    ]);
     expect(layout.furniture.every((f) => f.col >= 0 && f.row >= 0
       && f.col + f.assetFootprint!.width <= layout.cols
       && f.row + f.assetFootprint!.height <= layout.rows)).toBe(true);

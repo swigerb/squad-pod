@@ -65,6 +65,9 @@ describe('validated manifest assets', () => {
     expect(snapshot.furniture).toHaveLength(38);
     expect(snapshot.furniture.find((a) => a.type === 'pa_DESK_FRONT')).toMatchObject({ width: 3, height: 2 });
     expect(snapshot.furniture.find((a) => a.type === 'pa_DESK_SIDE')).toMatchObject({ width: 1, height: 4 });
+    expect(snapshot.furniture.find((a) => a.type === 'pa_WOODEN_CHAIR_SIDE')).toMatchObject({
+      width: 1, height: 2, backgroundTiles: 1,
+    });
     expect(snapshot.floors).toHaveLength(9);
     expect(snapshot.floors.every((sprite) => sprite.length === 16 && sprite.every((row) => row.length === 16))).toBe(true);
     expect(snapshot.walls).toHaveLength(16);

@@ -145,6 +145,12 @@ export function getCatalogEntry(type: string): FurnitureCatalogEntry | undefined
     ?? dynamicCatalog.find((entry) => entry.type === type);
 }
 
+export function isSeatFurniture(type: string): boolean {
+  const entry = getCatalogEntry(type);
+  return type === 'chair' || (entry?.category === 'chairs'
+    && ((entry.width === 1 && entry.height === 1) || (entry.backgroundTiles ?? 0) > 0));
+}
+
 export function buildDynamicCatalog(assets?: ManifestFurniture[]): FurnitureCatalogEntry[] {
   if (assets) {
     dynamicCatalog = assets.map((asset) => ({ ...asset }));

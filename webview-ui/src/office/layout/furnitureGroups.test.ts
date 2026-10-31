@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ManifestFurniture } from '../../../../src/manifestAssets.js';
-import type { OfficeLayout, PlacedFurniture } from '../types.js';
+import { Direction, type OfficeLayout, type PlacedFurniture } from '../types.js';
 import { clearColorizeCache, getColorizedSprite } from '../colorize.js';
 import { applyFurniturePlace, commitFurniturePlan, planFurnitureRotate } from '../editor/editorActions.js';
 import { buildDynamicCatalog, getAssetProblem, getCatalogEntry, getRotatedType, isRotatable } from './furnitureCatalog.js';
@@ -141,14 +141,27 @@ describe('rotation groups and mirrors', () => {
   });
 
   it('keeps saved chair uid, desk-adjacent facing and seat assignment keys across variant rotations', () => {
-    buildDynamicCatalog([asset('front'), asset('side', { mirrorSide: true }), asset('back')]);
-    let current = layout([placement(), { uid: 'desk', type: 'desk', col: 2, row: 1, rotation: 0 }]);
+    const tall = (orientation: ManifestFurniture['orientation'], extra: Partial<ManifestFurniture> = {}) => asset(orientation, {
+      width: 1, height: 2, backgroundTiles: 1,
+      sprite: Array.from({ length: 32 }, () => Array<string>(16).fill('#ffffff')),
+      ...extra,
+    });
+    buildDynamicCatalog([tall('front'), tall('side', { mirrorSide: true }), tall('back')]);
+    expect(applyFurniturePlace(layout([]), 'pa_front', 0, 0).furniture[0]).toMatchObject({
+      assetRole: 'seat', assetFootprint: { width: 1, height: 2 },
+    });
+    const chair = { ...placement(), assetFootprint: { width: 1, height: 2 } };
+    let current = layout([chair, { uid: 'desk', type: 'desk', col: 3, row: 3, rotation: 0 }]);
     const before = layoutToSeats(current.furniture);
-    expect(before).toHaveLength(1);
+    expect(before).toEqual([{ id: 'stable-seat', col: 2, row: 3, direction: Direction.RIGHT }]);
+    expect(getCatalogEntry('pa_side:left')?.backgroundTiles).toBe(1);
     for (let i = 0; i < 4; i++) {
       current = commitFurniturePlan(current, planFurnitureRotate(current, 'stable-seat'))!.layout;
       expect(layoutToSeats(current.furniture)).toEqual(before);
     }
-    expect(current.furniture[0]).toEqual(placement());
+    expect(current.furniture[0]).toMatchObject({
+      uid: 'stable-seat', type: 'pa_front', assetFootprint: { width: 1, height: 2 }, assetRole: 'seat',
+    });
+    expect(layoutToSeats(deserializeLayout(serializeLayout(current)).furniture)).toEqual(before);
   });
 });

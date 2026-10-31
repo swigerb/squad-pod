@@ -1,7 +1,9 @@
 import { OfficeLayout, TileType, FloorColor, PlacedFurniture, CarpetTile } from '../types.js';
 import { EditorState, UndoEntry } from './editorState.js';
 import { UNDO_STACK_MAX_SIZE } from '../../constants.js';
-import { getAssetProblem, getCatalogEntry, getRotatedType, getOnStateType, isRotatable } from '../layout/furnitureCatalog.js';
+import {
+  getAssetProblem, getCatalogEntry, getRotatedType, getOnStateType, isRotatable, isSeatFurniture,
+} from '../layout/furnitureCatalog.js';
 import { getFurnitureFootprint } from '../layout/layoutManager.js';
 import { getSurfaceOwners } from '../layout/furnitureSurfaces.js';
 import { isValidCarpetTile } from '../../../../src/carpetValidation.js';
@@ -121,7 +123,7 @@ export function planFurnitureRotate(layout: OfficeLayout, uid: string): Furnitur
     };
     delete rotated.assetRole;
     if (entry.isDesk) rotated.assetRole = 'desk';
-    else if (entry.category === 'chairs' && entry.width === 1 && entry.height === 1) rotated.assetRole = 'seat';
+    else if (isSeatFurniture(nextType)) rotated.assetRole = 'seat';
     // Variant artwork need not be a geometric quarter-turn. Riders retain their positions,
     // but must still fit completely on the replacement surface.
     const riders = getSurfaceRiders(layout, uid);
@@ -258,7 +260,7 @@ export function applyFurniturePlace(
   if (entry && /^(pa_|local_)/.test(type)) {
     furniture.assetFootprint = { width: entry.width, height: entry.height };
     if (entry.isDesk) furniture.assetRole = 'desk';
-    else if (entry.category === 'chairs' && entry.width === 1 && entry.height === 1) furniture.assetRole = 'seat';
+    else if (isSeatFurniture(type)) furniture.assetRole = 'seat';
   }
   if (groupPlacementError(layout, [furniture], true)) return layout;
   

@@ -4,6 +4,7 @@ import { createHash } from 'crypto';
 import { PNG } from 'pngjs';
 
 export interface FurnitureGroupMetadata {
+  backgroundTiles?: number;
   groupId?: string;
   groupType?: 'rotation' | 'state' | 'animation';
   rotationScheme?: '2-way' | '3-way-mirror' | '4-way';
@@ -209,7 +210,7 @@ export function validateManifest(value: unknown): { root: Record<string, unknown
   text(root.category, 'category', ID);
   flag(root.canPlaceOnWalls, 'canPlaceOnWalls');
   flag(root.canPlaceOnSurfaces, 'canPlaceOnSurfaces');
-  integer(root.backgroundTiles, 'backgroundTiles', 16, 0);
+  const backgroundTiles = integer(root.backgroundTiles, 'backgroundTiles', 16, 0);
   const leaves: Leaf[] = [];
   const ids = new Set<string>();
   const diagnostics: string[] = [];
@@ -275,7 +276,7 @@ export function validateManifest(value: unknown): { root: Record<string, unknown
       throw new Error('Manifest type must be asset or group');
     }
   };
-  visit(root, 0);
+  visit(root, 0, { backgroundTiles });
   return { root, leaves, diagnostics };
 }
 
@@ -411,6 +412,7 @@ export function loadAssetSnapshot(bundledRoot: string, externalRoots: string[] =
               groupId: leaf.groupId ? (index === 0 ? `pa_${leaf.groupId}` : `local_${meta.id}_${leaf.groupId}`) : undefined,
               groupType: leaf.groupType, rotationScheme: leaf.rotationScheme, orientation: leaf.orientation,
               state: leaf.state, frame: leaf.frame, mirrorSide: leaf.mirrorSide,
+              backgroundTiles: leaf.backgroundTiles,
               canPlaceOnSurfaces: meta.canPlaceOnSurfaces === true, canPlaceOnWalls: meta.canPlaceOnWalls === true,
             };
           });
