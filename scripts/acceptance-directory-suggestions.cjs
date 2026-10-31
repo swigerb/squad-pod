@@ -116,6 +116,9 @@ const server = http.createServer((request, response) => {
         const dialog = page.getByRole('dialog', { name: 'Launch directory' });
         await dialog.waitFor();
         await dialog.getByRole('button', { name: 'Browse for a directory', exact: true }).waitFor();
+        assert.equal(await dialog.evaluate((element) => getComputedStyle(element).textAlign), 'left',
+          'dialog content must override the centered no-workspace parent');
+        record.assertions.push('dialog content remains left-aligned over the centered no-workspace view');
 
         const manual = dialog.locator('.directory-manual > summary');
         await manual.click();
