@@ -1515,7 +1515,7 @@ describe('settings and source UI with simulated host messages', () => {
     expect(document.activeElement).toBe(opener);
   });
 
-  it('keeps manual directory entry open and usable when browsing is unavailable in standalone', () => {
+  it('renders manual directory entry fields when Browse is unavailable', () => {
     act(() => root.unmount());
     root = createRoot(host);
     act(() => root.render(<App client={client} standalone />));
@@ -1524,22 +1524,8 @@ describe('settings and source UI with simulated host messages', () => {
 
     expect(host.querySelector('[aria-label="Browse for a directory"]')).toBeNull();
     expect(host.querySelector('form[aria-label="Manual directory entry"]')).not.toBeNull();
-    const path = host.querySelector<HTMLInputElement>('[aria-label="Directory path"]')!;
-    const name = host.querySelector<HTMLInputElement>('[aria-label="Directory name"]')!;
-    act(() => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(path, 'C:\\Synthetic\\Manual');
-      path.dispatchEvent(new Event('input', { bubbles: true }));
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, 'Manual folder');
-      name.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    act(() => {
-      host.querySelector('form[aria-label="Manual directory entry"]')!.dispatchEvent(
-        new Event('submit', { bubbles: true, cancelable: true }),
-      );
-    });
-    expect(client.send).toHaveBeenLastCalledWith({
-      type: 'addDirectory', path: 'C:\\Synthetic\\Manual', name: 'Manual folder',
-    });
+    expect(host.querySelector('[aria-label="Directory path"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label="Directory name"]')).not.toBeNull();
   });
 
   it('reacts to later layout messages alone to show and clear missing-art warnings after ready', () => {

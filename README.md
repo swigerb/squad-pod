@@ -93,9 +93,9 @@ Enable **Live Activity** in Settings and accept the VS Code confirmation to turn
 
 ### Launch Squad in a directory
 
-Open **Directories** to browse for a folder or enter its path manually. Workspace folders and saved directories each have an explicit **Launch** action. On the VS Code host, Squad Pod submits `copilot --agent squad` to a new terminal only after you select **Launch**; workspace trust and the Copilot CLI on `PATH` are required. Squad Pod does not auto-launch.
+In VS Code, open **Directories** to browse for a folder or enter its path manually. Workspace folders and saved directories each have an explicit **Launch** action. Squad Pod submits `copilot --agent squad` to a new terminal only after you select **Launch**; workspace trust and the Copilot CLI on `PATH` are required. Squad Pod does not auto-launch.
 
-Recent launch requests are recorded when the command is submitted and do not prove the CLI started. Recent Squad directories can fill the manual-entry form from local Copilot CLI working-directory metadata, but never save or launch automatically; disable this read with `squad-pod.directorySuggestions`. Standalone mode does not provide the VS Code folder browser, so enter the path manually.
+Recent launch requests are recorded when the command is submitted and do not prove the CLI started. Recent Squad directories can fill the manual-entry form from local Copilot CLI working-directory metadata, but never save or launch automatically; disable this read with `squad-pod.directorySuggestions`. The standalone observer selects its project at server startup and does not provide native directory browsing, management, or launch actions.
 
 ### Activity and recorded usage
 
