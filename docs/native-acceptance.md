@@ -22,15 +22,24 @@ pass. Leave unavailable or unimplemented capabilities BLOCKED / NOT IMPLEMENTED.
 Treat office viewing, office-control writes, terminal authority, and each real launch as separate
 approvals with separate credentials; never infer network or auth compatibility.
 Stop on data loss, privacy leaks, wrong-member attribution, or unintended launches.
-Keep evidence local and redacted. Do not delete, post to GitHub, publish,
-merge, or change permissions automatically. Return results and defects for
-my review and explicit sign-off; do not claim acceptance on my behalf.
-Save the full report as report.md with relative links to redacted evidence.
-Keep the report and evidence local, outside the product workspace; do not
-commit, upload, or publish them without my explicit approval.
-If I approve a specific redacted report for repository publication, hand it to
-the coordinator for a PR at docs/acceptance/<run-id>/report.md under this plan's
-publication rules; do not push directly or publish unapproved evidence.
+Keep evidence local and redacted. Do not delete evidence, publish anything
+outside the scope below, merge a PR, close an issue, or change permissions
+automatically. Save the full report as report.md with relative links to
+redacted evidence, outside the product workspace.
+For this run, I authorize you to publish only the reviewed, redacted report at
+docs/acceptance/<run-id>/report.md by pushing a report branch and opening a PR
+to master, and to create or update redacted defect issues in swigerb/squad-pod.
+Record this scope in the manifest. Search for matching issues before filing;
+do not create duplicates. Review the staged publication diff for redaction.
+This authorization excludes raw logs, secrets, personal paths or session IDs,
+alias maps, unreviewed screenshots, unrelated files, merging the PR, and
+closing acceptance issues. Screenshots require individual selection and
+redaction. Do not publish if privacy doubts remain.
+Return the report PR URL and existing/new defect issue URLs to the coordinator.
+Do not require a separate report-file handoff or another approval for this
+already authorized scope. Still honor any tool/runtime-mandated confirmation.
+If you lack repository access or publishing capability, report that limitation
+honestly; do not bypass it. Do not claim acceptance on my behalf.
 ```
 
 ## Scope and outcomes
@@ -92,11 +101,11 @@ acceptance-results\<run-id>\
     build-and-test-logs\
 ```
 
-In `report.md`, include the completed run manifest (including exact source SHA and VSIX SHA-256), approvals, applicability decisions, results for every full-suite test and subcheck, relative links to redacted evidence, defects, cleanup status, and separate native and real Squad acceptance decisions for human sign-off. Use the results, defect, and sign-off templates below. For a smoke-only run, identify that limited scope and leave the unexecuted full-suite checks explicitly BLOCKED with the reason.
+In `report.md`, include the completed run manifest (including exact source SHA and VSIX SHA-256), approvals, applicability decisions, results for every full-suite test and subcheck, relative links to redacted evidence, defects, cleanup status, and separate native and real Squad acceptance decisions marked pending for human sign-off. Use the results, defect, and sign-off templates below. For a smoke-only run, identify that limited scope and leave the unexecuted full-suite checks explicitly BLOCKED with the reason.
 
 Give every result an outcome of **PASS, FAIL, BLOCKED, or NOT-PRODUCED**. Keep missing producer data and pending implementations explicit; do not summarize them as passes. Include the evidence index and any running processes, retained data, or cleanup still awaiting approval.
 
-Keep the report and evidence local. Apply the evidence-handling rules below, and retain any restricted originals separately from redacted material intended for review. Do not commit, upload, post to GitHub, or publish the report or evidence without separate explicit approval.
+Keep restricted originals and supporting evidence local. Apply the evidence-handling rules below, and retain restricted originals separately from redacted material intended for review. The copy-ready instruction authorizes only the reviewed redacted report PR and redacted defect issue creation/updates described below; it does not authorize publishing evidence or any other material. Do not require a second manual report handoff or approval for that already authorized scope.
 
 ## Run manifest
 
@@ -133,6 +142,7 @@ Ledger source, record version, byte size, line count, scope:
 Settings baseline / saved-layout and recovery backup references:
 Panel size, display scaling, zoom, sound device:
 Approvals (action, exact scope, approver, time, limits):
+Publication authorization (repository, report path/PR target, defect issue scope, approver and time):
 Suite selection / time and AI-spend budget / stop conditions:
 Evidence directory and redaction reviewer:
 Results / defects / cleanup left pending / user sign-off:
@@ -645,7 +655,7 @@ This procedure is source-checked at the accepted source in [Scope and outcomes](
    | Disconnect and resume | Disconnect/reconnect an approved browser viewer without restarting the CLI. Expect disconnected/retrying status, observation-only WebSocket retries with the existing cookie and a fresh office snapshot, never a process launch. Retries back off from 500 ms to 10 seconds; allow that plus the observation window. With **all** viewers disconnected, polling stops. Make an approved fixture edit while paused; reconnect: existing files are rebaselined without historical animation. Make a new edit after reconnect to verify fresh activity. Another connected viewer prevents that pause; do not confuse it with all-viewers-disconnected behavior. |
 
 6. **Revoke and stop gracefully.** Outside all capture, type `rotate` in the owned CLI console: all observation, office-control and terminal viewers/cookies are revoked and new credentials are printed. The old credential cannot reauthenticate; the viewer uses **Authenticate again** and private entry of the new one. Restarting also revokes credentials/cookies. After scoped stop approval, type `quit` in that console, press Ctrl+C, or send SIGTERM only to the exact owned PID. Expect process exit, closed listener/sockets, disposed subscriptions/polling and browser disconnected status; verify the tokenless endpoint no longer responds. Close owned browser tabs to stop retries; keep redacted evidence and record any retained console/clipboard material for human cleanup. No credential persistence, project writes or automatic deletion is expected. Follow X-01 for any separately approved restoration/deletion.
-7. **Return the local report, not an acceptance claim.** Save `report.md` and relative redacted evidence links outside the product workspace. Record every observer subcheck independently as PASS/FAIL/BLOCKED/NOT-PRODUCED. Record office-control, owned-terminal and mobile subchecks separately under the following procedures (BLOCKED if not approved). Keep synthetic installed-browser evidence, approved-project observation, REAL producer evidence and NATIVE VS Code evidence separate; physical-device mobile results remain unverified unless separately tested. Require human sign-off. Do not upload, publish, merge or close broad trackers.
+7. **Complete the report without claiming acceptance.** Save `report.md` and relative redacted evidence links outside the product workspace. Record every observer subcheck independently as PASS/FAIL/BLOCKED/NOT-PRODUCED. Record office-control, owned-terminal and mobile subchecks separately under the following procedures (BLOCKED if not approved). Keep synthetic installed-browser evidence, approved-project observation, REAL producer evidence and NATIVE VS Code evidence separate; physical-device mobile results remain unverified unless separately tested. Require human sign-off. Follow the approved repository publication workflow below; do not upload evidence, merge the PR, or close issues.
 
 #### Optional standalone live-observation procedure
 
@@ -784,23 +794,25 @@ This procedure applies to an identified installed artifact containing the mobile
 - **Actions:** Stop testing immediately for wrong-member/workspace attribution, data loss, privacy disclosure, unintended launch, security warning, or exceeded spend limit. Record the last safe state and defect. Turn live and suggestions off. Export drafts and retain source/evidence copies before panel disposal. With explicit scoped approval, stop only test-owned CLI sessions; restore only the isolated run's backed-up layout/settings/roster. Ask separately before deleting/removing named run artifacts, saved entries, profiles or asset registrations.
 - **Expected:** Normal profiles/workspaces/logs and unrelated terminals are untouched. Failed installation can be rolled back by disabling/uninstalling only the isolated extension after approval; do not change the normal installation. Recovery exports and evidence survive cleanup. Record anything still running or retained.
 - **Evidence:** Before/after ownership inventory and restoration hashes, approvals and pending cleanup list.
-- **Cleanup:** No recursive/broad deletion, automatic GitHub posting, publishing, permission bypass, merge, or issue closure.
+- **Cleanup:** No recursive/broad deletion, permission bypass, PR merge, or issue closure by Scout. The authorized publication flow below is limited to the reviewed report PR and redacted defect issue create/update; all other posting remains out of scope.
 
 ### Evidence handling
 
 Keep original evidence local with access limited to the approved reviewers. Prefer projected fields and small screenshots over raw logs. Redact usernames, absolute personal paths, repository/customer names, session identifiers, prompts, tool contents, arguments/outputs, tokens, credentials and unrelated window content before sharing. Use stable aliases (workspace A/member A/session A) so correlations survive redaction; keep the alias map local. Inspect exported layouts for private directory IDs, names and paths.
 
-If a leak occurs, stop capture, preserve evidence in the approved restricted location, notify the human and follow their incident process. Do not copy the leaked value into a defect. The user decides whether and where to share; GitHub artifacts, screenshots, issue comments and uploads require separate approval.
+If a leak occurs, stop capture, preserve evidence in the approved restricted location, notify the human and follow their incident process. Do not copy the leaked value into a defect. Reading this plan does not grant permission. The copy-ready instruction explicitly authorizes the narrow report and defect workflow below; screenshots and other GitHub artifacts still require separate, specific selection/approval.
 
 #### Approved repository report publication
 
-**Keep evidence local by default.** The user may approve committing a **specific reviewed, redacted Scout report** to the repository. That approval covers only the selected report, not raw evidence, later revisions or automatic posting. After approval, the coordinator commits it as `docs/acceptance/<run-id>/report.md` **via a PR, never a direct push**. Use a non-identifying Run ID and record the approval scope; preserve restricted originals and alias mappings locally.
+**Keep evidence local.** Under the copy-ready instruction, the user authorizes Scout to publish this run's reviewed, redacted report as `docs/acceptance/<run-id>/report.md` and to post or update redacted defect issues in `swigerb/squad-pod`. Record the exact authorization scope, approver and time in the manifest. Do not require another approval or a manual report-file handoff to execute this scope. Respect any tool/runtime-mandated confirmation. This authority does not come from reading this plan alone and does not authorize raw evidence, unrelated content, later revisions outside this run, PR merge, issue closure, or permission changes.
 
-The approved report may contain the completed **redacted manifest** (plan/product SHA, package hashes and non-identifying host/version/provenance fields), approvals summary, applicability and per-subcheck results table for all 27 cases, defect references, sign-off block, cleanup status, and an evidence index naming local files. Replace sensitive manifest fields with stable aliases or redaction markers, not invented values. Local evidence filenames must also be non-identifying; label local-only references explicitly rather than creating broken repository links or uploading the originals.
+After collecting evidence, create the redacted `report.md` and review every staged publication change for privacy before publishing. The report may contain the completed **redacted manifest** (plan/product SHA, package hashes and non-identifying host/version/provenance fields), the publication authorization summary, applicability and per-subcheck results table for all 27 cases, defect references, pending sign-off block, cleanup status, and an evidence index naming local files. Replace sensitive manifest fields with stable aliases or redaction markers, not invented values. Local evidence filenames must also be non-identifying; label local-only references explicitly rather than creating broken repository links or uploading originals. Unresolved privacy doubts block publication.
 
-Exclude usernames, absolute personal paths, customer/repository names other than `swigerb/squad-pod`, session IDs, prompts, tool arguments/outputs, tokens, credentials, raw logs and unrelated window content. Do not commit the alias map. Screenshots are excluded unless the user **individually selects already-redacted images** for that PR; keep each selected image small and review it for hidden private content. Selection of a report is not selection of its screenshots.
+Exclude usernames, absolute personal paths, customer/repository names other than `swigerb/squad-pod`, session IDs, prompts, tool arguments/outputs, tokens, credentials, raw logs, alias maps and unrelated window content. Do not commit the alias map. Screenshots are excluded unless individually selected for this PR and redacted/reviewed; keep each selected image small and check for hidden private content. Selection of a report does not select its screenshots. Do not include unreviewed images or other files.
 
-For Scout-filed defects, search for a matching existing issue first and update it with the new run evidence when appropriate; otherwise file a new issue. Use the defect template below, include the **test ID in the title** and **Run ID / product source SHA / VSIX SHA-256**, obtain the user's posting approval for either path, and link the issue in the report. The coordinator triages approved defects into fixes. Any product fix requires a new identified artifact and rerun of affected cases; preserve the prior failed run and never transfer its acceptance to the new build. Approval to publish a report does not imply that a report has already been supplied or that any of the six open issues meets its evidence gate.
+Search `swigerb/squad-pod` for a matching issue before posting each defect. Update a match with the new run evidence when appropriate; otherwise file a new issue. Use the defect template below, include the **test ID in the title** and **Run ID / product source SHA / VSIX SHA-256**, and link each issue in the report. The copy-ready instruction authorizes these redacted issue create/updates; do not ask for a second posting approval. The coordinator reviews and merges the report PR, coordinates fixes and affected-case reruns, and closes acceptance issues only when their evidence criteria are satisfied. Scout must not merge PRs or close issues. Any product fix requires a new identified artifact and rerun of affected cases; preserve the prior failed run and never transfer its acceptance to the new build. Publication is not human acceptance and does not satisfy any issue's evidence gate by itself.
+
+Publish the report from a dedicated report branch: commit only the reviewed report (and any individually selected, separately approved images) at `docs/acceptance/<run-id>/report.md`, push that branch, and open a PR targeting `master`. Never push directly to `master`, merge the PR, or include unrelated files. Return the report PR URL and the URLs of existing/new defect issues to the coordinator. If repository access or the required publishing capability is unavailable, state that plainly and stop publication; do not find a workaround or fall back to a manual handoff.
 
 ### Results template
 
@@ -819,6 +831,7 @@ Evidence references (redacted; local originals):
 Defect reference:
 Cleanup completed / retained data / running processes:
 Executor / reviewer:
+Publication authorization (repository, report PR and/or issue action; approver / time):
 ```
 
 ### Defect template and triage
@@ -837,14 +850,14 @@ Redacted evidence and local-original references:
 Impact / last safe state / recovery steps:
 Regression or compatibility hypothesis (label unverified):
 Owner / disposition / retest build and result:
-Posting approval (none unless separately obtained):
+Posting scope / publication authorization (repository, action, approver, time):
 ```
 
 Treat privacy leaks, data loss, cross-workspace/member misattribution and unintended process launches as stop-ship. Treat broken core controls, persistence or supported-source rendering as major. Triage visual-only issues by usability impact. Record producer incompatibility and absent fields explicitly even when no extension defect is proven. Retest against a new exact artifact; do not overwrite the failed run.
 
 ### Exit criteria and user sign-off
 
-The handoff is ready for review when every selected check has an outcome, evidence and cleanup status; pending implementations and missing producers remain explicit; artifact identity is proven; and all defects are triaged. Full native/real acceptance additionally requires actual NATIVE/REAL evidence for the agreed applicable checks, no unresolved stop-ship defects, and the user's decision on all remaining failures/gaps. Fixture passes cannot waive absent producers.
+The report is ready for coordinator review when every selected check has an outcome, evidence and cleanup status; pending implementations and missing producers remain explicit; artifact identity is proven; and all defects are linked. The report PR does not constitute human acceptance. Full native/real acceptance additionally requires actual NATIVE/REAL evidence for the agreed applicable checks, no unresolved stop-ship defects, and the user's decision on all remaining failures/gaps. Fixture passes cannot waive absent producers. The coordinator reviews and merges the report PR, coordinates fixes and affected-case reruns, and closes acceptance issues only when their evidence criteria are satisfied.
 
 ```text
 Run ID / source SHA / VSIX SHA-256:
@@ -858,11 +871,11 @@ Human signer / date / approval reference:
 Next implementing build requiring retest:
 ```
 
-Do not close [#4](https://github.com/swigerb/squad-pod/issues/4), [#7](https://github.com/swigerb/squad-pod/issues/7), or [#8](https://github.com/swigerb/squad-pod/issues/8) because this plan exists or smoke passed.
+Do not close [#4](https://github.com/swigerb/squad-pod/issues/4), [#7](https://github.com/swigerb/squad-pod/issues/7), or [#8](https://github.com/swigerb/squad-pod/issues/8) because this plan exists, a report was published, or smoke passed. The coordinator closes an acceptance issue only after its evidence gate below is satisfied; Scout never closes one.
 
 ### Issue-to-evidence closure map
 
-This table defines evidence needed for the user's decision, not automatic issue actions. Fixture/browser passes and missing producers cannot satisfy these gates.
+This table defines evidence gates for the coordinator's closure decision, not automatic issue actions. Fixture/browser passes and missing producers cannot satisfy these gates.
 
 | Issue | Required evidence |
 |---|---|
