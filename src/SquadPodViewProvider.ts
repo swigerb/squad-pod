@@ -319,12 +319,13 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
       this.startWatching(workspaceRoot, webview);
     }
 
+    // Establish workspace identity before replaying data to a fresh webview.
+    this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
     // Assets first, then layout, then the roster snapshot (the webview
     // buffers roster until layout arrives, so either order is safe).
     this.loadAndSendAssets();
     this.loadAndSendLayout(workspaceRoot);
     sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
-    this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
     this.sendRecordedUsage(workspaceRoot);
     this.postMessage({ type: 'cliUsage', snapshot: this.cliUsage.snapshot });
     this.liveActivity?.replay();

@@ -43,7 +43,7 @@ Squad Pod is a VS Code extension that visualizes [Squad](https://github.com/brad
 All communication uses typed `postMessage`. The extension sends `OutboundMessage` variants (discriminated union on `type` field in `src/types.ts`). The webview sends `WebviewMessage` objects back. Key flow:
 
 1. Webview posts `webviewReady`
-2. Extension responds with sprite assets, layout, and agent list
+2. Extension establishes the workspace with `sourceStatus`, then sends sprite assets, layout, and the agent list on every readiness handshake, including a recreated webview. Keep the existing watchers alive during replay; sending the roster before its workspace identity clears UI membership while leaving canvas characters behind.
 3. Extension posts `agentToolStart`/`agentToolDone`/`agentStatus` as `.squad/` files change
 4. Extension posts `telemetryEvent` with structured activity data (status changes, session updates, log entries, orchestration events)
 5. Webview posts `saveLayout`, `saveAgentSeats`, `requestAgentDetail`, etc.

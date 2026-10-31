@@ -42,6 +42,20 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     }
   });
 
+  it.each(['initial', 'replayed'])('sends workspace identity before the %s layout and roster', (phase) => {
+    if (phase === 'replayed') {
+      fixture.messages.length = 0;
+      fixture.send({ type: 'webviewReady' });
+    }
+    const sourceIndex = fixture.messages.findIndex(message =>
+      message.type === 'sourceStatus' && message.status.workspaceRoot === fixture.workspaceRoot);
+    const layoutIndex = fixture.messages.findIndex(message => message.type === 'layoutLoaded');
+    const rosterIndex = fixture.messages.findIndex(message => message.type === 'existingAgents');
+    expect(sourceIndex).toBeGreaterThanOrEqual(0);
+    expect(layoutIndex).toBeGreaterThan(sourceIndex);
+    expect(rosterIndex).toBeGreaterThan(layoutIndex);
+  });
+
   it.each(agents)('returns exactly $name detail and opens that charter, never a terminal/session', (agent) => {
     const before = details().length;
     const requestId = `${agent.id}-detail-1`;
