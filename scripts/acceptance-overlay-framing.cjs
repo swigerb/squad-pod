@@ -68,11 +68,18 @@ function Fixture(){
        const annotation=e.closest('[data-agent-annotation]')||e;
        const r=annotation.getBoundingClientRect();
        const b=getCharacterScreenBounds(c,currentZoom,pan.current);
-       return {id,x:r.x,y:r.y,width:r.width,height:r.height,anchor:b.top-14,
+       const docked=!!annotation.closest('[data-label-dock="true"]');
+       const characterBounds=[...office.characters.values(),...Array.from(office.subagents.values(),item=>item.character)]
+         .map(character=>getCharacterScreenBounds(character,currentZoom,pan.current));
+       const spriteOverlap=!docked&&characterBounds.some(bounds=>
+         r.left<bounds.right&&r.right>bounds.left&&r.top<bounds.bottom&&r.bottom>bounds.top);
+       const legacy=new URLSearchParams(location.search).has('baseline');
+       return {id,x:r.x,y:r.y,width:r.width,height:r.height,anchor:legacy?b.top-14:b.top-8-r.height,
          world:{x:c.x,y:c.y},pan:{...pan.current},zoom:currentZoom,offscreen:e.textContent.includes('Off-screen'),
          text:e.textContent,annotationText:annotation.textContent,
          toolBubble:!!annotation.querySelector('[data-agent-tool-bubble]'),transient:!!e.dataset.subagentLabel,
-         connector:!!document.querySelector('[data-'+(e.dataset.subagentLabel?'subagent':'agent')+'-connector="'+id+'"]')};
+         docked,spriteOverlap,associationCue:!!document.querySelector('[data-agent-association="'+id+'"]'),
+         whiteLeader:!!document.querySelector('line[data-agent-connector],line[data-subagent-connector]')};
      });
    },
    active(){
@@ -90,6 +97,15 @@ function Fixture(){
    isolateTarget(){
      for(let i=0;i<8;i++) Object.assign(office.characters.get('member-'+i),{
        x:i===7?168:16+i*16,y:i===7?120:16,state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
+   },
+   labelProof(){
+     motionEnabled=false;
+     office.subagents.clear();
+     setZoom(1);
+     for(let i=0;i<8;i++) Object.assign(office.characters.get('member-'+i),{
+       x:(i%2?innerWidth-90:90)-pan.current.x,
+       y:180+Math.floor(i/2)*160+(i%2)*40-pan.current.y,
+       state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
    },
    bounds(id){ return getCharacterScreenBounds(office.characters.get(id),currentZoom,pan.current); },
    unchanged:()=>JSON.stringify(office.layout)===initialLayout
@@ -175,7 +191,8 @@ async function main() {
       const page = await context.newPage();
       page.on('pageerror', error => evidence.errors.push(String(error)));
       const record = { ...scenario, samples: [], maxLaneResidual: 0, maxWorldStep: 0,
-        maxCameraStep: 0, maxLabelStep: 0, jumpsOver50: 0, overlapSamples: 0 };
+        maxCameraStep: 0, maxLabelStep: 0, jumpsOver50: 0, overlapSamples: 0,
+        floatingSamples: 0, spriteOverlapSamples: 0, whiteLeaderLines: 0 };
       evidence.cases.push(record);
       try {
         await page.goto(`http://127.0.0.1:${server.address().port}/?${scenario.variant}`);
@@ -188,24 +205,33 @@ async function main() {
           await page.evaluate(t => window.fixture.tick(t), t);
           await page.waitForTimeout(100);
           const sample = await page.evaluate(() => window.fixture.sample());
+          record.floatingSamples += sample.filter(item => !item.docked).length;
+          record.spriteOverlapSamples += sample.filter(item => item.spriteOverlap).length;
           if (previous) for (const item of sample) {
             const last = previous.find(p => p.id === item.id);
-            const residual = Math.abs((item.y - last.y) - (item.anchor - last.anchor));
-            record.maxLaneResidual = Math.max(record.maxLaneResidual, residual);
+            if (!item.docked && last && !last.docked) {
+              const residual = Math.abs((item.y - last.y) - (item.anchor - last.anchor));
+              record.maxLaneResidual = Math.max(record.maxLaneResidual, residual);
+              if (residual > 50) record.jumpsOver50++;
+            }
             record.maxWorldStep = Math.max(record.maxWorldStep, Math.hypot(
               item.world.x - last.world.x, item.world.y - last.world.y));
             record.maxCameraStep = Math.max(record.maxCameraStep, Math.hypot(
               item.pan.x - last.pan.x, item.pan.y - last.pan.y));
             record.maxLabelStep = Math.max(record.maxLabelStep, Math.hypot(item.x - last.x, item.y - last.y));
-            if (residual > 50) record.jumpsOver50++;
           }
           if (sample.some((a, i) => sample.slice(i + 1).some(b =>
             a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y))) record.overlapSamples++;
           record.samples.push({ elapsed: Date.now() - start, labels: sample });
           previous = sample;
         }
-        await page.screenshot({ path: path.join(output, `${scenario.variant}-${scenario.width}-zoom${scenario.zoom}.png`) });
+        if (scenario.variant === 'baseline') {
+          await page.screenshot({ path: path.join(output, `${scenario.variant}-${scenario.width}-zoom${scenario.zoom}.png`) });
+        }
         if (scenario.variant === 'current') {
+          record.whiteLeaderLines = await page.locator('line[data-agent-connector], line[data-subagent-connector]').count();
+          assert.equal(record.whiteLeaderLines, 0, 'floating labels must not draw long leader lines');
+          assert.equal(record.spriteOverlapSamples, 0, 'measured floating label rectangles must not overlap sprite bounds');
           assert.equal(record.jumpsOver50, 0, 'lane residual must not jump over50 CSSpx/100ms');
           assert.equal(record.maxCameraStep, 0, 'fixture must isolate lane motion from camera movement');
           assert.equal(await page.locator('[data-subagent-label]').count(), 2);
@@ -323,9 +349,28 @@ async function main() {
           await page.getByRole('button', { name: 'Show office labels', exact: true }).click();
           assert.equal(await page.getByRole('button', { name: 'Hide office labels', exact: true }).getAttribute('aria-expanded'), 'true');
           record.crowded = 'Locate collapses list; target exposed and canvas-clickable; keyboard focus on reopen control';
+          await page.setViewportSize({ width: scenario.width, height: 900 });
+          await page.evaluate(() => window.fixture.labelProof());
+          await page.waitForFunction(() => {
+            const proof=window.fixture.sample();
+            return proof.length===8&&proof.every(label=>label.zoom===1&&!label.docked
+              &&label.width>0&&label.height>0
+              &&Math.abs(label.y+label.height-(window.fixture.bounds(label.id).top-8))<2);
+          });
+          const proof=await page.evaluate(()=>window.fixture.sample());
+          assert.ok(proof.every(label=>!label.spriteOverlap),
+            'measured DOM rectangles must clear every rendered character bound in the normal layout');
+          assert.ok(proof.every(label=>!label.whiteLeader),'normal labels must have no long white leader line');
+          record.measuredGeometryProof={labels:proof.length,spriteOverlaps:0,whiteLeaderLines:0};
         }
+        await page.screenshot({ path: path.join(output, `${scenario.variant}-${scenario.width}-zoom${scenario.zoom}.png`) });
       } finally { await context.close(); }
     }
+    assert.ok(evidence.cases[0].spriteOverlapSamples > 0,
+      'frozen baseline must reproduce measured label rectangles intersecting sprite bounds');
+    assert.ok(evidence.cases.filter(test => test.variant === 'current')
+      .some(test => test.floatingSamples > 0),
+    'current layout must prove at least one real measured floating annotation');
     assert.ok(evidence.cases[0].jumpsOver50 > 0, 'frozen baseline must reproduce >50px lane jumps');
     assert.deepEqual(evidence.errors, []);
   } catch (error) {

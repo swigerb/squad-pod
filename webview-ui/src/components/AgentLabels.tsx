@@ -19,13 +19,12 @@ interface AgentLabelsProps {
 interface LabelPosition {
   key: string;
   agentId: string;
+  bounds: { left: number; right: number; top: number; bottom: number };
   parent?: { id: string; name: string };
   name: string;
   role: string;
   labelX: number;
   labelY: number;
-  anchorX: number;
-  anchorY: number;
   width: number;
   height: number;
   measured: boolean;
@@ -36,8 +35,13 @@ interface LabelPosition {
   taskBubble?: string;
   bubbleType: string;
   isSelected: boolean;
+  displaced: boolean;
   gauge?: ReturnType<typeof contextGauge>;
 }
+
+const LABEL_HEAD_GAP = 8;
+const MAX_LABEL_DISPLACEMENT = 12;
+const LABEL_SAFE_INSET = 56;
 
 export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, taskBubbles = {}, onAgentClick, onLocateAgent }: AgentLabelsProps) {
   const [frame, setFrame] = useState<{ positions: LabelPosition[]; docked: boolean }>({ positions: [], docked: false });
@@ -74,11 +78,11 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, taskBu
         const element = elements.get(key);
         const usage = parent ? undefined : getContextUsage(officeState, agentId);
         positions.push({
-          key, agentId, parent, name: char.name || agentId, role: char.role || '',
-          labelX: (bounds.left + bounds.right) / 2, labelY: bounds.top - 14,
-          anchorX: (bounds.left + bounds.right) / 2, anchorY: bounds.top,
+          key, agentId, bounds, parent, name: char.name || agentId, role: char.role || '',
+          labelX: (bounds.left + bounds.right) / 2,
+          labelY: bounds.top - LABEL_HEAD_GAP - (element?.offsetHeight ?? 0),
           width: element?.offsetWidth ?? 0, height: element?.offsetHeight ?? 0,
-          measured: !!element, isActive: char.active, tool: char.tool,
+          measured: !!element, displaced: false, isActive: char.active, tool: char.tool,
           tools: !parent && Object.hasOwn(toolsRef.current, agentId) ? toolsRef.current[agentId] : [],
           taskBubble: !parent && Object.hasOwn(bubblesRef.current, agentId) ? bubblesRef.current[agentId] : undefined,
           bubbleType: char.bubbleState.type, isSelected: officeState.selectedAgentId === agentId,
@@ -89,15 +93,66 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, taskBu
           gauge: usage && char.active ? contextGauge(usage) : undefined,
         });
       }
+      const directBoxes = positions.map(pos => {
+        const left = Math.max(4, Math.min(pos.labelX - pos.width / 2, width - pos.width - 4));
+        return { left, top: pos.labelY, width: pos.width, height: pos.height };
+      });
+      const directPlacementIsSafe = directBoxes.every((box, index) => {
+        const pos = positions[index];
+        if (box.left < 4 || box.left + box.width > width - 4
+          || box.top < LABEL_SAFE_INSET || box.top + box.height > height - LABEL_SAFE_INSET
+          || box.top + box.height > pos.bounds.top - LABEL_HEAD_GAP) return false;
+        const intersectsCharacter = positions.some(other => {
+          const visibleBounds = other.bounds.right > 0 && other.bounds.left < width
+            && other.bounds.bottom > 0 && other.bounds.top < height;
+          return visibleBounds
+            && box.left < other.bounds.right && box.left + box.width > other.bounds.left
+            && box.top < other.bounds.bottom && box.top + box.height > other.bounds.top;
+        });
+        if (intersectsCharacter) return false;
+        const separates = !directBoxes.slice(index + 1).some(other =>
+          box.left < other.left + other.width + 4 && box.left + box.width + 4 > other.left
+          && box.top < other.top + other.height + 4 && box.top + box.height + 4 > other.top);
+        return separates;
+      });
+      if (directPlacementIsSafe) {
+        positions.forEach((pos, index) => {
+          const box = directBoxes[index];
+          pos.labelX = box.left + box.width / 2;
+          pos.labelY = box.top;
+          pos.displaced = Math.abs(pos.labelX - (pos.bounds.left + pos.bounds.right) / 2) > 0.5;
+        });
+        setFrame({ positions, docked: false });
+        return;
+      }
+
       const { boxes, docked } = layoutRef.current.place(positions.map(pos => ({
-        id: pos.key, x: pos.labelX, y: pos.labelY - 56, width: pos.width, height: pos.height,
-      })), width, height - 112);
+        id: pos.key, x: pos.labelX, y: pos.labelY - LABEL_SAFE_INSET, width: pos.width, height: pos.height,
+      })), width, height - LABEL_SAFE_INSET * 2);
+      let shouldDock = docked;
       for (const pos of positions) {
         const box = boxes.get(pos.key)!;
+        const targetX = pos.labelX;
+        const targetY = pos.labelY;
         pos.labelX = box.left + box.width / 2;
-        pos.labelY = box.top + 56;
+        pos.labelY = box.top + LABEL_SAFE_INSET;
+        const actualTop = box.top + LABEL_SAFE_INSET;
+        const verticalDisplacement = Math.abs(actualTop - targetY);
+        const horizontalDisplacement = Math.abs(pos.labelX - targetX);
+        pos.displaced = verticalDisplacement > 0.5 || horizontalDisplacement > 0.5;
+        const clearsHead = actualTop + box.height <= pos.bounds.top - LABEL_HEAD_GAP;
+        const isNearAnchor = verticalDisplacement <= MAX_LABEL_DISPLACEMENT
+          && horizontalDisplacement <= MAX_LABEL_DISPLACEMENT;
+        const intersectsCharacter = positions.some(other => {
+          const visibleBounds = other.bounds.right > 0 && other.bounds.left < width
+            && other.bounds.bottom > 0 && other.bounds.top < height;
+          return visibleBounds
+            && box.left < other.bounds.right && box.left + box.width > other.bounds.left
+            && actualTop < other.bounds.bottom && actualTop + box.height > other.bounds.top;
+        });
+        if (!clearsHead || !isNearAnchor || intersectsCharacter) shouldDock = true;
       }
-      setFrame({ positions, docked });
+      setFrame({ positions, docked: shouldDock });
     };
     refreshRef.current = updatePositions;
     const tick = () => {
@@ -130,16 +185,6 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, taskBu
         style={{ position: 'absolute', right: 4, top: 16, pointerEvents: 'auto', cursor: 'pointer' }}>
         {collapsed ? 'Show office labels' : 'Hide office labels'}
       </button>}
-      {!frame.docked && !collapsed && <svg aria-hidden="true" style={{
-        position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'hidden',
-      }}>
-        {frame.positions.filter(pos => !pos.offscreen && pos.measured).map(pos =>
-          <line key={pos.key} data-agent-connector={pos.parent ? undefined : pos.agentId}
-            data-subagent-connector={pos.parent ? pos.agentId : undefined}
-            x1={pos.labelX} y1={pos.labelY + pos.height} x2={pos.anchorX} y2={pos.anchorY}
-            stroke={pos.isSelected ? '#fbbf24' : '#cbd5e1'} strokeWidth={1} strokeOpacity={0.65}
-            strokeDasharray={pos.parent ? '3 3' : undefined} />)}
-      </svg>}
       <div data-label-dock={frame.docked || undefined} role={frame.docked ? 'group' : undefined}
         aria-label={frame.docked ? 'Crowded office labels - scroll to browse, locate to center a character' : undefined}
         style={frame.docked ? {
@@ -171,6 +216,15 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, taskBu
                 background: 'rgba(0,0,0,0.8)', color: '#fff', borderRadius: 4,
                 overflowWrap: 'anywhere', boxSizing: 'border-box',
               }}>
+              {!frame.docked && pos.displaced && !pos.offscreen && pos.measured && <span
+                aria-hidden="true" data-agent-association={pos.agentId}
+                data-agent-connector={pos.parent ? undefined : pos.agentId}
+                data-subagent-connector={pos.parent ? pos.agentId : undefined}
+                style={{
+                  position: 'absolute', left: '50%', bottom: -5, transform: 'translateX(-50%)',
+                  width: 0, height: 0, borderLeft: '4px solid transparent', borderRight: '4px solid transparent',
+                  borderTop: `5px solid ${pos.parent ? '#93c5fd' : pos.isSelected ? '#fbbf24' : '#94a3b8'}`,
+                }} />}
               {pos.parent ? <div data-subagent-label={pos.agentId} data-parent-agent={pos.parent.id} role="note"
                 style={{ color: '#bfdbfe', fontSize: 10, padding: '2px 4px', border: '1px dashed #93c5fd',
                   maxWidth: '100%', boxSizing: 'border-box' }}>
