@@ -348,6 +348,23 @@ describe('AgentLabels over canvas characters', () => {
     expect(host.querySelector('line')).toBeNull();
   });
 
+  it('docks a visible side-edge label when clamping would detach it from its character', () => {
+    office.removeAgent('marge');
+    Object.assign(office.characters.get('homer')!, { x: (359 - panRef.current.x) / 2, y: 100 });
+    vi.stubGlobal('innerWidth', 360);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 180 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 30 : 0;
+    });
+    render(2);
+
+    expect(host.querySelector('[data-label-dock="true"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label^="Crowded office labels"]')).not.toBeNull();
+    expect(label().textContent).toContain('Homer Simpson');
+  });
+
   it('uses the accessible dock when the top edge leaves no safe label space', () => {
     office.removeAgent('marge');
     Object.assign(office.characters.get('homer')!, { x: 80, y: 0 });

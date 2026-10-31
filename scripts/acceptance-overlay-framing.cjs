@@ -104,7 +104,16 @@ function Fixture(){
      setZoom(1);
      for(let i=0;i<8;i++) Object.assign(office.characters.get('member-'+i),{
        x:(i%2?innerWidth-90:90)-pan.current.x,
-       y:180+Math.floor(i/2)*160+(i%2)*40-pan.current.y,
+       y:180+(i<2?0:Math.floor(i/2)*160+(i%2)*40)-pan.current.y,
+       state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
+   },
+   toolbarEdgeProof(){
+     motionEnabled=false;
+     office.subagents.clear();
+     setZoom(1);
+     for(let i=0;i<8;i++) Object.assign(office.characters.get('member-'+i),{
+       x:(i%2?innerWidth-90:90)-pan.current.x,
+       y:(i===0?60:180+Math.floor(i/2)*160+(i%2)*40)-pan.current.y,
        state:CharacterState.IDLE,path:[],wanderTimer:1000,active:false});
    },
    bounds(id){ return getCharacterScreenBounds(office.characters.get(id),currentZoom,pan.current); },
@@ -352,6 +361,7 @@ async function main() {
           await page.setViewportSize({ width: scenario.width, height: 900 });
           await page.evaluate(() => window.fixture.labelProof());
           await page.waitForFunction(() => {
+            if (document.querySelectorAll('[data-subagent-label]').length) return false;
             const proof=window.fixture.sample();
             return proof.length===8&&proof.every(label=>label.zoom===1&&!label.docked
               &&label.width>0&&label.height>0
@@ -361,7 +371,32 @@ async function main() {
           assert.ok(proof.every(label=>!label.spriteOverlap),
             'measured DOM rectangles must clear every rendered character bound in the normal layout');
           assert.ok(proof.every(label=>!label.whiteLeader),'normal labels must have no long white leader line');
+          const sparse=proof.filter(label=>label.id==='member-0'||label.id==='member-1');
+          assert.equal(sparse.length,2);
+          assert.equal(sparse[0].y,sparse[1].y,'sparse same-row labels must retain a shared floating anchor');
+          assert.ok(sparse[0].x+sparse[0].width<=sparse[1].x||sparse[1].x+sparse[1].width<=sparse[0].x,
+            'sparse same-row label rectangles must remain disjoint');
           record.measuredGeometryProof={labels:proof.length,spriteOverlaps:0,whiteLeaderLines:0};
+          record.sparseSameRowProof={labels:sparse.length,sharedTop:sparse[0].y};
+          await page.screenshot({ path: path.join(output, 'after-wide-1280x900.png') });
+          await page.evaluate(() => window.fixture.toolbarEdgeProof());
+          await page.waitForFunction(() => document.querySelector('[data-label-dock="true"]'));
+          record.toolbarEdgeProof=await page.evaluate(() => {
+            const annotation=document.querySelector('[data-agent-annotation="member:member-0"]');
+            const bounds=window.fixture.bounds('member-0');
+            const dock=document.querySelector('[data-label-dock="true"]');
+            return {candidateTop:bounds.top-8-annotation.getBoundingClientRect().height,
+              dockTop:dock.getBoundingClientRect().top,
+              floatingLabels:[...document.querySelectorAll('[data-agent-annotation]')]
+                .filter(element=>!element.closest('[data-label-dock="true"]')).length};
+          });
+          assert.ok(record.toolbarEdgeProof.candidateTop<56,
+            'near-toolbar label must not fit within the reserved top band');
+          assert.ok(record.toolbarEdgeProof.dockTop>=56,
+            'accessible dock must remain below toolbar controls');
+          assert.equal(record.toolbarEdgeProof.floatingLabels,0,
+            'near-toolbar labels must use the accessible dock rather than overlap controls');
+          await page.screenshot({ path: path.join(output, 'after-toolbar-edge-1280x900.png') });
         }
         await page.screenshot({ path: path.join(output, `${scenario.variant}-${scenario.width}-zoom${scenario.zoom}.png`) });
       } finally { await context.close(); }

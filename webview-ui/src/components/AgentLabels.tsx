@@ -102,6 +102,12 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, taskBu
         if (box.left < 4 || box.left + box.width > width - 4
           || box.top < LABEL_SAFE_INSET || box.top + box.height > height - LABEL_SAFE_INSET
           || box.top + box.height > pos.bounds.top - LABEL_HEAD_GAP) return false;
+        const characterVisible = pos.bounds.right > 0 && pos.bounds.left < width
+          && pos.bounds.bottom > 0 && pos.bounds.top < height;
+        if (characterVisible
+          && Math.abs(box.left + box.width / 2 - (pos.bounds.left + pos.bounds.right) / 2) > MAX_LABEL_DISPLACEMENT) {
+          return false;
+        }
         const intersectsCharacter = positions.some(other => {
           const visibleBounds = other.bounds.right > 0 && other.bounds.left < width
             && other.bounds.bottom > 0 && other.bounds.top < height;
