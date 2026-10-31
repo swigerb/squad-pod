@@ -449,6 +449,9 @@ describe('AgentLabels over canvas characters', () => {
             const last = previous.get(id);
             if (last) {
               const step = Math.abs((top - last.top) - (anchor - last.anchor));
+              if (!Number.isFinite(step)) {
+                expect(Number.isFinite(step), `${context}: finite lane step (${step})`).toBe(true);
+              }
               if (step > maxLaneStep) {
                 maxLaneStep = step;
                 worstLane = { id, tick, top, anchor };
