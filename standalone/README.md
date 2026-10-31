@@ -22,7 +22,8 @@ From the repository root, build and run the observer against this checkout's
 tracked Squad project:
 
 ```powershell
-npm run install:all && npm ci --prefix standalone
+npm run install:all
+npm ci --prefix standalone
 npm run build --prefix standalone
 node standalone\dist\cli.mjs "$((Get-Location).Path)" --port 0
 ```

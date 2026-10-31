@@ -28,7 +28,8 @@ async function makePackage(index, evidence = 'verified evidence\n') {
     entries: [index.entry(entry)],
   }));
   execFileSync('git', ['add', '.'], { cwd: root });
-  execFileSync('git', ['-c', 'user.name=Acceptance Test', '-c', 'user.email=acceptance@example.invalid', 'commit', '--quiet', '-m', 'evidence'], { cwd: root });
+  execFileSync('git', ['-c', 'user.name=Acceptance Test', '-c', 'user.email=acceptance@example.invalid',
+    '-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'evidence'], { cwd: root });
   return run;
 }
 
@@ -59,6 +60,23 @@ test('rejects an incorrect indexed byte count', async () => {
     entry: metadata => ({ ...metadata, bytes: metadata.bytes + 1, path: 'report.md' }),
   });
   await assert.rejects(verifyAcceptanceIndex(root), /Byte count mismatch/);
+});
+
+test('verifies binary evidence without text conversion', async () => {
+  const root = await makePackage({
+    selfHashExcluded: true,
+    entry: metadata => ({ ...metadata, path: 'report.md' }),
+  }, Buffer.from([0, 255, 13, 10, 128]));
+  assert.equal((await verifyAcceptanceIndex(root)).count, 1);
+});
+
+test('rejects a different product identity', async () => {
+  const root = await makePackage({
+    selfHashExcluded: true,
+    productSha: 'candidate-sha',
+    entry: metadata => ({ ...metadata, path: 'report.md', productSha: 'other-candidate' }),
+  });
+  await assert.rejects(verifyAcceptanceIndex(root), /different product SHA/);
 });
 
 test('rejects an incorrect indexed digest', async () => {

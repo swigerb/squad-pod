@@ -130,7 +130,7 @@ Descriptions inferred from those files are labeled **File activity hint**, not l
 
 ## Testing and acceptance
 
-Start with the [testing guide](docs/testing.md) for the five-minute observer quick
+Start with the [testing guide](docs/testing.md) for the observer quick
 start, automated checks, synthetic acceptance helpers, VSIX verification, and
 committed evidence packages. Native VS Code and real Squad testing is a separate,
 approval-gated process in the [native acceptance plan](docs/native-acceptance.md).

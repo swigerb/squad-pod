@@ -4,13 +4,14 @@ This guide is the entry point for trying and verifying Squad Pod. It covers the
 VS Code extension and the private `standalone/` browser observer; the observer is
 part of this repository, not a published npm package.
 
-## Try the observer in about five minutes
+## Quick start: try the observer
 
 Requires Node.js 22.13+ and the repository's configured npm feed. From the
 repository root:
 
 ```powershell
-npm run install:all && npm ci --prefix standalone
+npm run install:all
+npm ci --prefix standalone
 npm run build --prefix standalone
 node standalone\dist\cli.mjs "$((Get-Location).Path)" --port 0
 ```
@@ -21,6 +22,8 @@ address manually and enter the runtime credential printed in the CLI. The
 credential remains valid until rotation or server restart. The office is
 read-only by default. Keep the credential private: do not put it in a URL,
 screenshot, log, or report. Type `quit` in the CLI to stop the observer.
+You do not need to install Squad or start an AI session to try this office.
+Use the automated fixture checks below for a disposable test project.
 
 Do not add `--live-activity` for this quick start: it is a separate opt-in to
 bounded local Copilot CLI metadata/event reads. Do not add `--office-control` or
@@ -34,7 +37,8 @@ the standalone suite is separate:
 
 ```powershell
 npm run verify
-npm run check --prefix standalone && npm test --prefix standalone
+npm run check --prefix standalone
+npm test --prefix standalone
 npm run build --prefix standalone
 npm run package
 node --test scripts/verify-acceptance-index.test.cjs
@@ -51,6 +55,7 @@ Windows. It also runs standalone type/tests, build plus the read-only packaged
 acceptance helper, and synthetic owned-terminal acceptance on Ubuntu and Windows;
 macOS runs the standalone type/tests and those same two acceptance helpers. The
 office-control and live-activity browser helpers are not CI gates.
+The evidence-index verifier tests also run in the Ubuntu/Windows CI jobs.
 
 ### Standalone acceptance helpers
 
@@ -58,8 +63,9 @@ All browser launches are headless. Every helper creates and cleans up its own
 synthetic project and installation; none is a real Squad session test. The
 read-only, office-control, and live helpers install local tarballs offline. The
 terminal helper resolves official dependencies through the configured package
-feed and requires a working native `node-pty` helper; see the standalone README
-for platform prerequisites, including the macOS source rebuild.
+feed and requires a working native `node-pty` helper; see the
+[native terminal prerequisites](../standalone/README.md#optional-owned-terminals),
+including the macOS source rebuild and Linux compiler/Python requirements.
 
 Playwright is optional for the read-only and terminal helpers; without it, they
 run their non-browser checks. The office and live helpers require an already
@@ -68,6 +74,20 @@ installed Playwright ESM entry (`index.mjs`); no helper downloads a browser.
 artifacts variable to retain its output outside the repository. Pre-create the
 `OBSERVER_ARTIFACTS` directory before running the read-only helper.
 
+Start with read-only acceptance; no browser is required. Use a new output root
+for each run so a failed rerun cannot be confused with old reports or screenshots:
+
+```powershell
+$artifacts = Join-Path $env:TEMP ('squad-pod-acceptance-' + [guid]::NewGuid().ToString('N'))
+$env:OBSERVER_ARTIFACTS = Join-Path $artifacts 'read-only'
+New-Item -ItemType Directory -Force $env:OBSERVER_ARTIFACTS | Out-Null
+npm run acceptance --prefix standalone
+```
+
+Check `$LASTEXITCODE` after each command; `0` means it completed successfully.
+Without `PLAYWRIGHT_MODULE`, `observer-acceptance.json` records `browser: false`:
+that is a successful non-browser check, not UI acceptance.
+
 | Command | What it checks | Environment variables | Successful-run artifacts | CI |
 |---|---|---|---|---|
 | `npm run acceptance --prefix standalone` | Packs and installs the observer offline from local tarballs, then checks the production CLI, HTTP/WebSocket, read-only boundary, reconnect and synthetic project activity. With optional Playwright, also checks the browser UI and renderer. | Optional: `PLAYWRIGHT_MODULE`, `EDGE_PATH`, `OBSERVER_ARTIFACTS` | `observer-acceptance.json`; browser screenshots when Playwright is enabled | Yes |
@@ -75,26 +95,36 @@ artifacts variable to retain its output outside the repository. Pre-create the
 | `npm run acceptance:live --prefix standalone` | Uses a synthetic `COPILOT_HOME` fixture to check bounded live-activity projection, default-off behavior, filtering, UI, and stale-source clearing. It does not read a real home or launch AI. | Required: `PLAYWRIGHT_MODULE`; optional: `EDGE_PATH`, `LIVE_ARTIFACTS` | `live-report.json` and any screenshots captured before completion | No |
 | `npm run acceptance:terminals --prefix standalone` | Installs dependencies through the configured feed and exercises only the deterministic `--fixture` PTY path: input, resize, reconnect, revocation, and owned-process cleanup. Requires the platform's native `node-pty` helper; optional browser checks use installed Playwright/Edge. | Optional: `PLAYWRIGHT_MODULE`, `EDGE_PATH`, `TERMINAL_ARTIFACTS` | `terminal-report.json`, package tarball, and screenshots when captured | Yes |
 
-For office and live acceptance, first run this PowerShell setup from the
+For browser acceptance, first run this PowerShell setup from the
 repository root. It locates an already installed Playwright package resolvable
 from this checkout and selects its ESM entry; it does not install Playwright or
-download a browser:
+download a browser. If resolution fails, provision Playwright through your
+approved npm feed in a separate tool directory and set `PLAYWRIGHT_MODULE` to
+that installation's absolute `index.mjs` path instead. An installed browser is
+also required: set `EDGE_PATH` to your Edge executable, or have Playwright's
+compatible Chromium already installed.
 
 ```powershell
-$playwrightEntry = Join-Path (Split-Path (node -p "require.resolve('playwright')") -Parent) 'index.mjs'
+$playwrightPackage = node -p "require.resolve('playwright')"
+if ($LASTEXITCODE -ne 0) { throw 'An installed Playwright package is required for browser acceptance.' }
+$playwrightEntry = Join-Path (Split-Path $playwrightPackage -Parent) 'index.mjs'
 if (-not (Test-Path $playwrightEntry)) { throw "Installed Playwright index.mjs not found: $playwrightEntry" }
 $env:PLAYWRIGHT_MODULE = $playwrightEntry
 $edgePath = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'
 if (Test-Path $edgePath) { $env:EDGE_PATH = $edgePath }
-$env:OFFICE_ARTIFACTS = Join-Path $env:TEMP 'squad-pod-office-artifacts'
-New-Item -ItemType Directory -Force $env:OFFICE_ARTIFACTS | Out-Null
-npm run acceptance:office --prefix standalone
+$env:OBSERVER_ARTIFACTS = Join-Path $artifacts 'read-only-browser'
+New-Item -ItemType Directory -Force $env:OBSERVER_ARTIFACTS | Out-Null
+npm run acceptance --prefix standalone
 ```
 
-For the live helper, keep `PLAYWRIGHT_MODULE` set and choose its own output path:
+Keep those variables set for the office and live checks:
 
 ```powershell
-$env:LIVE_ARTIFACTS = Join-Path $env:TEMP 'squad-pod-live-artifacts'
+$env:OFFICE_ARTIFACTS = Join-Path $artifacts 'office'
+New-Item -ItemType Directory -Force $env:OFFICE_ARTIFACTS | Out-Null
+npm run acceptance:office --prefix standalone
+
+$env:LIVE_ARTIFACTS = Join-Path $artifacts 'live'
 New-Item -ItemType Directory -Force $env:LIVE_ARTIFACTS | Out-Null
 npm run acceptance:live --prefix standalone
 ```
@@ -102,13 +132,15 @@ npm run acceptance:live --prefix standalone
 For terminal acceptance, set and pre-create its output directory:
 
 ```powershell
-$env:TERMINAL_ARTIFACTS = Join-Path $env:TEMP 'squad-pod-terminal-artifacts'
+$env:TERMINAL_ARTIFACTS = Join-Path $artifacts 'terminals'
 New-Item -ItemType Directory -Force $env:TERMINAL_ARTIFACTS | Out-Null
 npm run acceptance:terminals --prefix standalone
 ```
 
 The acceptance helpers print their outcome; do not infer success from a report's
-existence alone.
+existence alone. The terminal command also exercises its browser checks when
+`PLAYWRIGHT_MODULE` remains set. These examples use PowerShell paths; on macOS or
+Linux, use equivalent absolute paths and shell environment-variable syntax.
 
 Artifacts variables select output folders for structured reports and, when browser
 checks run, screenshots. Use a directory you own outside the repository. The
@@ -121,15 +153,12 @@ The terminal helper uses only its packaged `--fixture`; it does not run Copilot
 or Squad. Do not use real profiles, private logs, real Copilot sessions, or real
 AI tasks for these synthetic checks.
 
-To save the read-only helper's report and screenshots, set `OBSERVER_ARTIFACTS`
-and create the directory before running it. To include browser screenshots,
-also set `PLAYWRIGHT_MODULE` using the setup above:
-
-```powershell
-$env:OBSERVER_ARTIFACTS = Join-Path $env:TEMP 'squad-pod-observer-artifacts'
-New-Item -ItemType Directory -Force $env:OBSERVER_ARTIFACTS | Out-Null
-npm run acceptance --prefix standalone
-```
+The helpers stop their own hosts and remove their temporary fixtures. Keep the
+artifact root until you finish review. Reports can include local paths and
+failure diagnostics: inspect and redact them before sharing, even for a
+synthetic run. Never include credentials, authentication screens or private
+logs. Use the [evidence handoff checklist](acceptance/README.md) to preserve
+reviewed results in GitHub rather than only in a chat or a temporary folder.
 
 ## Package and verify a VSIX
 
