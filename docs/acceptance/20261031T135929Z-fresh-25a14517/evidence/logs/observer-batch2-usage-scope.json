@@ -1,0 +1,26 @@
+{
+  "utc": "2026-10-31T14:47:59.191Z",
+  "evidenceClass": [
+    "BROWSER",
+    "FIXTURE"
+  ],
+  "text": "Fit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nEdit Layout\nDirectories\nSettings\nTELEMETRY\n↓ Latest\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - ready\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nRecorded event sums: 20 input / 10 output tokens; reported estimated cost 0.0600000 (producer units).\n\nUsage coverage and source diagnostics\n\n3 usage reports; 1 / 2 recorded starts have usage (distinct turn IDs, as in Squad cost). 1 reports without a matching start. This is ledger coverage, not all-runtime coverage.\n\nLatest usage report: 1/1/2026, 5:02:00 AM\n\nScope: all valid complete local ledger records; no agent or time filter.\n\nLocal source: ready\n<LOCAL_PATH_REDACTED>\n\nChecked: 10/31/2026, 10:47:51 AM\nLatest valid record: 1/1/2026, 5:02:00 AM\n\nRejected lines: 0; unsupported: 0; pending final line: no.\n\nReports may repeat; sums do not deduplicate usage events. The producer may substitute zero / unknown for missing values (1 reports contain zero tokens or unknown model). Zero is not evidence that usage was measured.\n\nLive context: unavailable (runtime bus not connected). Parent-child hierarchy / roster promotion: unavailable (no supported live feed).\n\nLocal ledger production is not guaranteed for Copilot CLI / VS Code / App or nonlocal backends. Do not start the deprecated Squad shell to populate this view.\n\nRecent historical reports (3 of 3, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nCLI usage import is unavailable in standalone/read-only observation. Use the VS Code extension to select an export.\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\n\nBrowser settings cannot grant live-log consent. Live observation requires explicit local CLI --live-activity opt-in; opening this drawer enables nothing.\n\nActivity source diagnostics\nObserved transient tasks (0)\n\nSession-local, not durable membership or recorded usage. Running calls with an explicit roster parent appear as temporary subtask characters. Squad provides no durable parent hierarchy or automatic roster promotion.\n\nLive Activity is off. After approving the session-log scope, restart the local CLI with --live-activity. It cannot be enabled from the browser.",
+  "summaries": [
+    {
+      "text": "Usage coverage and source diagnostics",
+      "open": true
+    },
+    {
+      "text": "Recent historical reports (3 of 3, newest first; at most 40)",
+      "open": false
+    },
+    {
+      "text": "CLI import provenance and limits",
+      "open": false
+    },
+    {
+      "text": "Activity source diagnostics",
+      "open": false
+    }
+  ]
+}

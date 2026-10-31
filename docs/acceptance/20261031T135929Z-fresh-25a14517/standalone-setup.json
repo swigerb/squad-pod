@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "runId": "20261031T135929Z-fresh-25a14517",
+  "status": "READ-ONLY RUNTIME PARTIALLY OBSERVED; FULL PAGE RELOAD RETURNED TO LOGIN",
+  "timestampUtc": "2026-10-31T15:42:39.490Z",
+  "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+  "tarball": {
+    "role": "STANDALONE",
+    "artifactId": 13031892507,
+    "artifactName": "owned-terminal-windows-latest",
+    "file": "squad-pod-observer-0.1.0.tgz",
+    "bytes": 423982,
+    "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+    "installedComparison": {
+      "status": "VERIFIED",
+      "files": 102,
+      "reference": "evidence/logs/installed-identity.json"
+    }
+  },
+  "installation": "COMPLETED using configured corporate npm feed only",
+  "installedFileComparison": {
+    "status": "VERIFIED",
+    "files": 102,
+    "artifact": "evidence/logs/installed-identity.json"
+  },
+  "authentication": {
+    "observation": "COMPLETED by human for Batch 2 read-only observation; later deliberate full-page reload returned to login. No current authenticated session claimed.",
+    "officeControl": "NOT EXECUTED",
+    "syntheticTerminal": "NOT EXECUTED"
+  },
+  "nodePty": "1.1.0; Windows official prebuild; module load succeeded",
+  "conPty": "1.23.2510.08001",
+  "browser": "Edge 156.0.0.0; read-only BROWSER/FIXTURE observations completed in Batch 2, not full standalone acceptance.",
+  "processes": [
+    {
+      "alias": "observer-server-A",
+      "mode": "read-only observation",
+      "listener": "127.0.0.1 ephemeral port",
+      "console": "private, no output capture"
+    }
+  ],
+  "credentialsCaptured": false,
+  "writes": [
+    "No observer-caused project changes; separately authored file/usage fixtures archived and original project restored"
+  ],
+  "evidenceRefs": [
+    "evidence/logs/installed-identity.json",
+    "evidence/logs/batch-2-summary.json",
+    "evidence/logs/observer-batch2-initial.json",
+    "evidence/logs/observer-batch2-fixture-actions.jsonl"
+  ],
+  "authenticationState": {
+    "latestObservedUi": "LOGIN after deliberate full-page reload",
+    "reconnectOrRetryProven": false,
+    "authDefectEstablished": false,
+    "furtherConnectionRequiresPrivateHumanEntry": true
+  },
+  "processStateReference": "evidence/logs/batch-3-process-state.json"
+}

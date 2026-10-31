@@ -1,0 +1,4443 @@
+[
+  {
+    "utc": "2026-10-31T15:22:18.483Z",
+    "action": "inspect",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "viewport": {
+        "width": 1383,
+        "height": 800,
+        "dpr": 1.5
+      },
+      "text": "Fit office\n+\n−\nHide office labels\n\nOffice labels (list, not character positions)\n\nAda\nDeveloper\nLocate character\nBea\nTester\nLocate character\nTask bubbles: On\nSquad Info\nTelemetry\n6\nEdit Layout\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (6)\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics\n10:44:57 AM\nSESSION\n[session] Ada — Synthetic acceptance file activity one\n▸\n10:44:57 AM\nSTATUS\nAda became active (file activity hint): Synthetic acceptance file activity one\n10:45:27 AM\nSTATUS\nAda went idle\n10:46:13 AM\nSESSION\n[session] Ada — Synthetic acceptance file activity two\n▸\n10:46:13 AM\nSTATUS\nAda became active (file activity hint): Synthetic acceptance file activity two\n10:46:43 AM\nSTATUS\nAda went idle",
+      "buttons": [
+        {
+          "tag": "BUTTON",
+          "text": "Fit office",
+          "ariaLabel": "Fit and center office",
+          "title": "Fit and center office (large layouts use minimum zoom)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 16,
+            "width": 96.02083587646484,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "+",
+          "ariaLabel": "Zoom in",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 52,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "−",
+          "ariaLabel": "Zoom out",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 88,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Hide office labels",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": "true",
+          "disabled": false,
+          "rect": {
+            "x": 1239.3021240234375,
+            "y": 16,
+            "width": 160.03125,
+            "height": 21.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ada\nDeveloper",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1223.03125,
+            "y": 97.33333587646484,
+            "width": 48.614585876464844,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Locate character",
+          "ariaLabel": "Locate Ada",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1175.3333740234375,
+            "y": 126,
+            "width": 144.02084350585938,
+            "height": 21.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Bea\nTester",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1231.135498046875,
+            "y": 155.33334350585938,
+            "width": 32.40625,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Locate character",
+          "ariaLabel": "Locate Bea",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1175.3333740234375,
+            "y": 184,
+            "width": 144.02084350585938,
+            "height": 21.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Task bubbles: On",
+          "ariaLabel": null,
+          "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 346.10418701171875,
+            "y": 761,
+            "width": 156.8229217529297,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Squad Info",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 510.9270935058594,
+            "y": 761,
+            "width": 110.02083587646484,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Telemetry\n6",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 628.9479370117188,
+            "y": 761,
+            "width": 102.21875,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Edit Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 739.1666870117188,
+            "y": 761,
+            "width": 117.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Directories",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 864.9896240234375,
+            "y": 761,
+            "width": 109.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 982.8125,
+            "y": 761,
+            "width": 94.41667175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Clear activity",
+          "ariaLabel": null,
+          "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1247.260498046875,
+            "y": 756,
+            "width": 109.75,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1365.010498046875,
+            "y": 756,
+            "width": 26.322917938232422,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Usage coverage and source diagnostics",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "rect": {
+            "x": 32,
+            "y": 329.3333435058594,
+            "width": 1344,
+            "height": 18
+          }
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Recent historical reports (0 of 0, newest first; at most 40)",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "rect": {
+            "x": 32,
+            "y": 347.3333435058594,
+            "width": 1344,
+            "height": 18
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Select CLI usage JSON...",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 32,
+            "y": 442,
+            "width": 192.1666717529297,
+            "height": 26.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Refresh selected export",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": true,
+          "rect": {
+            "x": 232.1666717529297,
+            "y": 442,
+            "width": 184.96875,
+            "height": 26.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Forget export",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": true,
+          "rect": {
+            "x": 425.13543701171875,
+            "y": 442,
+            "width": 112.95833587646484,
+            "height": 26.666667938232422
+          }
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "CLI import provenance and limits",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "rect": {
+            "x": 32,
+            "y": 528.6666870117188,
+            "width": 1344,
+            "height": 18
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Observation settings and consent",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 32,
+            "y": 561.3333740234375,
+            "width": 228.5729217529297,
+            "height": 18
+          }
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Activity source diagnostics",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "rect": {
+            "x": 32,
+            "y": 621.3333740234375,
+            "width": 1344,
+            "height": 18
+          }
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:22:28.470Z",
+    "action": "click",
+    "argument": "Settings",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Settings",
+      "point": {
+        "x": 1082.6875038146973,
+        "y": 844.0000057220459
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:22:28.584Z",
+    "action": "probe",
+    "argument": "batch3-settings-initial",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "phase": "batch3-settings-initial",
+      "viewport": {
+        "width": 1383,
+        "height": 800
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "label": null,
+        "text": "Settings",
+        "insideDialog": false
+      },
+      "dialogs": [],
+      "headings": [
+        "Activity events (6)",
+        "Recorded usage / model history - missing",
+        "Copilot CLI usage export - unselected",
+        "Settings"
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:22:47.522Z",
+    "action": "inspect",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "viewport": {
+        "width": 1383,
+        "height": 800,
+        "dpr": 1.5
+      },
+      "text": "Fit office\n+\n−\nHide office labels\n\nOffice labels (list, not character positions)\n\nAda\nDeveloper\nLocate character\nBea\nTester\nLocate character\nTask bubbles: On\nSquad Info\nTelemetry\n6\nEdit Layout\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (6)\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics\n10:44:57 AM\nSESSION\n[session] Ada — Synthetic acceptance file activity one\n▸\n10:44:57 AM\nSTATUS\nAda became active (file activity hint): Synthetic acceptance file activity one\n10:45:27 AM\nSTATUS\nAda went idle\n10:46:13 AM\nSESSION\n[session] Ada — Synthetic acceptance file activity two\n▸\n10:46:13 AM\nSTATUS\nAda became active (file activity hint): Synthetic acceptance file activity two\n10:46:43 AM\nSTATUS\nAda went idle\nSettings\n×\nSound Notifications\nShow Named Areas\nDebug View\nLive Activity (opt-in)\n\nLive source: searching. Reads local Copilot CLI session metadata for this workspace after confirmation.\n\nSquad source\nTeam file: Found\nDirectory: <RUN_ROOT>\\runtime\\project-A\\.squad\nFile observer: Watching (native watch + polling)\nLive CLI observer: searching\n\nFile observations are activity hints, not authoritative lifecycle, tool or context events.\n\nEventBus / WebSocket bridge: Not connected (no producer).\nLocal furniture assets\n\nChanges reload automatically. Removing a directory does not delete files or layout items.\n\nAdd Asset Directory\n\nAutomatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code's normal terminal and Copilot permission prompts. Live tools and context use an undocumented, best-effort Copilot CLI session format.\n\nLayout\nExport Layout\nImport Layout",
+      "buttons": [
+        {
+          "tag": "BUTTON",
+          "text": "Fit office",
+          "ariaLabel": "Fit and center office",
+          "title": "Fit and center office (large layouts use minimum zoom)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 16,
+            "width": 96.02083587646484,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "+",
+          "ariaLabel": "Zoom in",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 52,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "−",
+          "ariaLabel": "Zoom out",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 88,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Hide office labels",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": "true",
+          "disabled": false,
+          "rect": {
+            "x": 1239.3021240234375,
+            "y": 16,
+            "width": 160.03125,
+            "height": 21.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ada\nDeveloper",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1223.03125,
+            "y": 97.33333587646484,
+            "width": 48.614585876464844,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Locate character",
+          "ariaLabel": "Locate Ada",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1175.3333740234375,
+            "y": 126,
+            "width": 144.02084350585938,
+            "height": 21.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Bea\nTester",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1231.135498046875,
+            "y": 155.33334350585938,
+            "width": 32.40625,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Locate character",
+          "ariaLabel": "Locate Bea",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1175.3333740234375,
+            "y": 184,
+            "width": 144.02084350585938,
+            "height": 21.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Task bubbles: On",
+          "ariaLabel": null,
+          "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 346.10418701171875,
+            "y": 761,
+            "width": 156.8229217529297,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Squad Info",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 510.9270935058594,
+            "y": 761,
+            "width": 110.02083587646484,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Telemetry\n6",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 628.9479370117188,
+            "y": 761,
+            "width": 102.21875,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Edit Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 739.1666870117188,
+            "y": 761,
+            "width": 117.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Directories",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 864.9896240234375,
+            "y": 761,
+            "width": 109.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 982.8125,
+            "y": 761,
+            "width": 94.41667175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Clear activity",
+          "ariaLabel": null,
+          "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1247.260498046875,
+            "y": 756,
+            "width": 109.75,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1365.010498046875,
+            "y": 756,
+            "width": 26.322917938232422,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Usage coverage and source diagnostics",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "rect": {
+            "x": 32,
+            "y": 329.3333435058594,
+            "width": 1344,
+            "height": 18
+          }
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Recent historical reports (0 of 0, newest first; at most 40)",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "rect": {
+            "x": 32,
+            "y": 347.3333435058594,
+            "width": 1344,
+            "height": 18
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Select CLI usage JSON...",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 32,
+            "y": 442,
+            "width": 192.1666717529297,
+            "height": 26.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Refresh selected export",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": true,
+          "rect": {
+            "x": 232.1666717529297,
+            "y": 442,
+            "width": 184.96875,
+            "height": 26.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Forget export",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": true,
+          "rect": {
+            "x": 425.13543701171875,
+            "y": 442,
+            "width": 112.95833587646484,
+            "height": 26.666667938232422
+          }
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "CLI import provenance and limits",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "rect": {
+            "x": 32,
+            "y": 528.6666870117188,
+            "width": 1344,
+            "height": 18
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Observation settings and consent",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 32,
+            "y": 561.3333740234375,
+            "width": 228.5729217529297,
+            "height": 18
+          }
+        },
+        {
+          "tag": "SUMMARY",
+          "text": "Activity source diagnostics",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "rect": {
+            "x": 32,
+            "y": 621.3333740234375,
+            "width": 1344,
+            "height": 18
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "×",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 896.9896240234375,
+            "y": 65.83333587646484,
+            "width": 20.010417938232422,
+            "height": 22.666667938232422
+          }
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 896,
+            "y": 107.5,
+            "width": 18,
+            "height": 18
+          }
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 896,
+            "y": 147.5,
+            "width": 18,
+            "height": 18
+          }
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 896,
+            "y": 187.5,
+            "width": 18,
+            "height": 18
+          }
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 901,
+            "y": 227.5,
+            "width": 13,
+            "height": 13
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Add Asset Directory",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 466.3333435058594,
+            "y": 558.8333740234375,
+            "width": 168.03125,
+            "height": 21.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Export Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 466.3333435058594,
+            "y": 704.8333740234375,
+            "width": 221.33334350585938,
+            "height": 29.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Import Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 695.6666870117188,
+            "y": 704.8333740234375,
+            "width": 221.33334350585938,
+            "height": 29.33333396911621
+          }
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:23:54.728Z",
+    "action": "disable-live",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "checked": false,
+      "text": "Fit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\n6\nEdit Layout\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (6)\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics\n10:44:57 AM\nSESSION\n[session] Ada — Synthetic acceptance file activity one\n▸\n10:44:57 AM\nSTATUS\nAda became active (file activity hint): Synthetic acceptance file activity one\n10:45:27 AM\nSTATUS\nAda went idle\n10:46:13 AM\nSESSION\n[session] Ada — Synthetic acceptance file activity two\n▸\n10:46:13 AM\nSTATUS\nAda became active (file activity hint): Synthetic acceptance file activity two\n10:46:43 AM\nSTATUS\nAda went idle\nSettings\n×\nSound Notifications\nShow Named Areas\nDebug View\nLive Activity (opt-in)\n\nLive source: off. Reads local Copilot CLI session metadata for this workspace after confirmation.\n\nSquad source\nTeam file: Found\nDirectory: <RUN_ROOT>\\runtime\\project-A\\.squad\nFile observer: Watching (native watch + polling)\nLive CLI observer: off\n\nFile observations are activity hints, not authoritative lifecycle, tool or context events.\n\nEventBus / WebSocket bridge: Not connected (no producer).\nLocal furniture assets\n\nChanges reload automatically. Removing a directory does not delete files or layout items.\n\nAdd Asset Directory\n\nAutomatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code's normal terminal and Copilot permission prompts. Live tools and context use an undocumented, best-effort Copilot CLI session format.\n\nLayout\nExport Layout\nImport Layout"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:24:23.841Z",
+    "action": "click",
+    "argument": "×",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "×",
+      "point": {
+        "x": 959.6615009307861,
+        "y": 144.83334159851074
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:24:24.202Z",
+    "action": "click",
+    "argument": "Directories",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Directories",
+      "point": {
+        "x": 972.5677528381348,
+        "y": 844.0000057220459
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:24:24.278Z",
+    "action": "probe",
+    "argument": "batch3-directories-baseline",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "phase": "batch3-directories-baseline",
+      "viewport": {
+        "width": 1383,
+        "height": 800
+      },
+      "focus": {
+        "tag": "BUTTON",
+        "label": "Browse for a directory",
+        "text": "Browse for a directory",
+        "insideDialog": true
+      },
+      "dialogs": [
+        {
+          "label": null,
+          "text": "FOLDERS\n\nLaunch directory\n×\n\nChoose a folder to launch Squad explicitly.\n\nHow directory launches work\nWorkspace folders\n1\nproject-A\nAvailable\n<RUN_ROOT>\\runtime\\project-A\nLaunch\nSaved directories\n0\n\nNo saved directories yet.\n\nRecent launch requests\n0\n\nNo launch requests have been recorded.\n\nAdd a directory\n\nSave a folder so you can launch it explicitly later.\n\nBrowse for a directory\nEnter a path manually or choose a recent Squad folder",
+          "buttons": [
+            {
+              "label": "Close directories",
+              "text": "×",
+              "expanded": null,
+              "disabled": false
+            },
+            {
+              "label": "Launch project-A",
+              "text": "Launch",
+              "expanded": null,
+              "disabled": false
+            },
+            {
+              "label": "Browse for a directory",
+              "text": "Browse for a directory",
+              "expanded": null,
+              "disabled": false
+            },
+            {
+              "label": "Save directory",
+              "text": "",
+              "expanded": null,
+              "disabled": true
+            }
+          ]
+        }
+      ],
+      "headings": [
+        "Activity events (6)",
+        "Recorded usage / model history - missing",
+        "Copilot CLI usage export - unselected",
+        "Launch directory",
+        "Workspace folders",
+        "Saved directories",
+        "Recent launch requests",
+        "Add a directory"
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:24:37.597Z",
+    "action": "click",
+    "argument": "Enter a path manually or choose a recent Squad folder",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Enter a path manually or choose a recent Squad folder",
+      "point": {
+        "x": 563.0208549499512,
+        "y": 648.0000052452087
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:22.374Z",
+    "action": "fill-directory",
+    "argument": "{\"label\":\"Directory path\",\"value\":\"<RUN_ROOT>\\\\runtime\\\\project B\"}",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "label": "Directory path",
+      "value": "<RUN_ROOT>\\runtime\\project B"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:22.449Z",
+    "action": "form-probe",
+    "argument": "batch3-empty-name",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "phase": "batch3-empty-name",
+      "dialogs": [
+        {
+          "text": "FOLDERS\n\nLaunch directory\n×\n\nChoose a folder to launch Squad explicitly.\n\nHow directory launches work\nWorkspace folders\n1\nproject-A\nAvailable\n<RUN_ROOT>\\runtime\\project-A\nLaunch\nSaved directories\n0\n\nNo saved directories yet.\n\nRecent launch requests\n0\n\nNo launch requests have been recorded.\n\nAdd a directory\n\nSave a folder so you can launch it explicitly later.\n\nBrowse for a directory\nEnter a path manually or choose a recent Squad folder\nDirectory path\nDirectory name\nSave directory",
+          "inputs": [
+            {
+              "label": "Directory path",
+              "value": "<RUN_ROOT>\\runtime\\project B",
+              "disabled": false
+            },
+            {
+              "label": "Directory name",
+              "value": "",
+              "disabled": false
+            }
+          ],
+          "buttons": [
+            {
+              "label": "Close directories",
+              "text": "×",
+              "disabled": false
+            },
+            {
+              "label": "Launch project-A",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Browse for a directory",
+              "text": "Browse for a directory",
+              "disabled": false
+            },
+            {
+              "label": "Save directory",
+              "text": "Save directory",
+              "disabled": true
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:22.749Z",
+    "action": "fill-directory",
+    "argument": "{\"label\":\"Directory name\",\"value\":\"Batch3 smoke B\"}",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "label": "Directory name",
+      "value": "Batch3 smoke B"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:23.106Z",
+    "action": "click",
+    "argument": "Save directory",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Save directory",
+      "point": {
+        "x": 1044.5885429382324,
+        "y": 665.3333587646484
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:23.181Z",
+    "action": "form-probe",
+    "argument": "batch3-valid-add",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "phase": "batch3-valid-add",
+      "dialogs": [
+        {
+          "text": "FOLDERS\n\nLaunch directory\n×\n\nChoose a folder to launch Squad explicitly.\n\nHow directory launches work\n\nSaved \"Batch3 smoke B\". Launch it explicitly from the directory list.\n\nWorkspace folders\n1\nproject-A\nAvailable\n<RUN_ROOT>\\runtime\\project-A\nLaunch\nSaved directories\n1\nBatch3 smoke B\nAvailable\n<RUN_ROOT>\\runtime\\project B\nLaunch\nManage\nRecent launch requests\n0\n\nNo launch requests have been recorded.\n\nAdd a directory\n\nSave a folder so you can launch it explicitly later.\n\nBrowse for a directory\nEnter a path manually or choose a recent Squad folder\nDirectory path\nDirectory name\nSave directory",
+          "inputs": [
+            {
+              "label": "Name for Batch3 smoke B",
+              "value": "Batch3 smoke B",
+              "disabled": false
+            },
+            {
+              "label": "Directory path",
+              "value": "<RUN_ROOT>\\runtime\\project B",
+              "disabled": false
+            },
+            {
+              "label": "Directory name",
+              "value": "Batch3 smoke B",
+              "disabled": false
+            }
+          ],
+          "buttons": [
+            {
+              "label": "Close directories",
+              "text": "×",
+              "disabled": false
+            },
+            {
+              "label": "Launch project-A",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Launch Batch3 smoke B",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Rename Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Change folder for Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Remove Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Browse for a directory",
+              "text": "Browse for a directory",
+              "disabled": false
+            },
+            {
+              "label": "Save directory",
+              "text": "Save directory",
+              "disabled": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:39.127Z",
+    "action": "click",
+    "argument": "Save directory",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Save directory",
+      "point": {
+        "x": 1044.5885429382324,
+        "y": 713.3333587646484
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:39.203Z",
+    "action": "form-probe",
+    "argument": "batch3-duplicate-path",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "phase": "batch3-duplicate-path",
+      "dialogs": [
+        {
+          "text": "FOLDERS\n\nLaunch directory\n×\n\nChoose a folder to launch Squad explicitly.\n\nHow directory launches work\n\nThat folder is already in Saved directories.\n\nWorkspace folders\n1\nproject-A\nAvailable\n<RUN_ROOT>\\runtime\\project-A\nLaunch\nSaved directories\n1\nBatch3 smoke B\nAvailable\n<RUN_ROOT>\\runtime\\project B\nLaunch\nManage\nRecent launch requests\n0\n\nNo launch requests have been recorded.\n\nAdd a directory\n\nSave a folder so you can launch it explicitly later.\n\nBrowse for a directory\nEnter a path manually or choose a recent Squad folder\nDirectory path\nDirectory name\nSave directory",
+          "inputs": [
+            {
+              "label": "Name for Batch3 smoke B",
+              "value": "Batch3 smoke B",
+              "disabled": false
+            },
+            {
+              "label": "Directory path",
+              "value": "<RUN_ROOT>\\runtime\\project B",
+              "disabled": false
+            },
+            {
+              "label": "Directory name",
+              "value": "Batch3 smoke B",
+              "disabled": false
+            }
+          ],
+          "buttons": [
+            {
+              "label": "Close directories",
+              "text": "×",
+              "disabled": false
+            },
+            {
+              "label": "Launch project-A",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Launch Batch3 smoke B",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Rename Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Change folder for Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Remove Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Browse for a directory",
+              "text": "Browse for a directory",
+              "disabled": false
+            },
+            {
+              "label": "Save directory",
+              "text": "Save directory",
+              "disabled": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:39.505Z",
+    "action": "fill-directory",
+    "argument": "{\"label\":\"Directory path\",\"value\":\"<RUN_ROOT>\\\\runtime\\\\batch3-nonexistent\"}",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "label": "Directory path",
+      "value": "<RUN_ROOT>\\runtime\\batch3-nonexistent"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:39.800Z",
+    "action": "fill-directory",
+    "argument": "{\"label\":\"Directory name\",\"value\":\"Batch3 invalid\"}",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "label": "Directory name",
+      "value": "Batch3 invalid"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:40.157Z",
+    "action": "click",
+    "argument": "Save directory",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Save directory",
+      "point": {
+        "x": 1044.5885429382324,
+        "y": 713.3333587646484
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:40.232Z",
+    "action": "form-probe",
+    "argument": "batch3-nonexistent-path",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "phase": "batch3-nonexistent-path",
+      "dialogs": [
+        {
+          "text": "FOLDERS\n\nLaunch directory\n×\n\nChoose a folder to launch Squad explicitly.\n\nHow directory launches work\nDirectory action needs attention\nShow error details\nWorkspace folders\n1\nproject-A\nAvailable\n<RUN_ROOT>\\runtime\\project-A\nLaunch\nSaved directories\n1\nBatch3 smoke B\nAvailable\n<RUN_ROOT>\\runtime\\project B\nLaunch\nManage\nRecent launch requests\n0\n\nNo launch requests have been recorded.\n\nAdd a directory\n\nSave a folder so you can launch it explicitly later.\n\nBrowse for a directory\nEnter a path manually or choose a recent Squad folder\nDirectory path\nDirectory name\nSave directory",
+          "inputs": [
+            {
+              "label": "Name for Batch3 smoke B",
+              "value": "Batch3 smoke B",
+              "disabled": false
+            },
+            {
+              "label": "Directory path",
+              "value": "<RUN_ROOT>\\runtime\\batch3-nonexistent",
+              "disabled": false
+            },
+            {
+              "label": "Directory name",
+              "value": "Batch3 invalid",
+              "disabled": false
+            }
+          ],
+          "buttons": [
+            {
+              "label": "Close directories",
+              "text": "×",
+              "disabled": false
+            },
+            {
+              "label": "Launch project-A",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Launch Batch3 smoke B",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Rename Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Change folder for Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Remove Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Browse for a directory",
+              "text": "Browse for a directory",
+              "disabled": false
+            },
+            {
+              "label": "Save directory",
+              "text": "Save directory",
+              "disabled": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:40.531Z",
+    "action": "fill-directory",
+    "argument": "{\"label\":\"Directory path\",\"value\":\"<RUN_ROOT>\\\\runtime\\\\project-A\\\\acceptance-input.txt\"}",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "label": "Directory path",
+      "value": "<RUN_ROOT>\\runtime\\project-A\\acceptance-input.txt"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:40.876Z",
+    "action": "click",
+    "argument": "Save directory",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Save directory",
+      "point": {
+        "x": 1044.5885429382324,
+        "y": 720.6666717529297
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:40.952Z",
+    "action": "form-probe",
+    "argument": "batch3-file-not-folder",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "phase": "batch3-file-not-folder",
+      "dialogs": [
+        {
+          "text": "FOLDERS\n\nLaunch directory\n×\n\nChoose a folder to launch Squad explicitly.\n\nHow directory launches work\nDirectory action needs attention\nShow error details\nWorkspace folders\n1\nproject-A\nAvailable\n<RUN_ROOT>\\runtime\\project-A\nLaunch\nSaved directories\n1\nBatch3 smoke B\nAvailable\n<RUN_ROOT>\\runtime\\project B\nLaunch\nManage\nRecent launch requests\n0\n\nNo launch requests have been recorded.\n\nAdd a directory\n\nSave a folder so you can launch it explicitly later.\n\nBrowse for a directory\nEnter a path manually or choose a recent Squad folder\nDirectory path\nDirectory name\nSave directory",
+          "inputs": [
+            {
+              "label": "Name for Batch3 smoke B",
+              "value": "Batch3 smoke B",
+              "disabled": false
+            },
+            {
+              "label": "Directory path",
+              "value": "<RUN_ROOT>\\runtime\\project-A\\acceptance-input.txt",
+              "disabled": false
+            },
+            {
+              "label": "Directory name",
+              "value": "Batch3 invalid",
+              "disabled": false
+            }
+          ],
+          "buttons": [
+            {
+              "label": "Close directories",
+              "text": "×",
+              "disabled": false
+            },
+            {
+              "label": "Launch project-A",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Launch Batch3 smoke B",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Rename Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Change folder for Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Remove Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Browse for a directory",
+              "text": "Browse for a directory",
+              "disabled": false
+            },
+            {
+              "label": "Save directory",
+              "text": "Save directory",
+              "disabled": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:41.317Z",
+    "action": "click",
+    "argument": "Close directories",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Close directories",
+      "point": {
+        "x": 1089.6666679382324,
+        "y": 212.6666717529297
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:43.392Z",
+    "action": "command",
+    "argument": "Developer: Reload Window",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "command": "Developer: Reload Window",
+      "menuBeforeExecution": "File\nEdit\nSelection\nView\nGo\nRun\nTerminal\nHelp\n1\n1\nProblems\nOutput\nDebug Console\nTerminal\nPorts\nSquad Pod\n 0 \n 0\nPrimary Side Bar hidden\n3 Results\nDeveloper: Reload Window\nrecently used\nDeveloper: Reload Webviews\nsimilar commands\nDeveloper: Reload with Extensions Disabled"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:59.664Z",
+    "action": "click",
+    "argument": "Directories",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Directories",
+      "point": {
+        "x": 972.5677528381348,
+        "y": 844.0000057220459
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:37:59.741Z",
+    "action": "form-probe",
+    "argument": "batch3-directory-persisted-after-host-reload",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "phase": "batch3-directory-persisted-after-host-reload",
+      "dialogs": [
+        {
+          "text": "FOLDERS\n\nLaunch directory\n×\n\nChoose a folder to launch Squad explicitly.\n\nHow directory launches work\nWorkspace folders\n1\nproject-A\nAvailable\n<RUN_ROOT>\\runtime\\project-A\nLaunch\nSaved directories\n1\nBatch3 smoke B\nAvailable\n<RUN_ROOT>\\runtime\\project B\nLaunch\nManage\nRecent launch requests\n0\n\nNo launch requests have been recorded.\n\nAdd a directory\n\nSave a folder so you can launch it explicitly later.\n\nBrowse for a directory\nEnter a path manually or choose a recent Squad folder",
+          "inputs": [
+            {
+              "label": "Name for Batch3 smoke B",
+              "value": "Batch3 smoke B",
+              "disabled": false
+            },
+            {
+              "label": "Directory path",
+              "value": "",
+              "disabled": false
+            },
+            {
+              "label": "Directory name",
+              "value": "",
+              "disabled": false
+            }
+          ],
+          "buttons": [
+            {
+              "label": "Close directories",
+              "text": "×",
+              "disabled": false
+            },
+            {
+              "label": "Launch project-A",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Launch Batch3 smoke B",
+              "text": "Launch",
+              "disabled": false
+            },
+            {
+              "label": "Rename Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Change folder for Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Remove Batch3 smoke B",
+              "text": "",
+              "disabled": false
+            },
+            {
+              "label": "Browse for a directory",
+              "text": "Browse for a directory",
+              "disabled": false
+            },
+            {
+              "label": "Save directory",
+              "text": "",
+              "disabled": true
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:00.102Z",
+    "action": "click",
+    "argument": "Close directories",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Close directories",
+      "point": {
+        "x": 1089.6666679382324,
+        "y": 267.00001525878906
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:00.462Z",
+    "action": "click",
+    "argument": "Settings",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Settings",
+      "point": {
+        "x": 1082.6875038146973,
+        "y": 844.0000057220459
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:00.541Z",
+    "action": "inspect",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "viewport": {
+        "width": 1383,
+        "height": 800,
+        "dpr": 1.5
+      },
+      "text": "Fit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nEdit Layout\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics\nSettings\n×\nSound Notifications\nShow Named Areas\nDebug View\nLive Activity (opt-in)\n\nLive source: off. Reads local Copilot CLI session metadata for this workspace after confirmation.\n\nSquad source\nTeam file: Found\nDirectory: <RUN_ROOT>\\runtime\\project-A\\.squad\nFile observer: Watching (native watch + polling)\nLive CLI observer: off\n\nFile observations are activity hints, not authoritative lifecycle, tool or context events.\n\nEventBus / WebSocket bridge: Not connected (no producer).\nLocal furniture assets\n\nChanges reload automatically. Removing a directory does not delete files or layout items.\n\nAdd Asset Directory\n\nAutomatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code's normal terminal and Copilot permission prompts. Live tools and context use an undocumented, best-effort Copilot CLI session format.\n\nLayout\nExport Layout\nImport Layout",
+      "buttons": [
+        {
+          "tag": "BUTTON",
+          "text": "Fit office",
+          "ariaLabel": "Fit and center office",
+          "title": "Fit and center office (large layouts use minimum zoom)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 16,
+            "width": 96.02083587646484,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "+",
+          "ariaLabel": "Zoom in",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 52,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "−",
+          "ariaLabel": "Zoom out",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 88,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ada\nDeveloper",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1071.359375,
+            "y": 319,
+            "width": 48.614585876464844,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Bea\nTester",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 599.4635620117188,
+            "y": 295,
+            "width": 32.40625,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Task bubbles: On",
+          "ariaLabel": null,
+          "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 346.10418701171875,
+            "y": 761,
+            "width": 156.8229217529297,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Squad Info",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 510.9270935058594,
+            "y": 761,
+            "width": 110.02083587646484,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Telemetry",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 628.9479370117188,
+            "y": 761,
+            "width": 102.21875,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Edit Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 739.1666870117188,
+            "y": 761,
+            "width": 117.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Directories",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 864.9896240234375,
+            "y": 761,
+            "width": 109.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 982.8125,
+            "y": 761,
+            "width": 94.41667175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Clear activity",
+          "ariaLabel": null,
+          "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1247.260498046875,
+            "y": 756,
+            "width": 109.75,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1365.010498046875,
+            "y": 756,
+            "width": 26.322917938232422,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "×",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 896.9896240234375,
+            "y": 65.83333587646484,
+            "width": 20.010417938232422,
+            "height": 22.666667938232422
+          }
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 896,
+            "y": 107.5,
+            "width": 18,
+            "height": 18
+          }
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 896,
+            "y": 147.5,
+            "width": 18,
+            "height": 18
+          }
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 896,
+            "y": 187.5,
+            "width": 18,
+            "height": 18
+          }
+        },
+        {
+          "tag": "INPUT",
+          "text": "",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 901,
+            "y": 227.5,
+            "width": 13,
+            "height": 13
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Add Asset Directory",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 466.3333435058594,
+            "y": 558.8333740234375,
+            "width": 168.03125,
+            "height": 21.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Export Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 466.3333435058594,
+            "y": 704.8333740234375,
+            "width": 221.33334350585938,
+            "height": 29.33333396911621
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Import Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 695.6666870117188,
+            "y": 704.8333740234375,
+            "width": 221.33334350585938,
+            "height": 29.33333396911621
+          }
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:00.896Z",
+    "action": "click",
+    "argument": "×",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "×",
+      "point": {
+        "x": 959.6615009307861,
+        "y": 144.83334159851074
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:01.256Z",
+    "action": "click",
+    "argument": "Edit Layout",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Edit Layout",
+      "point": {
+        "x": 850.744815826416,
+        "y": 844.0000057220459
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:01.333Z",
+    "action": "inspect",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "viewport": {
+        "width": 1383,
+        "height": 800,
+        "dpr": 1.5
+      },
+      "text": "Drag to move. Hold Alt on release to copy. Desks carry PCs and lamps.\nTOOLS\n◎\nSelect\n▦\nFloor\n▥\nWall\n▦\nCarpet\n⬚\nArea\n♜\nFurniture\n♥\nPets\n✕\nErase\n⊙\nEyedrop\nEXPAND GRID\n←\n↑\n↓\n→\nACTIONS\nSave Layout\nUndo\nRedo\nReset\nSHORTCUTS\nDel Delete selected\nR Rotate selected\nCtrl+Z Undo\nCtrl+Shift+Z Redo\nCtrl+Y Redo\nEsc Deselect / Exit\nSpace+Drag Pan\nCtrl+Scroll Zoom\nFit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nExit Layout Editor\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics",
+      "buttons": [
+        {
+          "tag": "BUTTON",
+          "text": "◎\nSelect",
+          "ariaLabel": null,
+          "title": "Select",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nFloor",
+          "ariaLabel": null,
+          "title": "Floor",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 89.33333587646484,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▥\nWall",
+          "ariaLabel": null,
+          "title": "Wall",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nCarpet",
+          "ariaLabel": null,
+          "title": "Carpet",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⬚\nArea",
+          "ariaLabel": null,
+          "title": "Area",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 130.6666717529297,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♜\nFurniture",
+          "ariaLabel": null,
+          "title": "Furniture",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♥\nPets",
+          "ariaLabel": null,
+          "title": "Pets",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕\nErase",
+          "ariaLabel": null,
+          "title": "Erase",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 172,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⊙\nEyedrop",
+          "ariaLabel": null,
+          "title": "Eyedrop",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "←",
+          "ariaLabel": null,
+          "title": "Expand Left",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 91.76042175292969,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↑",
+          "ariaLabel": null,
+          "title": "Expand Up",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 244.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↓",
+          "ariaLabel": null,
+          "title": "Expand Down",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 266.3333435058594,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "→",
+          "ariaLabel": null,
+          "title": "Expand Right",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 143.6354217529297,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Save Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 320.3333435058594,
+            "width": 203.33334350585938,
+            "height": 26
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Undo",
+          "ariaLabel": null,
+          "title": "Undo (Ctrl+Z)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Redo",
+          "ariaLabel": null,
+          "title": "Redo (Ctrl+Y)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 131.1666717529297,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Reset",
+          "ariaLabel": null,
+          "title": "Reset to last save",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 376.3333435058594,
+            "width": 203.33334350585938,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Fit office",
+          "ariaLabel": "Fit and center office",
+          "title": "Fit and center office (large layouts use minimum zoom)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 16,
+            "width": 96.02083587646484,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "+",
+          "ariaLabel": "Zoom in",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 136.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "−",
+          "ariaLabel": "Zoom out",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 172.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ada\nDeveloper",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1071.359375,
+            "y": 319,
+            "width": 48.614585876464844,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Bea\nTester",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 599.4635620117188,
+            "y": 367,
+            "width": 32.40625,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Task bubbles: On",
+          "ariaLabel": null,
+          "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 318.8020935058594,
+            "y": 761,
+            "width": 156.8229217529297,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Squad Info",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 483.625,
+            "y": 761,
+            "width": 110.02083587646484,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Telemetry",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 601.6458740234375,
+            "y": 761,
+            "width": 102.21875,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Exit Layout Editor",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 711.8646240234375,
+            "y": 761,
+            "width": 172.42709350585938,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Directories",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 892.2916870117188,
+            "y": 761,
+            "width": 109.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1010.1146240234375,
+            "y": 761,
+            "width": 94.41667175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Clear activity",
+          "ariaLabel": null,
+          "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1247.260498046875,
+            "y": 756,
+            "width": 109.75,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1365.010498046875,
+            "y": 756,
+            "width": 26.322917938232422,
+            "height": 20.666667938232422
+          }
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:29.454Z",
+    "action": "screenshot",
+    "argument": "native-batch3-layout-before.png",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "file": "native-batch3-layout-before.png",
+      "clip": {
+        "x": 52.66666793823242,
+        "y": 67.66667175292969,
+        "width": 1382.666748046875,
+        "height": 799.6666870117188,
+        "scale": 1
+      },
+      "captureScope": "Isolated native product webview only"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:29.821Z",
+    "action": "click",
+    "argument": "→",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "→",
+      "point": {
+        "x": 208.2708396911621,
+        "y": 333.00001525878906
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:37.153Z",
+    "action": "inspect",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "viewport": {
+        "width": 1383,
+        "height": 800,
+        "dpr": 1.5
+      },
+      "text": "Drag to move. Hold Alt on release to copy. Desks carry PCs and lamps.\nTOOLS\n◎\nSelect\n▦\nFloor\n▥\nWall\n▦\nCarpet\n⬚\nArea\n♜\nFurniture\n♥\nPets\n✕\nErase\n⊙\nEyedrop\nEXPAND GRID\n←\n↑\n↓\n→\nACTIONS\n● Save Layout\nUndo\nRedo\nReset\nSHORTCUTS\nDel Delete selected\nR Rotate selected\nCtrl+Z Undo\nCtrl+Shift+Z Redo\nCtrl+Y Redo\nEsc Deselect / Exit\nSpace+Drag Pan\nCtrl+Scroll Zoom\nFit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nExit Layout Editor\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics",
+      "buttons": [
+        {
+          "tag": "BUTTON",
+          "text": "◎\nSelect",
+          "ariaLabel": null,
+          "title": "Select",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nFloor",
+          "ariaLabel": null,
+          "title": "Floor",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 89.33333587646484,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▥\nWall",
+          "ariaLabel": null,
+          "title": "Wall",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nCarpet",
+          "ariaLabel": null,
+          "title": "Carpet",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⬚\nArea",
+          "ariaLabel": null,
+          "title": "Area",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 130.6666717529297,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♜\nFurniture",
+          "ariaLabel": null,
+          "title": "Furniture",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♥\nPets",
+          "ariaLabel": null,
+          "title": "Pets",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕\nErase",
+          "ariaLabel": null,
+          "title": "Erase",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 172,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⊙\nEyedrop",
+          "ariaLabel": null,
+          "title": "Eyedrop",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "←",
+          "ariaLabel": null,
+          "title": "Expand Left",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 91.76042175292969,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↑",
+          "ariaLabel": null,
+          "title": "Expand Up",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 244.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↓",
+          "ariaLabel": null,
+          "title": "Expand Down",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 266.3333435058594,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "→",
+          "ariaLabel": null,
+          "title": "Expand Right",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 143.6354217529297,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "● Save Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 320.3333435058594,
+            "width": 203.33334350585938,
+            "height": 26
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Undo",
+          "ariaLabel": null,
+          "title": "Undo (Ctrl+Z)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Redo",
+          "ariaLabel": null,
+          "title": "Redo (Ctrl+Y)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 131.1666717529297,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Reset",
+          "ariaLabel": null,
+          "title": "Reset to last save",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 376.3333435058594,
+            "width": 203.33334350585938,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Fit office",
+          "ariaLabel": "Fit and center office",
+          "title": "Fit and center office (large layouts use minimum zoom)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 16,
+            "width": 96.02083587646484,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "+",
+          "ariaLabel": "Zoom in",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 136.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "−",
+          "ariaLabel": "Zoom out",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 172.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ada\nDeveloper",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 831.359375,
+            "y": 127,
+            "width": 48.614585876464844,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Bea\nTester",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 359.46356201171875,
+            "y": 385,
+            "width": 32.40625,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Task bubbles: On",
+          "ariaLabel": null,
+          "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 318.8020935058594,
+            "y": 761,
+            "width": 156.8229217529297,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Squad Info",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 483.625,
+            "y": 761,
+            "width": 110.02083587646484,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Telemetry",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 601.6458740234375,
+            "y": 761,
+            "width": 102.21875,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Exit Layout Editor",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 711.8646240234375,
+            "y": 761,
+            "width": 172.42709350585938,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Directories",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 892.2916870117188,
+            "y": 761,
+            "width": 109.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1010.1146240234375,
+            "y": 761,
+            "width": 94.41667175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Clear activity",
+          "ariaLabel": null,
+          "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1247.260498046875,
+            "y": 756,
+            "width": 109.75,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1365.010498046875,
+            "y": 756,
+            "width": 26.322917938232422,
+            "height": 20.666667938232422
+          }
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:38:50.333Z",
+    "action": "click",
+    "argument": "● Save Layout",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "● Save Layout",
+      "point": {
+        "x": 182.3333396911621,
+        "y": 401.00001525878906
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:39:03.751Z",
+    "action": "inspect",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "viewport": {
+        "width": 1383,
+        "height": 800,
+        "dpr": 1.5
+      },
+      "text": "Drag to move. Hold Alt on release to copy. Desks carry PCs and lamps.\nTOOLS\n◎\nSelect\n▦\nFloor\n▥\nWall\n▦\nCarpet\n⬚\nArea\n♜\nFurniture\n♥\nPets\n✕\nErase\n⊙\nEyedrop\nEXPAND GRID\n←\n↑\n↓\n→\nACTIONS\nSave Layout\nUndo\nRedo\nReset\nSHORTCUTS\nDel Delete selected\nR Rotate selected\nCtrl+Z Undo\nCtrl+Shift+Z Redo\nCtrl+Y Redo\nEsc Deselect / Exit\nSpace+Drag Pan\nCtrl+Scroll Zoom\nFit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nExit Layout Editor\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics",
+      "buttons": [
+        {
+          "tag": "BUTTON",
+          "text": "◎\nSelect",
+          "ariaLabel": null,
+          "title": "Select",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nFloor",
+          "ariaLabel": null,
+          "title": "Floor",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 89.33333587646484,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▥\nWall",
+          "ariaLabel": null,
+          "title": "Wall",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nCarpet",
+          "ariaLabel": null,
+          "title": "Carpet",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⬚\nArea",
+          "ariaLabel": null,
+          "title": "Area",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 130.6666717529297,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♜\nFurniture",
+          "ariaLabel": null,
+          "title": "Furniture",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♥\nPets",
+          "ariaLabel": null,
+          "title": "Pets",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕\nErase",
+          "ariaLabel": null,
+          "title": "Erase",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 172,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⊙\nEyedrop",
+          "ariaLabel": null,
+          "title": "Eyedrop",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "←",
+          "ariaLabel": null,
+          "title": "Expand Left",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 91.76042175292969,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↑",
+          "ariaLabel": null,
+          "title": "Expand Up",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 244.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↓",
+          "ariaLabel": null,
+          "title": "Expand Down",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 266.3333435058594,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "→",
+          "ariaLabel": null,
+          "title": "Expand Right",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 143.6354217529297,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Save Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 320.3333435058594,
+            "width": 203.33334350585938,
+            "height": 26
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Undo",
+          "ariaLabel": null,
+          "title": "Undo (Ctrl+Z)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Redo",
+          "ariaLabel": null,
+          "title": "Redo (Ctrl+Y)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 131.1666717529297,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Reset",
+          "ariaLabel": null,
+          "title": "Reset to last save",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 376.3333435058594,
+            "width": 203.33334350585938,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Fit office",
+          "ariaLabel": "Fit and center office",
+          "title": "Fit and center office (large layouts use minimum zoom)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 16,
+            "width": 96.02083587646484,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "+",
+          "ariaLabel": "Zoom in",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 136.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "−",
+          "ariaLabel": "Zoom out",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 172.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ada\nDeveloper",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 687.359375,
+            "y": 319,
+            "width": 48.614585876464844,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Bea\nTester",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 359.46356201171875,
+            "y": 385,
+            "width": 32.40625,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Task bubbles: On",
+          "ariaLabel": null,
+          "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 318.8020935058594,
+            "y": 761,
+            "width": 156.8229217529297,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Squad Info",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 483.625,
+            "y": 761,
+            "width": 110.02083587646484,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Telemetry",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 601.6458740234375,
+            "y": 761,
+            "width": 102.21875,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Exit Layout Editor",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 711.8646240234375,
+            "y": 761,
+            "width": 172.42709350585938,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Directories",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 892.2916870117188,
+            "y": 761,
+            "width": 109.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1010.1146240234375,
+            "y": 761,
+            "width": 94.41667175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Clear activity",
+          "ariaLabel": null,
+          "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1247.260498046875,
+            "y": 756,
+            "width": 109.75,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1365.010498046875,
+            "y": 756,
+            "width": 26.322917938232422,
+            "height": 20.666667938232422
+          }
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:39:03.838Z",
+    "action": "workbench",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": "File\nEdit\nSelection\nView\nGo\nRun\nTerminal\nHelp\nSquad Pod Acceptance - project-A\n1\n1\nProblems\nOutput\nDebug Console\nTerminal\nPorts\nSquad Pod\n 0 \n 0"
+  },
+  {
+    "utc": "2026-10-31T15:39:21.301Z",
+    "action": "click",
+    "argument": "Exit Layout Editor",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Exit Layout Editor",
+      "point": {
+        "x": 850.7448387145996,
+        "y": 844.0000057220459
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:39:23.374Z",
+    "action": "command",
+    "argument": "Developer: Reload Window",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "command": "Developer: Reload Window",
+      "menuBeforeExecution": "File\nEdit\nSelection\nView\nGo\nRun\nTerminal\nHelp\n1\n1\nProblems\nOutput\nDebug Console\nTerminal\nPorts\nSquad Pod\n 0 \n 0\n3 Results\nDeveloper: Reload Window\nrecently used\nDeveloper: Reload Webviews\nsimilar commands\nDeveloper: Reload with Extensions Disabled"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:39:58.407Z",
+    "action": "screenshot",
+    "argument": "native-batch3-layout-reloaded.png",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "file": "native-batch3-layout-reloaded.png",
+      "clip": {
+        "x": 52.66666793823242,
+        "y": 67.66667175292969,
+        "width": 1382.666748046875,
+        "height": 799.6666870117188,
+        "scale": 1
+      },
+      "captureScope": "Isolated native product webview only"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:39:58.766Z",
+    "action": "click",
+    "argument": "Edit Layout",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Edit Layout",
+      "point": {
+        "x": 850.744815826416,
+        "y": 844.0000057220459
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:39:59.129Z",
+    "action": "click",
+    "argument": "→",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "→",
+      "point": {
+        "x": 208.2708396911621,
+        "y": 333.00001525878906
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:39:59.205Z",
+    "action": "inspect",
+    "argument": "",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "viewport": {
+        "width": 1383,
+        "height": 800,
+        "dpr": 1.5
+      },
+      "text": "Drag to move. Hold Alt on release to copy. Desks carry PCs and lamps.\nTOOLS\n◎\nSelect\n▦\nFloor\n▥\nWall\n▦\nCarpet\n⬚\nArea\n♜\nFurniture\n♥\nPets\n✕\nErase\n⊙\nEyedrop\nEXPAND GRID\n←\n↑\n↓\n→\nACTIONS\n● Save Layout\nUndo\nRedo\nReset\nSHORTCUTS\nDel Delete selected\nR Rotate selected\nCtrl+Z Undo\nCtrl+Shift+Z Redo\nCtrl+Y Redo\nEsc Deselect / Exit\nSpace+Drag Pan\nCtrl+Scroll Zoom\nFit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nExit Layout Editor\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics",
+      "buttons": [
+        {
+          "tag": "BUTTON",
+          "text": "◎\nSelect",
+          "ariaLabel": null,
+          "title": "Select",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nFloor",
+          "ariaLabel": null,
+          "title": "Floor",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 89.33333587646484,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▥\nWall",
+          "ariaLabel": null,
+          "title": "Wall",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nCarpet",
+          "ariaLabel": null,
+          "title": "Carpet",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⬚\nArea",
+          "ariaLabel": null,
+          "title": "Area",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 130.6666717529297,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♜\nFurniture",
+          "ariaLabel": null,
+          "title": "Furniture",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♥\nPets",
+          "ariaLabel": null,
+          "title": "Pets",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕\nErase",
+          "ariaLabel": null,
+          "title": "Erase",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 172,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⊙\nEyedrop",
+          "ariaLabel": null,
+          "title": "Eyedrop",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "←",
+          "ariaLabel": null,
+          "title": "Expand Left",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 91.76042175292969,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↑",
+          "ariaLabel": null,
+          "title": "Expand Up",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 244.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↓",
+          "ariaLabel": null,
+          "title": "Expand Down",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 266.3333435058594,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "→",
+          "ariaLabel": null,
+          "title": "Expand Right",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 143.6354217529297,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "● Save Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 320.3333435058594,
+            "width": 203.33334350585938,
+            "height": 26
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Undo",
+          "ariaLabel": null,
+          "title": "Undo (Ctrl+Z)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Redo",
+          "ariaLabel": null,
+          "title": "Redo (Ctrl+Y)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 131.1666717529297,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Reset",
+          "ariaLabel": null,
+          "title": "Reset to last save",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 376.3333435058594,
+            "width": 203.33334350585938,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Fit office",
+          "ariaLabel": "Fit and center office",
+          "title": "Fit and center office (large layouts use minimum zoom)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 16,
+            "width": 96.02083587646484,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "+",
+          "ariaLabel": "Zoom in",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 136.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "−",
+          "ariaLabel": "Zoom out",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 172.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ada\nDeveloper",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 519.3385620117188,
+            "y": 79,
+            "width": 48.614585876464844,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Bea\nTester",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 575.4635620117188,
+            "y": 511,
+            "width": 32.40625,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Task bubbles: On",
+          "ariaLabel": null,
+          "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 318.8020935058594,
+            "y": 761,
+            "width": 156.8229217529297,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Squad Info",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 483.625,
+            "y": 761,
+            "width": 110.02083587646484,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Telemetry",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 601.6458740234375,
+            "y": 761,
+            "width": 102.21875,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Exit Layout Editor",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 711.8646240234375,
+            "y": 761,
+            "width": 172.42709350585938,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Directories",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 892.2916870117188,
+            "y": 761,
+            "width": 109.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1010.1146240234375,
+            "y": 761,
+            "width": 94.41667175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Clear activity",
+          "ariaLabel": null,
+          "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1247.260498046875,
+            "y": 756,
+            "width": 109.75,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1365.010498046875,
+            "y": 756,
+            "width": 26.322917938232422,
+            "height": 20.666667938232422
+          }
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:39:59.581Z",
+    "action": "click",
+    "argument": "Reset to last save",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Reset to last save",
+      "point": {
+        "x": 182.3333396911621,
+        "y": 456.00001525878906
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:39:59.699Z",
+    "action": "inspect",
+    "argument": "",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "viewport": {
+        "width": 1383,
+        "height": 800,
+        "dpr": 1.5
+      },
+      "text": "Drag to move. Hold Alt on release to copy. Desks carry PCs and lamps.\nTOOLS\n◎\nSelect\n▦\nFloor\n▥\nWall\n▦\nCarpet\n⬚\nArea\n♜\nFurniture\n♥\nPets\n✕\nErase\n⊙\nEyedrop\nEXPAND GRID\n←\n↑\n↓\n→\nACTIONS\nSave Layout\nUndo\nRedo\nReset\nSHORTCUTS\nDel Delete selected\nR Rotate selected\nCtrl+Z Undo\nCtrl+Shift+Z Redo\nCtrl+Y Redo\nEsc Deselect / Exit\nSpace+Drag Pan\nCtrl+Scroll Zoom\nFit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nExit Layout Editor\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics",
+      "buttons": [
+        {
+          "tag": "BUTTON",
+          "text": "◎\nSelect",
+          "ariaLabel": null,
+          "title": "Select",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nFloor",
+          "ariaLabel": null,
+          "title": "Floor",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 89.33333587646484,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▥\nWall",
+          "ariaLabel": null,
+          "title": "Wall",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 89.33333587646484,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "▦\nCarpet",
+          "ariaLabel": null,
+          "title": "Carpet",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⬚\nArea",
+          "ariaLabel": null,
+          "title": "Area",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 130.6666717529297,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♜\nFurniture",
+          "ariaLabel": null,
+          "title": "Furniture",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 130.6666717529297,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "♥\nPets",
+          "ariaLabel": null,
+          "title": "Pets",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕\nErase",
+          "ariaLabel": null,
+          "title": "Erase",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 96.77083587646484,
+            "y": 172,
+            "width": 65.78125,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "⊙\nEyedrop",
+          "ariaLabel": null,
+          "title": "Eyedrop",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 165.55209350585938,
+            "y": 172,
+            "width": 65.77083587646484,
+            "height": 38.333335876464844
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "←",
+          "ariaLabel": null,
+          "title": "Expand Left",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 91.76042175292969,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↑",
+          "ariaLabel": null,
+          "title": "Expand Up",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 244.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "↓",
+          "ariaLabel": null,
+          "title": "Expand Down",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 117.69792175292969,
+            "y": 266.3333435058594,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "→",
+          "ariaLabel": null,
+          "title": "Expand Right",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 143.6354217529297,
+            "y": 255.33334350585938,
+            "width": 23.9375,
+            "height": 20
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Save Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 320.3333435058594,
+            "width": 203.33334350585938,
+            "height": 26
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Undo",
+          "ariaLabel": null,
+          "title": "Undo (Ctrl+Z)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Redo",
+          "ariaLabel": null,
+          "title": "Redo (Ctrl+Y)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 131.1666717529297,
+            "y": 349.3333435058594,
+            "width": 100.16667175292969,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Reset",
+          "ariaLabel": null,
+          "title": "Reset to last save",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 28,
+            "y": 376.3333435058594,
+            "width": 203.33334350585938,
+            "height": 24
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Fit office",
+          "ariaLabel": "Fit and center office",
+          "title": "Fit and center office (large layouts use minimum zoom)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 16,
+            "width": 96.02083587646484,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "+",
+          "ariaLabel": "Zoom in",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 136.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "−",
+          "ariaLabel": "Zoom out",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 172.02084350585938,
+            "y": 16,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ada\nDeveloper",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 449.7239685058594,
+            "y": 79,
+            "width": 48.614585876464844,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Bea\nTester",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 575.4635620117188,
+            "y": 511,
+            "width": 32.40625,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Task bubbles: On",
+          "ariaLabel": null,
+          "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 318.8020935058594,
+            "y": 761,
+            "width": 156.8229217529297,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Squad Info",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 483.625,
+            "y": 761,
+            "width": 110.02083587646484,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Telemetry",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 601.6458740234375,
+            "y": 761,
+            "width": 102.21875,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Exit Layout Editor",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 711.8646240234375,
+            "y": 761,
+            "width": 172.42709350585938,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Directories",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 892.2916870117188,
+            "y": 761,
+            "width": 109.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1010.1146240234375,
+            "y": 761,
+            "width": 94.41667175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Clear activity",
+          "ariaLabel": null,
+          "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1247.260498046875,
+            "y": 756,
+            "width": 109.75,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1365.010498046875,
+            "y": 756,
+            "width": 26.322917938232422,
+            "height": 20.666667938232422
+          }
+        }
+      ]
+    }
+  },
+  {
+    "utc": "2026-10-31T15:40:00.117Z",
+    "action": "click",
+    "argument": "Exit Layout Editor",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "clicked": "Exit Layout Editor",
+      "point": {
+        "x": 850.7448387145996,
+        "y": 844.0000057220459
+      }
+    }
+  },
+  {
+    "utc": "2026-10-31T15:40:02.279Z",
+    "action": "command",
+    "argument": "Developer: Reload Window",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "command": "Developer: Reload Window",
+      "menuBeforeExecution": "File\nEdit\nSelection\nView\nGo\nRun\nTerminal\nHelp\n1\n1\nProblems\nOutput\nDebug Console\nTerminal\nPorts\nSquad Pod\n 0 \n 0\n3 Results\nDeveloper: Reload Window\nrecently used\nDeveloper: Reload Webviews\nsimilar commands\nDeveloper: Reload with Extensions Disabled"
+    }
+  },
+  {
+    "utc": "2026-10-31T15:40:25.972Z",
+    "action": "inspect",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "method": "Native installed VSIX; DOM inspection and Chromium input events, no mocked host",
+    "result": {
+      "viewport": {
+        "width": 1383,
+        "height": 800,
+        "dpr": 1.5
+      },
+      "text": "Fit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nEdit Layout\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics",
+      "buttons": [
+        {
+          "tag": "BUTTON",
+          "text": "Fit office",
+          "ariaLabel": "Fit and center office",
+          "title": "Fit and center office (large layouts use minimum zoom)",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 16,
+            "width": 96.02083587646484,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "+",
+          "ariaLabel": "Zoom in",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 52,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "−",
+          "ariaLabel": "Zoom out",
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 36,
+            "y": 88,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Ada\nDeveloper",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 255.359375,
+            "y": 319,
+            "width": 48.614585876464844,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Bea\nTester",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 935.4635620117188,
+            "y": 511,
+            "width": 32.40625,
+            "height": 24.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Task bubbles: On",
+          "ariaLabel": null,
+          "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 346.10418701171875,
+            "y": 761,
+            "width": 156.8229217529297,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Squad Info",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 510.9270935058594,
+            "y": 761,
+            "width": 110.02083587646484,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Telemetry",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 628.9479370117188,
+            "y": 761,
+            "width": 102.21875,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Edit Layout",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 739.1666870117188,
+            "y": 761,
+            "width": 117.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Directories",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 864.9896240234375,
+            "y": 761,
+            "width": 109.82292175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Settings",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 982.8125,
+            "y": 761,
+            "width": 94.41667175292969,
+            "height": 30.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Clear activity",
+          "ariaLabel": null,
+          "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1247.260498046875,
+            "y": 756,
+            "width": 109.75,
+            "height": 20.666667938232422
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "text": "✕",
+          "ariaLabel": null,
+          "title": "",
+          "expanded": null,
+          "disabled": false,
+          "rect": {
+            "x": 1365.010498046875,
+            "y": 756,
+            "width": 26.322917938232422,
+            "height": 20.666667938232422
+          }
+        }
+      ]
+    }
+  }
+]

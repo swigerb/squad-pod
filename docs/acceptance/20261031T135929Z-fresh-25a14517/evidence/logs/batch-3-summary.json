@@ -1,0 +1,124 @@
+{
+  "runId": "20261031T135929Z-fresh-25a14517",
+  "createdAtUtc": "2026-10-31T15:42:39.490Z",
+  "basedOnPublishedCommit": "a85ce4cd530d08edb367f6264e42c7efca9f1383",
+  "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+  "planSha": "0c22cffded2985370a80158d6bc252effa16c01c",
+  "status": "PARTIAL NATIVE OBSERVATIONS AND HANDOFF CORRECTIONS; NOT COMPLETE ACCEPTANCE",
+  "executionEndedAtUtc": "2026-10-31T15:40:25.972Z",
+  "testingStopUtc": "2026-10-31T15:44:29.243Z",
+  "hardStopUtc": "2026-10-31T15:59:29.243Z",
+  "publishedAtomicOutcomesUnchanged": true,
+  "noFullCaseAcceptance": true,
+  "noNewConfirmedProductDefect": true,
+  "observations": [
+    {
+      "caseId": "D-01",
+      "result": "Empty name kept Save disabled. One synthetic saved entry for run-owned project B was added. Duplicate path was rejected. Nonexistent path and file-as-folder produced visible error summaries and no extra entry. The entry survived host reload; recent launch requests remained zero.",
+      "evidence": [
+        "batch-3-native-actions.json"
+      ],
+      "records": [
+        {
+          "record": 11,
+          "utc": "2026-10-31T15:37:22.449Z"
+        },
+        {
+          "record": 14,
+          "utc": "2026-10-31T15:37:23.181Z"
+        },
+        {
+          "record": 16,
+          "utc": "2026-10-31T15:37:39.203Z"
+        },
+        {
+          "record": 20,
+          "utc": "2026-10-31T15:37:40.232Z"
+        },
+        {
+          "record": 23,
+          "utc": "2026-10-31T15:37:40.952Z"
+        },
+        {
+          "record": 27,
+          "utc": "2026-10-31T15:37:59.741Z"
+        }
+      ],
+      "limits": "No Browse/picker, rename, path-change, long-list/footer or all narrow variants completed. Error detail disclosures were not expanded. No claim of OS-wide terminal inventory proof."
+    },
+    {
+      "caseId": "L-01",
+      "result": "Native right-grid expansion left disk unchanged while dirty. Explicit Save later changed 21x13 to 22x13. The exact saved file persisted through host reload. No second Save was issued after the early readback.",
+      "baselineSha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+      "savedSha256": "d0771b09f63d3d7332f70702591d3acc1fe16c63217dba9016975f6f32f6c870",
+      "limits": "Immediate 250ms readback was premature; its original snapshot is retained. Settled observation supplies disk evidence. Pixel-perfect furniture/color/seat equivalence and absent-file/cache/default variants remain unproved."
+    },
+    {
+      "caseId": "L-02",
+      "result": "After reload, another grid expansion made a dirty draft. Reset cleared the dirty marker and left the persisted 22x13 file unchanged. Original 21x13 layout bytes were then restored from preserved baseline, with the expanded file retained.",
+      "limits": "Reset evidence covers dirty marker and unchanged persisted file, not complete canvas-state equivalence. Native export, import, overwrite and recovery variants remain incomplete; no export was attempted in Batch 3."
+    },
+    {
+      "caseId": "N-05",
+      "result": "Workspace liveActivity=true was discovered despite isolated user-profile false. Visible native checkbox was disabled; source status became off and remained off after host reload. The workspace setting remains false intentionally.",
+      "beforeWorkspaceSetting": true,
+      "afterWorkspaceSetting": false,
+      "limits": "Cause, prior consent and prior read scope not established. This is not a default-off, internal no-read or privacy certification. No source was enabled in this continuation."
+    },
+    {
+      "caseId": "N-04",
+      "result": "Post-reload activity display showed zero events with the existing historical fixture present.",
+      "limits": "Only this fixture/root; no full source-selection, alternate-root, legacy or replay-fix claim."
+    }
+  ],
+  "correctionEvidence": {
+    "repairedAtomicIds": [
+      "N-03-S016-A006",
+      "F-02-S019-A007"
+    ],
+    "afterStatePath": "evidence/logs/observer-batch2-fixture-actions.jsonl",
+    "lines": [
+      10,
+      13
+    ],
+    "noNewObservationInvented": true
+  },
+  "helperLimitations": [
+    "Initial input selector required explicit type=text although the input used the implicit default; refused before input, then corrected to inspect the type property.",
+    "Dirty Save label includes a dot, so the exact clean-label click was refused; the observed dirty label was used once.",
+    "The first post-Save file read was too early; retained without relabeling as a product failure. Later settled disk read and reload established saved bytes.",
+    "Initial explicit file inventory omitted the existing Scribe charter; supplemental before-state retained before any charter mutation. No charter was changed."
+  ],
+  "cleanup": {
+    "originalLayoutRestoredByteForByte": true,
+    "changedLayoutRetained": true,
+    "editorClosed": true,
+    "dialogsClosed": true,
+    "originalProjectFilesUnchangedExceptIntentionalLiveOff": true,
+    "retainedCatalogEntry": "Batch3 smoke B (run-owned project B), not launched; retained for review, not deleted",
+    "workspaceLiveActivity": false,
+    "directorySuggestions": false,
+    "privateLogsReadByAcceptanceHelpers": false,
+    "productReadScopeBeforeDisabling": "Not established; do not infer absence of reads from the isolated profile setting.",
+    "runningProcesses": {
+      "observedAtUtc": "2026-10-31T15:40:20.1697256Z",
+      "native": {
+        "alias": "isolated-native-vscode",
+        "running": true,
+        "exactOwnedPidCheckedPrivately": true,
+        "windowTitleMatchesOwnedAcceptanceHost": true
+      },
+      "observer": {
+        "alias": "observer-server-A",
+        "running": true,
+        "loopbackListenerPresent": true,
+        "exactOwnedPidCheckedPrivately": true
+      },
+      "stopped": false,
+      "deletionPerformed": false,
+      "limitation": "Point-in-time process check, not an assurance of continued operation or current browser authentication."
+    },
+    "filesDeleted": false
+  },
+  "publication": "Local checkpoint; exact-content approval required before upload. No product changes, REAL launches, review dispatch, merge or issue closure."
+}
