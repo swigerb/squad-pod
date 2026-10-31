@@ -104,12 +104,15 @@ function Fixture(){
      office.subagents.clear();
      setZoom(1);
      for(let i=2;i<8;i++) office.characters.delete('member-'+i);
+     refreshFixture(value=>value+1);
+   },
+   positionSparse(){
      for(let i=0;i<2;i++) {
        tools['member-'+i]=[];
        Object.assign(office.characters.get('member-'+i),{
-       x:300+i*400-pan.current.x,
-       y:220-pan.current.y,
-       state:CharacterState.IDLE,path:[],wanderTimer:1000000,active:false});
+         x:300+i*400-pan.current.x,
+         y:220-pan.current.y,
+         state:CharacterState.IDLE,path:[],wanderTimer:1000000,active:false});
      }
      refreshFixture(value=>value+1);
    },
@@ -367,6 +370,11 @@ async function main() {
           record.crowded = 'Locate collapses list; target exposed and canvas-clickable; keyboard focus on reopen control';
           await page.setViewportSize({ width: scenario.width, height: 900 });
           await page.evaluate(() => window.fixture.labelProof());
+          await page.waitForFunction(() => {
+            const labels=window.fixture.sample();
+            return labels.length===2&&labels.every(label=>label.zoom===1);
+          });
+          await page.evaluate(() => window.fixture.positionSparse());
           await page.waitForFunction(() => {
             if (document.querySelectorAll('[data-subagent-label]').length) return false;
             const proof=window.fixture.sample();
