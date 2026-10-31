@@ -16,6 +16,24 @@ Its build copies the canonical repository LICENSE and THIRD_PARTY_NOTICES.md
 into the package root; bundled asset provenance and runtime dependency licenses
 remain intact in the installed distribution.
 
+## Quick start
+
+From the repository root, build and run the observer against this checkout's
+tracked Squad project:
+
+```powershell
+npm run install:all && npm ci --prefix standalone
+npm run build --prefix standalone
+node standalone\dist\cli.mjs "$((Get-Location).Path)" --port 0
+```
+
+Open the printed loopback URL yourself and enter the runtime credential printed
+by the CLI. It remains valid until credential rotation or server restart. Keep it
+private; never put it in a URL or screenshot. The default office is read-only.
+Type `quit` in the CLI to stop the server.
+For automated checks, helper requirements, and evidence verification, see the
+[repository testing guide](../docs/testing.md).
+
 ## Build and run
 
 Requires Node 22.13+ and the repository's configured package feed. From the repository:
@@ -391,70 +409,10 @@ Charter content remains explicitly unavailable in both standalone modes.
 
 ## Verification and acceptance boundary
 
-```powershell
-npm run check --prefix standalone
-npm test --prefix standalone
-npm run build --prefix standalone
-node standalone\scripts\acceptance.mjs
-npm run acceptance:office --prefix standalone
-npm run acceptance:live --prefix standalone
-npm run acceptance:terminals --prefix standalone
-npm run verify
-npm run package
-```
-
-The packaged acceptance helper creates only an owned synthetic project and empty
-synthetic home, installs the tarball into an isolated path with spaces, then checks
-the production CLI/HTTP/WS/read-only path. Installation is offline with an empty
-cache, using local tarballs of the already-restored runtime dependencies (no feed
-metadata lookup). When `PLAYWRIGHT_MODULE` points to an
-already installed Playwright module, it additionally drives the actual browser
-authentication form and renderer, observes live fixture changes, reconnects, and
-writes desktop/narrow screenshots to `OBSERVER_ARTIFACTS`. It also opens the
-installed production agent card and asserts that the observer's unavailable
-activity timestamp is displayed explicitly; when artifacts are enabled, that card
-is captured as `observer-unavailable-activity-card.png`. A saved-project Floor10
-probe checks exact installed source-sheet canvas pixels and legacy VOID8 transparency.
-`EDGE_PATH` optionally
-selects an installed Edge executable; it installs no browsers.
-
-The live helper requires `PLAYWRIGHT_MODULE` pointing to an approved installed
-Playwright **ESM entry** (`index.mjs`), optionally `EDGE_PATH`, and `LIVE_ARTIFACTS`
-for its report/screenshots. It installs the tarball and already-restored dependencies
-offline into a fresh path with spaces. It starts only an observer with a synthetic
-`COPILOT_HOME`, compares installed/build bytes, checks default-off and exact-cwd/
-Squad-marker filtering, then drives installed Edge tools/context/inventory,
-read-only authority, reload, completion and stale-source clearing. It polls via
-`evaluate`, not CSP-blocked `waitForFunction`. No AI or real private logs are used.
-The separate synthetic-broker tests cover exact generated owned-session binding,
-collision/path rejection, active-run waiting, source precedence, home mismatch,
-revocation and exit/close fallback; this is wiring evidence, not a REAL launch.
-
-The office-control helper requires `PLAYWRIGHT_MODULE` and uses the same optional
-`EDGE_PATH`. It installs the tarball offline, starts only the opted-in office host
-with an empty synthetic home, and drives the real editor, save/reload, conflict
-recovery/export, storage-failure retry, settings, import/export and reconnect.
-`OFFICE_ARTIFACTS` receives the credential-free desktop/narrow screenshots and
-structured results. It checks actual project bytes, unchanged installed bytes,
-unchanged roster and no synthetic-home writes. All fixture hosts/browser contexts
-are closed and their owned fixture directories removed.
-
-The terminal acceptance helper installs the actual tarball and official dependencies
-using the configured feed, loads a real native PTY and executes only the packaged
-fixture in an empty synthetic home/project/installation with spaces. It checks
-argv/cwd/Unicode, input/resize, reconnect/replay gaps, observed identity rejection,
-revocation and owned descendant cleanup. With the same installed Playwright/Edge
-settings it exercises production terminal controls and reload, writing screenshots,
-package inventory/hashes, source head and failure details under `TERMINAL_ARTIFACTS`.
-It downloads no browser. Both helpers remove their owned fixtures and stop hosts.
-
-These are synthetic checks, **not** real Squad/Copilot session acceptance
-or native VS Code acceptance. Follow `docs/native-acceptance.md` for the
-user/Scout-owned plan covering native VS Code, real sessions, read-only
-observation, separately authorized office controls, owned terminals and mobile
-office/terminal interactions with their evidence boundaries. Installed browser
-touch emulation is BROWSER/FIXTURE evidence, not physical-device
-acceptance. Physical iOS/Android touch and software-keyboard behavior remain
-unverified. Real Squad launch and native VS Code execution remain user/Scout-owned.
-Private home-log telemetry, persistent credentials and remote auth/TLS remain
-outside the plan's authority. Nothing here completes or closes issues #4, #7 or #8.
+Use the [testing guide](../docs/testing.md) for the current commands, prerequisites,
+CI coverage, and artifact locations for all four standalone acceptance helpers.
+They run synthetic checks only; even browser-driven or fixture-terminal results do
+not establish real Squad/Copilot session or native VS Code acceptance. The separate
+[native acceptance plan](../docs/native-acceptance.md) defines those approval-gated
+tests and their evidence boundaries. Browser touch emulation is not physical-device
+acceptance.

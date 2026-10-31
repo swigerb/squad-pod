@@ -128,9 +128,12 @@ Descriptions inferred from those files are labeled **File activity hint**, not l
 - File-observed activity is approximate. Opt-in live activity reads best-effort local Copilot CLI session files, not a supported Squad Pod event API. The model projection is pinned to the shipped Copilot CLI 1.0.105 event declarations; this contract does not prove that a particular real session emitted a field. Unmatched members remain unattributed; stale or missing sessions fall back to file observations. Bounded scans may miss older in-flight members. Context gauges appear only when a live member's tool completion includes context metrics.
 - Directory launches do not switch the office's observed project.
 
-## Acceptance testing
+## Testing and acceptance
 
-Use the [native VS Code and real Squad acceptance plan](docs/native-acceptance.md) for a Scout-ready, approval-gated test handoff.
+Start with the [testing guide](docs/testing.md) for the five-minute observer quick
+start, automated checks, synthetic acceptance helpers, VSIX verification, and
+committed evidence packages. Native VS Code and real Squad testing is a separate,
+approval-gated process in the [native acceptance plan](docs/native-acceptance.md).
 
 ## Custom assets
 
