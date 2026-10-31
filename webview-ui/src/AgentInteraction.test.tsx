@@ -40,6 +40,7 @@ const extensionCode = process.env.SQUAD_POD_EXTENSION_BUNDLE
 
 describe('real App -> compiled provider -> real message handler -> card (mocked VS Code)', () => {
   let fixture: Fixture;
+  let client: HostClient;
   let host: HTMLDivElement;
   let root: Root;
   let frames: Map<number, FrameRequestCallback>;
@@ -78,7 +79,7 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     });
     // Lifecycle tests advance 30s of polling; bundled asset bytes have separate acceptance coverage.
     fixture = createProviderFixture({ artifactRoot: path.join(repo, 'src', '__fixtures__'), extensionCode });
-    const client: HostClient = {
+    client = {
       send: (message) => fixture.send(message),
       subscribe: (listener) => {
         deliver = listener;
@@ -127,6 +128,38 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     fixture.noFocus();
     click('Close agent details');
   }
+
+  it.each(['idle', 'active'] as const)('keeps the %s roster and details in a fresh webview on the same provider', (status) => {
+    const task = 'Verified the isolated replay fixture';
+    if (status === 'active') {
+      fs.appendFileSync(path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'history.md'), `\n- ${task}\n`);
+      act(() => vi.advanceTimersByTime(2000));
+    }
+    const seats = office.getSeatAssignments();
+    const palettes = agents.map(agent => office.characters.get(agent.id)!.palette);
+    for (let replay = 0; replay < 2; replay++) {
+      act(() => root.unmount());
+      root = createRoot(host);
+      act(() => root.render(<App client={client} />));
+      frame();
+
+      expect(office.getSeatAssignments()).toEqual(seats);
+      expect(agents.map(agent => office.characters.get(agent.id)!.palette)).toEqual(palettes);
+      click('Squad Info');
+      expect(card()?.textContent).toContain('2 agents');
+      expect(card()?.textContent).toContain(status === 'active' ? '1 active' : '0 active');
+      for (const agent of agents) {
+        expect(office.characters.has(agent.id)).toBe(true);
+        click(`Show details for ${agent.name}`);
+        expect(requests().at(-1)).toMatchObject({ type: 'requestAgentDetail', agentId: agent.id });
+        expect(memberDetail()?.textContent).toContain(agent.summary);
+        expect(memberDetail()?.textContent).toContain(`Observed status: ${agent.id === 'ada' ? status : 'idle'}`);
+        if (agent.id === 'ada' && status === 'active') {
+          expect(memberDetail()?.textContent).toContain(`File activity hint: ${task}`);
+        }
+      }
+    }
+  });
 
   it.each(agents)('opens exactly $name from character, native name, occupied chair and desk', (agent) => {
     const index = agents.indexOf(agent);
