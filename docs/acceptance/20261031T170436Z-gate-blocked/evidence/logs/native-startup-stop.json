@@ -1,0 +1,124 @@
+{
+  "recordType": "REDACTED_NATIVE_STARTUP_OBSERVATION_AND_OWNED_PROCESS_INVENTORY",
+  "runId": "20261031T170436Z-gate-blocked",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+  "launchUtc": "2026-10-31T17:30:23.162Z",
+  "uiSnapshotUtcUpperBound": "2026-10-31T17:31:28.143Z",
+  "snapshotTimeNote": "The DOM snapshot immediately preceded the screenshot timestamp in the same tool execution. Its exact individual UTC was not emitted; do not invent one.",
+  "observedNativeTitle": "office-A (Workspace) - Visual Studio Code",
+  "observedNativeViewportCss": {
+    "width": 1440,
+    "height": 900
+  },
+  "selectedWorkspace": "WORKSPACE_A",
+  "selectedFolder": "PROJECT_A",
+  "nativeUiTextExactExcerpt": "Info: A git repository was found in the parent folders of the workspace or the open file(s). Would you like to open the repository?",
+  "observedNativeFrames": [],
+  "productPanelShown": false,
+  "effectiveProductSettingsShown": false,
+  "authInteractionPerformed": false,
+  "promptsOrWarningsAccepted": false,
+  "inputMethod": "Agent-started actual installed VS Code window with explicit isolated directories; read-only DOM snapshot through the owned loopback CDP endpoint. No scripted product state mutation.",
+  "evidenceClass": "NATIVE",
+  "syntheticInputClass": "FIXTURE",
+  "processInventoryScope": "Only the root PID created by this run and recursively its descendants. No command lines were dumped.",
+  "processInventory": [
+    {
+      "pid": 47556,
+      "name": "Code",
+      "root": true,
+      "startedUtc": "2026-10-31T17:30:23.1552877Z"
+    },
+    {
+      "pid": 47300,
+      "name": "Code",
+      "startedUtc": "2026-10-31T17:30:23.4116144Z"
+    },
+    {
+      "pid": 45924,
+      "name": "Code",
+      "startedUtc": "2026-10-31T17:30:23.4116356Z"
+    },
+    {
+      "pid": 89152,
+      "name": "Code",
+      "startedUtc": "2026-10-31T17:30:23.6220196Z"
+    },
+    {
+      "pid": 30700,
+      "name": "Code",
+      "startedUtc": "2026-10-31T17:30:24.4149897Z"
+    },
+    {
+      "pid": 106412,
+      "name": "Code",
+      "startedUtc": "2026-10-31T17:30:24.7140941Z"
+    },
+    {
+      "pid": 43972,
+      "name": "Code",
+      "startedUtc": "2026-10-31T17:30:24.7275333Z"
+    },
+    {
+      "pid": 110652,
+      "name": "Code",
+      "startedUtc": "2026-10-31T17:30:24.8001885Z"
+    },
+    {
+      "pid": 95176,
+      "name": "copilot-runtime",
+      "startedUtc": "2026-10-31T17:30:25.7231682Z",
+      "attribution": "Owned native-host descendant, not an observed Squad producer or paid task."
+    },
+    {
+      "pid": 18468,
+      "name": "Code",
+      "startedUtc": "2026-10-31T17:30:27.4194606Z"
+    },
+    {
+      "pid": 35152,
+      "name": "conhost",
+      "startedUtc": "2026-10-31T17:30:25.7290555Z"
+    }
+  ],
+  "unknowns": [
+    "The parent-repository notification is a native host scope warning, not a traced list of out-of-scope file reads.",
+    "copilot-runtime executable name does not establish a Squad task, paid request, prompt submission or token spending.",
+    "No causal attribution to Squad Pod is established.",
+    "Internal absence of reads and effective native product consent are not established."
+  ],
+  "runtimeStopReason": "Conservative safety stop: root isolation unresolved and an unrequested AI-related native-host child appeared. Product testing did not continue and no reload masked the observation.",
+  "nativeCloseRequestedUtc": "2026-10-31T17:32:55.216Z",
+  "nativeCloseMethod": "CloseMainWindow on run-owned root PID 47556 after confirming its title; no broad process termination.",
+  "firstCleanupObservedUtc": "2026-10-31T17:32:58.235Z",
+  "recordedOwnedPidSet": [
+    47556,
+    47300,
+    45924,
+    89152,
+    30700,
+    106412,
+    43972,
+    110652,
+    95176,
+    18468,
+    35152
+  ],
+  "remainingFromRecordedOwnedPidSet": [],
+  "otherSessionsInspectedOrStopped": false,
+  "captureHandling": {
+    "screenshotProduced": true,
+    "screenshotFilename": "native-cold-workbench.png",
+    "screenshotPublication": "EXCLUDED",
+    "reason": "Actual startup image includes a sign-in welcome dialog. It is retained unreviewed locally but not selected for publication; no auth-screen image is published.",
+    "boundedMotionClipProduced": false
+  },
+  "outcome": "BLOCKED",
+  "caseIds": [
+    "N-01",
+    "N-05",
+    "X-01"
+  ],
+  "recordedUtc": "2026-10-31T17:39:56.448Z"
+}

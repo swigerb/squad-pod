@@ -1,0 +1,17 @@
+{
+  "recordType": "CANONICAL_REMOTE_GIT_BLOB_READBACK",
+  "verifiedCommit": "c85a3ce7655ac64f971ba665562922909e2400c4",
+  "verifiedUtc": "2026-10-31T17:27:28.443Z",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "runId": "20261031T170436Z-gate-blocked",
+  "verifiedFilesIncludingIndex": 11,
+  "atomicRows": 1932,
+  "cases": 27,
+  "commonDefinitions": 8,
+  "mappingsExactlyOnce": true,
+  "canonicalBlobBytesUsed": true,
+  "archiveOrCheckoutNewlineBytesNotUsed": true,
+  "observationIdsUnique": true,
+  "indexedHashesAndReferencesVerified": true,
+  "selfCommitNotClaimed": true
+}
