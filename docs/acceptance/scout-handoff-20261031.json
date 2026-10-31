@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-31",
+  "project": "swigerb/squad-pod",
+  "status": "INCOMPLETE: recovery handoff, not acceptance sign-off",
+  "reported_product_commit": "25a14517",
+  "provenance": "Results below were reported in the preceding Scout conversation. Supporting current-run artifacts could not be recovered for this handoff. Do not treat these statements as independently verified passes.",
+  "reported_findings": [
+    "Native keyboard export and disposable overwrite succeeded at the approved destination; the saved office remained unchanged. Relevant to issue #123, but does not resolve the older automation-helper failure.",
+    "Native smoke observations covered roster and seat persistence, source selection, directory validation, layout import/export/reset, usage arithmetic, and narrow-window controls.",
+    "Squad Info once showed an empty member list despite visible characters. Reload restored membership; the discrepancy remains unresolved.",
+    "Standalone installation reportedly matched all 102 packaged files, with node-pty 1.1.0 and ConPTY/OpenConsole 1.23.251008001. Runtime acceptance remained unexecuted.",
+    "The grouped ledger reportedly covered 27 cases, 199 behavioral subchecks, and 8 common requirements, mapping all 1329 atomic rows exactly once. Entries remained BLOCKED/unreconciled."
+  ],
+  "not_recovered_or_included": [
+    "case-ledger.json",
+    "case-ledger-atomic.json",
+    "standalone-setup.json",
+    "Current-run observation files, screenshots, and motion recording"
+  ],
+  "older_evidence": {
+    "product_commit": "0988f272",
+    "located_locally": [
+      "native-smoke-observations.json",
+      "native-full-observations-checkpoint.json"
+    ],
+    "included": false,
+    "restriction": "These files reference the older run and contain local details. Do not relabel them as evidence for 25a14517."
+  },
+  "continuation": [
+    "Confirm the current source, plan, package hashes, and installed identity.",
+    "Recover original evidence if available; otherwise rerun affected checks and record new evidence. Do not manufacture missing observations or ledger rows from this summary.",
+    "Investigate the intermittent Squad Info membership display and retain the export-helper discrepancy.",
+    "Complete standalone read-only, office-control, and synthetic-terminal acceptance after human authentication.",
+    "Obtain fresh confirmation of execution scope and remaining budget. Prior scope was isolated fixtures, 120 minutes total, and zero AI spending; it is not a renewed execution approval.",
+    "Keep real AI sessions, physical-device testing, private logs, and further publication separately gated. Do not close acceptance issues from this handoff."
+  ],
+  "publication_scope": "Redacted narrative only. No raw logs, credentials, signed URLs, personal paths, session identifiers, customer information, or screenshots."
+}
