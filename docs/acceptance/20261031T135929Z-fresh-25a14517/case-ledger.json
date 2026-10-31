@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T135929Z-fresh-25a14517",
-  "generation": "2026-10-31T14:25:49.970Z",
+  "generation": "2026-10-31T15:02:28.993Z",
   "derivation": {
     "status": "NEW DERIVATION, NOT RECOVERED ORIGINALS",
     "planSha": "0c22cffded2985370a80158d6bc252effa16c01c",
@@ -2364,12 +2364,13 @@
     "totalGroups": 512,
     "atomicRows": 1932,
     "byOutcome": {
-      "BLOCKED": 1927,
-      "PASS": 5
+      "BLOCKED": 1890,
+      "PASS": 42
     },
     "byObservedEvidenceClass": {
-      "NATIVE+FIXTURE": 5,
-      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1927
+      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1890,
+      "NATIVE+FIXTURE": 21,
+      "BROWSER+FIXTURE": 21
     }
   },
   "commonRequirements": [
@@ -2524,7 +2525,7 @@
             "N-01-S003-A004"
           ],
           "outcome": "BLOCKED",
-          "reason": "PARTIAL: remaining statement atoms not executed",
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
           "evidenceRefs": [
             "evidence/logs/native-lifecycle.json",
             "evidence/logs/native-actions.jsonl",
@@ -2930,7 +2931,7 @@
             "N-02-S003-A010"
           ],
           "outcome": "BLOCKED",
-          "reason": "PARTIAL: remaining statement atoms not executed",
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
           "evidenceRefs": [
             "evidence/logs/native-lifecycle.json",
             "evidence/logs/native-actions.jsonl",
@@ -3441,8 +3442,11 @@
             "N-03-S004-A006"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/native-batch2-actions.jsonl",
+            "evidence/screenshots/native-batch2-narrow-squad-info.png"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -3473,8 +3477,11 @@
             "N-03-S005-A005"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/native-batch2-actions.jsonl",
+            "evidence/screenshots/native-batch2-narrow-squad-info.png"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -3563,8 +3570,11 @@
             "N-03-S008-A002"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/observer-batch2-ada-details.json",
+            "evidence/logs/observer-batch2-bea-details.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -3714,8 +3724,11 @@
             "N-03-S013-A003"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/native-batch2-actions.jsonl",
+            "evidence/screenshots/native-batch2-narrow-squad-info.png"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -3772,8 +3785,11 @@
             "N-03-S015-A002"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/native-batch2-actions.jsonl",
+            "evidence/screenshots/native-batch2-narrow-squad-info.png"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -3805,8 +3821,12 @@
             "N-03-S016-A006"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/observer-batch2-ada-details.json",
+            "evidence/logs/observer-batch2-bea-details.json",
+            "evidence/logs/observer-batch2-baseline.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -3860,9 +3880,12 @@
           "atomicIds": [
             "N-03-S018-A001"
           ],
-          "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "outcome": "PASS",
+          "reason": "All statement atoms supported",
+          "evidenceRefs": [
+            "evidence/logs/native-batch2-actions.jsonl",
+            "evidence/screenshots/native-batch2-narrow-squad-info.png"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -3907,8 +3930,11 @@
             "N-03-S019-A019"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/native-batch2-actions.jsonl",
+            "evidence/screenshots/native-batch2-narrow-squad-info.png"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -5613,8 +5639,11 @@
             "D-01-S002-A009"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/native-batch2-actions.jsonl",
+            "evidence/screenshots/native-batch2-narrow-squad-info.png"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -5648,8 +5677,12 @@
             "D-01-S003-A008"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/native-batch2-actions.jsonl",
+            "evidence/screenshots/native-batch2-narrow-squad-info.png",
+            "evidence/logs/native-batch2-consent.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -10131,7 +10164,7 @@
             "U-01-S003-A013"
           ],
           "outcome": "BLOCKED",
-          "reason": "PARTIAL: remaining statement atoms not executed",
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
           "evidenceRefs": [
             "evidence/screenshots/native-missing-usage.png",
             "evidence/logs/native-actions.jsonl",
@@ -11362,7 +11395,7 @@
             "L-02-S008-A006"
           ],
           "outcome": "BLOCKED",
-          "reason": "PARTIAL: remaining statement atoms not executed",
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
           "evidenceRefs": [
             "evidence/logs/native-export-observations.jsonl",
             "evidence/logs/saved-office-baseline.json",
@@ -16036,8 +16069,11 @@
             "F-02-S017-A011"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/observer-batch2-missing-usage.json",
+            "evidence/logs/observer-batch2-initial.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -16115,8 +16151,10 @@
             "F-02-S019-A018"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/observer-batch2-baseline.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -16152,8 +16190,16 @@
             "F-02-S020-A010"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/observer-batch2-ada-details.json",
+            "evidence/logs/observer-batch2-bea-details.json",
+            "evidence/logs/observer-batch2-activity-new.json",
+            "evidence/logs/observer-batch2-activity-idle.json",
+            "evidence/logs/observer-batch2-activity-edit-idle.json",
+            "evidence/logs/observer-batch2-usage-known.json",
+            "evidence/logs/observer-batch2-usage-no-activity.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -16194,8 +16240,14 @@
             "F-02-S021-A015"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: other statements remain unexecuted or incomplete",
+          "evidenceRefs": [
+            "evidence/logs/observer-batch2-usage-known.json",
+            "evidence/logs/observer-batch2-usage-scope.json",
+            "evidence/logs/observer-batch2-usage-limit.json",
+            "evidence/logs/observer-batch2-missing-usage.json",
+            "evidence/logs/observer-batch2-usage-partial.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",

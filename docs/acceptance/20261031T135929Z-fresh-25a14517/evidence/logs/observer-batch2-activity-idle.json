@@ -1,0 +1,72 @@
+{
+  "evidenceClass": [
+    "BROWSER",
+    "FIXTURE"
+  ],
+  "method": "Live DOM samples every five seconds; no writes or clicks during interval",
+  "samples": [
+    {
+      "utc": "2026-10-31T14:45:24.265Z",
+      "elapsedMs": 0,
+      "activeCount": 1,
+      "expandedMemberStatus": "active",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:45:29.268Z",
+      "elapsedMs": 5003,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:45:34.268Z",
+      "elapsedMs": 10003,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:45:39.269Z",
+      "elapsedMs": 15004,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:45:44.269Z",
+      "elapsedMs": 20005,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:45:49.270Z",
+      "elapsedMs": 25005,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:45:54.270Z",
+      "elapsedMs": 30005,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:45:59.270Z",
+      "elapsedMs": 35005,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    },
+    {
+      "utc": "2026-10-31T14:46:04.270Z",
+      "elapsedMs": 40005,
+      "activeCount": 0,
+      "expandedMemberStatus": "idle",
+      "activityTimeUnavailable": true
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "evidenceClass": [
+    "BROWSER",
+    "FIXTURE"
+  ],
+  "method": "Live roster count sampled after ledger-only modification",
+  "samples": [
+    {
+      "utc": "2026-10-31T14:48:53.993Z",
+      "elapsedMs": 0,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:48:54.994Z",
+      "elapsedMs": 1001,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:48:55.994Z",
+      "elapsedMs": 2001,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:48:56.994Z",
+      "elapsedMs": 3001,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:48:58.004Z",
+      "elapsedMs": 4011,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:48:59.010Z",
+      "elapsedMs": 5017,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:49:00.011Z",
+      "elapsedMs": 6018,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:49:01.011Z",
+      "elapsedMs": 7018,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:49:02.011Z",
+      "elapsedMs": 8018,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:49:03.011Z",
+      "elapsedMs": 9018,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:49:04.014Z",
+      "elapsedMs": 10021,
+      "activeCount": 0
+    },
+    {
+      "utc": "2026-10-31T14:49:05.014Z",
+      "elapsedMs": 11021,
+      "activeCount": 0
+    }
+  ]
+}

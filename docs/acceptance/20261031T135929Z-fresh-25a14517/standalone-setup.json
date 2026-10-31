@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T135929Z-fresh-25a14517",
-  "status": "INSTALLED; OBSERVATION SERVER STARTED; AUTHENTICATION NOT EXECUTED",
-  "timestampUtc": "2026-10-31T14:25:49.970Z",
+  "status": "READ-ONLY RUNTIME PARTIALLY OBSERVED; FULL PAGE RELOAD RETURNED TO LOGIN",
+  "timestampUtc": "2026-10-31T15:02:28.993Z",
   "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
   "tarball": {
     "role": "STANDALONE",
@@ -39,8 +39,11 @@
     }
   ],
   "credentialsCaptured": false,
-  "writes": [],
+  "writes": [
+    "No observer-caused project changes; separately authored file/usage fixtures archived and original project restored"
+  ],
   "evidenceRefs": [
-    "evidence/logs/installed-identity.json"
+    "evidence/logs/installed-identity.json",
+    "evidence/logs/batch-2-summary.json"
   ]
 }

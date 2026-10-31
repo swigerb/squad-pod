@@ -1,5 +1,30 @@
 # Fresh Squad Pod acceptance: 20261031T135929Z-fresh-25a14517
 
+**Latest local checkpoint: Batch 2. Not completed acceptance or human sign-off. Publication approval pending.**
+
+Batch 1 was published at `f455459b30ec2ae1dd4d76e99dcc745262189d77` in draft PR #141. This local batch adds **37 precisely mapped PASS statements**, for **42 PASS / 1890 BLOCKED / 0 FAIL / 0 NOT-PRODUCED** across the unchanged 27 cases and 1,932 atoms. All cases remain incomplete. Original testing cutoff **15:44:29.243Z** and hard stop **15:59:29.243Z** are unchanged.
+
+## Batch 2 observations
+
+The identified installed read-only browser displayed the selected project, disabled settings, unavailable charter content and separate terminal authentication. Authored Ada file creation/edit each became active within ten seconds and returned to idle at approximately 32 seconds; unchanged polls did not renew activity. Ledger-only changes did not animate the roster. The pinned usage fixture showed 20 input / 10 output tokens and 0.06 reported producer units; session-ID variation preserved distinct-turn coverage, malformed/unsupported/unfinished records showed partial diagnostics, and 45 valid reports yielded exactly 40 recent cards.
+
+The installed native VSIX was exercised at actual wide **1383x800** and narrow **343x493 CSS-pixel** webview sizes. Squad Info keyboard/pointer disclosure, wide focus containment, focus return, declared fixture fields, missing charter content/text and directory disclosure behavior have direct records. These are NATIVE/FIXTURE observations, not REAL producer or physical-device acceptance.
+
+[Exact statement mapping and limitations](evidence/logs/batch-2-summary.json) | [Native action records](evidence/logs/native-batch2-actions.jsonl) | [Fixture changes and restoration](evidence/logs/observer-batch2-fixture-actions.jsonl)
+
+[Read-only details, clipped at office boundary](evidence/screenshots/observer-batch2-readonly-details.png) | [Usage display cap](evidence/screenshots/observer-batch2-usage-cap.png) | [Fit office](evidence/screenshots/observer-batch2-fit.png) | [Narrow native Squad Info](evidence/screenshots/native-batch2-narrow-squad-info.png)
+
+All seven original project files were restored byte-for-byte; generated inputs were archived, not deleted. The native window is restored and test dialogs are closed. Native host and read-only server remain running. No AI task, terminal/control authentication, product modification, permission change, merge or issue closure occurred.
+
+A deliberate full-page reload returned the observer to its login form. This does not establish WebSocket retry/all-viewers-paused coverage or a confirmed product defect. Private helper limitations and corrections are explicitly recorded. Native export remains blocked by its earlier input/readback limitations. Remaining charter, directory, layout, seat/motion, source, control, terminal and REAL checks remain incomplete or excluded.
+
+The initial derivation incorrectly tagged N-03's explicit read-only observer groups as NATIVE. Those two groups' evidence eligibility/package identity are corrected to BROWSER/FIXTURE; no requirements or row IDs were removed.
+
+## Historical Batch 1 report
+
+The following is retained as historical context. Its pending-publication statements describe the earlier checkpoint, not the current publication state.
+
+
 **Batch 1, partial execution. Not a completed acceptance run or human sign-off.**
 
 The initial checkpoint is remotely verified at `4dd7146d110544b63466d71816c1c35d6fc75eb3`, draft PR #141. This batch awaits exact-content publication confirmation. Testing stops by **2026-10-31T15:44:29.243Z**; hard stop **15:59:29.243Z**. The allowance began at 13:59:29.243Z and has not been extended. AI task spending is zero.

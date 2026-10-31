@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T135929Z-fresh-25a14517",
-  "generation": "2026-10-31T14:25:49.970Z",
+  "generation": "2026-10-31T15:02:28.993Z",
   "planSha": "0c22cffded2985370a80158d6bc252effa16c01c",
   "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
   "derivation": "NEW statement-level atoms; exactly-one-parent mapping to case-ledger.json. Not historical recovery.",
@@ -13,12 +13,13 @@
     "totalGroups": 512,
     "atomicRows": 1932,
     "byOutcome": {
-      "BLOCKED": 1927,
-      "PASS": 5
+      "BLOCKED": 1890,
+      "PASS": 42
     },
     "byObservedEvidenceClass": {
-      "NATIVE+FIXTURE": 5,
-      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1927
+      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1890,
+      "NATIVE+FIXTURE": 21,
+      "BROWSER+FIXTURE": 21
     }
   },
   "rows": [
@@ -1406,21 +1407,31 @@
       ],
       "requirement": "**Squad Info access:** At wide and narrow panel sizes, open **Squad Info** from the bottom toolbar.",
       "expected": "**Squad Info access:** At wide and narrow panel sizes, open **Squad Info** from the bottom toolbar.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:55:34.023Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Opened the named Squad Info dialog from the native toolbar at 1383x800 and 343x493 CSS-pixel webview sizes.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -1462,21 +1473,31 @@
       ],
       "requirement": "Reopen it, Tab to a member row (\"Show details for <name>\") and expand it with Enter, then Space",
       "expected": "Reopen it, Tab to a member row (\"Show details for <name>\") and expand it with Enter, then Space",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:55:50.858Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Tab reached the named member row; Enter and Space activated disclosure in the installed native host. The private Enter driver was corrected before the accepted Enter observations.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -1490,21 +1511,31 @@
       ],
       "requirement": "collapse it (\"Hide details for <name>\").",
       "expected": "collapse it (\"Hide details for <name>\").",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:55:51.237Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Enter and Space collapsed Ada details; the accessible label and aria-expanded returned to Show/false.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -1518,21 +1549,31 @@
       ],
       "requirement": "Repeat with the mouse.",
       "expected": "Repeat with the mouse.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:58:12.173Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Native pointer clicks expanded and collapsed Ada and selected Bea details.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -1574,21 +1615,31 @@
       ],
       "requirement": "**Declared details:** Expand M1.",
       "expected": "**Declared details:** Expand M1.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:58:11.724Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Expanded the fixture member Ada with native input.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -1602,21 +1653,31 @@
       ],
       "requirement": "Record **Observed status**, **Observed task**, **Charter summary (from charter.md)**, **Declared expertise**, **Declared responsibilities**, **Declared boundaries** and **Recent activity (from workspace activity logs",
       "expected": "Record **Observed status**, **Observed task**, **Charter summary (from charter.md)**, **Declared expertise**, **Declared responsibilities**, **Declared boundaries** and **Recent activity (from workspace activity logs",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:53:49.581Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Recorded observed idle/no current activity, the exact fixture summary, expertise, responsibilities, boundaries and empty recent activity.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -1885,12 +1946,12 @@
       "statusAtUtc": "2026-10-31T14:04:11.081Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
-      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
       "method": "NOT EXECUTED",
       "actual": "No acceptance action or observation has occurred.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
-        "NATIVE",
+        "BROWSER",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
@@ -1910,21 +1971,31 @@
       ],
       "requirement": "**Read-only observer (BROWSER, only with F-02's approval):** In F-02's observer office, open **Squad Info** and expand a member.",
       "expected": "**Read-only observer (BROWSER, only with F-02's approval):** In F-02's observer office, open **Squad Info** and expand a member.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:44:43.968Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
-      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
-      "eligibleEvidenceModes": [
-        "NATIVE",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "method": "Installed authenticated read-only observer and exact original-file hashes",
+      "actual": "Opened Squad Info and expanded Ada and Bea in the installed read-only observer.",
+      "evidenceClass": [
+        "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "eligibleEvidenceModes": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-ada-details.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-bea-details.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -2302,21 +2373,31 @@
       ],
       "requirement": "- Declared fields show only text present in that charter",
       "expected": "- Declared fields show only text present in that charter",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:53:49.581Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Ada declared fields match the existing reviewed fixture charter text; no different declared content was observed.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -2330,21 +2411,31 @@
       ],
       "requirement": "absent sections are omitted, never inferred from role, history or activity.",
       "expected": "absent sections are omitted, never inferred from role, history or activity.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:58:22.148Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Bea has no charter: expertise, responsibilities and boundaries were not inferred or shown.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -2442,21 +2533,31 @@
       ],
       "requirement": "- Missing charter shows \"Charter content is missing.\" and \"Charter text is missing.\"",
       "expected": "- Missing charter shows \"Charter content is missing.\" and \"Charter text is missing.\"",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:58:22.148Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Bea displayed both Charter content is missing and Charter text is missing after keyboard disclosure expansion.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -2501,12 +2602,12 @@
       "statusAtUtc": "2026-10-31T14:04:11.081Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
-      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
       "method": "NOT EXECUTED",
       "actual": "No acceptance action or observation has occurred.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
-        "NATIVE",
+        "BROWSER",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
@@ -2526,21 +2627,31 @@
       ],
       "requirement": "Charter content reads \"unavailable\", **Open charter** is disabled, and the note says opening a charter in the editor is unavailable in the read-only observer.",
       "expected": "Charter content reads \"unavailable\", **Open charter** is disabled, and the note says opening a charter in the editor is unavailable in the read-only observer.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:44:43.968Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
-      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
-      "eligibleEvidenceModes": [
-        "NATIVE",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "method": "Installed authenticated read-only observer and exact original-file hashes",
+      "actual": "Both observed members showed unavailable charter content, disabled Open charter and the explicit read-only opening notice.",
+      "evidenceClass": [
+        "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "eligibleEvidenceModes": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-ada-details.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-bea-details.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -2557,12 +2668,12 @@
       "statusAtUtc": "2026-10-31T14:04:11.081Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
-      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
       "method": "NOT EXECUTED",
       "actual": "No acceptance action or observation has occurred.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
-        "NATIVE",
+        "BROWSER",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
@@ -2585,12 +2696,12 @@
       "statusAtUtc": "2026-10-31T14:04:11.081Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
-      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
       "method": "NOT EXECUTED",
       "actual": "No acceptance action or observation has occurred.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
-        "NATIVE",
+        "BROWSER",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
@@ -2613,12 +2724,12 @@
       "statusAtUtc": "2026-10-31T14:04:11.081Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
-      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
       "method": "NOT EXECUTED",
       "actual": "No acceptance action or observation has occurred.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
-        "NATIVE",
+        "BROWSER",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
@@ -2638,21 +2749,28 @@
       ],
       "requirement": "Project hashes are unchanged.",
       "expected": "Project hashes are unchanged.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:58:22.613Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
-      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
-      "eligibleEvidenceModes": [
-        "NATIVE",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "method": "Installed authenticated read-only observer and exact original-file hashes",
+      "actual": "Original project and layout bytes remained unchanged by read-only viewing; authored fixture files were archived and the seven-file baseline restored.",
+      "evidenceClass": [
+        "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "eligibleEvidenceModes": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-baseline.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -2694,21 +2812,31 @@
       ],
       "requirement": "- **Cleanup:** Close test editors/cards/dialogs, restore the run-owned charter copies and roster snapshot, and restore any moved seat.",
       "expected": "- **Cleanup:** Close test editors/cards/dialogs, restore the run-owned charter copies and roster snapshot, and restore any moved seat.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:58:22.540Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Closed test dialogs; original native window dimensions restored and all original project file hashes unchanged. No editor, charter, roster or seat mutation was performed in this native segment.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -2946,21 +3074,31 @@
       ],
       "requirement": "Tab and Shift+Tab stay within the dialog, Space and Enter activate native buttons, and closing",
       "expected": "Tab and Shift+Tab stay within the dialog, Space and Enter activate native buttons, and closing",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:55:51.237Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Twelve wide-dialog Tab/Shift+Tab samples stayed inside the dialog; native Space/Enter changed disclosure state and Escape/Close dismissed it. Narrow Enter/Space activation was separately observed.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -2974,21 +3112,31 @@
       ],
       "requirement": "returns focus to the opener.",
       "expected": "returns focus to the opener.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:55:51.697Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Wide Escape and narrow Close returned focus to the Squad Info opener.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -5186,21 +5334,31 @@
       ],
       "requirement": "- **Actions:** At wide and narrow panel sizes, open **Directories**.",
       "expected": "- **Actions:** At wide and narrow panel sizes, open **Directories**.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:58:10.582Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Opened Directories at the narrow viewport and freshly reopened it at the restored wide viewport without launching a process.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -5438,21 +5596,31 @@
       ],
       "requirement": "- **Expected:** Workspace folders, saved directories, and recent launch requests are distinct.",
       "expected": "- **Expected:** Workspace folders, saved directories, and recent launch requests are distinct.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:58:10.582Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Workspace folders, saved directories and recent launch requests are shown as separate sections, with one/zero/zero entries.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -5466,21 +5634,31 @@
       ],
       "requirement": "The disclosures expand/collapse accessibly at both sizes",
       "expected": "The disclosures expand/collapse accessibly at both sizes",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:57:15.735Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Both directory disclosures expanded and collapsed through normal pointer/keyboard input at narrow and wide sizes.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -5606,21 +5784,34 @@
       ],
       "requirement": "Suggestions remain absent/off when their setting is false",
       "expected": "Suggestions remain absent/off when their setting is false",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:57:15.319Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "actual": "Isolated persisted directorySuggestions=false; the expanded manual form did not show recent-directory suggestions.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        },
+        {
+          "path": "evidence/logs/native-batch2-consent.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -25572,21 +25763,28 @@
       ],
       "requirement": "** Compare the canonical selected root recorded from the startup path with **Telemetry > Recorded usage / model history > Usage coverage and source diagnostics**, which shows the local ledger path even when missing (redact personal paths in evidence).",
       "expected": "** Compare the canonical selected root recorded from the startup path with **Telemetry > Recorded usage / model history > Usage coverage and source diagnostics**, which shows the local ledger path even when missing (redact personal paths in evidence).",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:43:47.534Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "The displayed canonical ledger path exactly matches the owned CLI-selected project-A ledger; published projection retains only the equality result.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-missing-usage.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -25600,21 +25798,28 @@
       ],
       "requirement": "Telemetry shows a read-only notice instead of **Observation settings and consent**, and **Activity source diagnostics** reports the live CLI observer off in artifacts with the optional live adapter (unavailable in older builds).",
       "expected": "Telemetry shows a read-only notice instead of **Observation settings and consent**, and **Activity source diagnostics** reports the live CLI observer off in artifacts with the optional live adapter (unavailable in older builds).",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:43:47.534Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Opened Telemetry shows the browser read-only consent notice and Live CLI observer: off.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-missing-usage.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -25628,21 +25833,28 @@
       ],
       "requirement": "Settings is disabled here",
       "expected": "Settings is disabled here",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:41:53.003Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Settings is disabled with the read-only observer explanation.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-initial.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26188,21 +26400,28 @@
       ],
       "requirement": "Viewing must not alter saved seat IDs or project hashes.",
       "expected": "Viewing must not alter saved seat IDs or project hashes.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:58:22.613Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "All seven original project files, including saved layout and seat IDs, retained their exact bytes through viewing; generated fixture files were archived and the original full project baseline restored.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-baseline.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26524,21 +26743,31 @@
       ],
       "requirement": "| Approximate file activity | Seed an old recognized session/log before first connection: no historical animation.",
       "expected": "| Approximate file activity | Seed an old recognized session/log before first connection: no historical animation.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:44:43.968Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "The pre-existing January historical Ada session did not animate the roster on this authenticated connection: both observed members idle and active count zero before the new file.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-ada-details.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-bea-details.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26552,21 +26781,34 @@
       ],
       "requirement": "While connected, create then edit a recognized source for an unambiguous visible member (use the historical/file-idle recipe only as FIXTURE).",
       "expected": "While connected, create then edit a recognized source for an unambiguous visible member (use the historical/file-idle recipe only as FIXTURE).",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:47:06.406Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Created then edited the allowlisted synthetic Ada session; both changes produced an observed active interval.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-activity-new.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-edit-idle.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26608,21 +26850,31 @@
       ],
       "requirement": "A new/content-changed source marks the member active for approximately 30 seconds",
       "expected": "A new/content-changed source marks the member active for approximately 30 seconds",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:47:06.406Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Ada was active after each source change and idle by approximately 32 seconds after each write, bounded by five-second sampling.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-edit-idle.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26636,21 +26888,31 @@
       ],
       "requirement": "unchanged polls do not renew it.",
       "expected": "unchanged polls do not renew it.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:47:06.406Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Unchanged polls did not renew activity; both sampled intervals returned to and remained idle.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-edit-idle.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26664,21 +26926,34 @@
       ],
       "requirement": "Allow 10 seconds for observation, then observe through 40 seconds after the last write for idle.",
       "expected": "Allow 10 seconds for observation, then observe through 40 seconds after the last write for idle.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:47:06.406Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Creation and edit were each observed active within ten seconds of the fixture action, then sampled beyond forty seconds after the last write.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-activity-new.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-edit-idle.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26720,21 +26995,34 @@
       ],
       "requirement": "No live tools, context counters, task inventory or durable hierarchy is supplied",
       "expected": "No live tools, context counters, task inventory or durable hierarchy is supplied",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:47:34.866Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "File hints did not supply attributable live time or runtime model; Telemetry explicitly reports unavailable live context/hierarchy and zero observed transient tasks.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-ada-details.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26748,21 +27036,28 @@
       ],
       "requirement": "usage writes do not drive activity.",
       "expected": "usage writes do not drive activity.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:49:05.014Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "The roster stayed at zero active throughout twelve samples covering eleven seconds after a ledger-only modification.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-no-activity.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26832,21 +27127,28 @@
       ],
       "requirement": "Reuse U-01 and the usage arithmetic fixture as FIXTURE: complete newline-terminated version-1 records",
       "expected": "Reuse U-01 and the usage arithmetic fixture as FIXTURE: complete newline-terminated version-1 records",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:47:34.866Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Used the pinned six-record, complete newline-terminated version-1 arithmetic fixture.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26860,21 +27162,28 @@
       ],
       "requirement": "every valid complete usage row counts, without time/member filtering or usage-row deduplication",
       "expected": "every valid complete usage row counts, without time/member filtering or usage-row deduplication",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:47:34.866Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Duplicate complete reports were summed: three reports, 20 input tokens, 10 output tokens, 0.06 reported producer units; no agent/time filter was applied.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26888,21 +27197,31 @@
       ],
       "requirement": "turn coverage is distinct-turn based",
       "expected": "turn coverage is distinct-turn based",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:47:59.191Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Two distinct starts and one covered turn remained one of two after a usage session ID changed while turn ID stayed unchanged.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-usage-scope.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26916,21 +27235,28 @@
       ],
       "requirement": "show at most 40 recent reports.",
       "expected": "show at most 40 recent reports.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:48:27.184Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Forty-five valid usage reports produced exactly forty rendered recent-report cards and the 40 of 45 heading.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-limit.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26944,21 +27270,28 @@
       ],
       "requirement": "Missing ledger displays missing, not zero usage",
       "expected": "Missing ledger displays missing, not zero usage",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:43:47.534Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Missing ledger explicitly displayed missing/unavailable totals rather than recorded zero consumption.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-missing-usage.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -26972,21 +27305,28 @@
       ],
       "requirement": "invalid/unsupported/incomplete records show the parser's partial diagnostics.",
       "expected": "invalid/unsupported/incomplete records show the parser's partial diagnostics.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:48:08.890Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "Malformed JSON, unsupported version and unterminated final record yielded partial status, one rejected line, one unsupported line and pending final line yes.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-partial.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -27168,21 +27508,28 @@
       ],
       "requirement": "models/costs are historical, not live model/context or proof that a runtime emits the ledger.",
       "expected": "models/costs are historical, not live model/context or proof that a runtime emits the ledger.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T15:02:28.993Z",
+      "observedAtUtc": "2026-10-31T14:47:34.866Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "actual": "The view explicitly labels reports historical, not current model, live context or billing-grade accounting.",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "BROWSER",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        }
+      ],
+      "cleanup": "Original project restored byte-for-byte; generated fixtures archived without deletion; native window restored and dialogs closed; owned host/server retained.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {

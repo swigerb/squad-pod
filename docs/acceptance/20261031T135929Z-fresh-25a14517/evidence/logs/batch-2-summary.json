@@ -1,0 +1,991 @@
+{
+  "runId": "20261031T135929Z-fresh-25a14517",
+  "generatedAtUtc": "2026-10-31T15:02:28.993Z",
+  "previousPublishedCommit": "f455459b30ec2ae1dd4d76e99dcc745262189d77",
+  "publication": "PENDING exact-content approval",
+  "addedPasses": 37,
+  "counts": {
+    "cases": 27,
+    "sourceAndUserGroups": 296,
+    "commonDefinitions": 8,
+    "commonApplications": 216,
+    "totalGroups": 512,
+    "atomicRows": 1932,
+    "byOutcome": {
+      "BLOCKED": 1890,
+      "PASS": 42
+    },
+    "byObservedEvidenceClass": {
+      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1890,
+      "NATIVE+FIXTURE": 21,
+      "BROWSER+FIXTURE": 21
+    }
+  },
+  "proposals": [
+    {
+      "id": "F-02-S017-A003",
+      "requirement": "** Compare the canonical selected root recorded from the startup path with **Telemetry > Recorded usage / model history > Usage coverage and source diagnostics**, which shows the local ledger path even when missing (redact personal paths in evidence).",
+      "actual": "The displayed canonical ledger path exactly matches the owned CLI-selected project-A ledger; published projection retains only the equality result.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:43:47.534Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-missing-usage.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-missing-usage.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S017-A004",
+      "requirement": "Telemetry shows a read-only notice instead of **Observation settings and consent**, and **Activity source diagnostics** reports the live CLI observer off in artifacts with the optional live adapter (unavailable in older builds).",
+      "actual": "Opened Telemetry shows the browser read-only consent notice and Live CLI observer: off.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:43:47.534Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-missing-usage.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-missing-usage.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S017-A005",
+      "requirement": "Settings is disabled here",
+      "actual": "Settings is disabled with the read-only observer explanation.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:41:53.003Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-initial.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-initial.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S019-A007",
+      "requirement": "Viewing must not alter saved seat IDs or project hashes.",
+      "actual": "All seven original project files, including saved layout and seat IDs, retained their exact bytes through viewing; generated fixture files were archived and the original full project baseline restored.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:58:22.613Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-baseline.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-baseline.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S020-A001",
+      "requirement": "| Approximate file activity | Seed an old recognized session/log before first connection: no historical animation.",
+      "actual": "The pre-existing January historical Ada session did not animate the roster on this authenticated connection: both observed members idle and active count zero before the new file.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:44:43.968Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-ada-details.json",
+        "observer-batch2-bea-details.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-ada-details.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-bea-details.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S020-A002",
+      "requirement": "While connected, create then edit a recognized source for an unambiguous visible member (use the historical/file-idle recipe only as FIXTURE).",
+      "actual": "Created then edited the allowlisted synthetic Ada session; both changes produced an observed active interval.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:47:06.406Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-activity-new.json",
+        "observer-batch2-activity-idle.json",
+        "observer-batch2-activity-edit-idle.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-activity-new.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-edit-idle.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S020-A004",
+      "requirement": "A new/content-changed source marks the member active for approximately 30 seconds",
+      "actual": "Ada was active after each source change and idle by approximately 32 seconds after each write, bounded by five-second sampling.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:47:06.406Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-activity-idle.json",
+        "observer-batch2-activity-edit-idle.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-edit-idle.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S020-A005",
+      "requirement": "unchanged polls do not renew it.",
+      "actual": "Unchanged polls did not renew activity; both sampled intervals returned to and remained idle.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:47:06.406Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-activity-idle.json",
+        "observer-batch2-activity-edit-idle.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-edit-idle.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S020-A006",
+      "requirement": "Allow 10 seconds for observation, then observe through 40 seconds after the last write for idle.",
+      "actual": "Creation and edit were each observed active within ten seconds of the fixture action, then sampled beyond forty seconds after the last write.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:47:06.406Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-activity-new.json",
+        "observer-batch2-activity-idle.json",
+        "observer-batch2-activity-edit-idle.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-activity-new.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-edit-idle.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S020-A008",
+      "requirement": "No live tools, context counters, task inventory or durable hierarchy is supplied",
+      "actual": "File hints did not supply attributable live time or runtime model; Telemetry explicitly reports unavailable live context/hierarchy and zero observed transient tasks.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:47:34.866Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-ada-details.json",
+        "observer-batch2-activity-idle.json",
+        "observer-batch2-usage-known.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-ada-details.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-activity-idle.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S020-A009",
+      "requirement": "usage writes do not drive activity.",
+      "actual": "The roster stayed at zero active throughout twelve samples covering eleven seconds after a ledger-only modification.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:49:05.014Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-usage-no-activity.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-no-activity.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S021-A002",
+      "requirement": "Reuse U-01 and the usage arithmetic fixture as FIXTURE: complete newline-terminated version-1 records",
+      "actual": "Used the pinned six-record, complete newline-terminated version-1 arithmetic fixture.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:47:34.866Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-usage-known.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S021-A003",
+      "requirement": "every valid complete usage row counts, without time/member filtering or usage-row deduplication",
+      "actual": "Duplicate complete reports were summed: three reports, 20 input tokens, 10 output tokens, 0.06 reported producer units; no agent/time filter was applied.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:47:34.866Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-usage-known.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S021-A004",
+      "requirement": "turn coverage is distinct-turn based",
+      "actual": "Two distinct starts and one covered turn remained one of two after a usage session ID changed while turn ID stayed unchanged.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:47:59.191Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-usage-known.json",
+        "observer-batch2-usage-scope.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-usage-scope.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S021-A005",
+      "requirement": "show at most 40 recent reports.",
+      "actual": "Forty-five valid usage reports produced exactly forty rendered recent-report cards and the 40 of 45 heading.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:48:27.184Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-usage-limit.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-limit.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S021-A006",
+      "requirement": "Missing ledger displays missing, not zero usage",
+      "actual": "Missing ledger explicitly displayed missing/unavailable totals rather than recorded zero consumption.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:43:47.534Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-missing-usage.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-missing-usage.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S021-A007",
+      "requirement": "invalid/unsupported/incomplete records show the parser's partial diagnostics.",
+      "actual": "Malformed JSON, unsupported version and unterminated final record yielded partial status, one rejected line, one unsupported line and pending final line yes.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:48:08.890Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-usage-partial.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-partial.json"
+        }
+      ]
+    },
+    {
+      "id": "F-02-S021-A014",
+      "requirement": "models/costs are historical, not live model/context or proof that a runtime emits the ledger.",
+      "actual": "The view explicitly labels reports historical, not current model, live context or billing-grade accounting.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:47:34.866Z",
+      "method": "Identified installed read-only observer, human authentication, normal browser controls and DOM observation; authored disposable inputs only",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceFiles": [
+        "observer-batch2-usage-known.json"
+      ],
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-usage-known.json"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S004-A002",
+      "requirement": "**Squad Info access:** At wide and narrow panel sizes, open **Squad Info** from the bottom toolbar.",
+      "actual": "Opened the named Squad Info dialog from the native toolbar at 1383x800 and 343x493 CSS-pixel webview sizes.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:55:34.023Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S004-A004",
+      "requirement": "Reopen it, Tab to a member row (\"Show details for <name>\") and expand it with Enter, then Space",
+      "actual": "Tab reached the named member row; Enter and Space activated disclosure in the installed native host. The private Enter driver was corrected before the accepted Enter observations.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:55:50.858Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S004-A005",
+      "requirement": "collapse it (\"Hide details for <name>\").",
+      "actual": "Enter and Space collapsed Ada details; the accessible label and aria-expanded returned to Show/false.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:55:51.237Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S004-A006",
+      "requirement": "Repeat with the mouse.",
+      "actual": "Native pointer clicks expanded and collapsed Ada and selected Bea details.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:58:12.173Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S005-A002",
+      "requirement": "**Declared details:** Expand M1.",
+      "actual": "Expanded the fixture member Ada with native input.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:58:11.724Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S005-A003",
+      "requirement": "Record **Observed status**, **Observed task**, **Charter summary (from charter.md)**, **Declared expertise**, **Declared responsibilities**, **Declared boundaries** and **Recent activity (from workspace activity logs",
+      "actual": "Recorded observed idle/no current activity, the exact fixture summary, expertise, responsibilities, boundaries and empty recent activity.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:53:49.581Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S013-A001",
+      "requirement": "- Declared fields show only text present in that charter",
+      "actual": "Ada declared fields match the existing reviewed fixture charter text; no different declared content was observed.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:53:49.581Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S013-A002",
+      "requirement": "absent sections are omitted, never inferred from role, history or activity.",
+      "actual": "Bea has no charter: expertise, responsibilities and boundaries were not inferred or shown.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:58:22.148Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S015-A001",
+      "requirement": "- Missing charter shows \"Charter content is missing.\" and \"Charter text is missing.\"",
+      "actual": "Bea displayed both Charter content is missing and Charter text is missing after keyboard disclosure expansion.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:58:22.148Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S019-A009",
+      "requirement": "Tab and Shift+Tab stay within the dialog, Space and Enter activate native buttons, and closing",
+      "actual": "Twelve wide-dialog Tab/Shift+Tab samples stayed inside the dialog; native Space/Enter changed disclosure state and Escape/Close dismissed it. Narrow Enter/Space activation was separately observed.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:55:51.237Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S019-A010",
+      "requirement": "returns focus to the opener.",
+      "actual": "Wide Escape and narrow Close returned focus to the Squad Info opener.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:55:51.697Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S018-A001",
+      "requirement": "- **Cleanup:** Close test editors/cards/dialogs, restore the run-owned charter copies and roster snapshot, and restore any moved seat.",
+      "actual": "Closed test dialogs; original native window dimensions restored and all original project file hashes unchanged. No editor, charter, roster or seat mutation was performed in this native segment.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:58:22.540Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "D-01-S002-A001",
+      "requirement": "- **Actions:** At wide and narrow panel sizes, open **Directories**.",
+      "actual": "Opened Directories at the narrow viewport and freshly reopened it at the restored wide viewport without launching a process.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:58:10.582Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "D-01-S003-A001",
+      "requirement": "- **Expected:** Workspace folders, saved directories, and recent launch requests are distinct.",
+      "actual": "Workspace folders, saved directories and recent launch requests are shown as separate sections, with one/zero/zero entries.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:58:10.582Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "D-01-S003-A002",
+      "requirement": "The disclosures expand/collapse accessibly at both sizes",
+      "actual": "Both directory disclosures expanded and collapsed through normal pointer/keyboard input at narrow and wide sizes.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:57:15.735Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        }
+      ]
+    },
+    {
+      "id": "D-01-S003-A007",
+      "requirement": "Suggestions remain absent/off when their setting is false",
+      "actual": "Isolated persisted directorySuggestions=false; the expanded manual form did not show recent-directory suggestions.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:57:15.319Z",
+      "method": "Exact installed VSIX in isolated desktop VS Code; native Chromium key/mouse input, scoped DOM probes and owned-window UI Automation; no mocked host",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-batch2-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-batch2-narrow-squad-info.png"
+        },
+        {
+          "path": "evidence/logs/native-batch2-consent.json"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S008-A002",
+      "requirement": "**Read-only observer (BROWSER, only with F-02's approval):** In F-02's observer office, open **Squad Info** and expand a member.",
+      "actual": "Opened Squad Info and expanded Ada and Bea in the installed read-only observer.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:44:43.968Z",
+      "method": "Installed authenticated read-only observer and exact original-file hashes",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-ada-details.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-bea-details.json"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S016-A002",
+      "requirement": "Charter content reads \"unavailable\", **Open charter** is disabled, and the note says opening a charter in the editor is unavailable in the read-only observer.",
+      "actual": "Both observed members showed unavailable charter content, disabled Open charter and the explicit read-only opening notice.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:44:43.968Z",
+      "method": "Installed authenticated read-only observer and exact original-file hashes",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-ada-details.json"
+        },
+        {
+          "path": "evidence/logs/observer-batch2-bea-details.json"
+        }
+      ]
+    },
+    {
+      "id": "N-03-S016-A006",
+      "requirement": "Project hashes are unchanged.",
+      "actual": "Original project and layout bytes remained unchanged by read-only viewing; authored fixture files were archived and the seven-file baseline restored.",
+      "outcome": "PASS",
+      "observedAtUtc": "2026-10-31T14:58:22.613Z",
+      "method": "Installed authenticated read-only observer and exact original-file hashes",
+      "evidenceClass": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+      "packageSha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/observer-batch2-baseline.json"
+        }
+      ]
+    }
+  ],
+  "eligibilityCorrections": [
+    {
+      "id": "N-03-S008-A001",
+      "previous": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "corrected": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "reason": "Pinned N-03 step 6 and its explicit read-only observer expectations are browser checks, not native VSIX checks."
+    },
+    {
+      "id": "N-03-S008-A002",
+      "previous": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "corrected": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "reason": "Pinned N-03 step 6 and its explicit read-only observer expectations are browser checks, not native VSIX checks."
+    },
+    {
+      "id": "N-03-S016-A001",
+      "previous": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "corrected": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "reason": "Pinned N-03 step 6 and its explicit read-only observer expectations are browser checks, not native VSIX checks."
+    },
+    {
+      "id": "N-03-S016-A002",
+      "previous": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "corrected": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "reason": "Pinned N-03 step 6 and its explicit read-only observer expectations are browser checks, not native VSIX checks."
+    },
+    {
+      "id": "N-03-S016-A003",
+      "previous": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "corrected": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "reason": "Pinned N-03 step 6 and its explicit read-only observer expectations are browser checks, not native VSIX checks."
+    },
+    {
+      "id": "N-03-S016-A004",
+      "previous": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "corrected": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "reason": "Pinned N-03 step 6 and its explicit read-only observer expectations are browser checks, not native VSIX checks."
+    },
+    {
+      "id": "N-03-S016-A005",
+      "previous": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "corrected": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "reason": "Pinned N-03 step 6 and its explicit read-only observer expectations are browser checks, not native VSIX checks."
+    },
+    {
+      "id": "N-03-S016-A006",
+      "previous": [
+        "NATIVE",
+        "FIXTURE"
+      ],
+      "corrected": [
+        "BROWSER",
+        "FIXTURE"
+      ],
+      "reason": "Pinned N-03 step 6 and its explicit read-only observer expectations are browser checks, not native VSIX checks."
+    }
+  ],
+  "limitations": [
+    "Only BROWSER/FIXTURE evidence. No REAL, physical-device, terminal, office-control or additional native pass.",
+    "No full case acceptance or human sign-off. Unsupported, unexecuted and incomplete atoms remain blocked.",
+    "Full-page reload returned to the authentication form; WebSocket disconnect/retry and all-viewers-paused behavior were not established. Do not equate the reload with the specified transient transport retry.",
+    "A click initially targeted a mounted but closed Telemetry drawer; opening it through its normal button resolved this. A second member expansion replaced the first; no product defect is inferred from those helper assumptions.",
+    "Details screenshot is clipped at the office boundary; full detail text and disabled charter control are supported by DOM projection, not a complete screenshot.",
+    "Seven original project files restored, generated inputs retained privately, server and isolated host left running. No deletion, credential capture, publication, merge or issue closure.",
+    "Native Enter initially lacked the CDP carriage-return text; corrected private input driver before accepting Enter results. No product code changed.",
+    "Renderer CDP does not expose Browser.getWindowForTarget. Owned-PID/title UI Automation resized the actual native window and restored its original bounds; this is not browser emulation.",
+    "One narrow toolbar coordinate was outside the webview and did not open Directories. The driver now refuses disabled, covered or out-of-viewport targets; normal keyboard navigation opened Directories. Scrolled charter disclosure was also reached by normal keyboard navigation.",
+    "Native export blocker is unchanged. Charter refresh/unreadable variants, full layout lifecycle, full seat/motion checks, long directory lists, catalog edits and remaining acceptance rows are not inferred from these checks."
+  ],
+  "noFullCaseAcceptance": true
+}

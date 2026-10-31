@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T135929Z-fresh-25a14517",
-  "status": "BATCH 1 CHECKPOINT - PARTIAL NATIVE EXECUTION; STANDALONE AUTHENTICATION PENDING",
+  "status": "BATCH 2 LOCAL CHECKPOINT - PARTIAL NATIVE AND READ-ONLY BROWSER EXECUTION",
   "createdAtUtc": "2026-10-31T14:04:11.081Z",
   "startUtc": "2026-10-31T13:59:29.243Z",
   "testingStopUtc": "2026-10-31T15:44:29.243Z",
@@ -96,7 +96,7 @@
     "officeControl": "Separate opt-in/authentication; writes restricted to disposable selected-project files",
     "terminal": "Synthetic --fixture only; separate human authentication",
     "publication": "Reviewed redacted run files and selected media in swigerb/squad-pod dedicated branch/draft PR to master; duplicate-aware redacted defects",
-    "mandatoryPublicationConfirmation": "Initial commit approved 2026-10-31T14:10:51.063Z; batch 1 exact-content preview pending",
+    "mandatoryPublicationConfirmation": "Batch 1 exact commit approved and published; Batch 2 exact-content approval pending",
     "prohibited": [
       "REAL AI launches",
       "paid producer tasks",
@@ -148,12 +148,13 @@
     "totalGroups": 512,
     "atomicRows": 1932,
     "byOutcome": {
-      "BLOCKED": 1927,
-      "PASS": 5
+      "BLOCKED": 1890,
+      "PASS": 42
     },
     "byObservedEvidenceClass": {
-      "NATIVE+FIXTURE": 5,
-      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1927
+      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1890,
+      "NATIVE+FIXTURE": 21,
+      "BROWSER+FIXTURE": 21
     }
   },
   "cleanup": {
@@ -163,7 +164,7 @@
       "run-owned package installations, fixtures, baselines and private raw media"
     ],
     "deletionApproved": false,
-    "credentials": "Never captured; human observation authentication pending"
+    "credentials": "Never captured; human authenticated read-only; deliberate full page reload later returned to login; terminal/control authentication unused."
   },
   "signoff": {
     "native": "PENDING HUMAN ACCEPTANCE",
@@ -171,7 +172,7 @@
     "standalone": "PENDING HUMAN ACCEPTANCE"
   },
   "remoteCheckpoint": {
-    "verifiedCommit": "4dd7146d110544b63466d71816c1c35d6fc75eb3",
+    "verifiedCommit": "f455459b30ec2ae1dd4d76e99dcc745262189d77",
     "draftPr": "https://github.com/swigerb/squad-pod/pull/141",
     "closingIssuesReferences": [],
     "newBatch": "PENDING publication confirmation"
@@ -184,5 +185,12 @@
     "durationSeconds": 60.002,
     "rawDetailsScreenshot": "WITHHELD: private fixture absolute paths; no public screenshot evidence for that detail view"
   },
-  "updatedAtUtc": "2026-10-31T14:25:49.970Z"
+  "updatedAtUtc": "2026-10-31T15:02:28.993Z",
+  "batch2": {
+    "summary": "evidence/logs/batch-2-summary.json",
+    "addedPasses": 37,
+    "baselineRestored": true,
+    "nativeWindowRestored": true,
+    "noFullCaseAcceptance": true
+  }
 }

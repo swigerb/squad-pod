@@ -1,0 +1,77 @@
+{
+  "capturedAtUtc": "2026-10-31T14:41:53.003Z",
+  "evidenceClass": [
+    "BROWSER",
+    "FIXTURE"
+  ],
+  "officeText": "Fit office\n+\n−\nAda\nDeveloper\nBea\nTester\nTask bubbles: On\nSquad Info\nTelemetry\nEdit Layout\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nCLI usage import is unavailable in standalone/read-only observation. Use the VS Code extension to select an export.\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\n\nBrowser settings cannot grant live-log consent. Live observation requires explicit local CLI --live-activity opt-in; opening this drawer enables nothing.\n\nActivity source diagnostics",
+  "terminalStatus": "Separate terminal authentication required. Office access grants no terminal authority.",
+  "browserVersion": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36 Edg/156.0.0.0",
+  "controls": [
+    {
+      "text": "Fit office",
+      "title": "Fit and center office (large layouts use minimum zoom)",
+      "disabled": false
+    },
+    {
+      "text": "+",
+      "title": "",
+      "disabled": false
+    },
+    {
+      "text": "−",
+      "title": "",
+      "disabled": false
+    },
+    {
+      "text": "AdaDeveloper",
+      "title": "",
+      "disabled": false
+    },
+    {
+      "text": "BeaTester",
+      "title": "",
+      "disabled": false
+    },
+    {
+      "text": "Task bubbles: On",
+      "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+      "disabled": false
+    },
+    {
+      "text": "Squad Info",
+      "title": "",
+      "disabled": false
+    },
+    {
+      "text": "Telemetry",
+      "title": "",
+      "disabled": false
+    },
+    {
+      "text": "Edit Layout",
+      "title": "Layout and appearance changes are disabled in the read-only observer.",
+      "disabled": true
+    },
+    {
+      "text": "Directories",
+      "title": "Only the explicitly selected project is available. Directory management is unavailable.",
+      "disabled": true
+    },
+    {
+      "text": "Settings",
+      "title": "Settings, live logs and external assets are unavailable in the read-only observer.",
+      "disabled": true
+    },
+    {
+      "text": "Clear activity",
+      "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+      "disabled": false
+    },
+    {
+      "text": "✕",
+      "title": "",
+      "disabled": false
+    }
+  ]
+}
