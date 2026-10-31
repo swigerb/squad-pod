@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import {
   layoutToTileMap,
   layoutToSeats,
@@ -11,6 +11,18 @@ import {
 } from './layoutManager.js';
 import { TileType, Direction } from '../types.js';
 import type { OfficeLayout, PlacedFurniture } from '../types.js';
+import type { ManifestFurniture } from '../../../../src/manifestAssets.js';
+import { buildDynamicCatalog } from './furnitureCatalog.js';
+
+function chairAsset(type: string, width: number, height: number, backgroundTiles: number): ManifestFurniture {
+  return {
+    type, label: type, width, height,
+    sprite: Array.from({ length: height * 16 }, () => Array<string>(width * 16).fill('#ffffff')),
+    isDesk: false, category: 'chairs', canPlaceOnSurfaces: false, canPlaceOnWalls: false, backgroundTiles,
+  };
+}
+
+afterEach(() => { buildDynamicCatalog([]); });
 
 describe('layoutManager', () => {
   describe('layoutToTileMap', () => {
@@ -48,6 +60,42 @@ describe('layoutManager', () => {
   });
 
   describe('layoutToSeats', () => {
+    it.each([
+      { rotation: 0, col: 2, row: 3, deskCol: 3, deskRow: 3, direction: Direction.RIGHT },
+      { rotation: 90, col: 2, row: 2, deskCol: 0, deskRow: 2, direction: Direction.LEFT },
+      { rotation: 180, col: 2, row: 2, deskCol: 2, deskRow: 1, direction: Direction.UP },
+      { rotation: 270, col: 3, row: 2, deskCol: 4, deskRow: 2, direction: Direction.RIGHT },
+    ])('maps a background row through a $rotation-degree chair turn', ({ rotation, col, row, deskCol, deskRow, direction }) => {
+      buildDynamicCatalog([chairAsset('pa_tall-chair', 1, 2, 1)]);
+      const furniture: PlacedFurniture[] = [
+        {
+          uid: 'stable-chair', type: 'pa_tall-chair', col: 2, row: 2, rotation,
+          assetFootprint: { width: 1, height: 2 },
+        },
+        { uid: 'desk-1', type: 'desk', col: deskCol, row: deskRow, rotation: 0, assetRole: 'desk' },
+      ];
+
+      expect(layoutToSeats(furniture)).toEqual([
+        { id: 'stable-chair', col, row, direction },
+      ]);
+      expect(getSeatTiles(furniture)).toEqual(new Set([`${col},${row}`]));
+    });
+
+    it('keeps a one-tile bench at its origin when backgroundTiles is zero', () => {
+      buildDynamicCatalog([chairAsset('pa_bench', 1, 1, 0)]);
+      const furniture: PlacedFurniture[] = [
+        {
+          uid: 'bench-1', type: 'pa_bench', col: 2, row: 2, rotation: 0,
+          assetFootprint: { width: 1, height: 1 },
+        },
+        { uid: 'desk-1', type: 'desk', col: 2, row: 1, rotation: 0, assetRole: 'desk' },
+      ];
+
+      expect(layoutToSeats(furniture)).toEqual([
+        { id: 'bench-1', col: 2, row: 2, direction: Direction.UP },
+      ]);
+    });
+
     it('creates seats for desk+chair pairs', () => {
       const furniture: PlacedFurniture[] = [
         { uid: 'desk-1', type: 'desk', col: 2, row: 2, rotation: 0 },

@@ -33,6 +33,7 @@ The manifest describes one or more furniture sprites. For a single sprite, use:
 ```
 
 `file` is optional and defaults to `<id>.png`. `width` and `height` are image pixels; the sprite must exactly match its footprint at 16 pixels per tile.
+`backgroundTiles` is the number of top footprint rows occupied by back/occlusion artwork before a chair's seat surface. For example, a 1x2 chair with `backgroundTiles: 1` seats its occupant on the lower row; a 1x1 chair or bench uses `0`. Geometric quarter-turns rotate this seat surface with the furniture.
 
 Non-desk items with `canPlaceOnSurfaces: true` belong to an overlapping desk (`category: "desks"`). The largest footprint overlap wins, with layout order breaking ties. Desks remain independent surfaces even if their manifest also sets `canPlaceOnSurfaces`. Rendering and grouped editor moves use the same ownership: the desk draws first, then its accessories, at the desk's normal scene depth. Foreground characters and furniture can still obscure the group. No group IDs are added to saved layouts.
 

@@ -110,7 +110,6 @@ export interface FurnitureCatalogEntry extends FurnitureGroupMetadata {
   category?: string;
   dynamicState?: boolean;
   canPlaceOnSurfaces?: boolean;
-  backgroundTiles?: number;
   canPlaceOnWalls?: boolean;
 }
 

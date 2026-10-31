@@ -8,6 +8,7 @@ const text: Check = v => typeof v === 'string' && v.length <= 8192;
 const short: Check = v => typeof v === 'string' && v.length <= 256;
 const number: Check = v => typeof v === 'number' && Number.isFinite(v);
 const integer: Check = v => number(v) && Number.isSafeInteger(v) && (v as number) >= 0;
+const backgroundTiles: Check = v => integer(v) && (v as number) <= 16;
 const boolean: Check = v => typeof v === 'boolean';
 const nullable = (check: Check): Check => v => v === null || check(v);
 const optional = (check: Check): Check => v => v === undefined || check(v);
@@ -136,6 +137,7 @@ const schemas: Record<string, Check> = {
       rotationScheme: optional(oneOf('2-way', '3-way-mirror', '4-way')),
       orientation: optional(oneOf('front', 'back', 'side', 'left', 'right')),
       state: optional(oneOf('on', 'off')), frame: optional(integer), mirrorSide: optional(boolean),
+      backgroundTiles: optional(backgroundTiles),
     }), 128),
     floors: array(sprite, 128), walls: array(sprite, 128), carpets: array(array(sprite, 128), 128),
     pets: array(object({ id: short, name: short, petType: integer, sprite }), 128),

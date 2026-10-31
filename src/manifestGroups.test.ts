@@ -22,19 +22,21 @@ afterEach(() => {
 
 describe('manifest group metadata', () => {
   it('inherits rotation, orientation and state through nested groups and retains leaf fields', () => {
-    const result = validateManifest(root([{
+    const manifest = root([{
       type: 'group', groupType: 'state', orientation: 'side', state: 'off',
       members: [{
         type: 'group', groupType: 'animation',
         members: [leaf('SIDE', { mirrorSide: true, frame: 2 }), leaf('ON', { state: 'on', frame: 3 })],
       }],
-    }]));
+    }]);
+    manifest.backgroundTiles = 1;
+    const result = validateManifest(manifest);
     expect(result.diagnostics).toEqual([]);
     expect(result.leaves[0]).toMatchObject({
       groupId: 'TEST', groupType: 'animation', rotationScheme: '3-way-mirror',
-      orientation: 'side', state: 'off', frame: 2, mirrorSide: true,
+      orientation: 'side', state: 'off', frame: 2, mirrorSide: true, backgroundTiles: 1,
     });
-    expect(result.leaves[1]).toMatchObject({ state: 'on', frame: 3, orientation: 'side' });
+    expect(result.leaves[1]).toMatchObject({ state: 'on', frame: 3, orientation: 'side', backgroundTiles: 1 });
   });
 
   it('diagnoses and rolls back malformed subgroups without discarding valid siblings', () => {
@@ -70,11 +72,13 @@ describe('manifest group metadata', () => {
     temporary.push(directory);
     const folder = path.join(directory, 'fixture');
     fs.mkdirSync(folder);
-    fs.writeFileSync(path.join(folder, 'manifest.json'), JSON.stringify(root([
+    const manifest = root([
       leaf('FRONT', { orientation: 'front', state: 'off', frame: 0 }),
       leaf('SIDE', { orientation: 'side', mirrorSide: true }),
       { type: 'group', groupType: 'invalid', members: [] },
-    ])));
+    ]);
+    manifest.backgroundTiles = 1;
+    fs.writeFileSync(path.join(folder, 'manifest.json'), JSON.stringify(manifest));
     const png = new PNG({ width: 16, height: 16 });
     png.data.fill(255);
     for (const id of ['FRONT', 'SIDE']) {
@@ -84,9 +88,11 @@ describe('manifest group metadata', () => {
     expect(snapshot.diagnostics).toEqual([expect.stringContaining('Invalid group')]);
     expect(snapshot.furniture.find((item) => item.type === 'local_TEST_FRONT')).toMatchObject({
       groupId: 'local_TEST_TEST', groupType: 'rotation', rotationScheme: '3-way-mirror',
-      orientation: 'front', state: 'off', frame: 0,
+      orientation: 'front', state: 'off', frame: 0, backgroundTiles: 1,
     });
-    expect(snapshot.furniture.find((item) => item.type === 'local_TEST_SIDE')).toMatchObject({ mirrorSide: true });
+    expect(snapshot.furniture.find((item) => item.type === 'local_TEST_SIDE')).toMatchObject({
+      mirrorSide: true, backgroundTiles: 1,
+    });
     expect(snapshot.furniture.find((item) => item.type === 'pa_CUSHIONED_CHAIR_SIDE')).toMatchObject({
       groupId: 'pa_CUSHIONED_CHAIR', orientation: 'side', mirrorSide: true,
     });

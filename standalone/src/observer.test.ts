@@ -35,6 +35,11 @@ describe('read-only selected-project observer', () => {
         expect(() => decodeEvent(frame), messages[index].type).not.toThrow();
         expect(Buffer.byteLength(frame)).toBeLessThan(8 * 1024 * 1024);
       }
+      const assets = messages.find(message => message.type === 'manifestAssetsLoaded');
+      expect(assets?.type).toBe('manifestAssetsLoaded');
+      if (assets?.type !== 'manifestAssetsLoaded') throw new Error('Missing bundled asset snapshot.');
+      expect(assets.snapshot.furniture.find(asset => asset.type === 'pa_WOODEN_CHAIR_SIDE')?.backgroundTiles).toBe(1);
+      expect(decodeEvent(JSON.stringify({ version: 1, kind: 'office', message: assets }))).toEqual(assets);
       const total = frames.reduce((sum, frame) => sum + Buffer.byteLength(frame), 0);
       expect(total).toBeLessThan(16 * 1024 * 1024);
       expect(total).toBeGreaterThan(100_000);
@@ -283,6 +288,40 @@ describe('read-only selected-project observer', () => {
 });
 
 describe('direction-specific browser event parsing', () => {
+  it.each([0, 1, 16])('accepts backgroundTiles=%i and preserves it through the standalone event boundary', backgroundTiles => {
+    const message = {
+      type: 'manifestAssetsLoaded',
+      snapshot: {
+        furniture: [{
+          type: 'local_TEST_CHAIR', label: 'Test Chair', width: 1, height: 2,
+          sprite: Array.from({ length: 32 }, () => Array(16).fill('#ffffff')),
+          isDesk: false, category: 'chairs', canPlaceOnSurfaces: false, canPlaceOnWalls: false,
+          backgroundTiles,
+        }],
+        floors: [], walls: [], carpets: [], pets: [], directories: [], diagnostics: [],
+      },
+    };
+
+    expect(decodeEvent(JSON.stringify({ version: 1, kind: 'office', message }))).toEqual(message);
+  });
+
+  it.each([-1, 1.5, 17, '1', null])('rejects invalid backgroundTiles=%j at the standalone event boundary', backgroundTiles => {
+    const message = {
+      type: 'manifestAssetsLoaded',
+      snapshot: {
+        furniture: [{
+          type: 'local_TEST_CHAIR', label: 'Test Chair', width: 1, height: 2, sprite: [['#ffffff']],
+          isDesk: false, category: 'chairs', canPlaceOnSurfaces: false, canPlaceOnWalls: false,
+          backgroundTiles,
+        }],
+        floors: [], walls: [], carpets: [], pets: [], directories: [], diagnostics: [],
+      },
+    };
+
+    expect(() => decodeEvent(JSON.stringify({ version: 1, kind: 'office', message })))
+      .toThrow('Invalid server office frame');
+  });
+
   it.each([
     { version: 2, kind: 'office', message: { type: 'noWorkspace' } },
     { version: 1, kind: 'terminal', message: { type: 'settingsLoaded' } },
