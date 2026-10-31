@@ -1,17 +1,20 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T170436Z-gate-blocked",
-  "status": "PREFLIGHT VERIFIED; INITIAL PUBLICATION PENDING",
-  "checkpointUtc": "2026-10-31T17:24:11.205Z",
+  "status": "STOPPED - NATIVE HOST ISOLATION UNRESOLVED",
+  "checkpointUtc": "2026-10-31T17:39:56.448Z",
   "clock": {
     "startUtc": "2026-10-31T17:04:36.279Z",
     "startBasis": "Conservative clock anchored to receipt of the authorized directive.",
     "testingStopUtc": "2026-10-31T18:49:36.279Z",
     "hardStopUtc": "2026-10-31T19:04:36.279Z",
-    "runtimeTestingStartedUtc": null,
+    "runtimeTestingStartedUtc": "2026-10-31T17:30:23.162Z",
     "candidateGateStoppedUtc": "2026-10-31T17:06:32.190Z",
     "clockContinuesDuringHumanWait": true,
-    "extensionAuthorized": false
+    "extensionAuthorized": false,
+    "actualRuntimeTestingStopUtc": "2026-10-31T17:32:55.216Z",
+    "actualHardStopReached": false,
+    "restartAuthorized": false
   },
   "plan": {
     "sourceSha": "0c22cffded2985370a80158d6bc252effa16c01c",
@@ -120,13 +123,35 @@
     "addedManifestPropertyNames": [
       "__metadata"
     ],
-    "executableOrAssetMismatches": []
+    "executableOrAssetMismatches": [],
+    "payloadClassifierSource": "https://github.com/swigerb/squad-pod/issues/4#issuecomment-6546719024",
+    "expandedPayloadComparisonPending": false,
+    "expandedPayloadComparison": {
+      "verifiedUtc": "2026-10-31T17:34:26.502Z",
+      "nonManifestPayloadFilesCompared": 187,
+      "nonManifestPayloadMismatches": [],
+      "manifestWithoutMetadataMatches": true,
+      "metadataKeyNames": [
+        "installedTimestamp",
+        "targetPlatform",
+        "size"
+      ],
+      "unexpectedMetadataKeys": [],
+      "packagedAndInstalledVsixManifestSha256": "e2464c4c78d41051c7600d6be51b2d06559c885b1aa8a7e41380d203ed61b731",
+      "vsixManifestMatches": true,
+      "contentTypesInstalled": false,
+      "installedBundleSha256": "622fa32cba1e28dc5720be5d3676fa475ec81a45b5010330a509b8d13aa4e478",
+      "installedMapSha256": "6b61d054f1615c50b774428c8d87ddace9c7a1af9cd1cd6762da894843888edc",
+      "expectedNewBundleAndMapMatched": true,
+      "outcome": "MATCH",
+      "doesNotResolveIndependentRuntimeStop": true
+    }
   },
   "execution": {
     "packageDownloadPerformed": true,
     "installationPerformed": true,
-    "nativeOrBrowserRuntimeTestingPerformed": false,
-    "settingsInspectionPerformed": false,
+    "nativeOrBrowserRuntimeTestingPerformed": true,
+    "settingsInspectionPerformed": true,
     "effectiveIsolationEstablished": false,
     "humanAuthenticationPerformed": false,
     "officeControlWritesPerformed": false,
@@ -135,17 +160,27 @@
     "testLaunchedAiSpend": 0,
     "dependencyInstallationPerformed": false,
     "productCodeChangesPerformed": false,
-    "newNativeEvidenceProduced": false,
-    "runtimeMediaProduced": false
+    "newNativeEvidenceProduced": true,
+    "runtimeMediaProduced": true,
+    "nativeHostLaunched": true,
+    "productBehaviorExercised": false,
+    "runtimeMediaSelectedForPublication": false,
+    "paidAiTaskObserved": false,
+    "nativeHostAiRelatedProcess": {
+      "executableName": "copilot-runtime",
+      "automaticallyStarted": true,
+      "squadOrPaidTaskAttribution": "NOT ESTABLISHED",
+      "processStoppedWithOwnedHost": true
+    }
   },
   "publication": {
     "authorizedRepository": "swigerb/squad-pod",
     "authorizedBase": "master",
-    "draftPrUrl": null,
-    "pushedSha": null,
-    "verifiedRemoteSha": null,
-    "status": "INITIAL PUBLICATION PENDING",
-    "reason": "Publish and verify this initial scoped checkpoint before any runtime testing.",
+    "draftPrUrl": "https://github.com/swigerb/squad-pod/pull/144",
+    "pushedSha": "c85a3ce7655ac64f971ba665562922909e2400c4",
+    "verifiedRemoteSha": "c85a3ce7655ac64f971ba665562922909e2400c4",
+    "status": "INITIAL CHECKPOINT VERIFIED; STOP CHECKPOINT AWAITING PUBLICATION",
+    "reason": "Initial 11 files read back as canonical Git blob bytes; runtime safety stop must now be published separately.",
     "branch": "evidence/native-20261031T170436Z-f3f080d4"
   },
   "cleanup": {
@@ -155,10 +190,25 @@
       "Frozen packages and isolated installation",
       "Historical mapping source copies",
       "Gate checkpoint",
-      "Current publication artifacts"
+      "Current publication artifacts",
+      "Unreviewed startup screenshot excluded from GitHub publication"
     ],
     "cleanupAwaitingPermission": [],
-    "otherSessionsProcessesInspectedOrTerminated": false
+    "otherSessionsProcessesInspectedOrTerminated": false,
+    "lastObservedUtc": "2026-10-31T17:32:58.235Z",
+    "ownedPidSetConfirmedAbsent": [
+      47556,
+      47300,
+      45924,
+      89152,
+      30700,
+      106412,
+      43972,
+      110652,
+      95176,
+      18468,
+      35152
+    ]
   },
   "humanAcceptance": "PENDING",
   "runtime": {
@@ -167,9 +217,11 @@
     "architecture": "x64",
     "nodeVersion": "v26.13.0",
     "productVersionNotUsedAsIdentity": true,
-    "nativeWindowNotYetLaunched": true,
+    "nativeWindowNotYetLaunched": false,
     "dependencyFeedUsed": false,
-    "dependencyInstallationPerformed": false
+    "dependencyInstallationPerformed": false,
+    "nativeWindowStopped": true,
+    "lastNativeObservation": "evidence/logs/native-startup-stop.json"
   },
   "isolation": {
     "aliases": [
@@ -199,6 +251,7 @@
     "realTaskOrTerminalLaunchConfigured": false,
     "uiEffectiveValuesVerified": false,
     "internalAbsenceOfReadsProven": false,
-    "historicalConsentOrReadScopeInferred": false
+    "historicalConsentOrReadScopeInferred": false,
+    "observedParentRepositoryDiscoveryNotice": true
   }
 }

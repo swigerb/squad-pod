@@ -5,11 +5,11 @@
   "entries": [
     {
       "relativePath": "behavioral-matrix.json",
-      "bytes": 10042,
-      "sha256": "55cf107572c903ff308e22bc60a5d7f1002cc79ff606e99d9b27484694a14a2d",
+      "bytes": 12239,
+      "sha256": "e7d05e25399d8517a5e685aa75d1215e2b1c11146fc0260d73981de70b357331",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T17:24:11.250Z",
+      "indexedUtc": "2026-10-31T17:39:56.558Z",
       "caseIds": [
         "N-01"
       ],
@@ -18,11 +18,11 @@
     },
     {
       "relativePath": "case-ledger-atomic.json",
-      "bytes": 2194859,
-      "sha256": "772271303903c9c13fa7a2852b0bccf3f4374c8770182d34faf3b3ab3be2587f",
+      "bytes": 2366807,
+      "sha256": "c2552e937a94b16b3faa0489d6a13731c608dc4233e86f5cc330de26a58160f7",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T17:24:11.253Z",
+      "indexedUtc": "2026-10-31T17:39:56.560Z",
       "caseIds": [
         "N-01",
         "N-02",
@@ -57,11 +57,11 @@
     },
     {
       "relativePath": "case-ledger.json",
-      "bytes": 729193,
-      "sha256": "c4686b9d6459343a742afb20ba3a432b9b48040be409df5a9796de2441f25ea8",
+      "bytes": 751831,
+      "sha256": "71acf1829344974b3fad37c9541426454718bc35057112569b31934532f9f466",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T17:24:11.255Z",
+      "indexedUtc": "2026-10-31T17:39:56.563Z",
       "caseIds": [
         "N-01",
         "N-02",
@@ -100,7 +100,7 @@
       "sha256": "42855f50a7122d843c685a7e6bf659f585b1ec07d19b4224e3b2825aa5ba7e46",
       "productSha": null,
       "packageSha256": null,
-      "indexedUtc": "2026-10-31T17:24:11.256Z",
+      "indexedUtc": "2026-10-31T17:39:56.564Z",
       "caseIds": [
         "N-01"
       ],
@@ -113,11 +113,50 @@
       "sha256": "3490d7826061edce055b13c0e212a3d3371f5982460949f5e9a65072d05cec15",
       "productSha": null,
       "packageSha256": null,
-      "indexedUtc": "2026-10-31T17:24:11.257Z",
+      "indexedUtc": "2026-10-31T17:39:56.565Z",
       "caseIds": [
         "N-01"
       ],
       "provenance": "IMMUTABLE EARLIER GATE CHECKPOINT; CANDIDATE NOT THEN SUPPLIED",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "checkpoints/initial-api-publication.json",
+      "bytes": 395,
+      "sha256": "4fdc1b22b174e4b4e82bec3d16d906decb4c7caa3d0f7d42980f676f23e6f741",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:39:56.565Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "checkpoints/remote-readback-c85a3ce7655a.json",
+      "bytes": 593,
+      "sha256": "a6ebe45be84ad0b0ac9a3fca5f4f1b90279d9de182fa82feeb6d8f8ef115eacb",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:39:56.566Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
+      "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
+    },
+    {
+      "relativePath": "evidence/logs/native-startup-stop.json",
+      "bytes": 4435,
+      "sha256": "0b4fd07f4a54b4fcb5863f7642ca2fad6b65ed045a5101ed04f393f3fc7920b8",
+      "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+      "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+      "indexedUtc": "2026-10-31T17:39:56.567Z",
+      "caseIds": [
+        "N-01"
+      ],
+      "provenance": "CURRENT CANDIDATE",
       "privacyReview": "Synthetic aliases and public repository identities only; no credentials, personal paths or alias map."
     },
     {
@@ -126,7 +165,7 @@
       "sha256": "e3755b18605d56d91d1cd85f17a689a76dfbdeedf599b88d683df0b844e1c8d1",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T17:24:11.258Z",
+      "indexedUtc": "2026-10-31T17:39:56.568Z",
       "caseIds": [
         "N-01"
       ],
@@ -135,11 +174,11 @@
     },
     {
       "relativePath": "observations.jsonl",
-      "bytes": 928,
-      "sha256": "48cfacdfa7feb6faa21a3503d583117ba92d32aa6eea7a325b321b56a1e49771",
+      "bytes": 2205,
+      "sha256": "4f85fc058585ea2b6adc6dccc5df7ab0b6c805d210fe3b276fa8f71d6ebcd620",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T17:24:11.259Z",
+      "indexedUtc": "2026-10-31T17:39:56.571Z",
       "caseIds": [
         "N-01"
       ],
@@ -148,11 +187,11 @@
     },
     {
       "relativePath": "report.md",
-      "bytes": 4383,
-      "sha256": "bdcccdc044b8dfa1760e50d6595fb8a2e24e51344aa5d209b6fba615066eddac",
+      "bytes": 9134,
+      "sha256": "600e24097ea95b7dc6420691642311b7c9ddfb2f28cbf4fcaad3504f8e177c06",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T17:24:11.259Z",
+      "indexedUtc": "2026-10-31T17:39:56.572Z",
       "caseIds": [
         "N-01"
       ],
@@ -161,11 +200,11 @@
     },
     {
       "relativePath": "run-manifest.json",
-      "bytes": 8207,
-      "sha256": "1e4f7e872c0d250b11777a005acb7fc6c2726005c514d0d3cf5ef155267af52d",
+      "bytes": 10407,
+      "sha256": "0f217112664555dcae6c18e3c7e65c99603e046d397f90e5f034e516d703ee63",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T17:24:11.261Z",
+      "indexedUtc": "2026-10-31T17:39:56.573Z",
       "caseIds": [
         "N-01"
       ],
@@ -178,7 +217,7 @@
       "sha256": "c6988e54919138fe119e90402c882812987bd687d14dd1d8274b5ab0407bff3f",
       "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
       "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
-      "indexedUtc": "2026-10-31T17:24:11.262Z",
+      "indexedUtc": "2026-10-31T17:39:56.574Z",
       "caseIds": [
         "N-01"
       ],
