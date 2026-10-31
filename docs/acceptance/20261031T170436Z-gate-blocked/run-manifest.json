@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "runId": "20261031T170436Z-gate-blocked",
+  "status": "PREFLIGHT VERIFIED; INITIAL PUBLICATION PENDING",
+  "checkpointUtc": "2026-10-31T17:24:11.205Z",
+  "clock": {
+    "startUtc": "2026-10-31T17:04:36.279Z",
+    "startBasis": "Conservative clock anchored to receipt of the authorized directive.",
+    "testingStopUtc": "2026-10-31T18:49:36.279Z",
+    "hardStopUtc": "2026-10-31T19:04:36.279Z",
+    "runtimeTestingStartedUtc": null,
+    "candidateGateStoppedUtc": "2026-10-31T17:06:32.190Z",
+    "clockContinuesDuringHumanWait": true,
+    "extensionAuthorized": false
+  },
+  "plan": {
+    "sourceSha": "0c22cffded2985370a80158d6bc252effa16c01c",
+    "url": "https://github.com/swigerb/squad-pod/blob/0c22cffded2985370a80158d6bc252effa16c01c/docs/native-acceptance.md"
+  },
+  "candidate": {
+    "repository": "swigerb/squad-pod",
+    "recordReceivedUtc": "2026-10-31T17:16:36.301Z",
+    "appliesToExistingRun": "20261031T170436Z-gate-blocked",
+    "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+    "productTree": "a70bfda8186eceaee97c68544e767eaa99b9a402",
+    "ci": {
+      "runId": "41219175729",
+      "attempt": 1,
+      "conclusion": "success",
+      "url": "https://github.com/swigerb/squad-pod/actions/runs/41219175729",
+      "checkoutRole": "Synthetic merge commit",
+      "prHeadSha": "4f010a53305af0905651b49b63bb0e9d44fadf1c",
+      "mergedMasterSha": "7cb5fe4866b8fac1dbfce7f63b50989ddd9fa038",
+      "allThreeTreesIdentical": true
+    },
+    "includedFixIds": [
+      "2522124e48b46a702427692869470680e832351e"
+    ],
+    "membershipFix": {
+      "sha": "2522124e48b46a702427692869470680e832351e",
+      "pr": "https://github.com/swigerb/squad-pod/pull/143",
+      "description": "Establish workspace identity before replaying layout and roster.",
+      "included": true,
+      "nativeVerificationRequired": true
+    },
+    "excludedFixIds": [],
+    "fixScopeNote": "No additional known fix intentionally withheld from this selected tree; later or unpublished changes excluded. This does not claim all issues fixed.",
+    "vsix": {
+      "artifactName": "squad-pod-vsix",
+      "artifactId": "13048334827",
+      "filename": "squad-pod-0.1.0.vsix",
+      "bytes": 578477,
+      "sha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3"
+    },
+    "standalone": {
+      "artifactName": "owned-terminal-windows-latest",
+      "artifactId": "13049980047",
+      "filename": "squad-pod-observer-0.1.0.tgz",
+      "bytes": 423982,
+      "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a"
+    },
+    "packageScopeNote": "Hashes identify extracted inner packages, not Actions ZIPs. Standalone bytes match the historical Windows package; VSIX bytes do not.",
+    "sourcePlan": {
+      "sha": "0c22cffded2985370a80158d6bc252effa16c01c",
+      "path": "docs/native-acceptance.md",
+      "lfBytesSha256": "82b2ab59ae8d8592e17cf3ddfb2a990cbf87452c779f21ab0dd102ec9add7fa4",
+      "url": "https://github.com/swigerb/squad-pod/blob/0c22cffded2985370a80158d6bc252effa16c01c/docs/native-acceptance.md",
+      "historicalInstallationTargetSuperseded": true,
+      "proceduresRemainApplicable": true
+    },
+    "clock": {
+      "startUtc": "2026-10-31T17:04:36.279Z",
+      "testingStopUtc": "2026-10-31T18:49:36.279Z",
+      "hardStopUtc": "2026-10-31T19:04:36.279Z",
+      "restartAuthorized": false,
+      "extensionAuthorized": false
+    },
+    "installedPayloadVerified": true
+  },
+  "historicalPlanCandidate": {
+    "applicability": "Historical only, as explicitly designated by the directive. Not selected for this run.",
+    "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+    "productTree": "e8bc96dc315b46d9926a0065a132e3d63636580c",
+    "ciRunId": "41173070887",
+    "vsix": {
+      "artifactName": "squad-pod-vsix",
+      "artifactId": "13031881538",
+      "filename": "squad-pod-0.1.0.vsix",
+      "bytes": 578477,
+      "sha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad"
+    },
+    "standalone": {
+      "artifactName": "owned-terminal-windows-latest",
+      "artifactId": "13031892507",
+      "filename": "squad-pod-observer-0.1.0.tgz",
+      "bytes": 423982,
+      "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a"
+    },
+    "identityVerification": "Documented values only; no package or installed payload was examined."
+  },
+  "historicalEvidence": {
+    "sourceSha": "a6047b4dad447092de57342f131090c7dedac208",
+    "url": "https://github.com/swigerb/squad-pod/tree/a6047b4dad447092de57342f131090c7dedac208/docs/acceptance/20261031T135929Z-fresh-25a14517",
+    "pr": "https://github.com/swigerb/squad-pod/pull/141",
+    "newCandidatePassesCarriedForward": 0,
+    "historicalLedgerRebuilt": false,
+    "lostArtifactSearchPerformed": false
+  },
+  "gate": {
+    "outcome": "PASS",
+    "evidenceClass": null,
+    "recordType": "PACKAGE_IDENTITY_NOT_RUNTIME_BEHAVIOR",
+    "reason": "Frozen CI/artifact/tree/plan/package checks matched. Installer metadata exception explicitly recorded.",
+    "stoppedOnInitialRawManifestMismatch": true,
+    "rawMismatchResolution": "Only package.json differs: VS Code added __metadata. Every original manifest property compares equal; every other packaged installed file compares by raw SHA-256.",
+    "expectedManifestSha256": "201cfc005d22038d91365d60fc6772918bb861278e2c49c29a816e779bbcb177",
+    "installedManifestSha256": "7d0686626f9c5f7a8155c87e176967fc92249b1661f69e0a84ea4fded782b33d",
+    "installedBundleSha256": "622fa32cba1e28dc5720be5d3676fa475ec81a45b5010330a509b8d13aa4e478",
+    "originalManifestPropertyChanges": [],
+    "addedManifestPropertyNames": [
+      "__metadata"
+    ],
+    "executableOrAssetMismatches": []
+  },
+  "execution": {
+    "packageDownloadPerformed": true,
+    "installationPerformed": true,
+    "nativeOrBrowserRuntimeTestingPerformed": false,
+    "settingsInspectionPerformed": false,
+    "effectiveIsolationEstablished": false,
+    "humanAuthenticationPerformed": false,
+    "officeControlWritesPerformed": false,
+    "syntheticTerminalsLaunched": 0,
+    "realProducerLaunches": 0,
+    "testLaunchedAiSpend": 0,
+    "dependencyInstallationPerformed": false,
+    "productCodeChangesPerformed": false,
+    "newNativeEvidenceProduced": false,
+    "runtimeMediaProduced": false
+  },
+  "publication": {
+    "authorizedRepository": "swigerb/squad-pod",
+    "authorizedBase": "master",
+    "draftPrUrl": null,
+    "pushedSha": null,
+    "verifiedRemoteSha": null,
+    "status": "INITIAL PUBLICATION PENDING",
+    "reason": "Publish and verify this initial scoped checkpoint before any runtime testing.",
+    "branch": "evidence/native-20261031T170436Z-f3f080d4"
+  },
+  "cleanup": {
+    "runOwnedRetainedHostsServersHelpers": [],
+    "runOwnedSyntheticTerminals": [],
+    "retainedArtifacts": [
+      "Frozen packages and isolated installation",
+      "Historical mapping source copies",
+      "Gate checkpoint",
+      "Current publication artifacts"
+    ],
+    "cleanupAwaitingPermission": [],
+    "otherSessionsProcessesInspectedOrTerminated": false
+  },
+  "humanAcceptance": "PENDING",
+  "runtime": {
+    "vscodeVersion": "1.144.0",
+    "vscodeCommit": "2c33b50b16c472efe58357d1d2a8a5414bc23fbf",
+    "architecture": "x64",
+    "nodeVersion": "v26.13.0",
+    "productVersionNotUsedAsIdentity": true,
+    "nativeWindowNotYetLaunched": true,
+    "dependencyFeedUsed": false,
+    "dependencyInstallationPerformed": false
+  },
+  "isolation": {
+    "aliases": [
+      "RUN_ROOT",
+      "ISOLATED_PROFILE",
+      "ISOLATED_EXTENSIONS",
+      "FIXTURE_CLI_HOME",
+      "PROJECT_A",
+      "PROJECT_B"
+    ],
+    "liveActivity": {
+      "profile": false,
+      "workspaceA": false,
+      "folderA": false,
+      "workspaceB": false,
+      "folderB": false
+    },
+    "directorySuggestions": {
+      "profile": false,
+      "workspaceA": false,
+      "folderA": false,
+      "workspaceB": false,
+      "folderB": false
+    },
+    "selectedRealUsageExport": null,
+    "normalCliLogRootConfigured": false,
+    "realTaskOrTerminalLaunchConfigured": false,
+    "uiEffectiveValuesVerified": false,
+    "internalAbsenceOfReadsProven": false,
+    "historicalConsentOrReadScopeInferred": false
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "repository": "swigerb/squad-pod",
+  "recordReceivedUtc": "2026-10-31T17:16:36.301Z",
+  "appliesToExistingRun": "20261031T170436Z-gate-blocked",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "productTree": "a70bfda8186eceaee97c68544e767eaa99b9a402",
+  "ci": {
+    "runId": "41219175729",
+    "attempt": 1,
+    "conclusion": "success",
+    "url": "https://github.com/swigerb/squad-pod/actions/runs/41219175729",
+    "checkoutRole": "Synthetic merge commit",
+    "prHeadSha": "4f010a53305af0905651b49b63bb0e9d44fadf1c",
+    "mergedMasterSha": "7cb5fe4866b8fac1dbfce7f63b50989ddd9fa038",
+    "allThreeTreesIdentical": true
+  },
+  "includedFixIds": [
+    "2522124e48b46a702427692869470680e832351e"
+  ],
+  "membershipFix": {
+    "sha": "2522124e48b46a702427692869470680e832351e",
+    "pr": "https://github.com/swigerb/squad-pod/pull/143",
+    "description": "Establish workspace identity before replaying layout and roster.",
+    "included": true,
+    "nativeVerificationRequired": true
+  },
+  "excludedFixIds": [],
+  "fixScopeNote": "No additional known fix intentionally withheld from this selected tree; later or unpublished changes excluded. This does not claim all issues fixed.",
+  "vsix": {
+    "artifactName": "squad-pod-vsix",
+    "artifactId": "13048334827",
+    "filename": "squad-pod-0.1.0.vsix",
+    "bytes": 578477,
+    "sha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3"
+  },
+  "standalone": {
+    "artifactName": "owned-terminal-windows-latest",
+    "artifactId": "13049980047",
+    "filename": "squad-pod-observer-0.1.0.tgz",
+    "bytes": 423982,
+    "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a"
+  },
+  "packageScopeNote": "Hashes identify extracted inner packages, not Actions ZIPs. Standalone bytes match the historical Windows package; VSIX bytes do not.",
+  "sourcePlan": {
+    "sha": "0c22cffded2985370a80158d6bc252effa16c01c",
+    "path": "docs/native-acceptance.md",
+    "lfBytesSha256": "82b2ab59ae8d8592e17cf3ddfb2a990cbf87452c779f21ab0dd102ec9add7fa4",
+    "url": "https://github.com/swigerb/squad-pod/blob/0c22cffded2985370a80158d6bc252effa16c01c/docs/native-acceptance.md",
+    "historicalInstallationTargetSuperseded": true,
+    "proceduresRemainApplicable": true
+  },
+  "clock": {
+    "startUtc": "2026-10-31T17:04:36.279Z",
+    "testingStopUtc": "2026-10-31T18:49:36.279Z",
+    "hardStopUtc": "2026-10-31T19:04:36.279Z",
+    "restartAuthorized": false,
+    "extensionAuthorized": false
+  }
+}
