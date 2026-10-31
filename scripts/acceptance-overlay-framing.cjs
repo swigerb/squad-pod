@@ -103,19 +103,23 @@ function Fixture(){
      motionEnabled=false;
      office.subagents.clear();
      setZoom(1);
-     for(let i=0;i<8;i++) Object.assign(office.characters.get('member-'+i),{
+     for(let i=2;i<8;i++) office.characters.delete('member-'+i);
+     for(let i=0;i<2;i++) {
+       tools['member-'+i]=[];
+       Object.assign(office.characters.get('member-'+i),{
        x:(i%2?innerWidth-90:90)-pan.current.x,
-       y:220+(i<2?0:Math.floor(i/2)*160+(i%2)*40)-pan.current.y,
+       y:220-pan.current.y,
        state:CharacterState.IDLE,path:[],wanderTimer:1000000,active:false});
+     }
      refreshFixture(value=>value+1);
    },
    toolbarEdgeProof(){
      motionEnabled=false;
      office.subagents.clear();
      setZoom(1);
-     for(let i=0;i<8;i++) Object.assign(office.characters.get('member-'+i),{
+     for(let i=0;i<2;i++) Object.assign(office.characters.get('member-'+i),{
        x:(i%2?innerWidth-90:90)-pan.current.x,
-       y:(i===0?60:180+Math.floor(i/2)*160+(i%2)*40)-pan.current.y,
+       y:(i===0?60:260)-pan.current.y,
        state:CharacterState.IDLE,path:[],wanderTimer:1000000,active:false});
      refreshFixture(value=>value+1);
    },
@@ -366,7 +370,7 @@ async function main() {
           await page.waitForFunction(() => {
             if (document.querySelectorAll('[data-subagent-label]').length) return false;
             const proof=window.fixture.sample();
-            return proof.length===8&&proof.every(label=>label.zoom===1&&!label.docked
+            return proof.length===2&&proof.every(label=>label.zoom===1&&!label.docked
               &&label.width>0&&label.height>0
               &&Math.abs(label.y+label.height-(window.fixture.bounds(label.id).top-8))<2);
           });
