@@ -25,6 +25,10 @@ describe('AgentLabels over canvas characters', () => {
   const panRef = { current: { x: 30, y: 40 } };
   const onAgentClick = vi.fn();
   const client = createHostClientFixture();
+  const dimensionDescriptors = {
+    offsetWidth: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth')!,
+    offsetHeight: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')!,
+  };
 
   beforeEach(() => {
     frames = new Map();
@@ -55,6 +59,7 @@ describe('AgentLabels over canvas characters', () => {
   afterEach(() => {
     act(() => root.unmount());
     host.remove();
+    Object.defineProperties(HTMLElement.prototype, dimensionDescriptors);
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -384,17 +389,22 @@ describe('AgentLabels over canvas characters', () => {
         expect(host.querySelector('[data-agent-connector="homer"]')).not.toBeNull();
   });
 
+  // Windows CI measured 1.2-6.1s per case, exceeding the 5s default under runner contention.
   it.each([360, 1400].flatMap(width => Array.from({ length: 10 }, (_, i) => [width, i + 1])))
       ('bounds collision-lane changes over 60s in a %spx panel at zoom %s (CSS pixels, DPR 1.5)', (width, zoom) => {
         vi.stubGlobal('devicePixelRatio', 1.5);
         vi.stubGlobal('innerWidth', width);
         vi.stubGlobal('innerHeight', 900);
-        vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
-          return this.dataset.agentAnnotation ? 90 : 0;
+        // Fixed jsdom geometry needs no spy call history for every layout measurement.
+        Object.defineProperties(HTMLElement.prototype, {
+          offsetWidth: { configurable: true, get(this: HTMLElement) {
+            return this.dataset.agentAnnotation ? 90 : 0;
+          } },
+          offsetHeight: { configurable: true, get(this: HTMLElement) {
+            return this.dataset.agentAnnotation ? 28 : 0;
+          } },
         });
-        vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
-          return this.dataset.agentAnnotation ? 28 : 0;
-        });
+        const crowd = Array.from({ length: 6 }, (_, i) => `crowd-${i}`);
         for (let i = 0; i < 6; i++) {
           const id = `crowd-${i}`;
           office.addAgent(id, `Moving member ${i}`, 'Developer');
@@ -404,6 +414,7 @@ describe('AgentLabels over canvas characters', () => {
         frame(); // Real measured dimensions become available after the first DOM commit.
         const previous = new Map<string, { top: number; anchor: number }>();
         let maxLaneStep = 0;
+        let worstLane: { id: string; tick: number; top: number; anchor: number } | undefined;
         for (let tick = 0; tick < 600; tick++) {
           for (let i = 0; i < 6; i++) {
             Object.assign(office.characters.get(`crowd-${i}`)!, {
@@ -413,22 +424,58 @@ describe('AgentLabels over canvas characters', () => {
             });
           }
           frame();
-          for (const element of host.querySelectorAll<HTMLElement>('[data-agent-label]')) {
-            const id = element.dataset.agentLabel!;
-            if (!id.startsWith('crowd-')) continue;
-            const top = parseFloat(element.parentElement!.style.top);
-            const bounds = getCharacterScreenBounds(office.characters.get(id)!, zoom, panRef.current);
+          if (panRef.current.x !== 30 || panRef.current.y !== 40) {
+            expect(panRef.current, `width=${width}, zoom=${zoom}, frame=${tick}: unchanged camera`)
+              .toEqual({ x: 30, y: 40 });
+          }
+          // Discover live nodes each frame: cached references could hide removal/replacement.
+          const labels = new Map([...host.querySelectorAll<HTMLElement>('[data-agent-label]')]
+            .map(element => [element.dataset.agentLabel!, element]));
+          const connectors = new Map([...host.querySelectorAll<SVGLineElement>('[data-agent-connector]')]
+            .map(element => [element.dataset.agentConnector!, element]));
+          for (const id of crowd) {
+            const context = `width=${width}, zoom=${zoom}, DPR=1.5, frame=${tick}, member=${id}`;
+            const element = labels.get(id);
+            const connector = connectors.get(id);
+            // Pay matcher/diagnostic cost only on failure, not thousands of successful reads.
+            if (!element || !connector) {
+              expect(element, `${context}: live label`).toBeDefined();
+              expect(connector, `${context}: live connector`).toBeDefined();
+            }
+            const character = office.characters.get(id)!;
+            const top = parseFloat(element!.parentElement!.style.top);
+            const bounds = getCharacterScreenBounds(character, zoom, panRef.current);
             const anchor = Math.max(4, Math.min(bounds.top - 14, 900 - 28 - 4));
+            if (!Number.isFinite(top)) expect(Number.isFinite(top), `${context}: finite label top (${top})`).toBe(true);
             const last = previous.get(id);
-            if (last) maxLaneStep = Math.max(maxLaneStep, Math.abs((top - last.top) - (anchor - last.anchor)));
+            if (last) {
+              const step = Math.abs((top - last.top) - (anchor - last.anchor));
+              if (!Number.isFinite(step)) {
+                expect(Number.isFinite(step), `${context}: finite lane step (${step})`).toBe(true);
+              }
+              if (step > maxLaneStep) {
+                maxLaneStep = step;
+                worstLane = { id, tick, top, anchor };
+              }
+            }
             previous.set(id, { top, anchor });
-            expect(element.textContent).toContain('Developer');
-            const connector = host.querySelector(`[data-agent-connector="${id}"]`)!;
-            expect(Number(connector.getAttribute('x2'))).toBeCloseTo(
-              office.characters.get(id)!.x * zoom + panRef.current.x);
+            const text = element!.textContent;
+            if (!text?.includes('Developer')) expect(text, `${context}: role text`).toContain('Developer');
+            const x2 = connector!.getAttribute('x2');
+            const expectedX = character.x * zoom + panRef.current.x;
+            if (x2 === null || !Number.isFinite(Number(x2)) || !(Math.abs(Number(x2) - expectedX) < 0.005)) {
+              expect(x2, `${context}: connector x2 attribute`).not.toBeNull();
+              expect(Number(x2), `${context}: connector x2 alignment`).toBeCloseTo(expectedX);
+            }
+            const y2 = connector!.getAttribute('y2');
+            if (y2 === null || !Number.isFinite(Number(y2)) || !(Math.abs(Number(y2) - bounds.top) < 0.005)) {
+              expect(y2, `${context}: connector y2 attribute`).not.toBeNull();
+              expect(Number(y2), `${context}: connector y2 alignment`).toBeCloseTo(bounds.top);
+            }
           }
         }
-        expect(maxLaneStep).toBeLessThanOrEqual(12.000001);
+        expect(maxLaneStep, `width=${width}, zoom=${zoom}: worst lane ${JSON.stringify(worstLane)}`)
+          .toBeLessThanOrEqual(12.000001);
         expect(panRef.current).toEqual({ x: 30, y: 40 });
-  });
+  }, 20_000);
 });
