@@ -36,6 +36,9 @@ alias maps, unreviewed screenshots, unrelated files, merging the PR, and
 closing acceptance issues. Screenshots require individual selection and
 redaction. Do not publish if privacy doubts remain.
 Return the report PR URL and existing/new defect issue URLs to the coordinator.
+In the report PR body, reference issues only with ordinary links or `Refs #<number>`.
+Never use closing keywords, including in negated wording; before reporting the PR,
+verify its `closingIssuesReferences` list is empty.
 Do not require a separate report-file handoff or another approval for this
 already authorized scope. Still honor any tool/runtime-mandated confirmation.
 If you lack repository access or publishing capability, report that limitation
@@ -812,7 +815,7 @@ Exclude usernames, absolute personal paths, customer/repository names other than
 
 Search `swigerb/squad-pod` for a matching issue before posting each defect. Update a match with the new run evidence when appropriate; otherwise file a new issue. Use the defect template below, include the **test ID in the title** and **Run ID / product source SHA / VSIX SHA-256**, and link each issue in the report. The copy-ready instruction authorizes these redacted issue create/updates; do not ask for a second posting approval. The coordinator reviews and merges the report PR, coordinates fixes and affected-case reruns, and closes acceptance issues only when their evidence criteria are satisfied. Scout must not merge PRs or close issues. Any product fix requires a new identified artifact and rerun of affected cases; preserve the prior failed run and never transfer its acceptance to the new build. Publication is not human acceptance and does not satisfy any issue's evidence gate by itself.
 
-Publish the report from a dedicated report branch: commit only the reviewed report (and any individually selected, separately approved images) at `docs/acceptance/<run-id>/report.md`, push that branch, and open a PR targeting `master`. Never push directly to `master`, merge the PR, or include unrelated files. Return the report PR URL and the URLs of existing/new defect issues to the coordinator. If repository access or the required publishing capability is unavailable, state that plainly and stop publication; do not find a workaround or fall back to a manual handoff.
+Publish the report from a dedicated report branch: commit only the reviewed report (and any individually selected, separately approved images) at `docs/acceptance/<run-id>/report.md`, push that branch, and open a PR targeting `master`. Never push directly to `master`, merge the PR, or include unrelated files. In the PR body, reference issues only with ordinary links or `Refs #<number>`; never use closing keywords, including in negated wording. Verify `closingIssuesReferences` is empty before returning the PR URL and the URLs of existing/new defect issues to the coordinator. If repository access or the required publishing capability is unavailable, state that plainly and stop publication; do not find a workaround or fall back to a manual handoff.
 
 ### Results template
 
