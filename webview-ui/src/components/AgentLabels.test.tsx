@@ -7,6 +7,7 @@ import { OfficeCanvas } from '../office/components/OfficeCanvas.js';
 import { OfficeState } from '../office/engine/officeState.js';
 import { EditorState } from '../office/editor/editorState.js';
 import { CharacterState, TileType } from '../office/types.js';
+import type { ToolActivity } from '../office/types.js';
 import { HostClientProvider } from '../HostClientContext.js';
 import { createHostClientFixture } from '../__tests__/hostClientFixture.js';
 import { setContextUsage } from '../office/toolUtils.js';
@@ -71,12 +72,14 @@ describe('AgentLabels over canvas characters', () => {
     act(() => callbacks.forEach((callback) => callback(time)));
   }
 
-  function render(zoom = 2, withCanvas = false) {
+  function render(zoom = 2, withCanvas = false, taskBubbles: Readonly<Record<string, string>> = {},
+    agentTools: Record<string, ToolActivity[]> = {}) {
     act(() => root.render(<HostClientProvider client={client}><>
       {withCanvas && <OfficeCanvas officeState={office} editorState={new EditorState()}
         isEditMode={false} editorTick={0} zoom={zoom} panRef={panRef}
         onDeskClick={onAgentClick} />}
-      <AgentLabels officeState={office} zoom={zoom} panRef={panRef} onAgentClick={onAgentClick} />
+      <AgentLabels officeState={office} zoom={zoom} panRef={panRef} taskBubbles={taskBubbles}
+        agentTools={agentTools} onAgentClick={onAgentClick} />
     </></HostClientProvider>));
     frame();
     frame();
@@ -113,7 +116,7 @@ describe('AgentLabels over canvas characters', () => {
     office.removeAgent('marge');
     render();
     expect(label().parentElement!.style.left).toBe('190px');
-    expect(label().parentElement!.style.top).toBe('194px');
+    expect(label().parentElement!.style.top).toBe('200px');
     Object.assign(office.characters.get('homer')!, { name: 'Homer Updated', role: 'Reviewer', x: 90, y: 110 });
     office.selectedAgentId = 'homer';
     panRef.current = { x: 50, y: 60 };
@@ -122,7 +125,7 @@ describe('AgentLabels over canvas characters', () => {
     expect(label('Homer Updated').style.color).toBe('rgb(251, 191, 36)');
     render(3);
     expect(label('Homer Updated').parentElement!.style.left).toBe('320px');
-    expect(label('Homer Updated').parentElement!.style.top).toBe('328px');
+    expect(label('Homer Updated').parentElement!.style.top).toBe('334px');
     office.removeAgent('homer');
     frame();
     expect(host.textContent).not.toContain('Homer');
@@ -233,13 +236,14 @@ describe('AgentLabels over canvas characters', () => {
       return this.dataset.agentAnnotation ? 58 : this.dataset.agentLabel ? 28 : this.dataset.agentToolBubble ? 18 : 0;
     });
     for (const id of ['homer', 'marge']) {
-      Object.assign(office.characters.get(id)!, { x: 80, y: 100 });
+      Object.assign(office.characters.get(id)!, { x: 80, y: id === 'homer' ? 100 : 200 });
       office.setAgentActive(id, true);
       office.setAgentTool(id, 'view');
       setContextUsage(office, id, { contextTokens: 600, maxContextTokens: 1000 });
     }
     render(2);
     frame();
+    expect(host.querySelector('[data-label-dock="true"]')).toBeNull();
     const boxes = [...host.querySelectorAll<HTMLElement>('[data-agent-annotation]')]
       .map(element => {
         const width = element.offsetWidth;
@@ -259,6 +263,124 @@ describe('AgentLabels over canvas characters', () => {
     expect(host.querySelector('[data-agent-context="homer"]')).toBeNull();
   });
 
+  it('keeps each measured floating annotation above every character it spans', () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 140 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 62 : 0;
+    });
+    Object.assign(office.characters.get('homer')!, { x: 80, y: 100 });
+    Object.assign(office.characters.get('marge')!, { x: 80, y: 250 });
+    office.setAgentActive('homer', true);
+    office.setAgentTool('homer', 'Read file');
+    setContextUsage(office, 'homer', { contextTokens: 600, maxContextTokens: 1000 });
+    render(2, false, { homer: 'CLI task: Running a focused check' }, {
+      homer: [{ toolId: 'read-file', status: 'Reading file', done: false }],
+    });
+    frame();
+
+    expect(host.querySelector('[data-label-dock="true"]')).toBeNull();
+    expect(host.querySelectorAll('line[data-agent-connector], line[data-subagent-connector]')).toHaveLength(0);
+    expect(host.querySelector('[data-agent-task-bubble="homer"]')).not.toBeNull();
+    expect(host.querySelector('[data-agent-tools="homer"]')).not.toBeNull();
+    expect(host.querySelector('[data-agent-tool-bubble="homer"]')).not.toBeNull();
+    expect(host.querySelector('[data-agent-context="homer"]')).not.toBeNull();
+    const characters = [...office.characters].map(([id, character]) => ({
+      id, bounds: getCharacterScreenBounds(character, 2, panRef.current),
+    }));
+    const annotations = [...host.querySelectorAll<HTMLElement>('[data-agent-annotation]')];
+    expect(annotations).toHaveLength(2);
+    for (const annotation of annotations) {
+      const box = {
+        left: parseFloat(annotation.style.left) - annotation.offsetWidth / 2,
+        top: parseFloat(annotation.style.top),
+        right: parseFloat(annotation.style.left) + annotation.offsetWidth / 2,
+        bottom: parseFloat(annotation.style.top) + annotation.offsetHeight,
+      };
+      for (const character of characters) {
+        const bounds = character.bounds;
+        const spansCharacter = box.left < bounds.right && box.right > bounds.left;
+        if (spansCharacter) {
+          const overlapsSprite = box.top < bounds.bottom && box.bottom > bounds.top;
+          expect(overlapsSprite).toBe(false);
+          if (annotation.dataset.agentAnnotation === `member:${character.id}`) {
+            expect(box.bottom).toBeLessThanOrEqual(bounds.top - 8);
+          }
+        }
+      }
+    }
+  });
+
+  it('keeps sparse same-row labels floating at their direct anchors', () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 80 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 28 : 0;
+    });
+    Object.assign(office.characters.get('homer')!, { x: 80, y: 100 });
+    Object.assign(office.characters.get('marge')!, { x: 230, y: 100 });
+    render(2);
+    frame();
+
+    expect(host.querySelector('[data-label-dock="true"]')).toBeNull();
+    for (const [id, character] of office.characters) {
+      const annotation = host.querySelector<HTMLElement>(`[data-agent-annotation="member:${id}"]`)!;
+      const bounds = getCharacterScreenBounds(character, 2, panRef.current);
+      expect(parseFloat(annotation.style.top) + annotation.offsetHeight).toBe(bounds.top - 8);
+    }
+  });
+
+  it('uses a compact association cue only for a modestly displaced label', () => {
+    office.removeAgent('marge');
+    Object.assign(office.characters.get('homer')!, { x: 25, y: 100 });
+    vi.stubGlobal('innerWidth', 360);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 160 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 30 : 0;
+    });
+    render(2);
+    expect(host.querySelector('[data-label-dock="true"]')).toBeNull();
+    expect(host.querySelector('[data-agent-association="homer"]')).not.toBeNull();
+    expect(host.querySelector('line')).toBeNull();
+  });
+
+  it('docks a visible side-edge label when clamping would detach it from its character', () => {
+    office.removeAgent('marge');
+    Object.assign(office.characters.get('homer')!, { x: (359 - panRef.current.x) / 2, y: 100 });
+    vi.stubGlobal('innerWidth', 360);
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 180 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 30 : 0;
+    });
+    render(2);
+
+    expect(host.querySelector('[data-label-dock="true"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label^="Crowded office labels"]')).not.toBeNull();
+    expect(label().textContent).toContain('Homer Simpson');
+  });
+
+  it('uses the accessible dock when the top edge leaves no safe label space', () => {
+    office.removeAgent('marge');
+    Object.assign(office.characters.get('homer')!, { x: 80, y: 0 });
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 120 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.dataset.agentAnnotation ? 60 : 0;
+    });
+    render();
+    expect(host.querySelector('[data-label-dock="true"]')).not.toBeNull();
+    expect(host.querySelector('[aria-label^="Crowded office labels"]')).not.toBeNull();
+    expect(label().textContent).toContain('Homer Simpson');
+    expect(host.querySelector('line')).toBeNull();
+  });
+
   it('projects member/subtask and subtask/subtask footprints together through motion and measurement changes', () => {
     let taskHeight = 20;
     let memberHeight = 20;
@@ -273,29 +395,49 @@ describe('AgentLabels over canvas characters', () => {
     });
     for (const id of ['homer', 'test-child']) {
       const character = createCharacter(id, `Test task ${id}`, 'Ephemeral', 0, null, null, 0);
-      Object.assign(character, { x: 80, y: 100 });
+      Object.assign(character, { x: id === 'homer' ? 180 : 80, y: id === 'homer' ? 360 : 430 });
       office.subagents.set(id, { character, parentAgentId: 'homer' });
     }
+    Object.assign(office.characters.get('marge')!, { y: 230 });
     render();
+    let floatingFrames = 0;
+    let floatingAnchorComparisons = 0;
     for (let tick = 0; tick < 100; tick++) {
       taskHeight = tick % 2 ? 80 : 20;
       memberHeight = tick % 3 ? 20 : 100;
       office.characters.get('homer')!.x = 80 + Math.sin(tick / 10) * 20;
-      office.subagents.get('homer')!.character.y = 100 + Math.sin(tick / 10) * 20;
+      office.subagents.get('homer')!.character.y = 360 + Math.sin(tick / 10) * 20;
+      office.subagents.get('test-child')!.character.y = 430 + Math.sin(tick / 10) * 20;
       frame();
       const annotations = [...host.querySelectorAll<HTMLElement>('[data-agent-annotation]')];
       expect(annotations).toHaveLength(4); // Member and transient with identical IDs remain distinct.
-      annotations.forEach((element, index) => {
-        const top = parseFloat(element.style.top);
-        annotations.slice(index + 1).forEach(other => {
-          const otherTop = parseFloat(other.style.top);
-          expect(top + element.offsetHeight <= otherTop || otherTop + other.offsetHeight <= top).toBe(true);
+      if (host.querySelector('[data-label-dock="true"]')) {
+        expect(host.querySelector('[aria-label^="Crowded office labels"]')).not.toBeNull();
+      } else {
+        floatingFrames++;
+        annotations.forEach((element, index) => {
+          const top = parseFloat(element.style.top);
+          const [kind, id] = element.dataset.agentAnnotation!.split(':');
+          const character = kind === 'member'
+            ? office.characters.get(id)
+            : office.subagents.get(id)?.character;
+          expect(character, `live character for ${element.dataset.agentAnnotation}`).toBeDefined();
+          const bounds = getCharacterScreenBounds(character!, 2, panRef.current);
+          const expectedTop = bounds.top - 8 - element.offsetHeight;
+          expect(Number.isFinite(top)).toBe(true);
+          expect(Math.abs(top - expectedTop)).toBeLessThanOrEqual(12);
+          floatingAnchorComparisons++;
+          annotations.slice(index + 1).forEach(other => {
+            const otherTop = parseFloat(other.style.top);
+            expect(top + element.offsetHeight <= otherTop || otherTop + other.offsetHeight <= top).toBe(true);
+          });
         });
-      });
+      }
       expect(host.querySelectorAll('[data-subagent-label]')).toHaveLength(2);
       expect(host.querySelector('[data-subagent-label="test-child"]')?.textContent).toContain('Parent: Homer Simpson');
-      expect(host.querySelector('[data-label-dock="true"]')).toBeNull();
     }
+    expect(floatingFrames).toBeGreaterThan(0);
+    expect(floatingAnchorComparisons).toBeGreaterThan(0);
     office.subagents.clear();
     frame();
     expect(host.querySelector('[data-subagent-label]')).toBeNull();
@@ -310,13 +452,14 @@ describe('AgentLabels over canvas characters', () => {
       return this.dataset.agentAnnotation ? (this.querySelector('[data-agent-task-bubble]') ? 90 : 30) : 0;
     });
     for (const id of ['homer', 'marge']) {
-      Object.assign(office.characters.get(id)!, { x: 80, y: 100 });
+      Object.assign(office.characters.get(id)!, { x: 80, y: id === 'homer' ? 100 : 200 });
       office.setAgentActive(id, true);
     }
     const show = (taskBubbles: Record<string, string>) => {
       act(() => root.render(<AgentLabels officeState={office} zoom={2} panRef={panRef} taskBubbles={taskBubbles} />));
       frame();
       frame();
+      expect(host.querySelector('[data-label-dock="true"]')).toBeNull();
       const [a, b] = [...host.querySelectorAll<HTMLElement>('[data-agent-annotation]')];
       expect(parseFloat(a.style.top) + a.offsetHeight <= parseFloat(b.style.top)
         || parseFloat(b.style.top) + b.offsetHeight <= parseFloat(a.style.top)).toBe(true);
@@ -383,15 +526,16 @@ describe('AgentLabels over canvas characters', () => {
         expect(locate).toHaveBeenCalledExactlyOnceWith('homer');
         expect(onAgentClick).not.toHaveBeenCalled();
         expect(host.querySelector('[data-agent-connector="homer"]')).toBeNull();
+        expect(host.querySelector('line[data-agent-connector]')).toBeNull();
         panRef.current.x = -700;
         frame();
         expect(label().textContent).not.toContain('Off-screen');
-        expect(host.querySelector('[data-agent-connector="homer"]')).not.toBeNull();
+        expect(host.querySelector('line[data-agent-connector]')).toBeNull();
   });
 
   // Windows CI measured 1.2-6.1s per case, exceeding the 5s default under runner contention.
   it.each([360, 1400].flatMap(width => Array.from({ length: 10 }, (_, i) => [width, i + 1])))
-      ('bounds collision-lane changes over 60s in a %spx panel at zoom %s (CSS pixels, DPR 1.5)', (width, zoom) => {
+      ('bounds collision fallback and floating anchor motion over 60s in a %spx panel at zoom %s (CSS pixels, DPR 1.5)', (width, zoom) => {
         vi.stubGlobal('devicePixelRatio', 1.5);
         vi.stubGlobal('innerWidth', width);
         vi.stubGlobal('innerHeight', 900);
@@ -412,9 +556,7 @@ describe('AgentLabels over canvas characters', () => {
         }
         render(zoom);
         frame(); // Real measured dimensions become available after the first DOM commit.
-        const previous = new Map<string, { top: number; anchor: number }>();
-        let maxLaneStep = 0;
-        let worstLane: { id: string; tick: number; top: number; anchor: number } | undefined;
+        let crowdedFrames = 0;
         for (let tick = 0; tick < 600; tick++) {
           for (let i = 0; i < 6; i++) {
             Object.assign(office.characters.get(`crowd-${i}`)!, {
@@ -431,51 +573,59 @@ describe('AgentLabels over canvas characters', () => {
           // Discover live nodes each frame: cached references could hide removal/replacement.
           const labels = new Map([...host.querySelectorAll<HTMLElement>('[data-agent-label]')]
             .map(element => [element.dataset.agentLabel!, element]));
-          const connectors = new Map([...host.querySelectorAll<SVGLineElement>('[data-agent-connector]')]
-            .map(element => [element.dataset.agentConnector!, element]));
+          const docked = host.querySelector('[data-label-dock="true"]') !== null;
+          expect(docked, `width=${width}, zoom=${zoom}, frame=${tick}: crowded labels use the dock`).toBe(true);
+          expect(host.querySelector('[aria-label^="Crowded office labels"]')).not.toBeNull();
+          crowdedFrames++;
           for (const id of crowd) {
             const context = `width=${width}, zoom=${zoom}, DPR=1.5, frame=${tick}, member=${id}`;
             const element = labels.get(id);
-            const connector = connectors.get(id);
             // Pay matcher/diagnostic cost only on failure, not thousands of successful reads.
-            if (!element || !connector) {
-              expect(element, `${context}: live label`).toBeDefined();
-              expect(connector, `${context}: live connector`).toBeDefined();
-            }
-            const character = office.characters.get(id)!;
-            const top = parseFloat(element!.parentElement!.style.top);
-            const bounds = getCharacterScreenBounds(character, zoom, panRef.current);
-            const anchor = Math.max(4, Math.min(bounds.top - 14, 900 - 28 - 4));
-            if (!Number.isFinite(top)) expect(Number.isFinite(top), `${context}: finite label top (${top})`).toBe(true);
-            const last = previous.get(id);
-            if (last) {
-              const step = Math.abs((top - last.top) - (anchor - last.anchor));
-              if (!Number.isFinite(step)) {
-                expect(Number.isFinite(step), `${context}: finite lane step (${step})`).toBe(true);
-              }
-              if (step > maxLaneStep) {
-                maxLaneStep = step;
-                worstLane = { id, tick, top, anchor };
-              }
-            }
-            previous.set(id, { top, anchor });
+            if (!element) expect(element, `${context}: live label`).toBeDefined();
             const text = element!.textContent;
             if (!text?.includes('Developer')) expect(text, `${context}: role text`).toContain('Developer');
-            const x2 = connector!.getAttribute('x2');
-            const expectedX = character.x * zoom + panRef.current.x;
-            if (x2 === null || !Number.isFinite(Number(x2)) || !(Math.abs(Number(x2) - expectedX) < 0.005)) {
-              expect(x2, `${context}: connector x2 attribute`).not.toBeNull();
-              expect(Number(x2), `${context}: connector x2 alignment`).toBeCloseTo(expectedX);
-            }
-            const y2 = connector!.getAttribute('y2');
-            if (y2 === null || !Number.isFinite(Number(y2)) || !(Math.abs(Number(y2) - bounds.top) < 0.005)) {
-              expect(y2, `${context}: connector y2 attribute`).not.toBeNull();
-              expect(Number(y2), `${context}: connector y2 alignment`).toBeCloseTo(bounds.top);
-            }
+            expect(host.querySelector('line[data-agent-connector], line[data-subagent-connector]'),
+              `${context}: no long leader line`).toBeNull();
           }
         }
-        expect(maxLaneStep, `width=${width}, zoom=${zoom}: worst lane ${JSON.stringify(worstLane)}`)
-          .toBeLessThanOrEqual(12.000001);
+        expect(crowdedFrames).toBe(600);
+        for (const id of crowd) office.removeAgent(id);
+        office.removeAgent('marge');
+        const character = office.characters.get('homer')!;
+        character.x = (width / 2 - panRef.current.x) / zoom;
+        let bounds = getCharacterScreenBounds(character, zoom, panRef.current);
+        character.y += (300 - bounds.top) / zoom;
+        frame();
+        let comparisons = 0;
+        let maxAnchorResidual = 0;
+        let previous: { top: number; anchor: number } | undefined;
+        for (let tick = 0; tick < 600; tick++) {
+          const targetTop = 300 + Math.sin(tick / 25) * 4;
+          bounds = getCharacterScreenBounds(character, zoom, panRef.current);
+          character.y += (targetTop - bounds.top) / zoom;
+          character.x = (width / 2 + Math.sin(tick / 25) * Math.min(40, width / 4) - panRef.current.x) / zoom;
+          frame();
+          const liveLabel = host.querySelector<HTMLElement>('[data-agent-label="homer"]');
+          expect(liveLabel, `width=${width}, zoom=${zoom}, floating frame=${tick}: current live node`).not.toBeNull();
+          expect(host.querySelector('[data-label-dock="true"]'),
+            `width=${width}, zoom=${zoom}, floating frame=${tick}: label remains floating`).toBeNull();
+          const annotation = liveLabel!.closest<HTMLElement>('[data-agent-annotation]')!;
+          bounds = getCharacterScreenBounds(character, zoom, panRef.current);
+          const top = parseFloat(annotation.style.top);
+          const anchor = bounds.top - 8 - annotation.offsetHeight;
+          expect(Number.isFinite(top)).toBe(true);
+          expect(top + annotation.offsetHeight).toBeLessThanOrEqual(bounds.top - 8);
+          expect(top).toBeCloseTo(anchor, 4);
+          if (previous) {
+            const residual = Math.abs((top - previous.top) - (anchor - previous.anchor));
+            maxAnchorResidual = Math.max(maxAnchorResidual, residual);
+            comparisons++;
+          }
+          previous = { top, anchor };
+          expect(host.querySelector('line[data-agent-connector]')).toBeNull();
+        }
+        expect(comparisons).toBe(599);
+        expect(maxAnchorResidual).toBeLessThan(0.001);
         expect(panRef.current).toEqual({ x: 30, y: 40 });
   }, 20_000);
 });
