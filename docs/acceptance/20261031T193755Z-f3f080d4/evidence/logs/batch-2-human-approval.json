@@ -1,0 +1,52 @@
+{
+  "runId": "20261031T193755Z-f3f080d4",
+  "approvedUtc": "2026-10-31T20:48:06.785Z",
+  "exactUserReply": "A. Publish and approve exports",
+  "repository": "swigerb/squad-pod",
+  "branch": "evidence/native-20261031T193755Z-f3f080d4",
+  "draftPr": 146,
+  "expectedParent": "9f50d9354793907f28f0fefd3f84a0c5e0e5f3ec",
+  "files": 109,
+  "indexSha256": "879c58e425d0e15446d38370db4c400a0b1c2b0493932a21418344211580130e",
+  "imageSelection": [
+    {
+      "file": "evidence/screenshots/native-cold-squad-info.png",
+      "sha256": "06f89c2baed64115bf76c23bdc66d396a7f2458a026e087120f5659f797dc796"
+    },
+    {
+      "file": "evidence/screenshots/native-full-reload-info-settled.png",
+      "sha256": "c886830d1c7fe77480fdb679076677573ec226a35e3fe3ee1117e80f9badb415"
+    },
+    {
+      "file": "evidence/screenshots/native-project-b-open-info.png",
+      "sha256": "73a772c05be9d15a1f6bdd054113ea12629fd534d38f2053d1fcab5ab511de3d"
+    },
+    {
+      "file": "evidence/screenshots/native-directory-suggestions-workspace-off.png",
+      "sha256": "79e5f6e3f959a84301cc4a66bd84c8481db92f671fc2930864922f3cd9c2b5b4"
+    },
+    {
+      "file": "evidence/screenshots/native-layout-expanded-saved.png",
+      "sha256": "7ef2c2c744dd4efa62b29ee6c1043f4166c02c65c56865b9b815781999b43f4c"
+    }
+  ],
+  "commitMessage": "docs: bounded native acceptance 20261031T193755Z-f3f080d4\n\nRefs #4; Refs #7; Refs #8; Refs #123.\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>",
+  "exportDirectory": "RUN_ROOT/isolation/exports",
+  "exportTargets": [
+    "native-default-new.json",
+    "native-settings-new.json",
+    "native-default-overwrite.json",
+    "native-cancel.json"
+  ],
+  "overwriteOnlyDesignatedDisposableCopy": true,
+  "baselineRestoreApproved": true,
+  "baselineBackup": "LOCAL_ONLY_PRIVATE/layout-baseline.json",
+  "testingStopUtc": "2026-10-31T21:22:55.466Z",
+  "hardStopUtc": "2026-10-31T21:37:55.466Z",
+  "noClockExtension": true,
+  "productCodeChange": false,
+  "prBodyChange": false,
+  "merge": false,
+  "issueClosure": false,
+  "standaloneLaunch": false
+}

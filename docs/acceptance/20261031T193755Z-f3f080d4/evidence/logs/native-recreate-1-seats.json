@@ -1,0 +1,38 @@
+{
+  "utc": "2026-10-31T20:03:39.356757+00:00",
+  "runId": "20261031T193755Z-f3f080d4",
+  "recordType": "READ_ONLY_RUN_OWNED_SAVED_SEAT_MAP",
+  "method": "SQLite mode=ro; exact extension memento key; only agents/agentSeats fields retained; no state writes",
+  "workspaces": [
+    {
+      "project": "PROJECT_A",
+      "savedMementoPresent": true,
+      "allowedSavedValues": {
+        "squad-pod.agents": {
+          "ada": {
+            "palette": 0,
+            "seatId": "chair-left-1"
+          },
+          "basil": {
+            "palette": 1,
+            "seatId": "chair-left-2"
+          },
+          "cedar": {
+            "palette": 2,
+            "seatId": "chair-right-1"
+          },
+          "dahlia": {
+            "palette": 3,
+            "seatId": "chair-right-2"
+          }
+        },
+        "squad-pod.agentSeats": {
+          "ada": "chair-left-1",
+          "basil": "chair-left-2",
+          "cedar": "chair-right-1",
+          "dahlia": "chair-right-2"
+        }
+      }
+    }
+  ]
+}

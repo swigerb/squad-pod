@@ -1,0 +1,189 @@
+{
+  "runId": "20261031T193755Z-f3f080d4",
+  "status": "BOUNDED NATIVE RUN ENDED; ACCEPTANCE INCOMPLETE; BATCH 3 LOCAL CANDIDATE AWAITING PUBLICATION APPROVAL",
+  "checkpointUtc": "2026-10-31T21:04:43.174Z",
+  "clock": {
+    "startUtc": "2026-10-31T19:37:55.466Z",
+    "testingStopUtc": "2026-10-31T21:22:55.466Z",
+    "hardStopUtc": "2026-10-31T21:37:55.466Z",
+    "runtimeStartedUtc": "2026-10-31T19:57:23.522Z",
+    "runtimeEndedUtc": "2026-10-31T21:01:43.2046423+00:00"
+  },
+  "executor": "Agent-driven native UI tester and delegated technical reviewer, not a human",
+  "humanAcceptance": "PENDING",
+  "candidate": {
+    "repository": "swigerb/squad-pod",
+    "recordReceivedUtc": "2026-10-31T17:16:36.301Z",
+    "appliesToExistingRun": "20261031T170436Z-gate-blocked",
+    "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+    "productTree": "a70bfda8186eceaee97c68544e767eaa99b9a402",
+    "ci": {
+      "runId": "41219175729",
+      "attempt": 1,
+      "conclusion": "success",
+      "url": "https://github.com/swigerb/squad-pod/actions/runs/41219175729",
+      "checkoutRole": "Synthetic merge commit",
+      "prHeadSha": "4f010a53305af0905651b49b63bb0e9d44fadf1c",
+      "mergedMasterSha": "7cb5fe4866b8fac1dbfce7f63b50989ddd9fa038",
+      "allThreeTreesIdentical": true
+    },
+    "includedFixIds": [
+      "2522124e48b46a702427692869470680e832351e"
+    ],
+    "membershipFix": {
+      "sha": "2522124e48b46a702427692869470680e832351e",
+      "pr": "https://github.com/swigerb/squad-pod/pull/143",
+      "description": "Establish workspace identity before replaying layout and roster.",
+      "included": true,
+      "nativeVerificationRequired": true
+    },
+    "excludedFixIds": [],
+    "fixScopeNote": "No additional known fix intentionally withheld from this selected tree; later or unpublished changes excluded. This does not claim all issues fixed.",
+    "vsix": {
+      "artifactName": "squad-pod-vsix",
+      "artifactId": "13048334827",
+      "filename": "squad-pod-0.1.0.vsix",
+      "bytes": 578477,
+      "sha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3"
+    },
+    "standalone": {
+      "artifactName": "owned-terminal-windows-latest",
+      "artifactId": "13049980047",
+      "filename": "squad-pod-observer-0.1.0.tgz",
+      "bytes": 423982,
+      "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a"
+    },
+    "packageScopeNote": "Hashes identify extracted inner packages, not Actions ZIPs. Standalone bytes match the historical Windows package; VSIX bytes do not.",
+    "sourcePlan": {
+      "sha": "0c22cffded2985370a80158d6bc252effa16c01c",
+      "path": "docs/native-acceptance.md",
+      "lfBytesSha256": "82b2ab59ae8d8592e17cf3ddfb2a990cbf87452c779f21ab0dd102ec9add7fa4",
+      "url": "https://github.com/swigerb/squad-pod/blob/0c22cffded2985370a80158d6bc252effa16c01c/docs/native-acceptance.md",
+      "historicalInstallationTargetSuperseded": true,
+      "proceduresRemainApplicable": true
+    },
+    "currentRun": "20261031T193755Z-f3f080d4",
+    "originalRecordClockIsHistorical": true
+  },
+  "packageGate": {
+    "outcome": "MATCH",
+    "evidenceRef": "evidence/logs/installed-payload.json"
+  },
+  "plan": {
+    "sha": "0c22cffded2985370a80158d6bc252effa16c01c",
+    "lfBytesSha256": "82b2ab59ae8d8592e17cf3ddfb2a990cbf87452c779f21ab0dd102ec9add7fa4"
+  },
+  "isolation": {
+    "liveActivity": false,
+    "directorySuggestions": false,
+    "aiChatDisabled": true,
+    "parentRepositoryDiscoveryDisabled": true,
+    "nativeUiEffectiveValuesVerified": false,
+    "internalNoReadAssertion": "BLOCKED - NO READ MONITOR",
+    "fixtureRoots": [
+      "PROJECT_A",
+      "PROJECT_B",
+      "FIXTURE_CLI_HOME"
+    ],
+    "selectedRealUsageFile": null,
+    "nativeUiLiveOffVerified": true,
+    "nativeUiDirectorySuggestionsCheckboxVerified": true
+  },
+  "runtime": {
+    "vscodeVersion": "1.144.0",
+    "vscodeCommit": "2c33b50b16c472efe58357d1d2a8a5414bc23fbf",
+    "architecture": "x64",
+    "nodeVersion": "v26.13.0",
+    "nativeLaunched": true,
+    "standaloneLaunched": false
+  },
+  "authorization": {
+    "newRunApprovedUtc": "2026-10-31T19:37:55.466Z",
+    "maximumMinutes": 120,
+    "finalCleanupReserveMinutes": 15,
+    "testLaunchedAiSpend": 0,
+    "realProducerLaunchesAllowed": false,
+    "physicalDevicesAllowed": false,
+    "normalProfilesAllowed": false,
+    "productCodeChangesAllowed": false,
+    "permissionChangesAllowed": false,
+    "mergeOrIssueClosureAllowed": false,
+    "marketplaceReleaseAllowed": false,
+    "authEnteredByActualHumanOnly": true,
+    "warningAndToolConfirmationsPreserved": true
+  },
+  "history": {
+    "previousRun": "20261031T170436Z-gate-blocked",
+    "previousVerifiedSha": "b001afae667a671f242740e048dc1386e58dab09",
+    "previousPr": 145,
+    "previousStopRetained": true,
+    "transferredPasses": 0,
+    "historicalLedgerRebuilt": false,
+    "lostArtifactsSearched": false
+  },
+  "publication": {
+    "repository": "swigerb/squad-pod",
+    "branch": "evidence/native-20261031T193755Z-f3f080d4",
+    "base": "master",
+    "initialPublicationVerified": true,
+    "initialVerifiedSha": "9f50d9354793907f28f0fefd3f84a0c5e0e5f3ec",
+    "draftPrUrl": "https://github.com/swigerb/squad-pod/pull/146"
+  },
+  "cleanup": {
+    "ownedProcesses": [],
+    "retained": [
+      "Frozen packages",
+      "Fresh isolated VSIX and synthetic fixtures",
+      "Evidence"
+    ],
+    "awaitingPermission": [],
+    "batch3Receipt": "evidence/logs/native-batch-3-cleanup.json"
+  },
+  "batch1": {
+    "observedVariants": 6,
+    "passedAtomicRequirements": 2,
+    "otherVariantsUnexecuted": true,
+    "fullCanvasEquivalenceAccepted": false,
+    "helperPreconditionBlockerRetained": "evidence/logs/helper-project-b-panel-closed.json"
+  },
+  "batch2": {
+    "observations": [
+      "OBS-0008",
+      "OBS-0009",
+      "OBS-0010",
+      "OBS-0011"
+    ],
+    "atomicPasses": 8,
+    "atomicBlocked": 1924,
+    "exportsAttempted": false,
+    "newNativeMediaSelected": 5,
+    "mediaPublicationApproval": "PENDING",
+    "retainedSyntheticCatalog": "Recovered B renamed -> PROJECT_B",
+    "retainedSyntheticLayout": "22x13",
+    "baselineBackup": "LOCAL_ONLY_PRIVATE/layout-baseline.json",
+    "unexpectedProducerPresent": false
+  },
+  "batch3": {
+    "observations": [
+      "OBS-0012",
+      "OBS-0013",
+      "OBS-0014",
+      "OBS-0015"
+    ],
+    "atomicOutcomes": {
+      "PASS": 22,
+      "FAIL": 0,
+      "BLOCKED": 1910,
+      "NOT-PRODUCED": 0
+    },
+    "batch2PublishedCommit": "e9a05f953c4a363f8aa8cfad053e71ad758c19e8",
+    "exportsAttempted": true,
+    "approvedNativeBaselineRestored": true,
+    "baselineSha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+    "retainedSyntheticLayout": "21x13",
+    "newReviewedImages": 4,
+    "publicationApproved": false,
+    "nativeHostClosedNormally": true,
+    "unexpectedProducerPresent": false
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "utc": "2026-10-31T20:35:33.7068216+00:00",
+  "runId": "20261031T193755Z-f3f080d4",
+  "rootPid": 61060,
+  "ownedChildren": 7,
+  "producerChildPresent": false,
+  "matches": [],
+  "method": "Read-only process tree scoped to the retained owned root; actual producer executable/entry-point markers, not disabled-extension flags; no command lines retained",
+  "helperCorrection": "An initial overbroad keyword probe matched disabled GitHub.copilot-chat flags on the root process. The corrected child-only executable/entry-point probe did not find a producer. This is a helper classification correction, not a product defect.",
+  "limitation": "A point-in-time owned-process inventory is not an internal file-read monitor or billing audit."
+}

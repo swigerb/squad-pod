@@ -1,0 +1,21 @@
+{
+  "utc": "2026-10-31T21:04:43.174Z",
+  "runId": "20261031T193755Z-f3f080d4",
+  "atomicOutcomes": {
+    "PASS": 22,
+    "FAIL": 0,
+    "BLOCKED": 1910,
+    "NOT-PRODUCED": 0
+  },
+  "observationsAdded": [
+    "OBS-0012",
+    "OBS-0013",
+    "OBS-0014",
+    "OBS-0015"
+  ],
+  "batch2PublishedCommit": "e9a05f953c4a363f8aa8cfad053e71ad758c19e8",
+  "status": "LOCAL REVIEWED CANDIDATE; NOT YET APPROVED OR PUBLISHED",
+  "nativeCleanup": "OWNED_NATIVE_HOST_CLOSED_NORMALLY",
+  "testingStopUtc": "2026-10-31T21:22:55.466Z",
+  "hardStopUtc": "2026-10-31T21:37:55.466Z"
+}

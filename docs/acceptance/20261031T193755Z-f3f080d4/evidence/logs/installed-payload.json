@@ -1,0 +1,1143 @@
+{
+  "runId": "20261031T193755Z-f3f080d4",
+  "utc": "2026-10-31T19:40:54.5674846+00:00",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+  "recordType": "INSTALLED_PAYLOAD_IDENTITY_NOT_RUNTIME_ACCEPTANCE",
+  "outcome": "MATCH",
+  "filesCompared": 187,
+  "files": [
+    {
+      "relativePath": "changelog.md",
+      "packagedSha256": "a074477c56f641564741dbba2bcc849d3286e67ee600afe0d585aecdd00fced0",
+      "installedSha256": "a074477c56f641564741dbba2bcc849d3286e67ee600afe0d585aecdd00fced0",
+      "matches": true
+    },
+    {
+      "relativePath": "LICENSE.txt",
+      "packagedSha256": "d415e70ac5e0a40cd36acc8673e65cfe66e2fa42472c8c02445611434a1e3593",
+      "installedSha256": "d415e70ac5e0a40cd36acc8673e65cfe66e2fa42472c8c02445611434a1e3593",
+      "matches": true
+    },
+    {
+      "relativePath": "readme.md",
+      "packagedSha256": "8fd33fbab8eccfe214fd0c1ea11843a079034f73b4d2b3c3ecea1ecd1eadb0eb",
+      "installedSha256": "8fd33fbab8eccfe214fd0c1ea11843a079034f73b4d2b3c3ecea1ecd1eadb0eb",
+      "matches": true
+    },
+    {
+      "relativePath": "THIRD_PARTY_NOTICES.md",
+      "packagedSha256": "080f963d40d4c00fba5d5d682e1014fb72c16aa00a6d8793bed4fe3cb19d420a",
+      "installedSha256": "080f963d40d4c00fba5d5d682e1014fb72c16aa00a6d8793bed4fe3cb19d420a",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/extension.js",
+      "packagedSha256": "622fa32cba1e28dc5720be5d3676fa475ec81a45b5010330a509b8d13aa4e478",
+      "installedSha256": "622fa32cba1e28dc5720be5d3676fa475ec81a45b5010330a509b8d13aa4e478",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/extension.js.map",
+      "packagedSha256": "6b61d054f1615c50b774428c8d87ddace9c7a1af9cd1cd6762da894843888edc",
+      "installedSha256": "6b61d054f1615c50b774428c8d87ddace9c7a1af9cd1cd6762da894843888edc",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/pixel-agents-source.json",
+      "packagedSha256": "a24d020559fab077a311cba12385930a2de9eec2b9da5a8f7b28d8d014e0fb48",
+      "installedSha256": "a24d020559fab077a311cba12385930a2de9eec2b9da5a8f7b28d8d014e0fb48",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/index.html",
+      "packagedSha256": "3be465cb7a17807632e3e95f184195538d8b1b5c1ca2a92d776e033a7940e146",
+      "installedSha256": "3be465cb7a17807632e3e95f184195538d8b1b5c1ca2a92d776e033a7940e146",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/carpets/carpet_0.png",
+      "packagedSha256": "a3a2b9789dd7b6e4345fe9f6204e668aa3b0ec52ae13cbc567e9abdac708a385",
+      "installedSha256": "a3a2b9789dd7b6e4345fe9f6204e668aa3b0ec52ae13cbc567e9abdac708a385",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/carpets/carpet_1.png",
+      "packagedSha256": "5fdc496323782dd846c0fa485b51da8827a907dc85058005905329d8d8d7b05e",
+      "installedSha256": "5fdc496323782dd846c0fa485b51da8827a907dc85058005905329d8d8d7b05e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/carpets/carpet_2.png",
+      "packagedSha256": "926017fb0052dd8466b88618a309889edaa5c37b83b3b4f24ea52a00d84ce72e",
+      "installedSha256": "926017fb0052dd8466b88618a309889edaa5c37b83b3b4f24ea52a00d84ce72e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/characters/char_0.png",
+      "packagedSha256": "9ece93c20765abb876e3dacfe01e0cd1801323eff41c1779be0c47369886c09a",
+      "installedSha256": "9ece93c20765abb876e3dacfe01e0cd1801323eff41c1779be0c47369886c09a",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/characters/char_1.png",
+      "packagedSha256": "f935f033726b06f73dbbe590db5a23cfb20d2d02c1329fd5d67d57a262e9b05e",
+      "installedSha256": "f935f033726b06f73dbbe590db5a23cfb20d2d02c1329fd5d67d57a262e9b05e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/characters/char_2.png",
+      "packagedSha256": "9f63ee7be4577e1d60de3b64d198d387d1c09794bed3a608958e77c7b955575d",
+      "installedSha256": "9f63ee7be4577e1d60de3b64d198d387d1c09794bed3a608958e77c7b955575d",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/characters/char_3.png",
+      "packagedSha256": "ee5ebe0847471e4834e367f8a4108e6caf2f402ed506bbfebd90c64a43a79348",
+      "installedSha256": "ee5ebe0847471e4834e367f8a4108e6caf2f402ed506bbfebd90c64a43a79348",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/characters/char_4.png",
+      "packagedSha256": "fcf72626bbee3045d0f3e10bb87a41dab19a331d1affdfc53b483567f9c083aa",
+      "installedSha256": "fcf72626bbee3045d0f3e10bb87a41dab19a331d1affdfc53b483567f9c083aa",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/characters/char_5.png",
+      "packagedSha256": "4b2c639a50e089a4e3b87be440ffb52b5c5c8cfd6473a386f325b25f99db7381",
+      "installedSha256": "4b2c639a50e089a4e3b87be440ffb52b5c5c8cfd6473a386f325b25f99db7381",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/characters/char_employeeA.png",
+      "packagedSha256": "49d59363017e4619ccae7731b8e71292f098f3ea19318d58335c599ec90e5d8c",
+      "installedSha256": "49d59363017e4619ccae7731b8e71292f098f3ea19318d58335c599ec90e5d8c",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/characters/char_employeeB.png",
+      "packagedSha256": "47b7b7c8cce52fa6a1d2925b8cc213ccae38092811b7ab7eb7e9bc8919aa9a7c",
+      "installedSha256": "47b7b7c8cce52fa6a1d2925b8cc213ccae38092811b7ab7eb7e9bc8919aa9a7c",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/floors/floor_0.png",
+      "packagedSha256": "7ac83e6dafab1d73c2ee346880929718920123a7057b0cd9ee34dec6543eacc2",
+      "installedSha256": "7ac83e6dafab1d73c2ee346880929718920123a7057b0cd9ee34dec6543eacc2",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/floors/floor_1.png",
+      "packagedSha256": "6199f7135d3f5e233e0f33a925a20e348fcc17e396347799ac7573241c1416b8",
+      "installedSha256": "6199f7135d3f5e233e0f33a925a20e348fcc17e396347799ac7573241c1416b8",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/floors/floor_2.png",
+      "packagedSha256": "ac112a1f1b2bc0068649e7cfd8be47f9c794f343388fb2e4437f140eb2ed0dee",
+      "installedSha256": "ac112a1f1b2bc0068649e7cfd8be47f9c794f343388fb2e4437f140eb2ed0dee",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/floors/floor_3.png",
+      "packagedSha256": "8befc77b71238aa01d19cc73d5fe747831e0e85b1a986838c02df2f76cdf2690",
+      "installedSha256": "8befc77b71238aa01d19cc73d5fe747831e0e85b1a986838c02df2f76cdf2690",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/floors/floor_4.png",
+      "packagedSha256": "fdf610ffa4583c688ed72cc3b8c8b9496c4843b341c201ead62ba769804a9cbb",
+      "installedSha256": "fdf610ffa4583c688ed72cc3b8c8b9496c4843b341c201ead62ba769804a9cbb",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/floors/floor_5.png",
+      "packagedSha256": "b935a21804f12c18e0b0cc4db2ba873e4e39c2c6cf80c59cc9dfa01c00e497bb",
+      "installedSha256": "b935a21804f12c18e0b0cc4db2ba873e4e39c2c6cf80c59cc9dfa01c00e497bb",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/floors/floor_6.png",
+      "packagedSha256": "dc7dc8722e3a03b28385400b76079c168a5d93d50e7b06f6a40ebd1dd8f178b4",
+      "installedSha256": "dc7dc8722e3a03b28385400b76079c168a5d93d50e7b06f6a40ebd1dd8f178b4",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/floors/floor_7.png",
+      "packagedSha256": "aa44b7de3ced5e0bb2ef3fbd8bd27e9993a83bf8b901c37da2a97c162d7e6dad",
+      "installedSha256": "aa44b7de3ced5e0bb2ef3fbd8bd27e9993a83bf8b901c37da2a97c162d7e6dad",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/floors/floor_8.png",
+      "packagedSha256": "653e4534e66844d72ea78fef499c5052ed337f7c10ada4d818d21255ad27bdfe",
+      "installedSha256": "653e4534e66844d72ea78fef499c5052ed337f7c10ada4d818d21255ad27bdfe",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/walls/wall_0.png",
+      "packagedSha256": "f2afc6dacc44986a388695a720839ed00da03e9b308d6c727f5292740a62adfa",
+      "installedSha256": "f2afc6dacc44986a388695a720839ed00da03e9b308d6c727f5292740a62adfa",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/index.css",
+      "packagedSha256": "5ae6f7bfdd7cdecb861adcff7f4d5b310574c090a100c55d6cea3dce69576fcc",
+      "installedSha256": "5ae6f7bfdd7cdecb861adcff7f4d5b310574c090a100c55d6cea3dce69576fcc",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/index.js",
+      "packagedSha256": "43b20f41e74bd77bf8fc3b9f957cd20f2d8a87095eee08516ec4644ed3a62739",
+      "installedSha256": "43b20f41e74bd77bf8fc3b9f957cd20f2d8a87095eee08516ec4644ed3a62739",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/pixel-agents-source.json",
+      "packagedSha256": "a24d020559fab077a311cba12385930a2de9eec2b9da5a8f7b28d8d014e0fb48",
+      "installedSha256": "a24d020559fab077a311cba12385930a2de9eec2b9da5a8f7b28d8d014e0fb48",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/pets/gitcat/manifest.json",
+      "packagedSha256": "621ffd5a2c3250ea8755724a96b01823a08754dcca93e60f910fcd29c2c22ca9",
+      "installedSha256": "621ffd5a2c3250ea8755724a96b01823a08754dcca93e60f910fcd29c2c22ca9",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/pets/gitcat/pet.png",
+      "packagedSha256": "cb4163bc000da739d988dda58402b4a27cea970ae772d0b107bef515af092a68",
+      "installedSha256": "cb4163bc000da739d988dda58402b4a27cea970ae772d0b107bef515af092a68",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/pets/claudio/manifest.json",
+      "packagedSha256": "f7164f8dbfcbd3f8c23226a70ddb1fe305dabb5c8b4a69101797c61d4cc2929e",
+      "installedSha256": "f7164f8dbfcbd3f8c23226a70ddb1fe305dabb5c8b4a69101797c61d4cc2929e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/pets/claudio/pet.png",
+      "packagedSha256": "174acbe0a597830bd311c241eed3ac8ad70bd46a55a78b6d9a77ae1728f23185",
+      "installedSha256": "174acbe0a597830bd311c241eed3ac8ad70bd46a55a78b6d9a77ae1728f23185",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/BIN/BIN.png",
+      "packagedSha256": "738129d621fabc15b100f7129b854d1fe36201dbe92c0800bb1e80cb06793284",
+      "installedSha256": "738129d621fabc15b100f7129b854d1fe36201dbe92c0800bb1e80cb06793284",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/BIN/manifest.json",
+      "packagedSha256": "6d3c3d075e3f77bcf4bc2bbd6809bb8b747c34dcc557be881146ca0122dd7e35",
+      "installedSha256": "6d3c3d075e3f77bcf4bc2bbd6809bb8b747c34dcc557be881146ca0122dd7e35",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/BOOKSHELF/BOOKSHELF.png",
+      "packagedSha256": "bd05119962080fd4cff6697fec0c3730c5a9c3def01b31ca0fa929971144322e",
+      "installedSha256": "bd05119962080fd4cff6697fec0c3730c5a9c3def01b31ca0fa929971144322e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/BOOKSHELF/manifest.json",
+      "packagedSha256": "f162c5c78a8e7e3357d99ac8dc9f9e5ebda30e5756474aa8891888eeb39bda7e",
+      "installedSha256": "f162c5c78a8e7e3357d99ac8dc9f9e5ebda30e5756474aa8891888eeb39bda7e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CACTUS/CACTUS.png",
+      "packagedSha256": "830dbba8ac4912858e22eed1e89d4290202113363a934389e54fffb794ad893b",
+      "installedSha256": "830dbba8ac4912858e22eed1e89d4290202113363a934389e54fffb794ad893b",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CACTUS/manifest.json",
+      "packagedSha256": "78e4ecb0a0ccfe4da323ca5bcb32f1b43a79967f83b573bda44c917bd01605b3",
+      "installedSha256": "78e4ecb0a0ccfe4da323ca5bcb32f1b43a79967f83b573bda44c917bd01605b3",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/COFFEE/COFFEE.png",
+      "packagedSha256": "6bed27c8de5a4ce98b3646d233803b3192cc5980c8f4caf779eb1344a87f8e0d",
+      "installedSha256": "6bed27c8de5a4ce98b3646d233803b3192cc5980c8f4caf779eb1344a87f8e0d",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/COFFEE/manifest.json",
+      "packagedSha256": "8f671ece319b7ee5b462bc2afe7bf072538ad71f08370ebede83ae926c67ccb8",
+      "installedSha256": "8f671ece319b7ee5b462bc2afe7bf072538ad71f08370ebede83ae926c67ccb8",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CLOCK/CLOCK.png",
+      "packagedSha256": "f1ff567d71508dfdba37f2ff94ffde734940b56b3999e29b213ab6774e67b20f",
+      "installedSha256": "f1ff567d71508dfdba37f2ff94ffde734940b56b3999e29b213ab6774e67b20f",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CLOCK/manifest.json",
+      "packagedSha256": "10a2596fda4958c436bdc7fbae18bc2bd8fe72d58e1dd7a98b5392e6a9568944",
+      "installedSha256": "10a2596fda4958c436bdc7fbae18bc2bd8fe72d58e1dd7a98b5392e6a9568944",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/COFFEE_TABLE/COFFEE_TABLE.png",
+      "packagedSha256": "0b0fd17c95b29e3b86da00031452166a1400a534c8adff1dc98bb4e5ce72aad3",
+      "installedSha256": "0b0fd17c95b29e3b86da00031452166a1400a534c8adff1dc98bb4e5ce72aad3",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/COFFEE_TABLE/manifest.json",
+      "packagedSha256": "acca0880e88e6ada927eddef632559ed7941ce3c5bc2d8a576f4a33dd98034cb",
+      "installedSha256": "acca0880e88e6ada927eddef632559ed7941ce3c5bc2d8a576f4a33dd98034cb",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CUSHIONED_BENCH/CUSHIONED_BENCH.png",
+      "packagedSha256": "b66ba12ce7921b3ab34515c319bc72775c49351d75ad146c6b29adf46459eaa0",
+      "installedSha256": "b66ba12ce7921b3ab34515c319bc72775c49351d75ad146c6b29adf46459eaa0",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CUSHIONED_BENCH/manifest.json",
+      "packagedSha256": "854d701f00f9dec17141f266edf12868c1faa396ca88596cb1c2c9dd0fc28a27",
+      "installedSha256": "854d701f00f9dec17141f266edf12868c1faa396ca88596cb1c2c9dd0fc28a27",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_BACK.png",
+      "packagedSha256": "7eba17a7c86115caba0246599988e3169dc766af7814e51c7afa566e0fe40846",
+      "installedSha256": "7eba17a7c86115caba0246599988e3169dc766af7814e51c7afa566e0fe40846",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_FRONT.png",
+      "packagedSha256": "30a021a8356125a743be8352da9756ec6d0832e232aca1ae2dd76a5e038a2208",
+      "installedSha256": "30a021a8356125a743be8352da9756ec6d0832e232aca1ae2dd76a5e038a2208",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_SIDE.png",
+      "packagedSha256": "ac2d90e87ce198271f50fd3e9161c4c9b8ea4befd3befdb0c5c9720256febb70",
+      "installedSha256": "ac2d90e87ce198271f50fd3e9161c4c9b8ea4befd3befdb0c5c9720256febb70",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/CUSHIONED_CHAIR/manifest.json",
+      "packagedSha256": "a8a1a949ca45f9b0c65ac2ff2726004ec1a3a60db842f448a6de31a1be9cd8ec",
+      "installedSha256": "a8a1a949ca45f9b0c65ac2ff2726004ec1a3a60db842f448a6de31a1be9cd8ec",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/DOUBLE_BOOKSHELF/DOUBLE_BOOKSHELF.png",
+      "packagedSha256": "b27bd0cc4c73dab38eebbf6b8ed68257acb8264d23a8e87c2cf5026138842cda",
+      "installedSha256": "b27bd0cc4c73dab38eebbf6b8ed68257acb8264d23a8e87c2cf5026138842cda",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/DOUBLE_BOOKSHELF/manifest.json",
+      "packagedSha256": "e3af4890e8f9e140a58b3db79c1718c6bf742ae4dca21aa17b2dcf235465db91",
+      "installedSha256": "e3af4890e8f9e140a58b3db79c1718c6bf742ae4dca21aa17b2dcf235465db91",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/DESK/DESK_FRONT.png",
+      "packagedSha256": "4df9ed2b04efb98dbd901d400d65fa5a1729e4508787ad70eb93e747017220ca",
+      "installedSha256": "4df9ed2b04efb98dbd901d400d65fa5a1729e4508787ad70eb93e747017220ca",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/DESK/DESK_SIDE.png",
+      "packagedSha256": "b5421b3b3fc30b4a295c67c67d4a138877a1d179b532ffe25973200277107ff9",
+      "installedSha256": "b5421b3b3fc30b4a295c67c67d4a138877a1d179b532ffe25973200277107ff9",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/DESK/manifest.json",
+      "packagedSha256": "2f68f60b61f6ee5aaa40b526af7dcf8581072d936b38ae3a0a25e5caa61cf3db",
+      "installedSha256": "2f68f60b61f6ee5aaa40b526af7dcf8581072d936b38ae3a0a25e5caa61cf3db",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/HANGING_PLANT/HANGING_PLANT.png",
+      "packagedSha256": "a6e9c025d0a84e960d3c84d55f18d01585eb8e079cd84f9970de08d636877de2",
+      "installedSha256": "a6e9c025d0a84e960d3c84d55f18d01585eb8e079cd84f9970de08d636877de2",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/HANGING_PLANT/manifest.json",
+      "packagedSha256": "200ca5deaef21d2b135dd8d894a4445f96ecf43d325321b904e35c0088c3aed1",
+      "installedSha256": "200ca5deaef21d2b135dd8d894a4445f96ecf43d325321b904e35c0088c3aed1",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/LARGE_PAINTING/LARGE_PAINTING.png",
+      "packagedSha256": "f6355392631f0004ccd49c3d9ddf4df8ef60c59ec8b23d0b3fb1d0dce6c01c2b",
+      "installedSha256": "f6355392631f0004ccd49c3d9ddf4df8ef60c59ec8b23d0b3fb1d0dce6c01c2b",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/LARGE_PAINTING/manifest.json",
+      "packagedSha256": "906af931475def2450e40d553e2e900b2b2068f5d990b1301433e622942046bf",
+      "installedSha256": "906af931475def2450e40d553e2e900b2b2068f5d990b1301433e622942046bf",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/LARGE_PLANT/LARGE_PLANT.png",
+      "packagedSha256": "196a4f1748160cdbf69400e370b1d7d1254b49902b8c091bcabd7676934f3149",
+      "installedSha256": "196a4f1748160cdbf69400e370b1d7d1254b49902b8c091bcabd7676934f3149",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/LARGE_PLANT/manifest.json",
+      "packagedSha256": "3d45775a4c7930f4d53c3436d9eda4527633eb51a572c106acea1f90b4cf5184",
+      "installedSha256": "3d45775a4c7930f4d53c3436d9eda4527633eb51a572c106acea1f90b4cf5184",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PC/PC_BACK.png",
+      "packagedSha256": "48f3d9aa7f571cc0ce1e5d702977987432bca292995ff67e36d47361d4b6f9a0",
+      "installedSha256": "48f3d9aa7f571cc0ce1e5d702977987432bca292995ff67e36d47361d4b6f9a0",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PC/PC_FRONT_OFF.png",
+      "packagedSha256": "a5d6f40f500f14f440cf981950630f5433521faa7578ae0f83684b9ededdc2bf",
+      "installedSha256": "a5d6f40f500f14f440cf981950630f5433521faa7578ae0f83684b9ededdc2bf",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PC/PC_FRONT_ON_1.png",
+      "packagedSha256": "d00d95a9c4718f770dee1a93240be8b7dc6d2e8abab4071179dd79c2d73a9337",
+      "installedSha256": "d00d95a9c4718f770dee1a93240be8b7dc6d2e8abab4071179dd79c2d73a9337",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PC/PC_FRONT_ON_2.png",
+      "packagedSha256": "dc083d31848be3661b4ea571ee8d8d7e5dcd34cdbcef48d4dd6c444166eb7a69",
+      "installedSha256": "dc083d31848be3661b4ea571ee8d8d7e5dcd34cdbcef48d4dd6c444166eb7a69",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PC/PC_FRONT_ON_3.png",
+      "packagedSha256": "773c5e0cfee45ad12669c082ff26c0041f12a6369e4622db3eab35685aeabc0f",
+      "installedSha256": "773c5e0cfee45ad12669c082ff26c0041f12a6369e4622db3eab35685aeabc0f",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PC/PC_SIDE.png",
+      "packagedSha256": "c327f64a39cc84d3a2c4e97b7165e5a07e355003d0f1a9bca27fc8f8deef9603",
+      "installedSha256": "c327f64a39cc84d3a2c4e97b7165e5a07e355003d0f1a9bca27fc8f8deef9603",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PC/manifest.json",
+      "packagedSha256": "4f33a91b789e22c4e3f5aa05b53eb903581612ef3aa004330143646b8c830f82",
+      "installedSha256": "4f33a91b789e22c4e3f5aa05b53eb903581612ef3aa004330143646b8c830f82",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PLANT/PLANT.png",
+      "packagedSha256": "b9f845e7930e685161a21ac0f1743c2906cb7cbb0bd6b79ef1e4fb5aafff98c6",
+      "installedSha256": "b9f845e7930e685161a21ac0f1743c2906cb7cbb0bd6b79ef1e4fb5aafff98c6",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PLANT/manifest.json",
+      "packagedSha256": "94bfbdc7ba97c86517a8b6bcefda8b23b7c10128b479eabc433ba72ba1e136f5",
+      "installedSha256": "94bfbdc7ba97c86517a8b6bcefda8b23b7c10128b479eabc433ba72ba1e136f5",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PLANT_2/PLANT_2.png",
+      "packagedSha256": "b0d2e82fefd1f7ebada9656260571aa3e810db55975495e72a62d9ce8a878b42",
+      "installedSha256": "b0d2e82fefd1f7ebada9656260571aa3e810db55975495e72a62d9ce8a878b42",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/PLANT_2/manifest.json",
+      "packagedSha256": "238248bdd213f7f6a18875153ccaee50e5b7d44f916a9f310abbef516197c6ba",
+      "installedSha256": "238248bdd213f7f6a18875153ccaee50e5b7d44f916a9f310abbef516197c6ba",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/POT/POT.png",
+      "packagedSha256": "cc2889e6fe22350bbeba94d55157f5bb2a38fe40f3a85ef96429f1af88506585",
+      "installedSha256": "cc2889e6fe22350bbeba94d55157f5bb2a38fe40f3a85ef96429f1af88506585",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/POT/manifest.json",
+      "packagedSha256": "1e6106dd6e888adae7701597f565e0a9c1741d72918708b6421dafcfb7cb7d5e",
+      "installedSha256": "1e6106dd6e888adae7701597f565e0a9c1741d72918708b6421dafcfb7cb7d5e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SMALL_PAINTING/SMALL_PAINTING.png",
+      "packagedSha256": "15f370af43455d303b5ccb21429e298f7a603c3b6db10d6ed9270aa62caa71a3",
+      "installedSha256": "15f370af43455d303b5ccb21429e298f7a603c3b6db10d6ed9270aa62caa71a3",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SMALL_PAINTING/manifest.json",
+      "packagedSha256": "02f09ec0d22404f102f609f8aabc0ca41f3e4d9af4274206167088db95cd13f6",
+      "installedSha256": "02f09ec0d22404f102f609f8aabc0ca41f3e4d9af4274206167088db95cd13f6",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SMALL_PAINTING_2/SMALL_PAINTING_2.png",
+      "packagedSha256": "148d161726fb08dc7887e75e91f0332bf69d1aadfc649dce6fbc4b2678f5d0f0",
+      "installedSha256": "148d161726fb08dc7887e75e91f0332bf69d1aadfc649dce6fbc4b2678f5d0f0",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SMALL_PAINTING_2/manifest.json",
+      "packagedSha256": "b023f4e593a868efb5dc98ac283e9a15d923848514849ed6e836944d6605867a",
+      "installedSha256": "b023f4e593a868efb5dc98ac283e9a15d923848514849ed6e836944d6605867a",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SOFA/SOFA_BACK.png",
+      "packagedSha256": "62a40318fce1d3166f1ea3811ca2081b39ad3161974c6bcd2edb0bdaf9b06d08",
+      "installedSha256": "62a40318fce1d3166f1ea3811ca2081b39ad3161974c6bcd2edb0bdaf9b06d08",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SOFA/SOFA_FRONT.png",
+      "packagedSha256": "7e4c7e98e46d32daa2776651f6f413f68a84252b357b01d722fce6bb2a0ca52f",
+      "installedSha256": "7e4c7e98e46d32daa2776651f6f413f68a84252b357b01d722fce6bb2a0ca52f",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SOFA/SOFA_SIDE.png",
+      "packagedSha256": "b583fa6261dbbc4c4020c0a887023d3f707a70b7e5524535d541b453b22f9e94",
+      "installedSha256": "b583fa6261dbbc4c4020c0a887023d3f707a70b7e5524535d541b453b22f9e94",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SOFA/manifest.json",
+      "packagedSha256": "aa3615e2e2b9de9766d1936d06f630c0a4053030cef7f9f054f16cba6661b8d6",
+      "installedSha256": "aa3615e2e2b9de9766d1936d06f630c0a4053030cef7f9f054f16cba6661b8d6",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SMALL_TABLE/SMALL_TABLE_FRONT.png",
+      "packagedSha256": "dc224670ea2c5752830143337fd8b3a080f93980287706d4efd614aaabd4882f",
+      "installedSha256": "dc224670ea2c5752830143337fd8b3a080f93980287706d4efd614aaabd4882f",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SMALL_TABLE/SMALL_TABLE_SIDE.png",
+      "packagedSha256": "5568526f6393ad643606b0095eceee5b7674b5588d7105144adc3fb99f0a3f42",
+      "installedSha256": "5568526f6393ad643606b0095eceee5b7674b5588d7105144adc3fb99f0a3f42",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/SMALL_TABLE/manifest.json",
+      "packagedSha256": "cfd626759f52304db591b28caab63832813e846a02bd974e4cee43950005e854",
+      "installedSha256": "cfd626759f52304db591b28caab63832813e846a02bd974e4cee43950005e854",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/TABLE_FRONT/TABLE_FRONT.png",
+      "packagedSha256": "fef9638fd372f081f4c80cc52f9bcb4be8db9db194fa46f88968ec08e5463b4a",
+      "installedSha256": "fef9638fd372f081f4c80cc52f9bcb4be8db9db194fa46f88968ec08e5463b4a",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/TABLE_FRONT/manifest.json",
+      "packagedSha256": "d7868924b6edd92f0b6f135e254fe7c291fe1134c56f84fc3b98b2ca1bc72373",
+      "installedSha256": "d7868924b6edd92f0b6f135e254fe7c291fe1134c56f84fc3b98b2ca1bc72373",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/WHITEBOARD/WHITEBOARD.png",
+      "packagedSha256": "42fb63a8d8041f602c6cd0e7491be3ea95c3f4699b6a5ba6e47851ba8a473059",
+      "installedSha256": "42fb63a8d8041f602c6cd0e7491be3ea95c3f4699b6a5ba6e47851ba8a473059",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/WHITEBOARD/manifest.json",
+      "packagedSha256": "70c1924a08f76f042a8bcaf0d56e7fd3724e717ea207f5ab31e0ec9c3ea1dd67",
+      "installedSha256": "70c1924a08f76f042a8bcaf0d56e7fd3724e717ea207f5ab31e0ec9c3ea1dd67",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/WOODEN_BENCH/WOODEN_BENCH.png",
+      "packagedSha256": "b2a889a7e67dd1bd59ce1035daffeda8c0b34e696f07658ee0bc8ae514e1af49",
+      "installedSha256": "b2a889a7e67dd1bd59ce1035daffeda8c0b34e696f07658ee0bc8ae514e1af49",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/WOODEN_BENCH/manifest.json",
+      "packagedSha256": "cc37d68a0cd451d4329b8efc43e6b01ac157df69f928751b2eca27c96c07407a",
+      "installedSha256": "cc37d68a0cd451d4329b8efc43e6b01ac157df69f928751b2eca27c96c07407a",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_BACK.png",
+      "packagedSha256": "244fd28f4650e469d836f4287613e834805d3a00b7e14f68ae8415dd30411d5c",
+      "installedSha256": "244fd28f4650e469d836f4287613e834805d3a00b7e14f68ae8415dd30411d5c",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_FRONT.png",
+      "packagedSha256": "fb4c4bf7def68c98e4eedffe1d9ee0cbeaa054fc5bc4aa6785f37cc83b1cd44d",
+      "installedSha256": "fb4c4bf7def68c98e4eedffe1d9ee0cbeaa054fc5bc4aa6785f37cc83b1cd44d",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_SIDE.png",
+      "packagedSha256": "b57e3fd470a60e9f9800e9cdfe629b2a187cc0f936ed81314522a17fc7bb2198",
+      "installedSha256": "b57e3fd470a60e9f9800e9cdfe629b2a187cc0f936ed81314522a17fc7bb2198",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/assets/furniture/WOODEN_CHAIR/manifest.json",
+      "packagedSha256": "ba184e498776b354b5642f579499c1a60a0b4e5a4fdbe452009d4cca2cc5cc9b",
+      "installedSha256": "ba184e498776b354b5642f579499c1a60a0b4e5a4fdbe452009d4cca2cc5cc9b",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/carpets/carpet_0.png",
+      "packagedSha256": "a3a2b9789dd7b6e4345fe9f6204e668aa3b0ec52ae13cbc567e9abdac708a385",
+      "installedSha256": "a3a2b9789dd7b6e4345fe9f6204e668aa3b0ec52ae13cbc567e9abdac708a385",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/carpets/carpet_1.png",
+      "packagedSha256": "5fdc496323782dd846c0fa485b51da8827a907dc85058005905329d8d8d7b05e",
+      "installedSha256": "5fdc496323782dd846c0fa485b51da8827a907dc85058005905329d8d8d7b05e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/carpets/carpet_2.png",
+      "packagedSha256": "926017fb0052dd8466b88618a309889edaa5c37b83b3b4f24ea52a00d84ce72e",
+      "installedSha256": "926017fb0052dd8466b88618a309889edaa5c37b83b3b4f24ea52a00d84ce72e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/characters/char_0.png",
+      "packagedSha256": "9ece93c20765abb876e3dacfe01e0cd1801323eff41c1779be0c47369886c09a",
+      "installedSha256": "9ece93c20765abb876e3dacfe01e0cd1801323eff41c1779be0c47369886c09a",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/characters/char_1.png",
+      "packagedSha256": "f935f033726b06f73dbbe590db5a23cfb20d2d02c1329fd5d67d57a262e9b05e",
+      "installedSha256": "f935f033726b06f73dbbe590db5a23cfb20d2d02c1329fd5d67d57a262e9b05e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/characters/char_2.png",
+      "packagedSha256": "9f63ee7be4577e1d60de3b64d198d387d1c09794bed3a608958e77c7b955575d",
+      "installedSha256": "9f63ee7be4577e1d60de3b64d198d387d1c09794bed3a608958e77c7b955575d",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/characters/char_3.png",
+      "packagedSha256": "ee5ebe0847471e4834e367f8a4108e6caf2f402ed506bbfebd90c64a43a79348",
+      "installedSha256": "ee5ebe0847471e4834e367f8a4108e6caf2f402ed506bbfebd90c64a43a79348",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/characters/char_4.png",
+      "packagedSha256": "fcf72626bbee3045d0f3e10bb87a41dab19a331d1affdfc53b483567f9c083aa",
+      "installedSha256": "fcf72626bbee3045d0f3e10bb87a41dab19a331d1affdfc53b483567f9c083aa",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/characters/char_5.png",
+      "packagedSha256": "4b2c639a50e089a4e3b87be440ffb52b5c5c8cfd6473a386f325b25f99db7381",
+      "installedSha256": "4b2c639a50e089a4e3b87be440ffb52b5c5c8cfd6473a386f325b25f99db7381",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/characters/char_employeeA.png",
+      "packagedSha256": "49d59363017e4619ccae7731b8e71292f098f3ea19318d58335c599ec90e5d8c",
+      "installedSha256": "49d59363017e4619ccae7731b8e71292f098f3ea19318d58335c599ec90e5d8c",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/characters/char_employeeB.png",
+      "packagedSha256": "47b7b7c8cce52fa6a1d2925b8cc213ccae38092811b7ab7eb7e9bc8919aa9a7c",
+      "installedSha256": "47b7b7c8cce52fa6a1d2925b8cc213ccae38092811b7ab7eb7e9bc8919aa9a7c",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/floors/floor_0.png",
+      "packagedSha256": "7ac83e6dafab1d73c2ee346880929718920123a7057b0cd9ee34dec6543eacc2",
+      "installedSha256": "7ac83e6dafab1d73c2ee346880929718920123a7057b0cd9ee34dec6543eacc2",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/floors/floor_1.png",
+      "packagedSha256": "6199f7135d3f5e233e0f33a925a20e348fcc17e396347799ac7573241c1416b8",
+      "installedSha256": "6199f7135d3f5e233e0f33a925a20e348fcc17e396347799ac7573241c1416b8",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/floors/floor_2.png",
+      "packagedSha256": "ac112a1f1b2bc0068649e7cfd8be47f9c794f343388fb2e4437f140eb2ed0dee",
+      "installedSha256": "ac112a1f1b2bc0068649e7cfd8be47f9c794f343388fb2e4437f140eb2ed0dee",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/floors/floor_3.png",
+      "packagedSha256": "8befc77b71238aa01d19cc73d5fe747831e0e85b1a986838c02df2f76cdf2690",
+      "installedSha256": "8befc77b71238aa01d19cc73d5fe747831e0e85b1a986838c02df2f76cdf2690",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/floors/floor_4.png",
+      "packagedSha256": "fdf610ffa4583c688ed72cc3b8c8b9496c4843b341c201ead62ba769804a9cbb",
+      "installedSha256": "fdf610ffa4583c688ed72cc3b8c8b9496c4843b341c201ead62ba769804a9cbb",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/floors/floor_5.png",
+      "packagedSha256": "b935a21804f12c18e0b0cc4db2ba873e4e39c2c6cf80c59cc9dfa01c00e497bb",
+      "installedSha256": "b935a21804f12c18e0b0cc4db2ba873e4e39c2c6cf80c59cc9dfa01c00e497bb",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/floors/floor_6.png",
+      "packagedSha256": "dc7dc8722e3a03b28385400b76079c168a5d93d50e7b06f6a40ebd1dd8f178b4",
+      "installedSha256": "dc7dc8722e3a03b28385400b76079c168a5d93d50e7b06f6a40ebd1dd8f178b4",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/floors/floor_7.png",
+      "packagedSha256": "aa44b7de3ced5e0bb2ef3fbd8bd27e9993a83bf8b901c37da2a97c162d7e6dad",
+      "installedSha256": "aa44b7de3ced5e0bb2ef3fbd8bd27e9993a83bf8b901c37da2a97c162d7e6dad",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/floors/floor_8.png",
+      "packagedSha256": "653e4534e66844d72ea78fef499c5052ed337f7c10ada4d818d21255ad27bdfe",
+      "installedSha256": "653e4534e66844d72ea78fef499c5052ed337f7c10ada4d818d21255ad27bdfe",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/walls/wall_0.png",
+      "packagedSha256": "f2afc6dacc44986a388695a720839ed00da03e9b308d6c727f5292740a62adfa",
+      "installedSha256": "f2afc6dacc44986a388695a720839ed00da03e9b308d6c727f5292740a62adfa",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/pets/claudio/manifest.json",
+      "packagedSha256": "f7164f8dbfcbd3f8c23226a70ddb1fe305dabb5c8b4a69101797c61d4cc2929e",
+      "installedSha256": "f7164f8dbfcbd3f8c23226a70ddb1fe305dabb5c8b4a69101797c61d4cc2929e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/pets/claudio/pet.png",
+      "packagedSha256": "174acbe0a597830bd311c241eed3ac8ad70bd46a55a78b6d9a77ae1728f23185",
+      "installedSha256": "174acbe0a597830bd311c241eed3ac8ad70bd46a55a78b6d9a77ae1728f23185",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/pets/gitcat/manifest.json",
+      "packagedSha256": "621ffd5a2c3250ea8755724a96b01823a08754dcca93e60f910fcd29c2c22ca9",
+      "installedSha256": "621ffd5a2c3250ea8755724a96b01823a08754dcca93e60f910fcd29c2c22ca9",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/pets/gitcat/pet.png",
+      "packagedSha256": "cb4163bc000da739d988dda58402b4a27cea970ae772d0b107bef515af092a68",
+      "installedSha256": "cb4163bc000da739d988dda58402b4a27cea970ae772d0b107bef515af092a68",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/BIN/BIN.png",
+      "packagedSha256": "738129d621fabc15b100f7129b854d1fe36201dbe92c0800bb1e80cb06793284",
+      "installedSha256": "738129d621fabc15b100f7129b854d1fe36201dbe92c0800bb1e80cb06793284",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/BIN/manifest.json",
+      "packagedSha256": "6d3c3d075e3f77bcf4bc2bbd6809bb8b747c34dcc557be881146ca0122dd7e35",
+      "installedSha256": "6d3c3d075e3f77bcf4bc2bbd6809bb8b747c34dcc557be881146ca0122dd7e35",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/BOOKSHELF/BOOKSHELF.png",
+      "packagedSha256": "bd05119962080fd4cff6697fec0c3730c5a9c3def01b31ca0fa929971144322e",
+      "installedSha256": "bd05119962080fd4cff6697fec0c3730c5a9c3def01b31ca0fa929971144322e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/BOOKSHELF/manifest.json",
+      "packagedSha256": "f162c5c78a8e7e3357d99ac8dc9f9e5ebda30e5756474aa8891888eeb39bda7e",
+      "installedSha256": "f162c5c78a8e7e3357d99ac8dc9f9e5ebda30e5756474aa8891888eeb39bda7e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CACTUS/CACTUS.png",
+      "packagedSha256": "830dbba8ac4912858e22eed1e89d4290202113363a934389e54fffb794ad893b",
+      "installedSha256": "830dbba8ac4912858e22eed1e89d4290202113363a934389e54fffb794ad893b",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CACTUS/manifest.json",
+      "packagedSha256": "78e4ecb0a0ccfe4da323ca5bcb32f1b43a79967f83b573bda44c917bd01605b3",
+      "installedSha256": "78e4ecb0a0ccfe4da323ca5bcb32f1b43a79967f83b573bda44c917bd01605b3",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CLOCK/CLOCK.png",
+      "packagedSha256": "f1ff567d71508dfdba37f2ff94ffde734940b56b3999e29b213ab6774e67b20f",
+      "installedSha256": "f1ff567d71508dfdba37f2ff94ffde734940b56b3999e29b213ab6774e67b20f",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CLOCK/manifest.json",
+      "packagedSha256": "10a2596fda4958c436bdc7fbae18bc2bd8fe72d58e1dd7a98b5392e6a9568944",
+      "installedSha256": "10a2596fda4958c436bdc7fbae18bc2bd8fe72d58e1dd7a98b5392e6a9568944",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/COFFEE/COFFEE.png",
+      "packagedSha256": "6bed27c8de5a4ce98b3646d233803b3192cc5980c8f4caf779eb1344a87f8e0d",
+      "installedSha256": "6bed27c8de5a4ce98b3646d233803b3192cc5980c8f4caf779eb1344a87f8e0d",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/COFFEE/manifest.json",
+      "packagedSha256": "8f671ece319b7ee5b462bc2afe7bf072538ad71f08370ebede83ae926c67ccb8",
+      "installedSha256": "8f671ece319b7ee5b462bc2afe7bf072538ad71f08370ebede83ae926c67ccb8",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/COFFEE_TABLE/COFFEE_TABLE.png",
+      "packagedSha256": "0b0fd17c95b29e3b86da00031452166a1400a534c8adff1dc98bb4e5ce72aad3",
+      "installedSha256": "0b0fd17c95b29e3b86da00031452166a1400a534c8adff1dc98bb4e5ce72aad3",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/COFFEE_TABLE/manifest.json",
+      "packagedSha256": "acca0880e88e6ada927eddef632559ed7941ce3c5bc2d8a576f4a33dd98034cb",
+      "installedSha256": "acca0880e88e6ada927eddef632559ed7941ce3c5bc2d8a576f4a33dd98034cb",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CUSHIONED_BENCH/CUSHIONED_BENCH.png",
+      "packagedSha256": "b66ba12ce7921b3ab34515c319bc72775c49351d75ad146c6b29adf46459eaa0",
+      "installedSha256": "b66ba12ce7921b3ab34515c319bc72775c49351d75ad146c6b29adf46459eaa0",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CUSHIONED_BENCH/manifest.json",
+      "packagedSha256": "854d701f00f9dec17141f266edf12868c1faa396ca88596cb1c2c9dd0fc28a27",
+      "installedSha256": "854d701f00f9dec17141f266edf12868c1faa396ca88596cb1c2c9dd0fc28a27",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_BACK.png",
+      "packagedSha256": "7eba17a7c86115caba0246599988e3169dc766af7814e51c7afa566e0fe40846",
+      "installedSha256": "7eba17a7c86115caba0246599988e3169dc766af7814e51c7afa566e0fe40846",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_FRONT.png",
+      "packagedSha256": "30a021a8356125a743be8352da9756ec6d0832e232aca1ae2dd76a5e038a2208",
+      "installedSha256": "30a021a8356125a743be8352da9756ec6d0832e232aca1ae2dd76a5e038a2208",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_SIDE.png",
+      "packagedSha256": "ac2d90e87ce198271f50fd3e9161c4c9b8ea4befd3befdb0c5c9720256febb70",
+      "installedSha256": "ac2d90e87ce198271f50fd3e9161c4c9b8ea4befd3befdb0c5c9720256febb70",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/CUSHIONED_CHAIR/manifest.json",
+      "packagedSha256": "a8a1a949ca45f9b0c65ac2ff2726004ec1a3a60db842f448a6de31a1be9cd8ec",
+      "installedSha256": "a8a1a949ca45f9b0c65ac2ff2726004ec1a3a60db842f448a6de31a1be9cd8ec",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/DESK/DESK_FRONT.png",
+      "packagedSha256": "4df9ed2b04efb98dbd901d400d65fa5a1729e4508787ad70eb93e747017220ca",
+      "installedSha256": "4df9ed2b04efb98dbd901d400d65fa5a1729e4508787ad70eb93e747017220ca",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/DESK/DESK_SIDE.png",
+      "packagedSha256": "b5421b3b3fc30b4a295c67c67d4a138877a1d179b532ffe25973200277107ff9",
+      "installedSha256": "b5421b3b3fc30b4a295c67c67d4a138877a1d179b532ffe25973200277107ff9",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/DESK/manifest.json",
+      "packagedSha256": "2f68f60b61f6ee5aaa40b526af7dcf8581072d936b38ae3a0a25e5caa61cf3db",
+      "installedSha256": "2f68f60b61f6ee5aaa40b526af7dcf8581072d936b38ae3a0a25e5caa61cf3db",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/DOUBLE_BOOKSHELF/DOUBLE_BOOKSHELF.png",
+      "packagedSha256": "b27bd0cc4c73dab38eebbf6b8ed68257acb8264d23a8e87c2cf5026138842cda",
+      "installedSha256": "b27bd0cc4c73dab38eebbf6b8ed68257acb8264d23a8e87c2cf5026138842cda",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/DOUBLE_BOOKSHELF/manifest.json",
+      "packagedSha256": "e3af4890e8f9e140a58b3db79c1718c6bf742ae4dca21aa17b2dcf235465db91",
+      "installedSha256": "e3af4890e8f9e140a58b3db79c1718c6bf742ae4dca21aa17b2dcf235465db91",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/HANGING_PLANT/HANGING_PLANT.png",
+      "packagedSha256": "a6e9c025d0a84e960d3c84d55f18d01585eb8e079cd84f9970de08d636877de2",
+      "installedSha256": "a6e9c025d0a84e960d3c84d55f18d01585eb8e079cd84f9970de08d636877de2",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/HANGING_PLANT/manifest.json",
+      "packagedSha256": "200ca5deaef21d2b135dd8d894a4445f96ecf43d325321b904e35c0088c3aed1",
+      "installedSha256": "200ca5deaef21d2b135dd8d894a4445f96ecf43d325321b904e35c0088c3aed1",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/LARGE_PAINTING/LARGE_PAINTING.png",
+      "packagedSha256": "f6355392631f0004ccd49c3d9ddf4df8ef60c59ec8b23d0b3fb1d0dce6c01c2b",
+      "installedSha256": "f6355392631f0004ccd49c3d9ddf4df8ef60c59ec8b23d0b3fb1d0dce6c01c2b",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/LARGE_PAINTING/manifest.json",
+      "packagedSha256": "906af931475def2450e40d553e2e900b2b2068f5d990b1301433e622942046bf",
+      "installedSha256": "906af931475def2450e40d553e2e900b2b2068f5d990b1301433e622942046bf",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/LARGE_PLANT/LARGE_PLANT.png",
+      "packagedSha256": "196a4f1748160cdbf69400e370b1d7d1254b49902b8c091bcabd7676934f3149",
+      "installedSha256": "196a4f1748160cdbf69400e370b1d7d1254b49902b8c091bcabd7676934f3149",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/LARGE_PLANT/manifest.json",
+      "packagedSha256": "3d45775a4c7930f4d53c3436d9eda4527633eb51a572c106acea1f90b4cf5184",
+      "installedSha256": "3d45775a4c7930f4d53c3436d9eda4527633eb51a572c106acea1f90b4cf5184",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PC/PC_BACK.png",
+      "packagedSha256": "48f3d9aa7f571cc0ce1e5d702977987432bca292995ff67e36d47361d4b6f9a0",
+      "installedSha256": "48f3d9aa7f571cc0ce1e5d702977987432bca292995ff67e36d47361d4b6f9a0",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PC/PC_FRONT_OFF.png",
+      "packagedSha256": "a5d6f40f500f14f440cf981950630f5433521faa7578ae0f83684b9ededdc2bf",
+      "installedSha256": "a5d6f40f500f14f440cf981950630f5433521faa7578ae0f83684b9ededdc2bf",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PC/PC_FRONT_ON_1.png",
+      "packagedSha256": "d00d95a9c4718f770dee1a93240be8b7dc6d2e8abab4071179dd79c2d73a9337",
+      "installedSha256": "d00d95a9c4718f770dee1a93240be8b7dc6d2e8abab4071179dd79c2d73a9337",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PC/PC_FRONT_ON_2.png",
+      "packagedSha256": "dc083d31848be3661b4ea571ee8d8d7e5dcd34cdbcef48d4dd6c444166eb7a69",
+      "installedSha256": "dc083d31848be3661b4ea571ee8d8d7e5dcd34cdbcef48d4dd6c444166eb7a69",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PC/PC_FRONT_ON_3.png",
+      "packagedSha256": "773c5e0cfee45ad12669c082ff26c0041f12a6369e4622db3eab35685aeabc0f",
+      "installedSha256": "773c5e0cfee45ad12669c082ff26c0041f12a6369e4622db3eab35685aeabc0f",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PC/PC_SIDE.png",
+      "packagedSha256": "c327f64a39cc84d3a2c4e97b7165e5a07e355003d0f1a9bca27fc8f8deef9603",
+      "installedSha256": "c327f64a39cc84d3a2c4e97b7165e5a07e355003d0f1a9bca27fc8f8deef9603",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PC/manifest.json",
+      "packagedSha256": "4f33a91b789e22c4e3f5aa05b53eb903581612ef3aa004330143646b8c830f82",
+      "installedSha256": "4f33a91b789e22c4e3f5aa05b53eb903581612ef3aa004330143646b8c830f82",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PLANT/PLANT.png",
+      "packagedSha256": "b9f845e7930e685161a21ac0f1743c2906cb7cbb0bd6b79ef1e4fb5aafff98c6",
+      "installedSha256": "b9f845e7930e685161a21ac0f1743c2906cb7cbb0bd6b79ef1e4fb5aafff98c6",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PLANT/manifest.json",
+      "packagedSha256": "94bfbdc7ba97c86517a8b6bcefda8b23b7c10128b479eabc433ba72ba1e136f5",
+      "installedSha256": "94bfbdc7ba97c86517a8b6bcefda8b23b7c10128b479eabc433ba72ba1e136f5",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PLANT_2/PLANT_2.png",
+      "packagedSha256": "b0d2e82fefd1f7ebada9656260571aa3e810db55975495e72a62d9ce8a878b42",
+      "installedSha256": "b0d2e82fefd1f7ebada9656260571aa3e810db55975495e72a62d9ce8a878b42",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/PLANT_2/manifest.json",
+      "packagedSha256": "238248bdd213f7f6a18875153ccaee50e5b7d44f916a9f310abbef516197c6ba",
+      "installedSha256": "238248bdd213f7f6a18875153ccaee50e5b7d44f916a9f310abbef516197c6ba",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/POT/POT.png",
+      "packagedSha256": "cc2889e6fe22350bbeba94d55157f5bb2a38fe40f3a85ef96429f1af88506585",
+      "installedSha256": "cc2889e6fe22350bbeba94d55157f5bb2a38fe40f3a85ef96429f1af88506585",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/POT/manifest.json",
+      "packagedSha256": "1e6106dd6e888adae7701597f565e0a9c1741d72918708b6421dafcfb7cb7d5e",
+      "installedSha256": "1e6106dd6e888adae7701597f565e0a9c1741d72918708b6421dafcfb7cb7d5e",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SMALL_PAINTING/SMALL_PAINTING.png",
+      "packagedSha256": "15f370af43455d303b5ccb21429e298f7a603c3b6db10d6ed9270aa62caa71a3",
+      "installedSha256": "15f370af43455d303b5ccb21429e298f7a603c3b6db10d6ed9270aa62caa71a3",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SMALL_PAINTING/manifest.json",
+      "packagedSha256": "02f09ec0d22404f102f609f8aabc0ca41f3e4d9af4274206167088db95cd13f6",
+      "installedSha256": "02f09ec0d22404f102f609f8aabc0ca41f3e4d9af4274206167088db95cd13f6",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SMALL_PAINTING_2/SMALL_PAINTING_2.png",
+      "packagedSha256": "148d161726fb08dc7887e75e91f0332bf69d1aadfc649dce6fbc4b2678f5d0f0",
+      "installedSha256": "148d161726fb08dc7887e75e91f0332bf69d1aadfc649dce6fbc4b2678f5d0f0",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SMALL_PAINTING_2/manifest.json",
+      "packagedSha256": "b023f4e593a868efb5dc98ac283e9a15d923848514849ed6e836944d6605867a",
+      "installedSha256": "b023f4e593a868efb5dc98ac283e9a15d923848514849ed6e836944d6605867a",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SMALL_TABLE/SMALL_TABLE_FRONT.png",
+      "packagedSha256": "dc224670ea2c5752830143337fd8b3a080f93980287706d4efd614aaabd4882f",
+      "installedSha256": "dc224670ea2c5752830143337fd8b3a080f93980287706d4efd614aaabd4882f",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SMALL_TABLE/SMALL_TABLE_SIDE.png",
+      "packagedSha256": "5568526f6393ad643606b0095eceee5b7674b5588d7105144adc3fb99f0a3f42",
+      "installedSha256": "5568526f6393ad643606b0095eceee5b7674b5588d7105144adc3fb99f0a3f42",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SMALL_TABLE/manifest.json",
+      "packagedSha256": "cfd626759f52304db591b28caab63832813e846a02bd974e4cee43950005e854",
+      "installedSha256": "cfd626759f52304db591b28caab63832813e846a02bd974e4cee43950005e854",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SOFA/SOFA_BACK.png",
+      "packagedSha256": "62a40318fce1d3166f1ea3811ca2081b39ad3161974c6bcd2edb0bdaf9b06d08",
+      "installedSha256": "62a40318fce1d3166f1ea3811ca2081b39ad3161974c6bcd2edb0bdaf9b06d08",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SOFA/SOFA_FRONT.png",
+      "packagedSha256": "7e4c7e98e46d32daa2776651f6f413f68a84252b357b01d722fce6bb2a0ca52f",
+      "installedSha256": "7e4c7e98e46d32daa2776651f6f413f68a84252b357b01d722fce6bb2a0ca52f",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SOFA/SOFA_SIDE.png",
+      "packagedSha256": "b583fa6261dbbc4c4020c0a887023d3f707a70b7e5524535d541b453b22f9e94",
+      "installedSha256": "b583fa6261dbbc4c4020c0a887023d3f707a70b7e5524535d541b453b22f9e94",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/SOFA/manifest.json",
+      "packagedSha256": "aa3615e2e2b9de9766d1936d06f630c0a4053030cef7f9f054f16cba6661b8d6",
+      "installedSha256": "aa3615e2e2b9de9766d1936d06f630c0a4053030cef7f9f054f16cba6661b8d6",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/TABLE_FRONT/TABLE_FRONT.png",
+      "packagedSha256": "fef9638fd372f081f4c80cc52f9bcb4be8db9db194fa46f88968ec08e5463b4a",
+      "installedSha256": "fef9638fd372f081f4c80cc52f9bcb4be8db9db194fa46f88968ec08e5463b4a",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/TABLE_FRONT/manifest.json",
+      "packagedSha256": "d7868924b6edd92f0b6f135e254fe7c291fe1134c56f84fc3b98b2ca1bc72373",
+      "installedSha256": "d7868924b6edd92f0b6f135e254fe7c291fe1134c56f84fc3b98b2ca1bc72373",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/WHITEBOARD/WHITEBOARD.png",
+      "packagedSha256": "42fb63a8d8041f602c6cd0e7491be3ea95c3f4699b6a5ba6e47851ba8a473059",
+      "installedSha256": "42fb63a8d8041f602c6cd0e7491be3ea95c3f4699b6a5ba6e47851ba8a473059",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/WHITEBOARD/manifest.json",
+      "packagedSha256": "70c1924a08f76f042a8bcaf0d56e7fd3724e717ea207f5ab31e0ec9c3ea1dd67",
+      "installedSha256": "70c1924a08f76f042a8bcaf0d56e7fd3724e717ea207f5ab31e0ec9c3ea1dd67",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/WOODEN_BENCH/WOODEN_BENCH.png",
+      "packagedSha256": "b2a889a7e67dd1bd59ce1035daffeda8c0b34e696f07658ee0bc8ae514e1af49",
+      "installedSha256": "b2a889a7e67dd1bd59ce1035daffeda8c0b34e696f07658ee0bc8ae514e1af49",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/WOODEN_BENCH/manifest.json",
+      "packagedSha256": "cc37d68a0cd451d4329b8efc43e6b01ac157df69f928751b2eca27c96c07407a",
+      "installedSha256": "cc37d68a0cd451d4329b8efc43e6b01ac157df69f928751b2eca27c96c07407a",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_BACK.png",
+      "packagedSha256": "244fd28f4650e469d836f4287613e834805d3a00b7e14f68ae8415dd30411d5c",
+      "installedSha256": "244fd28f4650e469d836f4287613e834805d3a00b7e14f68ae8415dd30411d5c",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_FRONT.png",
+      "packagedSha256": "fb4c4bf7def68c98e4eedffe1d9ee0cbeaa054fc5bc4aa6785f37cc83b1cd44d",
+      "installedSha256": "fb4c4bf7def68c98e4eedffe1d9ee0cbeaa054fc5bc4aa6785f37cc83b1cd44d",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_SIDE.png",
+      "packagedSha256": "b57e3fd470a60e9f9800e9cdfe629b2a187cc0f936ed81314522a17fc7bb2198",
+      "installedSha256": "b57e3fd470a60e9f9800e9cdfe629b2a187cc0f936ed81314522a17fc7bb2198",
+      "matches": true
+    },
+    {
+      "relativePath": "dist/webview/assets/furniture/WOODEN_CHAIR/manifest.json",
+      "packagedSha256": "ba184e498776b354b5642f579499c1a60a0b4e5a4fdbe452009d4cca2cc5cc9b",
+      "installedSha256": "ba184e498776b354b5642f579499c1a60a0b4e5a4fdbe452009d4cca2cc5cc9b",
+      "matches": true
+    }
+  ],
+  "originalManifestMatchesAfterRemovingOnlyMetadata": true,
+  "metadataKeyNames": [
+    "installedTimestamp",
+    "targetPlatform",
+    "size"
+  ],
+  "unexpectedMetadataKeys": [],
+  "packagedVsixManifestSha256": "e2464c4c78d41051c7600d6be51b2d06559c885b1aa8a7e41380d203ed61b731",
+  "installedVsixManifestSha256": "e2464c4c78d41051c7600d6be51b2d06559c885b1aa8a7e41380d203ed61b731",
+  "contentTypesInstalled": false
+}

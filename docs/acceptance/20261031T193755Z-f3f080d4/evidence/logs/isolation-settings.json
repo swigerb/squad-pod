@@ -1,0 +1,73 @@
+{
+  "utc": "2026-10-31T19:43:00.747Z",
+  "runId": "20261031T193755Z-f3f080d4",
+  "recordType": "ALLOWLISTED_PRELAUNCH_CONFIGURATION",
+  "scopes": [
+    {
+      "scope": "ISOLATED_PROFILE",
+      "values": {
+        "squad-pod.liveActivity": false,
+        "squad-pod.directorySuggestions": false,
+        "squad-pod.autoShowPanel": false,
+        "chat.disableAIFeatures": true,
+        "git.autoRepositoryDetection": false,
+        "git.openRepositoryInParentFolders": "never"
+      }
+    },
+    {
+      "scope": "WORKSPACE_A",
+      "values": {
+        "squad-pod.liveActivity": false,
+        "squad-pod.directorySuggestions": false,
+        "squad-pod.autoShowPanel": false,
+        "chat.disableAIFeatures": true,
+        "git.autoRepositoryDetection": false,
+        "git.openRepositoryInParentFolders": "never"
+      }
+    },
+    {
+      "scope": "FOLDER_A",
+      "values": {
+        "squad-pod.liveActivity": false,
+        "squad-pod.directorySuggestions": false,
+        "squad-pod.autoShowPanel": false,
+        "chat.disableAIFeatures": true,
+        "git.autoRepositoryDetection": false,
+        "git.openRepositoryInParentFolders": "never"
+      }
+    },
+    {
+      "scope": "WORKSPACE_B",
+      "values": {
+        "squad-pod.liveActivity": false,
+        "squad-pod.directorySuggestions": false,
+        "squad-pod.autoShowPanel": false,
+        "chat.disableAIFeatures": true,
+        "git.autoRepositoryDetection": false,
+        "git.openRepositoryInParentFolders": "never"
+      }
+    },
+    {
+      "scope": "FOLDER_B",
+      "values": {
+        "squad-pod.liveActivity": false,
+        "squad-pod.directorySuggestions": false,
+        "squad-pod.autoShowPanel": false,
+        "chat.disableAIFeatures": true,
+        "git.autoRepositoryDetection": false,
+        "git.openRepositoryInParentFolders": "never"
+      }
+    }
+  ],
+  "fixtureRoots": [
+    "RUN_ROOT/isolation/project-A",
+    "RUN_ROOT/isolation/project-B",
+    "RUN_ROOT/isolation/fixture-cli-home"
+  ],
+  "cliHome": "FIXTURE_CLI_HOME",
+  "realUsageFile": null,
+  "realTerminalOrTaskConfigured": false,
+  "effectiveNativeUiVerified": false,
+  "internalAbsenceOfReadsProven": false,
+  "historicalPrivacyCauseOrScopeInferred": false
+}

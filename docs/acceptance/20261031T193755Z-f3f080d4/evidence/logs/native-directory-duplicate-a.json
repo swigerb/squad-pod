@@ -1,0 +1,796 @@
+{
+  "utc": "2026-10-31T20:29:01.742Z",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+  "evidenceClass": "NATIVE",
+  "inputMethod": "Read-only rendered DOM observation of the actual isolated installed native host",
+  "targetKind": "webview",
+  "snapshot": {
+    "title": "Squad Pod",
+    "width": 1383,
+    "height": 800,
+    "activeElement": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": "Save directory"
+    },
+    "text": "Fit office\n+\n−\nHide office labels\n\nOffice labels (list, not character positions)\n\nAda\nArchitect\nLocate character\nBasil\nDeveloper\nLocate character\nCedar\nReviewer\nLocate character\nDahlia\nTester\nLocate character\nTask bubbles: On\nSquad Info\nTelemetry\nEdit Layout\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics\n\nFOLDERS\n\nLaunch directory\n×\n\nChoose a folder to launch Squad explicitly.\n\nHow directory launches work\n\nLaunch submits copilot --agent squad in a new VS Code terminal at the selected folder.\n\nRecent launch requests are recorded when the command is submitted; they do not prove the CLI started.\n\nThat folder is already listed under Workspace folders.\n\nWorkspace folders\n1\nSynthetic Office A\nAvailable\nRUN_ROOT\\isolation\\project-A\nLaunch\nSaved directories\n1\nRecovered B\nAvailable\nRUN_ROOT\\isolation\\project-B\nLaunch\nManage\nRecent launch requests\n0\n\nNo launch requests have been recorded.\n\nAdd a directory\n\nSave a folder so you can launch it explicitly later.\n\nBrowse for a directory\nEnter a path manually or choose a recent Squad folder\nDirectory path\nDirectory name\nSave directory",
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Fit office",
+        "label": "Fit and center office",
+        "placeholder": null,
+        "title": "Fit and center office (large layouts use minimum zoom)",
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          36,
+          16,
+          96.02083587646484,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "+",
+        "label": "Zoom in",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          36,
+          52,
+          32,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "−",
+        "label": "Zoom out",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          36,
+          88,
+          32,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Hide office labels",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": "true",
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1239.3021240234375,
+          16,
+          160.03125,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Ada\nArchitect",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1223.03125,
+          97.33333587646484,
+          48.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Ada",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1175.3333740234375,
+          126,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Basil\nDeveloper",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1223.03125,
+          155.33334350585938,
+          48.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Basil",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1175.3333740234375,
+          184,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Cedar\nReviewer",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1225.7396240234375,
+          213.33334350585938,
+          43.208335876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Cedar",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1175.3333740234375,
+          242,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Dahlia\nTester",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1222.53125,
+          271.3333435058594,
+          49.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Dahlia",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1175.3333740234375,
+          300,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Task bubbles: On",
+        "placeholder": null,
+        "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          346.10418701171875,
+          761,
+          156.8229217529297,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Squad Info",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          510.9270935058594,
+          761,
+          110.02083587646484,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Telemetry",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          628.9479370117188,
+          761,
+          102.21875,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Edit Layout",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          739.1666870117188,
+          761,
+          117.82292175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Directories",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          864.9896240234375,
+          761,
+          109.82292175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Settings",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          982.8125,
+          761,
+          94.41667175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Clear activity",
+        "placeholder": null,
+        "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1247.260498046875,
+          756,
+          109.75,
+          20.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "✕",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1365.010498046875,
+          756,
+          26.322917938232422,
+          20.666667938232422
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Usage coverage and source diagnostics",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          953.3333740234375,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Recent historical reports (0 of 0, newest first; at most 40)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          971.3333740234375,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Select CLI usage JSON...",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1066,
+          192.1666717529297,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Refresh selected export",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": true,
+        "visibleAtCenter": false,
+        "box": [
+          232.1666717529297,
+          1066,
+          184.96875,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Forget export",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": true,
+        "visibleAtCenter": false,
+        "box": [
+          425.13543701171875,
+          1066,
+          112.95833587646484,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "CLI import provenance and limits",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1152.666748046875,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Observation settings and consent",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1185.3333740234375,
+          228.5729217529297,
+          18
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Activity source diagnostics",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1245.3333740234375,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "×",
+        "label": "Close directories",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1021,
+          111.05208587646484,
+          32,
+          32
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "How directory launches work",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": true,
+        "visibleAtCenter": true,
+        "box": [
+          330.3333435058594,
+          175.05209350585938,
+          188.40625,
+          12.666666984558105
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Launch",
+        "label": "Launch Synthetic Office A",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          986.4583740234375,
+          331.1145935058594,
+          64.54167175292969,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Launch",
+        "label": "Launch Recovered B",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          986.4583740234375,
+          425.1145935058594,
+          64.54167175292969,
+          32
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Manage",
+        "label": "Manage directory actions for Recovered B",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": true,
+        "box": [
+          1001.2083740234375,
+          469.28125,
+          49.79166793823242,
+          12.666666984558105
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "text": "",
+        "label": "Name for Recovered B",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          601.6666870117188,
+          513.9479370117188,
+          426.66668701171875,
+          28.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "",
+        "label": "Rename Recovered B",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          784.2916870117188,
+          550.6146240234375,
+          64.54167175292969,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "",
+        "label": "Change folder for Recovered B",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          854.8333740234375,
+          550.6146240234375,
+          114.95833587646484,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "",
+        "label": "Remove Recovered B",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          975.7916870117188,
+          550.6146240234375,
+          64.54167175292969,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Browse for a directory",
+        "label": "Browse for a directory",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          873.2396240234375,
+          576.28125,
+          179.7604217529297,
+          32
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Enter a path manually or choose a recent Squad folder",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": true,
+        "visibleAtCenter": true,
+        "box": [
+          330.3333435058594,
+          620.28125,
+          360.04168701171875,
+          12.666666984558105
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "text": "",
+        "label": "Directory path",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          330.3333435058594,
+          658.28125,
+          377.09375,
+          28.666667938232422
+        ]
+      },
+      {
+        "tag": "INPUT",
+        "role": null,
+        "text": "",
+        "label": "Directory name",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          715.4271240234375,
+          658.28125,
+          207.4166717529297,
+          28.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Save directory",
+        "label": "Save directory",
+        "placeholder": null,
+        "title": null,
+        "type": "submit",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          930.84375,
+          654.9479370117188,
+          122.15625,
+          32
+        ]
+      }
+    ],
+    "frames": [],
+    "canvases": [
+      {
+        "width": 2075,
+        "height": 1200
+      }
+    ]
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "utc": "2026-10-31T19:43:00.749Z",
+  "runId": "20261031T193755Z-f3f080d4",
+  "evidenceClass": "FIXTURE",
+  "projects": [
+    {
+      "alias": "PROJECT_A",
+      "teamName": "Synthetic Office A",
+      "members": [
+        {
+          "name": "Ada",
+          "slug": "ada",
+          "role": "Architect",
+          "status": "Active"
+        },
+        {
+          "name": "Basil",
+          "slug": "basil",
+          "role": "Developer",
+          "status": "Active"
+        },
+        {
+          "name": "Cedar",
+          "slug": "cedar",
+          "role": "Reviewer",
+          "status": "Active"
+        },
+        {
+          "name": "Dahlia",
+          "slug": "dahlia",
+          "role": "Tester",
+          "status": "Active"
+        },
+        {
+          "name": "Scribe",
+          "slug": "scribe",
+          "role": "Scribe",
+          "status": "Silent"
+        },
+        {
+          "name": "Ralph",
+          "slug": "ralph",
+          "role": "Monitor",
+          "status": "Active"
+        }
+      ],
+      "rosterBytes": 598,
+      "rosterSha256": "c26bd06ca41c79b3f7e0e39703723c2e7d21adb45a8b5bd0682d4ecfe12f5d6e",
+      "savedLayoutInitiallyExists": false
+    },
+    {
+      "alias": "PROJECT_B",
+      "teamName": "Synthetic Office B",
+      "members": [
+        {
+          "name": "Iris",
+          "slug": "iris",
+          "role": "Architect",
+          "status": "Active"
+        },
+        {
+          "name": "Jasper",
+          "slug": "jasper",
+          "role": "Developer",
+          "status": "Active"
+        },
+        {
+          "name": "Kestrel",
+          "slug": "kestrel",
+          "role": "Tester",
+          "status": "Active"
+        },
+        {
+          "name": "Scribe",
+          "slug": "scribe",
+          "role": "Scribe",
+          "status": "Silent"
+        },
+        {
+          "name": "Ralph",
+          "slug": "ralph",
+          "role": "Monitor",
+          "status": "Active"
+        }
+      ],
+      "rosterBytes": 539,
+      "rosterSha256": "78df1e6ff6ca3c5fc01b3f1b7e083c76e47d0ca287f6c28da9c0aef9caf50974",
+      "savedLayoutInitiallyExists": false
+    }
+  ]
+}

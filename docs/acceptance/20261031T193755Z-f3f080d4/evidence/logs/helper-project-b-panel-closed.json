@@ -1,0 +1,22 @@
+{
+  "utc": "2026-10-31T20:07:15.452Z",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+  "recordType": "HELPER_SEQUENCE_BLOCKER_NOT_PRODUCT_FAILURE",
+  "caseIds": ["N-02"],
+  "behavior": "Project B before explicitly opening its panel",
+  "actual": "Native window switched to WORKSPACE_B, whose autoShowPanel setting was false. No webview target existed. A chained helper command incorrectly proceeded to subsequent webview calls after the first target-validation failure.",
+  "helperErrorExact": "Native webview target is not unique (0).",
+  "classification": "HELPER PRECONDITION / CHAIN ERROR",
+  "outcome": "BLOCKED",
+  "wrongMemberOrWrongProjectShown": false,
+  "productDefectEstablished": false,
+  "keyboardOrSelectorRefusalApprovalInvented": false,
+  "resolution": "Stop the invalid sequence; retain its observations. Explicitly open the B panel through the native workbench command. Subsequent action wrappers stop immediately on a nonzero helper exit; do not repeat the absent-webview calls.",
+  "evidenceRefs": [
+    "native-project-b-shell.json",
+    "native-project-b-seats.json",
+    "native-project-b-host.json"
+  ],
+  "mediaDisposition": "The two pre-panel screenshots remain local, excluded from publication and not treated as office or Squad Info evidence."
+}

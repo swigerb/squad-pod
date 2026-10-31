@@ -1,0 +1,841 @@
+{
+  "utc": "2026-10-31T20:34:10.927Z",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "packageSha256": "1790a5c133063a5e4aa1a43d96bb00c40795f4e9307decd51721b02de56a50f3",
+  "evidenceClass": "NATIVE",
+  "inputMethod": "Read-only rendered DOM observation of the actual isolated installed native host",
+  "targetKind": "webview",
+  "snapshot": {
+    "title": "Squad Pod",
+    "width": 1383,
+    "height": 800,
+    "activeElement": {
+      "tag": "BUTTON",
+      "role": null,
+      "label": null
+    },
+    "text": "Drag to move. Hold Alt on release to copy. Desks carry PCs and lamps.\nTOOLS\n◎\nSelect\n▦\nFloor\n▥\nWall\n▦\nCarpet\n⬚\nArea\n♜\nFurniture\n♥\nPets\n✕\nErase\n⊙\nEyedrop\nEXPAND GRID\n←\n↑\n↓\n→\nACTIONS\nSave Layout\nUndo\nRedo\nReset\nSHORTCUTS\nDel Delete selected\nR Rotate selected\nCtrl+Z Undo\nCtrl+Shift+Z Redo\nCtrl+Y Redo\nEsc Deselect / Exit\nSpace+Drag Pan\nCtrl+Scroll Zoom\nFit office\n+\n−\nHide office labels\n\nOffice labels (list, not character positions)\n\nAda\nArchitect\nLocate character\nBasil\nDeveloper\nLocate character\nCedar\nReviewer\nLocate character\nDahlia\nTester\nLocate character\nTask bubbles: On\nSquad Info\nTelemetry\nExit Layout Editor\nDirectories\nSettings\nTELEMETRY\nClear activity\n✕\nActivity events (0)\nNo activity events observed since this panel opened or activity was cleared. Existing files are a baseline, not replayed activity. Idle sources do not imply a failed collector or zero usage.\nRecorded usage / model history - missing\n\nHistorical reports only, not current model, live context or billing-grade accounting.\n\nNo usage totals available. An empty, missing or rejected source is not recorded zero consumption. Usage requires a local ledger; enabling live CLI observation does not create one.\n\nUsage coverage and source diagnostics\nRecent historical reports (0 of 0, newest first; at most 40)\nCopilot CLI usage export - unselected\n\nSeparate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.\n\nSelect CLI usage JSON...\nRefresh selected export\nForget export\n\nNo imported CLI quantities available. Missing or rejected data is not zero consumption. Launch with copilot --agent squad --usage-output-file <file.json> to request an export; then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.\n\nCLI import provenance and limits\nObservation settings and consent\n\nReview live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.\n\nActivity source diagnostics",
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "◎\nSelect",
+        "placeholder": null,
+        "title": "Select",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          28,
+          89.33333587646484,
+          65.77083587646484,
+          38.333335876464844
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "▦\nFloor",
+        "placeholder": null,
+        "title": "Floor",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          96.77083587646484,
+          89.33333587646484,
+          65.78125,
+          38.333335876464844
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "▥\nWall",
+        "placeholder": null,
+        "title": "Wall",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          165.55209350585938,
+          89.33333587646484,
+          65.77083587646484,
+          38.333335876464844
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "▦\nCarpet",
+        "placeholder": null,
+        "title": "Carpet",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          28,
+          130.6666717529297,
+          65.77083587646484,
+          38.333335876464844
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "⬚\nArea",
+        "placeholder": null,
+        "title": "Area",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          96.77083587646484,
+          130.6666717529297,
+          65.78125,
+          38.333335876464844
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "♜\nFurniture",
+        "placeholder": null,
+        "title": "Furniture",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          165.55209350585938,
+          130.6666717529297,
+          65.77083587646484,
+          38.333335876464844
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "♥\nPets",
+        "placeholder": null,
+        "title": "Pets",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          28,
+          172,
+          65.77083587646484,
+          38.333335876464844
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "✕\nErase",
+        "placeholder": null,
+        "title": "Erase",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          96.77083587646484,
+          172,
+          65.78125,
+          38.333335876464844
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "⊙\nEyedrop",
+        "placeholder": null,
+        "title": "Eyedrop",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          165.55209350585938,
+          172,
+          65.77083587646484,
+          38.333335876464844
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "←",
+        "placeholder": null,
+        "title": "Expand Left",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          91.76042175292969,
+          255.33334350585938,
+          23.9375,
+          20
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "↑",
+        "placeholder": null,
+        "title": "Expand Up",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          117.69792175292969,
+          244.33334350585938,
+          23.9375,
+          20
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "↓",
+        "placeholder": null,
+        "title": "Expand Down",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          117.69792175292969,
+          266.3333435058594,
+          23.9375,
+          20
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "→",
+        "placeholder": null,
+        "title": "Expand Right",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          143.6354217529297,
+          255.33334350585938,
+          23.9375,
+          20
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Save Layout",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          28,
+          320.3333435058594,
+          203.33334350585938,
+          26
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Undo",
+        "placeholder": null,
+        "title": "Undo (Ctrl+Z)",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          28,
+          349.3333435058594,
+          100.16667175292969,
+          24
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Redo",
+        "placeholder": null,
+        "title": "Redo (Ctrl+Y)",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          131.1666717529297,
+          349.3333435058594,
+          100.16667175292969,
+          24
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Reset",
+        "placeholder": null,
+        "title": "Reset to last save",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          28,
+          376.3333435058594,
+          203.33334350585938,
+          24
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Fit office",
+        "label": "Fit and center office",
+        "placeholder": null,
+        "title": "Fit and center office (large layouts use minimum zoom)",
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          36,
+          16,
+          96.02083587646484,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "+",
+        "label": "Zoom in",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          136.02084350585938,
+          16,
+          32,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "−",
+        "label": "Zoom out",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          172.02084350585938,
+          16,
+          32,
+          32
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Hide office labels",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": "true",
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1239.3021240234375,
+          16,
+          160.03125,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Ada\nArchitect",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1223.03125,
+          97.33333587646484,
+          48.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Ada",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1175.3333740234375,
+          126,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Basil\nDeveloper",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1223.03125,
+          155.33334350585938,
+          48.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Basil",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1175.3333740234375,
+          184,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Cedar\nReviewer",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1225.7396240234375,
+          213.33334350585938,
+          43.208335876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Cedar",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1175.3333740234375,
+          242,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Dahlia\nTester",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1222.53125,
+          271.3333435058594,
+          49.614585876464844,
+          24.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Locate character",
+        "label": "Locate Dahlia",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1175.3333740234375,
+          300,
+          144.02084350585938,
+          21.33333396911621
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Task bubbles: On",
+        "placeholder": null,
+        "title": "Show or hide task summaries in this view only. Does not change project settings or live-source consent.",
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          318.8020935058594,
+          761,
+          156.8229217529297,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Squad Info",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          483.625,
+          761,
+          110.02083587646484,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Telemetry",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          601.6458740234375,
+          761,
+          102.21875,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Exit Layout Editor",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          711.8646240234375,
+          761,
+          172.42709350585938,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Directories",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          892.2916870117188,
+          761,
+          109.82292175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Settings",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": true,
+        "box": [
+          1010.1146240234375,
+          761,
+          94.41667175292969,
+          30.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Clear activity",
+        "placeholder": null,
+        "title": "Clear activity feed only; observed tasks and recorded usage are unchanged",
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1247.260498046875,
+          756,
+          109.75,
+          20.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "✕",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          1365.010498046875,
+          756,
+          26.322917938232422,
+          20.666667938232422
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Usage coverage and source diagnostics",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          953.3333740234375,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Recent historical reports (0 of 0, newest first; at most 40)",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          971.3333740234375,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Select CLI usage JSON...",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1066,
+          192.1666717529297,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Refresh selected export",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": true,
+        "visibleAtCenter": false,
+        "box": [
+          232.1666717529297,
+          1066,
+          184.96875,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Forget export",
+        "placeholder": null,
+        "title": null,
+        "type": "button",
+        "checked": null,
+        "expanded": null,
+        "disabled": true,
+        "visibleAtCenter": false,
+        "box": [
+          425.13543701171875,
+          1066,
+          112.95833587646484,
+          26.666667938232422
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "CLI import provenance and limits",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1152.666748046875,
+          1344,
+          18
+        ]
+      },
+      {
+        "tag": "BUTTON",
+        "role": null,
+        "text": "Observation settings and consent",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": null,
+        "disabled": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1185.3333740234375,
+          228.5729217529297,
+          18
+        ]
+      },
+      {
+        "tag": "SUMMARY",
+        "role": null,
+        "text": "Activity source diagnostics",
+        "placeholder": null,
+        "title": null,
+        "type": null,
+        "checked": null,
+        "expanded": false,
+        "visibleAtCenter": false,
+        "box": [
+          32,
+          1245.3333740234375,
+          1344,
+          18
+        ]
+      }
+    ],
+    "frames": [],
+    "canvases": [
+      {
+        "width": 2075,
+        "height": 1200
+      }
+    ]
+  }
+}

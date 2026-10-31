@@ -1,0 +1,561 @@
+{
+  "runId": "20261031T193755Z-f3f080d4",
+  "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
+  "generatedUtc": "2026-10-31T21:04:43.174Z",
+  "rollupRule": "A successful variant does not pass an entire combined subcheck. Shared requirements stay BLOCKED until every applicable asserted variant has adequate direct evidence.",
+  "inheritedPasses": 0,
+  "variants": [
+    {
+      "id": "P0-effective-settings",
+      "caseIds": [
+        "N-05"
+      ],
+      "atomicIds": [
+        "N-05-S001-A002",
+        "N-05-S002-A001",
+        "N-05-S004-A003"
+      ],
+      "expected": "Profile/workspace/folder values, explicit fixture roots and actual native UI; no internal no-read claim.",
+      "outcome": "BLOCKED",
+      "reason": "PARTIAL: configured live/suggestions off independently observed; product default-off and internal reads remain unproved.",
+      "observationIds": [
+        "OBS-0008"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-settings-before-live-cancel.json",
+        "evidence/logs/native-settings-after-live-cancel.json",
+        "evidence/logs/native-directory-suggestions-off.json",
+        "evidence/logs/native-directory-suggestions-workspace-off.json",
+        "evidence/logs/native-window-actions.jsonl",
+        "evidence/logs/native-batch-2-process-safety.json"
+      ]
+    },
+    {
+      "id": "membership-cold",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "Cold native open; compare all IDs/count, auxiliary members, status, project and seat map.",
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0002"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-cold-squad-info.json",
+        "evidence/logs/native-cold-saved-seats.json",
+        "evidence/logs/native-cold-host-roles-redacted.json"
+      ]
+    },
+    {
+      "id": "membership-recreate-1",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "First host-surviving panel recreation; capture the same full comparison.",
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0003"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-recreate-1-info.json",
+        "evidence/logs/native-recreate-1-seats.json",
+        "evidence/logs/native-recreate-1-host.json",
+        "evidence/logs/native-recreate-1-comparison.json"
+      ]
+    },
+    {
+      "id": "membership-recreate-2",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "Second host-surviving panel recreation; capture the same full comparison.",
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0004"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-recreate-2-info.json",
+        "evidence/logs/native-recreate-2-seats.json",
+        "evidence/logs/native-recreate-2-host.json",
+        "evidence/logs/native-recreate-2-comparison.json"
+      ]
+    },
+    {
+      "id": "membership-recreate-3",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "Third host-surviving panel recreation; capture ordering and the same full comparison.",
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0005"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-recreate-3-info.json",
+        "evidence/logs/native-recreate-3-seats.json",
+        "evidence/logs/native-recreate-3-host.json",
+        "evidence/logs/native-recreate-3-comparison.json"
+      ]
+    },
+    {
+      "id": "membership-host-reload",
+      "caseIds": [
+        "N-01"
+      ],
+      "atomicIds": [
+        "N-01-S002-A003",
+        "N-01-S003-A001",
+        "N-01-S003-A003"
+      ],
+      "expected": "Full window/extension-host reload, with before/after owned host identity and same roster/project/seat comparison.",
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0006"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-full-reload-info-settled.json",
+        "evidence/logs/native-full-reload-seats.json",
+        "evidence/logs/native-full-reload-host.json"
+      ]
+    },
+    {
+      "id": "membership-project-switch",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S003-A001",
+        "N-02-S003-A003",
+        "N-02-S003-A007"
+      ],
+      "expected": "Switch between explicit synthetic A and B, then return; stop on wrong attribution.",
+      "outcome": "PASS",
+      "reason": "BOUNDED RENDERED MEMBERSHIP / SAVED IDENTITY VARIANT",
+      "observationIds": [
+        "OBS-0007"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-project-a-return-info.json",
+        "evidence/logs/native-project-a-return-seats.json",
+        "evidence/logs/native-project-a-return-host.json",
+        "evidence/logs/native-project-b-open-info.json",
+        "evidence/logs/native-project-b-open-seats.json",
+        "evidence/logs/native-project-b-open-host.json"
+      ]
+    },
+    {
+      "id": "native-export-new",
+      "caseIds": [
+        "L-02"
+      ],
+      "atomicIds": [
+        "L-02-S001-A002",
+        "L-02-S002-A001",
+        "L-02-S002-A002",
+        "L-02-S002-A008",
+        "L-02-S003-A001"
+      ],
+      "expected": "Real native dialog, unique initially absent target, output bytes/hash/parse and unchanged saved baseline.",
+      "outcome": "BLOCKED",
+      "reason": "PARTIAL: native new/default/Settings exports, designated existing-copy overwrite, Default cancellation and approved backup Import/Reset/Save/reload observed. Dirty Settings, full canvas, normal-navigation, error/conflict/recovery and human-comparison variants remain.",
+      "observationIds": [
+        "OBS-0012",
+        "OBS-0013",
+        "OBS-0014"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-file-dialogs.jsonl",
+        "evidence/logs/native-window-actions.jsonl",
+        "evidence/logs/native-export-cancel-workbench.json",
+        "evidence/logs/native-layout-after-export-cancel-disk.json",
+        "evidence/logs/native-exports-before-overwrite.json",
+        "evidence/logs/native-export-preconditions.json",
+        "evidence/logs/native-overwrite-confirmations.jsonl",
+        "evidence/logs/native-exports-after-overwrite.json",
+        "evidence/logs/native-layout-before-exports-disk.json",
+        "evidence/logs/native-layout-after-default-export-disk.json",
+        "evidence/logs/native-layout-after-settings-export-disk.json",
+        "evidence/logs/native-layout-after-approved-overwrite-disk.json",
+        "evidence/exports/native-default-new.json",
+        "evidence/exports/native-settings-new.json",
+        "evidence/exports/native-default-overwrite.json",
+        "evidence/screenshots/native-export-baseline.png",
+        "evidence/screenshots/native-default-export-office.png",
+        "evidence/logs/batch-2-human-approval.json",
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-layout-imported-baseline-draft-disk.json",
+        "evidence/logs/native-imported-baseline-editor.json",
+        "evidence/logs/native-import-reset-editor.json",
+        "evidence/logs/native-layout-after-import-reset-disk.json",
+        "evidence/logs/native-baseline-before-save.json",
+        "evidence/logs/native-layout-immediately-before-baseline-save-disk.json",
+        "evidence/logs/native-layout-restored-baseline-disk.json",
+        "evidence/logs/native-baseline-saved-editor.json",
+        "evidence/logs/native-layout-restored-baseline-after-reload-disk.json",
+        "evidence/logs/native-baseline-after-reload.json",
+        "evidence/screenshots/native-baseline-draft-editor.png",
+        "evidence/screenshots/native-restored-baseline-office.png"
+      ]
+    },
+    {
+      "id": "native-export-overwrite",
+      "caseIds": [
+        "L-02"
+      ],
+      "atomicIds": [
+        "L-02-S001-A002",
+        "L-02-S002-A001",
+        "L-02-S002-A002",
+        "L-02-S002-A008",
+        "L-02-S003-A001"
+      ],
+      "expected": "Distinct disposable preexisting target, human-approved native overwrite and before/after bytes/hash.",
+      "outcome": "BLOCKED",
+      "reason": "PARTIAL: native new/default/Settings exports, designated existing-copy overwrite, Default cancellation and approved backup Import/Reset/Save/reload observed. Dirty Settings, full canvas, normal-navigation, error/conflict/recovery and human-comparison variants remain.",
+      "observationIds": [
+        "OBS-0012",
+        "OBS-0013",
+        "OBS-0014"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-file-dialogs.jsonl",
+        "evidence/logs/native-window-actions.jsonl",
+        "evidence/logs/native-export-cancel-workbench.json",
+        "evidence/logs/native-layout-after-export-cancel-disk.json",
+        "evidence/logs/native-exports-before-overwrite.json",
+        "evidence/logs/native-export-preconditions.json",
+        "evidence/logs/native-overwrite-confirmations.jsonl",
+        "evidence/logs/native-exports-after-overwrite.json",
+        "evidence/logs/native-layout-before-exports-disk.json",
+        "evidence/logs/native-layout-after-default-export-disk.json",
+        "evidence/logs/native-layout-after-settings-export-disk.json",
+        "evidence/logs/native-layout-after-approved-overwrite-disk.json",
+        "evidence/exports/native-default-new.json",
+        "evidence/exports/native-settings-new.json",
+        "evidence/exports/native-default-overwrite.json",
+        "evidence/screenshots/native-export-baseline.png",
+        "evidence/screenshots/native-default-export-office.png",
+        "evidence/logs/batch-2-human-approval.json",
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-layout-imported-baseline-draft-disk.json",
+        "evidence/logs/native-imported-baseline-editor.json",
+        "evidence/logs/native-import-reset-editor.json",
+        "evidence/logs/native-layout-after-import-reset-disk.json",
+        "evidence/logs/native-baseline-before-save.json",
+        "evidence/logs/native-layout-immediately-before-baseline-save-disk.json",
+        "evidence/logs/native-layout-restored-baseline-disk.json",
+        "evidence/logs/native-baseline-saved-editor.json",
+        "evidence/logs/native-layout-restored-baseline-after-reload-disk.json",
+        "evidence/logs/native-baseline-after-reload.json",
+        "evidence/screenshots/native-baseline-draft-editor.png",
+        "evidence/screenshots/native-restored-baseline-office.png"
+      ]
+    },
+    {
+      "id": "native-export-cancel",
+      "caseIds": [
+        "L-02"
+      ],
+      "atomicIds": [
+        "L-02-S001-A002",
+        "L-02-S002-A001",
+        "L-02-S002-A002",
+        "L-02-S002-A008",
+        "L-02-S003-A001"
+      ],
+      "expected": "Native cancellation; prove disposable target and saved-office baseline unchanged.",
+      "outcome": "BLOCKED",
+      "reason": "PARTIAL: native new/default/Settings exports, designated existing-copy overwrite, Default cancellation and approved backup Import/Reset/Save/reload observed. Dirty Settings, full canvas, normal-navigation, error/conflict/recovery and human-comparison variants remain.",
+      "observationIds": [
+        "OBS-0012",
+        "OBS-0013",
+        "OBS-0014"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-file-dialogs.jsonl",
+        "evidence/logs/native-window-actions.jsonl",
+        "evidence/logs/native-export-cancel-workbench.json",
+        "evidence/logs/native-layout-after-export-cancel-disk.json",
+        "evidence/logs/native-exports-before-overwrite.json",
+        "evidence/logs/native-export-preconditions.json",
+        "evidence/logs/native-overwrite-confirmations.jsonl",
+        "evidence/logs/native-exports-after-overwrite.json",
+        "evidence/logs/native-layout-before-exports-disk.json",
+        "evidence/logs/native-layout-after-default-export-disk.json",
+        "evidence/logs/native-layout-after-settings-export-disk.json",
+        "evidence/logs/native-layout-after-approved-overwrite-disk.json",
+        "evidence/exports/native-default-new.json",
+        "evidence/exports/native-settings-new.json",
+        "evidence/exports/native-default-overwrite.json",
+        "evidence/screenshots/native-export-baseline.png",
+        "evidence/screenshots/native-default-export-office.png",
+        "evidence/logs/batch-2-human-approval.json",
+        "evidence/logs/native-ui-actions.jsonl",
+        "evidence/logs/native-layout-imported-baseline-draft-disk.json",
+        "evidence/logs/native-imported-baseline-editor.json",
+        "evidence/logs/native-import-reset-editor.json",
+        "evidence/logs/native-layout-after-import-reset-disk.json",
+        "evidence/logs/native-baseline-before-save.json",
+        "evidence/logs/native-layout-immediately-before-baseline-save-disk.json",
+        "evidence/logs/native-layout-restored-baseline-disk.json",
+        "evidence/logs/native-baseline-saved-editor.json",
+        "evidence/logs/native-layout-restored-baseline-after-reload-disk.json",
+        "evidence/logs/native-baseline-after-reload.json",
+        "evidence/screenshots/native-baseline-draft-editor.png",
+        "evidence/screenshots/native-restored-baseline-office.png"
+      ]
+    },
+    {
+      "id": "layout-save-reload",
+      "caseIds": [
+        "L-01"
+      ],
+      "atomicIds": [
+        "L-01-S001-A003",
+        "L-01-S002-A001",
+        "L-01-S002-A002",
+        "L-01-S002-A003",
+        "L-01-S002-A004"
+      ],
+      "expected": "UI edit/save/reload with actual saved disk bytes and separately evaluated canvas equivalence.",
+      "outcome": "BLOCKED",
+      "reason": "PARTIAL: actual Save and disk hash across reload observed; complete canvas/color/metadata equivalence remains.",
+      "observationIds": [
+        "OBS-0010"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-layout-baseline-disk.json",
+        "evidence/logs/native-layout-expanded-draft-disk.json",
+        "evidence/logs/native-layout-expanded-draft.json",
+        "evidence/logs/native-layout-reset-disk.json",
+        "evidence/logs/native-layout-reset.json",
+        "evidence/logs/native-layout-after-save-helper-block.json",
+        "evidence/logs/native-layout-expanded-saved-disk.json",
+        "evidence/logs/native-layout-expanded-saved.json",
+        "evidence/logs/native-layout-after-reload-disk.json",
+        "evidence/logs/native-members-after-layout-reload.json",
+        "evidence/logs/native-batch-2-host.json",
+        "evidence/logs/native-ui-actions.jsonl"
+      ]
+    },
+    {
+      "id": "layout-reset-cancel-recovery",
+      "caseIds": [
+        "L-03"
+      ],
+      "atomicIds": [
+        "L-03-S001-A002",
+        "L-03-S002-A003",
+        "L-03-S002-A005",
+        "L-03-S003-A002",
+        "L-03-S003-A004"
+      ],
+      "expected": "Dirty Reset, cancellation and recovery with before/after bytes; do not collapse variants.",
+      "outcome": "BLOCKED",
+      "reason": "PARTIAL: simple draft Reset keeps saved bytes; pending external/conflict/recovery variants remain.",
+      "observationIds": [
+        "OBS-0010"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-layout-baseline-disk.json",
+        "evidence/logs/native-layout-expanded-draft-disk.json",
+        "evidence/logs/native-layout-expanded-draft.json",
+        "evidence/logs/native-layout-reset-disk.json",
+        "evidence/logs/native-layout-reset.json",
+        "evidence/logs/native-layout-after-save-helper-block.json",
+        "evidence/logs/native-layout-expanded-saved-disk.json",
+        "evidence/logs/native-layout-expanded-saved.json",
+        "evidence/logs/native-layout-after-reload-disk.json",
+        "evidence/logs/native-members-after-layout-reload.json",
+        "evidence/logs/native-batch-2-host.json",
+        "evidence/logs/native-ui-actions.jsonl"
+      ]
+    },
+    {
+      "id": "synthetic-seat-arrival",
+      "caseIds": [
+        "N-02"
+      ],
+      "atomicIds": [
+        "N-02-S002-A003",
+        "N-02-S002-A004",
+        "N-02-S003-A003",
+        "N-02-S003-A004",
+        "N-02-S003-A005"
+      ],
+      "expected": "Labeled synthetic arrival and saved assignments against the approved actual starter map.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED IN THIS RUN",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "wide-office-controls",
+      "caseIds": [
+        "V-01"
+      ],
+      "atomicIds": [
+        "V-01-S001-A001",
+        "V-01-S002-A001",
+        "V-01-S002-A007",
+        "V-01-S003-A003",
+        "V-01-S003-A004"
+      ],
+      "expected": "Wide labels/list/Hide/Locate/Fit plus a bounded action clip, not a static-only claim.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED IN THIS RUN",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "narrow-office-controls",
+      "caseIds": [
+        "V-01"
+      ],
+      "atomicIds": [
+        "V-01-S001-A001",
+        "V-01-S002-A001",
+        "V-01-S002-A007",
+        "V-01-S003-A003",
+        "V-01-S003-A004"
+      ],
+      "expected": "Resize, explicitly Fit office again, inspect all relevant narrow controls and clip the claimed behavior.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED IN THIS RUN",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "directory-controls",
+      "caseIds": [
+        "D-01"
+      ],
+      "atomicIds": [
+        "D-01-S002-A002",
+        "D-01-S002-A003",
+        "D-01-S002-A004",
+        "D-01-S002-A005",
+        "D-01-S002-A006"
+      ],
+      "expected": "Browse/manual disclosure, validation, rename, Change folder, reload, footer and no unintended Launch.",
+      "outcome": "BLOCKED",
+      "reason": "PARTIAL: native add/rename/validation/reload observed; picker/Change folder/narrow/long-list/keyboard variants remain.",
+      "observationIds": [
+        "OBS-0009"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-directories-initial.json",
+        "evidence/logs/native-directory-b-ready.json",
+        "evidence/logs/native-directory-duplicate-a.json",
+        "evidence/logs/native-directory-missing-rejected.json",
+        "evidence/logs/native-directory-file-rejected.json",
+        "evidence/logs/native-directory-b-renamed.json",
+        "evidence/logs/native-directories-after-reload.json",
+        "evidence/logs/native-ui-actions.jsonl"
+      ]
+    },
+    {
+      "id": "keyboard-and-source-warnings",
+      "caseIds": [
+        "U-01"
+      ],
+      "atomicIds": [
+        "U-01-S003-A001",
+        "U-01-S003-A002",
+        "U-01-S003-A003",
+        "U-01-S003-A008",
+        "U-01-S003-A009"
+      ],
+      "expected": "Native keyboard/focus and distinct missing/partial source warnings.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED IN THIS RUN",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "standalone-readonly",
+      "caseIds": [
+        "F-02"
+      ],
+      "atomicIds": [
+        "F-02-S001-A001",
+        "F-02-S001-A003",
+        "F-02-S002-A001",
+        "F-02-S003-A002",
+        "F-02-S003-A003"
+      ],
+      "expected": "Only after human observation authentication, attempt negative writes through visible browser UI.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED IN THIS RUN",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "standalone-office-conflict",
+      "caseIds": [
+        "F-02"
+      ],
+      "atomicIds": [
+        "F-02-S001-A001",
+        "F-02-S001-A003",
+        "F-02-S002-A001",
+        "F-02-S003-A002",
+        "F-02-S003-A003"
+      ],
+      "expected": "Separately human-authenticated/approved selected-project office-control revision/conflict variants.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED IN THIS RUN",
+      "observationIds": [],
+      "evidenceRefs": []
+    },
+    {
+      "id": "standalone-fixture-terminals",
+      "caseIds": [
+        "F-02"
+      ],
+      "atomicIds": [
+        "F-02-S001-A001",
+        "F-02-S002-A001",
+        "F-02-S003-A002",
+        "F-02-S003-A004",
+        "F-02-S003-A005"
+      ],
+      "expected": "Separately authenticated --fixture terminals: lifecycle/output/resize/reconnect/stop; no actual agent.",
+      "outcome": "BLOCKED",
+      "reason": "NOT EXECUTED IN THIS RUN",
+      "observationIds": [],
+      "evidenceRefs": []
+    }
+  ]
+}

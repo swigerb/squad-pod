@@ -1,0 +1,49 @@
+{
+  "utc": "2026-10-31T19:57:43.9150926+00:00",
+  "runId": "20261031T193755Z-f3f080d4",
+  "rootPid": 61060,
+  "inventoryMethod": "Recorded root PID and direct recursive descendants; no command lines",
+  "processes": [
+    {
+      "pid": 61060,
+      "name": "Code",
+      "startedUtc": "2026-10-31T19:57:23.5229622Z"
+    },
+    {
+      "pid": 107752,
+      "name": "Code",
+      "startedUtc": "2026-10-31T19:57:23.6832311Z"
+    },
+    {
+      "pid": 27184,
+      "name": "Code",
+      "startedUtc": "2026-10-31T19:57:23.6884415Z"
+    },
+    {
+      "pid": 91076,
+      "name": "Code",
+      "startedUtc": "2026-10-31T19:57:24.0402787Z"
+    },
+    {
+      "pid": 48340,
+      "name": "Code",
+      "startedUtc": "2026-10-31T19:57:25.0456896Z"
+    },
+    {
+      "pid": 82484,
+      "name": "Code",
+      "startedUtc": "2026-10-31T19:57:25.0589423Z"
+    },
+    {
+      "pid": 69488,
+      "name": "Code",
+      "startedUtc": "2026-10-31T19:57:25.0940320Z"
+    },
+    {
+      "pid": 50324,
+      "name": "Code",
+      "startedUtc": "2026-10-31T19:57:27.7795026Z"
+    }
+  ],
+  "aiRelatedChildObserved": false
+}
