@@ -1,0 +1,33 @@
+{
+  "runId": "20261031T135929Z-fresh-25a14517",
+  "recordedAtUtc": "2026-10-31T14:25:49.970Z",
+  "caseId": "L-02",
+  "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
+  "outcome": "BLOCKED",
+  "occurrenceWindowUtc": [
+    "2026-10-31T14:18:45.877Z",
+    "2026-10-31T14:20:53.968Z"
+  ],
+  "actualErrorsInSequence": [
+    "Native Win32 save dialog not found; no keyboard input sent",
+    "Keyboard filename readback mismatch; no save sent",
+    "Filename edit does not own keyboard focus; input refused",
+    "Keyboard filename readback mismatch; no save sent"
+  ],
+  "method": "First Windows SendKeys, then guarded Win32 SendInput. UI Automation used only for control identification/focus/readback and final Cancel invocation.",
+  "observedFilenameAfterFailedSendKeys": "squad-pod-layout",
+  "expectedTarget": "exports/default-keyboard-new.json",
+  "targetPreviouslyExisted": false,
+  "targetExistsAfterCancellation": false,
+  "finalCancellation": {
+    "utc": "2026-10-31T14:20:53.968Z",
+    "method": "Invoke Cancel on the exact owned native dialog"
+  },
+  "savedOfficeBeforeSha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+  "savedOfficeAfterSha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+  "preexistingOverwriteFixtureSha256": "cdf64bb662707a9a6db725468b06a791a4c974117686478955785ab5c717075b",
+  "overwriteAttempt": "NOT EXECUTED; original disposable copy remains unchanged",
+  "expectedExportComparison": "BLOCKED: no new export bytes were produced",
+  "consequence": "No successful export or product defect established. Human keyboard operation is needed. Earlier helper failure is not resolved.",
+  "artifactCaveat": "The wide screenshot/idle clip retain text selection left by the refused keyboard attempts. This is recorded, not silently retouched."
+}

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T135929Z-fresh-25a14517",
-  "generation": "2026-10-31T14:04:11.081Z",
+  "generation": "2026-10-31T14:25:49.970Z",
   "planSha": "0c22cffded2985370a80158d6bc252effa16c01c",
   "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
   "derivation": "NEW statement-level atoms; exactly-one-parent mapping to case-ledger.json. Not historical recovery.",
@@ -13,10 +13,12 @@
     "totalGroups": 512,
     "atomicRows": 1932,
     "byOutcome": {
-      "BLOCKED": 1932
+      "BLOCKED": 1927,
+      "PASS": 5
     },
     "byObservedEvidenceClass": {
-      "NONE_NOT_EXECUTED": 1932
+      "NATIVE+FIXTURE": 5,
+      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1927
     }
   },
   "rows": [
@@ -227,21 +229,40 @@
       ],
       "requirement": "- **Expected:** Office loads with assets, roster and source status",
       "expected": "- **Expected:** Office loads with assets, roster and source status",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
+      "observedAtUtc": "2026-10-31T14:17:09.610Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX; command-palette keyboard and native webview input; scoped screenshots, owned host diagnostics and isolated state read. PASS scope is rendering/count only.",
+      "actual": "Cold/recreated/full-reloaded Squad Info each displayed Ada and Bea, 2 agents, 0 active; hidden Scribe/Ralph were background services. Host survived webview reload and changed on full reload. Seats were not captured at every boundary.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-lifecycle.json"
+        },
+        {
+          "path": "evidence/logs/native-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-cold-squad-info.png"
+        },
+        {
+          "path": "evidence/screenshots/native-recreated-squad-info.png"
+        },
+        {
+          "path": "evidence/screenshots/native-full-reload-squad-info.png"
+        }
+      ],
+      "cleanup": "Owned native host retained; no unrelated process changed.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -283,21 +304,40 @@
       ],
       "requirement": "A full host reload reestablishes observation",
       "expected": "A full host reload reestablishes observation",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
+      "observedAtUtc": "2026-10-31T14:17:09.610Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX; command-palette keyboard and native webview input; scoped screenshots, owned host diagnostics and isolated state read. PASS scope is rendering/count only.",
+      "actual": "Cold/recreated/full-reloaded Squad Info each displayed Ada and Bea, 2 agents, 0 active; hidden Scribe/Ralph were background services. Host survived webview reload and changed on full reload. Seats were not captured at every boundary.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-lifecycle.json"
+        },
+        {
+          "path": "evidence/logs/native-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-cold-squad-info.png"
+        },
+        {
+          "path": "evidence/screenshots/native-recreated-squad-info.png"
+        },
+        {
+          "path": "evidence/screenshots/native-full-reload-squad-info.png"
+        }
+      ],
+      "cleanup": "Owned native host retained; no unrelated process changed.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -675,21 +715,40 @@
       ],
       "requirement": "- **Expected:** Exactly the visible roster appears.",
       "expected": "- **Expected:** Exactly the visible roster appears.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
+      "observedAtUtc": "2026-10-31T14:17:09.610Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Exact installed VSIX; command-palette keyboard and native webview input; scoped screenshots, owned host diagnostics and isolated state read. PASS scope is rendering/count only.",
+      "actual": "Cold/recreated/full-reloaded Squad Info each displayed Ada and Bea, 2 agents, 0 active; hidden Scribe/Ralph were background services. Host survived webview reload and changed on full reload. Seats were not captured at every boundary.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-lifecycle.json"
+        },
+        {
+          "path": "evidence/logs/native-actions.jsonl"
+        },
+        {
+          "path": "evidence/screenshots/native-cold-squad-info.png"
+        },
+        {
+          "path": "evidence/screenshots/native-recreated-squad-info.png"
+        },
+        {
+          "path": "evidence/screenshots/native-full-reload-squad-info.png"
+        }
+      ],
+      "cleanup": "Owned native host retained; no unrelated process changed.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -11688,21 +11747,34 @@
       ],
       "requirement": "the always-visible usage section states that a missing/empty/rejected source is not recorded zero and that enabling live observation does not create a ledger.",
       "expected": "the always-visible usage section states that a missing/empty/rejected source is not recorded zero and that enabling live observation does not create a ledger.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
+      "observedAtUtc": "2026-10-31T14:17:10.648Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Native Telemetry button and scoped screenshot; authored historical fixture, no REAL producer.",
+      "actual": "Telemetry visibly showed Activity events (0), recorded usage missing, unavailable totals and the explicit nonzero/missing-source warning. Only the historical JSON recipe was seeded; other historical-source variants remain unexecuted.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/screenshots/native-missing-usage.png"
+        },
+        {
+          "path": "evidence/logs/native-actions.jsonl"
+        },
+        {
+          "path": "evidence/logs/fixture-inputs.json"
+        }
+      ],
+      "cleanup": "Owned native host retained; no unrelated process changed.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -13900,21 +13972,34 @@
       ],
       "requirement": "First open **Export Default Layout**, record the initial location category (**drive root / workspace / other**) and suggested filename, redacted without any private path, then cancel and verify no write or office change.",
       "expected": "First open **Export Default Layout**, record the initial location category (**drive root / workspace / other**) and suggested filename, redacted without any private path, then cancel and verify no write or office change.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
-      "observedAtUtc": null,
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
+      "observedAtUtc": "2026-10-31T14:18:42.756Z",
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
-      "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
-      "evidenceClass": null,
+      "method": "Native command, UI Automation classification and keyboard cancellation; no dialog stubs.",
+      "actual": "Win32 #32770 Save As, filename control 1001, suggested basename squad-pod-layout, location category other. Initial cancel completed; saved office SHA-256 stayed unchanged. A native Save had produced the retained baseline.",
+      "evidenceClass": [
+        "NATIVE",
+        "FIXTURE"
+      ],
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
-      "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
-      "cleanup": "No test process started or fixture mutated.",
+      "outcome": "PASS",
+      "reason": "Direct evidence for this exact statement only",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/native-export-observations.jsonl"
+        },
+        {
+          "path": "evidence/logs/saved-office-baseline.json"
+        },
+        {
+          "path": "evidence/logs/native-actions.jsonl"
+        }
+      ],
+      "cleanup": "Owned native host retained; no unrelated process changed.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
     {
@@ -13928,20 +14013,24 @@
       ],
       "requirement": "3.",
       "expected": "3.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -13956,20 +14045,24 @@
       ],
       "requirement": "On a fresh approved attempt, type the new run-owned **absolute filename by keyboard** into the correct filename control.",
       "expected": "On a fresh approved attempt, type the new run-owned **absolute filename by keyboard** into the correct filename control.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -13984,20 +14077,24 @@
       ],
       "requirement": "Verify the intended destination and absence before submission.",
       "expected": "Verify the intended destination and absence before submission.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14012,20 +14109,24 @@
       ],
       "requirement": "Separately compare normal directory navigation plus unique basename if approved.",
       "expected": "Separately compare normal directory navigation plus unique basename if approved.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14040,20 +14141,24 @@
       ],
       "requirement": "If an automation helper is used, compare it in a separate explicitly approved attempt with another absent target and validated window/field/capture scope",
       "expected": "If an automation helper is used, compare it in a separate explicitly approved attempt with another absent target and validated window/field/capture scope",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14068,20 +14173,24 @@
       ],
       "requirement": "retain input method and dialog mode in each result.",
       "expected": "retain input method and dialog mode in each result.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14096,20 +14205,24 @@
       ],
       "requirement": "4.",
       "expected": "4.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14124,20 +14237,24 @@
       ],
       "requirement": "If **Confirm Save As** appears for a target that does not exist, **cancel**, capture the prompt locally, redact its destination and record FAIL for a verified contradiction or BLOCKED if the effective target remains uncertain.",
       "expected": "If **Confirm Save As** appears for a target that does not exist, **cancel**, capture the prompt locally, redact its destination and record FAIL for a verified contradiction or BLOCKED if the effective target remains uncertain.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14152,20 +14269,24 @@
       ],
       "requirement": "Stop that subcheck",
       "expected": "Stop that subcheck",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14180,20 +14301,24 @@
       ],
       "requirement": "never accept an overwrite of a non-run-owned file or weaken a warning.",
       "expected": "never accept an overwrite of a non-run-owned file or weaken a warning.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14208,20 +14333,24 @@
       ],
       "requirement": "Testing confirmation on an **existing run-owned copy** needs its own explicit approval and separate result",
       "expected": "Testing confirmation on an **existing run-owned copy** needs its own explicit approval and separate result",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14236,20 +14365,24 @@
       ],
       "requirement": "it is not permission to overwrite the saved office.",
       "expected": "it is not permission to overwrite the saved office.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14264,20 +14397,24 @@
       ],
       "requirement": "5.",
       "expected": "5.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14292,20 +14429,24 @@
       ],
       "requirement": "For a completed new-file export, inspect only the named output: JSON validity, byte size and file hash must match the expected serialized JSON (bundled starter for Default Layout",
       "expected": "For a completed new-file export, inspect only the named output: JSON validity, byte size and file hash must match the expected serialized JSON (bundled starter for Default Layout",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14320,20 +14461,24 @@
       ],
       "requirement": "persisted office/default for Settings Export Layout, never the unsaved draft).",
       "expected": "persisted office/default for Settings Export Layout, never the unsaved draft).",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14348,20 +14493,24 @@
       ],
       "requirement": "Verify the saved-layout hash and canvas are unchanged.",
       "expected": "Verify the saved-layout hash and canvas are unchanged.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14376,20 +14525,24 @@
       ],
       "requirement": "A success toast or filename read-back alone cannot prove the destination or bytes.",
       "expected": "A success toast or filename read-back alone cannot prove the destination or bytes.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14404,20 +14557,24 @@
       ],
       "requirement": "Repeat Settings Export Layout only with separate approval and a second absent target.",
       "expected": "Repeat Settings Export Layout only with separate approval and a second absent target.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14432,20 +14589,24 @@
       ],
       "requirement": "Retain failed originals separately",
       "expected": "Retain failed originals separately",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -14460,20 +14621,24 @@
       ],
       "requirement": "later success cannot replace their evidence or establish full L-02 import/Save/Reset acceptance.",
       "expected": "later success cannot replace their evidence or establish full L-02 import/Save/Reset acceptance.",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "No new export produced. Existing overwrite fixture untouched.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/logs/export-driver-limitations.json"
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },
@@ -17988,20 +18153,28 @@
       ],
       "requirement": "Observe 60 seconds of idle wandering and a seat move through corners",
       "expected": "Observe 60 seconds of idle wandering and a seat move through corners",
-      "statusAtUtc": "2026-10-31T14:04:11.081Z",
+      "statusAtUtc": "2026-10-31T14:25:49.970Z",
       "observedAtUtc": null,
       "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
       "packageSha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "method": "NOT EXECUTED",
-      "actual": "No acceptance action or observation has occurred.",
+      "actual": "60.002 seconds recorded; remaining conjunct not inferred.",
       "evidenceClass": null,
       "eligibleEvidenceModes": [
         "NATIVE",
         "FIXTURE"
       ],
       "outcome": "BLOCKED",
-      "reason": "NOT YET EXECUTED",
-      "evidenceRefs": [],
+      "reason": "PARTIAL: one-minute recording produced; deliberate seat move through corners not yet executed.",
+      "evidenceRefs": [
+        {
+          "path": "evidence/recordings/native-idle-motion.mp4",
+          "clipSeconds": [
+            0,
+            60.002
+          ]
+        }
+      ],
       "cleanup": "No test process started or fixture mutated.",
       "authorityGate": "No REAL launches; physical devices, private logs, permission changes and normal profiles excluded."
     },

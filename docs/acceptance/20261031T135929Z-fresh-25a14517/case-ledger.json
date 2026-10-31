@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T135929Z-fresh-25a14517",
-  "generation": "2026-10-31T14:04:11.081Z",
+  "generation": "2026-10-31T14:25:49.970Z",
   "derivation": {
     "status": "NEW DERIVATION, NOT RECOVERED ORIGINALS",
     "planSha": "0c22cffded2985370a80158d6bc252effa16c01c",
@@ -2364,10 +2364,12 @@
     "totalGroups": 512,
     "atomicRows": 1932,
     "byOutcome": {
-      "BLOCKED": 1932
+      "BLOCKED": 1927,
+      "PASS": 5
     },
     "byObservedEvidenceClass": {
-      "NONE_NOT_EXECUTED": 1932
+      "NATIVE+FIXTURE": 5,
+      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1927
     }
   },
   "commonRequirements": [
@@ -2522,8 +2524,14 @@
             "N-01-S003-A004"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: remaining statement atoms not executed",
+          "evidenceRefs": [
+            "evidence/logs/native-lifecycle.json",
+            "evidence/logs/native-actions.jsonl",
+            "evidence/screenshots/native-cold-squad-info.png",
+            "evidence/screenshots/native-recreated-squad-info.png",
+            "evidence/screenshots/native-full-reload-squad-info.png"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -2922,8 +2930,14 @@
             "N-02-S003-A010"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: remaining statement atoms not executed",
+          "evidenceRefs": [
+            "evidence/logs/native-lifecycle.json",
+            "evidence/logs/native-actions.jsonl",
+            "evidence/screenshots/native-cold-squad-info.png",
+            "evidence/screenshots/native-recreated-squad-info.png",
+            "evidence/screenshots/native-full-reload-squad-info.png"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -10117,8 +10131,12 @@
             "U-01-S003-A013"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: remaining statement atoms not executed",
+          "evidenceRefs": [
+            "evidence/screenshots/native-missing-usage.png",
+            "evidence/logs/native-actions.jsonl",
+            "evidence/logs/fixture-inputs.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -11344,8 +11362,12 @@
             "L-02-S008-A006"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "PARTIAL: remaining statement atoms not executed",
+          "evidenceRefs": [
+            "evidence/logs/native-export-observations.jsonl",
+            "evidence/logs/saved-office-baseline.json",
+            "evidence/logs/native-actions.jsonl"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -11377,8 +11399,10 @@
             "L-02-S009-A006"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+          "evidenceRefs": [
+            "evidence/logs/export-driver-limitations.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -11410,8 +11434,10 @@
             "L-02-S010-A006"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+          "evidenceRefs": [
+            "evidence/logs/export-driver-limitations.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -11445,8 +11471,10 @@
             "L-02-S011-A008"
           ],
           "outcome": "BLOCKED",
-          "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "reason": "BLOCKED: reliable native keyboard filename entry was not established; no save accepted; human input required.",
+          "evidenceRefs": [
+            "evidence/logs/export-driver-limitations.json"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",
@@ -13904,7 +13932,9 @@
           ],
           "outcome": "BLOCKED",
           "reason": "NOT YET EXECUTED",
-          "evidenceRefs": [],
+          "evidenceRefs": [
+            "evidence/recordings/native-idle-motion.mp4"
+          ],
           "applicability": {
             "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
             "implementingSource": "Frozen product; per-feature implementation references in pinned plan lines 220-253",

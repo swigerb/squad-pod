@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T135929Z-fresh-25a14517",
-  "status": "INITIAL CHECKPOINT - ACCEPTANCE NOT EXECUTED",
+  "status": "BATCH 1 CHECKPOINT - PARTIAL NATIVE EXECUTION; STANDALONE AUTHENTICATION PENDING",
   "createdAtUtc": "2026-10-31T14:04:11.081Z",
   "startUtc": "2026-10-31T13:59:29.243Z",
   "testingStopUtc": "2026-10-31T15:44:29.243Z",
@@ -19,7 +19,7 @@
     "gitObjectVerified": true,
     "rebuilt": false,
     "localMembershipFixExcluded": "2522124e48b46a702427692869470680e832351e",
-    "installedIdentity": "NOT EXECUTED"
+    "installedIdentity": "VERIFIED: 188 VSIX payload files and 102 standalone payload files matched"
   },
   "evidenceBranch": "acceptance/20261031T135929Z-fresh-25a14517",
   "baseBranch": "master",
@@ -40,8 +40,9 @@
       "bytes": 578477,
       "sha256": "dc37c602cb013537d01999ef489280c27fb3f70b1f37edd2233619ca6a1445ad",
       "installedComparison": {
-        "status": "NOT EXECUTED",
-        "files": null
+        "status": "VERIFIED",
+        "files": 188,
+        "reference": "evidence/logs/installed-identity.json"
       }
     },
     {
@@ -52,13 +53,14 @@
       "bytes": 423982,
       "sha256": "1f7bbb5c7cd35764e5c417dccd2ce38d21e73f82e78ae104af148fa48ef0633a",
       "installedComparison": {
-        "status": "NOT EXECUTED",
-        "files": null
+        "status": "VERIFIED",
+        "files": 102,
+        "reference": "evidence/logs/installed-identity.json"
       }
     }
   ],
   "runtime": {
-    "os": "Windows",
+    "os": "Windows 10.0.26300.0",
     "architecture": "x64",
     "node": "26.13.0",
     "npm": "11.20.0",
@@ -72,7 +74,8 @@
     "copilotCli": "NOT EXECUTED; no REAL producer launch authorized",
     "workspaceAgentTemplate": "NOT EXECUTED; disposable authored fixtures planned",
     "browser": "NOT EXECUTED",
-    "nodePty": "NOT EXECUTED"
+    "nodePty": "1.1.0; Windows official prebuild loaded; no source rebuild",
+    "conPty": "conpty.dll/OpenConsole.exe file version 1.23.2510.08001"
   },
   "isolatedAliases": {
     "userData": "isolated-user-data",
@@ -93,7 +96,7 @@
     "officeControl": "Separate opt-in/authentication; writes restricted to disposable selected-project files",
     "terminal": "Synthetic --fixture only; separate human authentication",
     "publication": "Reviewed redacted run files and selected media in swigerb/squad-pod dedicated branch/draft PR to master; duplicate-aware redacted defects",
-    "mandatoryPublicationConfirmation": "PENDING exact-content preview",
+    "mandatoryPublicationConfirmation": "Initial commit approved 2026-10-31T14:10:51.063Z; batch 1 exact-content preview pending",
     "prohibited": [
       "REAL AI launches",
       "paid producer tasks",
@@ -145,32 +148,41 @@
     "totalGroups": 512,
     "atomicRows": 1932,
     "byOutcome": {
-      "BLOCKED": 1932
+      "BLOCKED": 1927,
+      "PASS": 5
     },
     "byObservedEvidenceClass": {
-      "NONE_NOT_EXECUTED": 1932
+      "NATIVE+FIXTURE": 5,
+      "NONE_NOT_EXECUTED_OR_INCOMPLETE": 1927
     }
   },
   "cleanup": {
-    "testProcessesStarted": 0,
     "retained": [
-      "isolated evidence clone",
-      "verified candidate downloads",
-      "private preparation scripts"
+      "isolated native VS Code host",
+      "observation-only standalone server and private console",
+      "run-owned package installations, fixtures, baselines and private raw media"
     ],
-    "deletionApproved": false
+    "deletionApproved": false,
+    "credentials": "Never captured; human observation authentication pending"
   },
   "signoff": {
     "native": "PENDING HUMAN ACCEPTANCE",
     "real": "BLOCKED - NOT AUTHORIZED",
     "standalone": "PENDING HUMAN ACCEPTANCE"
   },
-  "remoteCheckpoint": "NOT PUBLISHED - mandatory preview confirmation pending",
+  "remoteCheckpoint": {
+    "verifiedCommit": "4dd7146d110544b63466d71816c1c35d6fc75eb3",
+    "draftPr": "https://github.com/swigerb/squad-pod/pull/141",
+    "closingIssuesReferences": [],
+    "newBatch": "PENDING publication confirmation"
+  },
   "prTemplate": "No repository PR template present at preparation HEAD; inherited owner template endpoint returned 404.",
   "automationSafety": "Evidence commits use [skip ci]; no labels, assignees, review requests or AI workflow dispatch. Product code is unchanged.",
   "media": {
-    "screenshots": "NOT PRODUCED - tests not executed",
-    "recording": "NOT PRODUCED - tests not executed",
-    "emptyDirectories": "Created locally; Git does not track empty directories. No fake media/placeholder files."
-  }
+    "screenshots": 5,
+    "recording": "evidence/recordings/native-idle-motion.mp4",
+    "durationSeconds": 60.002,
+    "rawDetailsScreenshot": "WITHHELD: private fixture absolute paths; no public screenshot evidence for that detail view"
+  },
+  "updatedAtUtc": "2026-10-31T14:25:49.970Z"
 }

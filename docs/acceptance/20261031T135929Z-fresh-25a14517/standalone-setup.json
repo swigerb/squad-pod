@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "runId": "20261031T135929Z-fresh-25a14517",
-  "status": "NOT EXECUTED",
-  "timestampUtc": "2026-10-31T14:04:11.081Z",
+  "status": "INSTALLED; OBSERVATION SERVER STARTED; AUTHENTICATION NOT EXECUTED",
+  "timestampUtc": "2026-10-31T14:25:49.970Z",
   "productSha": "25a14517f894f10e2e8169612499a04f8bcb49ce",
   "tarball": {
     "role": "STANDALONE",
@@ -16,18 +16,31 @@
       "files": null
     }
   },
-  "installation": "NOT EXECUTED",
-  "installedFileComparison": "NOT EXECUTED",
+  "installation": "COMPLETED using configured corporate npm feed only",
+  "installedFileComparison": {
+    "status": "VERIFIED",
+    "files": 102,
+    "artifact": "evidence/logs/installed-identity.json"
+  },
   "authentication": {
     "observation": "NOT EXECUTED",
     "officeControl": "NOT EXECUTED",
     "syntheticTerminal": "NOT EXECUTED"
   },
-  "nodePty": "NOT EXECUTED",
-  "conPty": "NOT EXECUTED",
+  "nodePty": "1.1.0; Windows official prebuild; module load succeeded",
+  "conPty": "1.23.2510.08001",
   "browser": "NOT EXECUTED",
-  "processes": [],
+  "processes": [
+    {
+      "alias": "observer-server-A",
+      "mode": "read-only observation",
+      "listener": "127.0.0.1 ephemeral port",
+      "console": "private, no output capture"
+    }
+  ],
   "credentialsCaptured": false,
   "writes": [],
-  "evidenceRefs": []
+  "evidenceRefs": [
+    "evidence/logs/installed-identity.json"
+  ]
 }
