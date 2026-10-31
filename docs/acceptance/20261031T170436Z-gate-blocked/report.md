@@ -1,5 +1,17 @@
 # Bounded Squad Pod acceptance
 
+**STOPPED: native host isolation unresolved.** Selected package payload **MATCH**; no Squad Pod behavioral variant accepted. Native host opened at `2026-10-31T17:30:23.162Z` and was stopped at `2026-10-31T17:32:55.216Z`. All owned startup PIDs were absent by `2026-10-31T17:32:58.235Z`.
+
+Original limits unchanged: start `2026-10-31T17:04:36.279Z`, testing deadline `2026-10-31T18:49:36.279Z`, hard stop `2026-10-31T19:04:36.279Z`. Zero test-launched AI tasks/spending; automatically created `copilot-runtime` process is recorded without attributing a paid task. Human acceptance pending.
+
+Current outcomes: **0 PASS / 0 FAIL / 1,932 BLOCKED / 0 NOT-PRODUCED** atomic statements; **20/20 compact variants BLOCKED**. Most recent remotely verified initial checkpoint: `c85a3ce7655ac64f971ba665562922909e2400c4`, [draft PR 144](https://github.com/swigerb/squad-pod/pull/144). This stop update awaits publication/readback and does not claim a future commit.
+
+## Historical initial checkpoint text
+
+The following section describes the pre-testing state published at `c85a3ce7655ac64f971ba665562922909e2400c4`, not the current runtime state. The current stop/cleanup appears after it.
+
+### Initial pre-testing checkpoint
+
 Run `20261031T170436Z-gate-blocked` resumes the original clock. **Preflight verified; runtime acceptance not started.**
 
 Start: `2026-10-31T17:04:36.279Z`. Testing stop: `2026-10-31T18:49:36.279Z`. Hard stop: `2026-10-31T19:04:36.279Z`. Last 15 minutes reserved for remote readback/accounting/cleanup. No extension and zero AI tasks launched by tests.
@@ -29,3 +41,19 @@ Refs [#123](https://github.com/swigerb/squad-pod/issues/123) and [#143](https://
 No run-owned runtime process remains running. Frozen packages, fresh isolated installation, exact historical mapping source copies and evidence are retained. Historical gate checkpoint bytes are immutable under [checkpoints/gate-20261031T170632Z](checkpoints/gate-20261031T170632Z/). Publication/readback must complete before runtime testing. Current remote verification is not yet claimed.
 
 [Case ledger](case-ledger.json) | [Atomic ledger](case-ledger-atomic.json) | [Observations](observations.jsonl) | [Standalone setup](standalone-setup.json) | [Evidence index](evidence-index.json)
+
+## Native startup safety stop
+
+At `2026-10-31T17:30:23.162Z`, the identified installed native host opened `WORKSPACE_A`. A read-only native workbench snapshot displayed the exact parent-repository discovery warning quoted in [the actual startup observation](evidence/logs/native-startup-stop.json). The run-owned process inventory also contained an automatically started `copilot-runtime` descendant. No product panel or consent settings were opened, no prompt was accepted, and no keyboard/selector campaign or reload followed.
+
+**Runtime stopped at `2026-10-31T17:32:55.216Z`; effective isolation remains BLOCKED.** These observations do not prove paid AI execution, a Squad producer, out-of-scope file contents, or a Squad Pod privacy defect. They do not prove absence of reads either. The separately identified native host was gracefully closed, and all 11 recorded owned PIDs were absent by `2026-10-31T17:32:58.235Z`. No other session was inspected or stopped.
+
+The expanded installed-payload classifier at `2026-10-31T17:34:26.502Z` is **MATCH**: 187 non-manifest files byte-identical; all original `package.json` properties equal after removing only `__metadata` with the three documented keys; installed `.vsixmanifest` identical to packaged `extension.vsixmanifest`; `[Content_Types].xml` absent as expected. Both bundle and map have the supplied NEW hashes, not historical ones. This does not resolve the independent runtime safety stop.
+
+Initial durable checkpoint [`c85a3ce7655ac64f971ba665562922909e2400c4`](https://github.com/swigerb/squad-pod/commit/c85a3ce7655ac64f971ba665562922909e2400c4) was read back before the native launch: [immutable receipt](checkpoints/remote-readback-c85a3ce7655a.json). Draft evidence [PR 144](https://github.com/swigerb/squad-pod/pull/144) targets master and has no closing issue references.
+
+Outcome delta: **no behavioral/atomic PASS or FAIL added; all 1,932 statements and all 20 compact variants remain BLOCKED**. One actual NATIVE host-safety observation is added, distinct from package identity. Native membership cold/recreation/reload/project-switch, new-file export/overwrite/cancel, layout/seat/desktop/directory controls, all authenticated standalone variants and motion evidence remain unexecuted. No bounded clip was produced. The startup screenshot includes a sign-in welcome dialog and is excluded from publication; no auth image or console is published.
+
+Issue recommendations against actual criteria: [#4](https://github.com/swigerb/squad-pod/issues/4) **blocked**, installed native membership/runtime acceptance not exercised; [#123](https://github.com/swigerb/squad-pod/issues/123) **blocked**, no manual native export destination or overwrite outcome established. [PR 143](https://github.com/swigerb/squad-pod/pull/143) membership fix is included in the verified package but **native acceptance remains blocked**. No closure/merge/release action, and human acceptance stays pending.
+
+Current setup: no run-owned native host, observer, helper or terminal running. Frozen packages, isolated installation, synthetic projects and checkpoint files are retained. The one unreviewed startup screenshot remains local and excluded. No dependency installation or public registry contact occurred; standalone dependency resolution reached ancestors, so its isolated installation is not established and it was never executed. Native warning/root isolation must be resolved explicitly before any continuation; original `18:49:36Z` testing and `19:04:36Z` hard limits still apply.

@@ -1,7 +1,7 @@
 {
   "runId": "20261031T170436Z-gate-blocked",
   "productSha": "f3f080d4ce7bec009df2c62648f4ad0c4ea505a6",
-  "generatedUtc": "2026-10-31T17:24:11.245Z",
+  "generatedUtc": "2026-10-31T17:39:56.448Z",
   "rollupRule": "A successful variant does not pass an entire combined subcheck. Shared requirements stay BLOCKED until every applicable asserted variant has adequate direct evidence.",
   "inheritedPasses": 0,
   "variants": [
@@ -17,9 +17,13 @@
       ],
       "expected": "Profile/workspace/folder values, explicit fixture roots and actual native UI; no internal no-read claim.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
-      "observationIds": [],
-      "evidenceRefs": []
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
+      "observationIds": [
+        "OBS-0002"
+      ],
+      "evidenceRefs": [
+        "evidence/logs/native-startup-stop.json"
+      ]
     },
     {
       "id": "membership-cold",
@@ -33,7 +37,7 @@
       ],
       "expected": "Cold native open; compare all IDs/count, auxiliary members, status, project and seat map.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -49,7 +53,7 @@
       ],
       "expected": "First host-surviving panel recreation; capture the same full comparison.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -65,7 +69,7 @@
       ],
       "expected": "Second host-surviving panel recreation; capture the same full comparison.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -81,7 +85,7 @@
       ],
       "expected": "Third host-surviving panel recreation; capture ordering and the same full comparison.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -97,7 +101,7 @@
       ],
       "expected": "Full window/extension-host reload, with before/after owned host identity and same roster/project/seat comparison.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -113,7 +117,7 @@
       ],
       "expected": "Switch between explicit synthetic A and B, then return; stop on wrong attribution.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -131,7 +135,7 @@
       ],
       "expected": "Real native dialog, unique initially absent target, output bytes/hash/parse and unchanged saved baseline.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -149,7 +153,7 @@
       ],
       "expected": "Distinct disposable preexisting target, human-approved native overwrite and before/after bytes/hash.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -167,7 +171,7 @@
       ],
       "expected": "Native cancellation; prove disposable target and saved-office baseline unchanged.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -185,7 +189,7 @@
       ],
       "expected": "UI edit/save/reload with actual saved disk bytes and separately evaluated canvas equivalence.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -203,7 +207,7 @@
       ],
       "expected": "Dirty Reset, cancellation and recovery with before/after bytes; do not collapse variants.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -221,7 +225,7 @@
       ],
       "expected": "Labeled synthetic arrival and saved assignments against the approved actual starter map.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -239,7 +243,7 @@
       ],
       "expected": "Wide labels/list/Hide/Locate/Fit plus a bounded action clip, not a static-only claim.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -257,7 +261,7 @@
       ],
       "expected": "Resize, explicitly Fit office again, inspect all relevant narrow controls and clip the claimed behavior.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -275,7 +279,7 @@
       ],
       "expected": "Browse/manual disclosure, validation, rename, Change folder, reload, footer and no unintended Launch.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -293,7 +297,7 @@
       ],
       "expected": "Native keyboard/focus and distinct missing/partial source warnings.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -311,7 +315,7 @@
       ],
       "expected": "Only after human observation authentication, attempt negative writes through visible browser UI.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -329,7 +333,7 @@
       ],
       "expected": "Separately human-authenticated/approved selected-project office-control revision/conflict variants.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     },
@@ -347,9 +351,10 @@
       ],
       "expected": "Separately authenticated --fixture terminals: lifecycle/output/resize/reconnect/stop; no actual agent.",
       "outcome": "BLOCKED",
-      "reason": "NOT EXECUTED ON SELECTED CANDIDATE",
+      "reason": "RUNTIME SAFETY STOP BEFORE PRODUCT UI: effective root/consent isolation unresolved; native host automatically started an AI-related child.",
       "observationIds": [],
       "evidenceRefs": []
     }
-  ]
+  ],
+  "runtimeSafetyStop": "OBS-0002"
 }
