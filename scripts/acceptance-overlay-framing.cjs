@@ -380,10 +380,10 @@ async function main() {
           assert.ok(proof.every(label=>!label.whiteLeader),'normal labels must have no long white leader line');
           const sparse=proof.filter(label=>label.id==='member-0'||label.id==='member-1');
           assert.equal(sparse.length,2);
-          assert.ok(sparse.every(label=>!label.docked
-            &&Math.abs(label.y+label.height-(window.fixture.bounds(label.id).top-8))<2
-            &&Math.abs(label.x+label.width/2-
-              (window.fixture.bounds(label.id).left+window.fixture.bounds(label.id).right)/2)<=12),
+          const sparseBounds=await page.evaluate(ids=>ids.map(id=>window.fixture.bounds(id)),sparse.map(label=>label.id));
+          assert.ok(sparse.every((label,index)=>!label.docked
+            &&Math.abs(label.y+label.height-(sparseBounds[index].top-8))<2
+            &&Math.abs(label.x+label.width/2-(sparseBounds[index].left+sparseBounds[index].right)/2)<=12),
           'sparse same-row labels must float near each character anchor');
           assert.ok(sparse[0].x+sparse[0].width<=sparse[1].x||sparse[1].x+sparse[1].width<=sparse[0].x,
             'sparse same-row label rectangles must remain disjoint');
