@@ -216,7 +216,11 @@ node scripts/verify-acceptance-index.cjs docs\acceptance\20261031T170436Z-gate-b
 The verifier reads canonical Git blob bytes at `HEAD`, so Windows checkout
 line-ending conversion does not change the result. It supports both recorded
 entry field spellings (`path` and `relativePath`), checks byte count and SHA-256,
-and requires the index to declare that it excludes its own hash. It verifies
+and requires the index to declare that it excludes its own hash. Generate a
+read-only, single-run progress report with
+`node scripts/acceptance-progress.cjs docs\acceptance\<run-id>`. It uses the
+verified committed ledgers, keeps original IDs and outcomes, and does not
+aggregate runs or count parsed prose as executed tests. It verifies
 committed content, not uncommitted edits. A matching index establishes file
 integrity only; it does not prove who produced the evidence, that the observations
 were correct, or that acceptance was complete. Do not edit a committed package to

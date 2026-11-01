@@ -30,7 +30,7 @@ async function verifyAcceptanceIndex(directory) {
   const indexRelativePath = path.posix.join(relativeDirectory.split(path.sep).join('/'), 'evidence-index.json');
   const index = JSON.parse(gitBlob(repoRoot, commit, indexRelativePath).toString('utf8'));
 
-  if (index.selfHashExcluded !== true && index.excludesIndexItself !== true) {
+  if (index.selfHashExcluded !== true && index.excludesIndexItself !== true && index.excludesSelf !== true) {
     throw new Error('Evidence index must declare that it excludes its own hash.');
   }
   if (!Array.isArray(index.entries) || index.entries.length === 0) {
