@@ -73,7 +73,10 @@ test('personal branding uses square PNG assets and HTTPS theme-aware original lo
   assert.equal(manifest.bugs.url, 'https://github.com/swigerb/squad-pod/issues');
   assert.equal(manifest.icon, 'assets/squad-pod-icon.png');
   assert.equal(manifest.publisher, 'brianswiger');
-  assert.equal(manifest.version, '0.1.0');
+  assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
+  const lockfile = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  assert.equal(lockfile.version, manifest.version);
+  assert.equal(lockfile.packages[''].version, manifest.version);
   assert.equal(manifest.preview, true);
   assert.match(manifest.scripts.package, /^vsce package\b.*\s--pre-release\b/);
   assert.match(readme, /code --install-extension brianswiger\.squad-pod --pre-release/);
@@ -107,6 +110,22 @@ test('allows valid repository issues, PRs, releases, pinned content and master r
     'https://raw.githubusercontent.com/swigerb/squad-pod/master/Screenshot.jpg',
   ].map((url, index) => `[Link ${index}](${url})`).join('\n');
   assert.doesNotThrow(() => validatePackagedMarkdown(`${packagedReadme}\n${validDestinations}`, 'README.md'));
+});
+
+test('storefront leads with the extension pitch and keeps observer guidance below installation', () => {
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const tagline = readme.indexOf('**Your Squad AI team, but make it pixel art.**');
+  const features = readme.indexOf('## Features');
+  const showcase = readme.indexOf('## See Squad Pod in action');
+  const installation = readme.indexOf('## Install the pre-release');
+  const observer = readme.indexOf('## Local browser observer');
+  assert(tagline >= 0 && tagline < features && features < showcase);
+  assert(installation >= 0 && observer > installation);
+  assert(!readme.includes('## Preview release scope'));
+  assert(readme.includes('Opt in to matching local Copilot CLI sessions'));
+  assert(readme.includes('## Known limitations'));
+  assert(readme.includes('Durable team hierarchy, automatic roster promotion, and remote access are not supported.'));
+  assert(readme.includes('Squad-Pod-Sizzle-preview.gif'));
 });
 
 test('rejects main-branch repository content and image URLs only', () => {
