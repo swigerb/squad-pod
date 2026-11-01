@@ -1,11 +1,27 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/swigerb/squad-pod/master/assets/squad-pod-logo-black.png" />
-    <img src="assets/squad-pod-logo-white.png" alt="Squad Pod: a pixel-art AI agent team" width="320" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/swigerb/squad-pod/master/assets/squad-pod-logo-black.jpg" />
+    <img src="https://raw.githubusercontent.com/swigerb/squad-pod/master/assets/squad-pod-logo-white.jpg" alt="Squad Pod: a pixel-art AI agent team" width="320" />
   </picture>
 </p>
 
 # Squad Pod
+
+## See Squad Pod in action
+
+[![Watch Squad Pod: Big ideas. Tiny office. Animated office preview.](https://raw.githubusercontent.com/swigerb/squad-pod/master/assets/showcase/Squad-Pod-Sizzle-preview.gif)](https://raw.githubusercontent.com/swigerb/squad-pod/master/assets/showcase/Squad-Pod-Sizzle.mp4)
+
+**[Watch the full 1:53 showcase (MP4)](https://raw.githubusercontent.com/swigerb/squad-pod/master/assets/showcase/Squad-Pod-Sizzle.mp4)** | [Captions (SRT)](assets/showcase/Squad-Pod-Sizzle.srt)
+
+Big ideas. Tiny office. Meet the pixel squad, watch characters walk and work at
+their computers, explore the office controls, and meet Claudio and Gitcat.
+
+Recorded from the actual production webview with a synthetic host and staged
+activity. No real AI tasks, private session logs, or customer data are shown.
+This is a product showcase, not native VS Code or real-session acceptance evidence.
+
+AI narration: Ava Multilingual.
+Music: Brian Swiger's supplied DaVinci AI-generated soundtrack.
 
 **Local browser observer:** [Build/run and security instructions](standalone/README.md)
 for the private, authenticated, loopback-only office, read-only by default. It uses the same

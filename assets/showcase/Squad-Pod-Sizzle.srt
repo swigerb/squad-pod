@@ -1,0 +1,123 @@
+1
+00:00:01,062 --> 00:00:04,425
+Your AI team has a new headquarters. And yes,
+
+2
+00:00:04,450 --> 00:00:06,900
+the office has pets. Meet Squad Pod.
+
+3
+00:00:10,754 --> 00:00:13,692
+Squad Pod brings your Squad team into an animated
+
+4
+00:00:13,692 --> 00:00:17,492
+pixel art office in Visual Studio Code. Six built-in
+
+5
+00:00:17,492 --> 00:00:20,567
+character styles turn the roster into a team you
+
+6
+00:00:20,579 --> 00:00:21,579
+can actually see.
+
+7
+00:00:24,454 --> 00:00:27,917
+Watch characters wander, head back to their desks,
+read,
+
+8
+00:00:28,292 --> 00:00:33,004
+and type. Computers animate with desk activity.
+Here, synthetic
+
+9
+00:00:33,017 --> 00:00:35,079
+signals drive the action, so you can see the
+
+10
+00:00:35,092 --> 00:00:37,854
+experience without launching real AI work.
+
+11
+00:00:40,721 --> 00:00:43,321
+Open Squad Info to explore the people behind the
+
+12
+00:00:43,321 --> 00:00:48,196
+pixels: their roles, charter summaries, and observed
+activity. It's
+
+13
+00:00:48,208 --> 00:00:51,271
+a friendlier window into your team, not just another
+
+14
+00:00:51,271 --> 00:00:52,346
+wall of terminals.
+
+15
+00:00:55,208 --> 00:00:58,883
+Make the office your own. Arrange furniture, choose
+floors
+
+16
+00:00:58,896 --> 00:01:01,396
+and colors, and shape a space that fits your
+
+17
+00:01:01,408 --> 00:01:05,221
+squad. Undo a change, try another look, and save
+
+18
+00:01:05,233 --> 00:01:05,921
+when you're happy.
+
+19
+00:01:08,788 --> 00:01:11,538
+And then there are Claudio and Gitcat. They wander
+
+20
+00:01:11,550 --> 00:01:14,888
+around the office and react when clicked. No sprint
+
+21
+00:01:14,888 --> 00:01:19,913
+commitments. No status reports. Just outstanding
+contributions to team
+
+22
+00:01:19,913 --> 00:01:20,400
+morale.
+
+23
+00:01:23,254 --> 00:01:27,492
+Squad Pod observes your selected project. Live CLI
+activity
+
+24
+00:01:27,504 --> 00:01:30,804
+is opt-in, and launching Squad is an explicit
+action.
+
+25
+00:01:31,167 --> 00:01:35,029
+This showcase uses only synthetic data. The tiny
+office
+
+26
+00:01:35,029 --> 00:01:37,454
+is real; the workday is staged.
+
+27
+00:01:40,321 --> 00:01:44,121
+Big ideas. Tiny office. Bring your team to life
+
+28
+00:01:44,221 --> 00:01:47,508
+with Squad Pod. Find the project on GitHub, and
+
+29
+00:01:47,833 --> 00:01:49,733
+give your squad a place to call home.

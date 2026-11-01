@@ -64,7 +64,7 @@ test('accepts packaged Markdown without links or images', () => {
   assert.doesNotThrow(() => validatePackagedMarkdown('# Changelog', 'CHANGELOG.md'));
 });
 
-test('personal branding uses packaged square PNG assets and a theme-aware README logo', () => {
+test('personal branding uses square PNG assets and HTTPS theme-aware original logos', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
   assert.equal(manifest.author.name, 'Brian Swiger');
@@ -89,8 +89,12 @@ test('personal branding uses packaged square PNG assets and a theme-aware README
     assert.equal(image.readUInt32BE(20), size, `${filename} height`);
   }
 
-  assert.match(readme, /<source media="\(prefers-color-scheme: dark\)" srcset="https:\/\/raw\.githubusercontent\.com\/swigerb\/squad-pod\/master\/assets\/squad-pod-logo-black\.png"/);
-  assert.match(readme, /<img src="assets\/squad-pod-logo-white\.png" alt="Squad Pod:/);
+  for (const theme of ['white', 'black']) {
+    const image = fs.readFileSync(path.join(root, 'assets', `squad-pod-logo-${theme}.jpg`));
+    assert.deepEqual(image.subarray(0, 3), Buffer.from([255, 216, 255]));
+  }
+  assert.match(readme, /<source media="\(prefers-color-scheme: dark\)" srcset="https:\/\/raw\.githubusercontent\.com\/swigerb\/squad-pod\/master\/assets\/squad-pod-logo-black\.jpg"/);
+  assert.match(readme, /<img src="https:\/\/raw\.githubusercontent\.com\/swigerb\/squad-pod\/master\/assets\/squad-pod-logo-white\.jpg" alt="Squad Pod:/);
 });
 
 test('allows valid repository issues, PRs, releases, pinned content and master raw images', () => {
