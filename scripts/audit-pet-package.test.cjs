@@ -96,6 +96,11 @@ test('rejects source, tooling, evidence, standalone, and native-terminal payload
     'extension/dist/webview-ui/src/main.tsx',
     'extension/dist/esbuild.js',
     'extension/dist/assets/pixel-agents-source.json',
+    'extension/dist/check.test.js',
+    'extension/dist/check.spec.ts',
+    'extension/test-results/trace.zip',
+    'extension/playwright-report/report.html',
+    'extension/dist/native/libconpty.dll',
   ]) {
     assert.throws(() => validateInventory(inventory([...requiredEntries, forbidden])), /must not contain/);
   }
