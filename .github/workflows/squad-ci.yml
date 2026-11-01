@@ -39,8 +39,8 @@ jobs:
       - name: Unit tests
         run: npm run test:all
 
-      - name: Evidence index verifier tests
-        run: node --test scripts/verify-acceptance-index.test.cjs
+      - name: Script tests
+        run: node --test "scripts/*.test.cjs"
 
       - name: Build
         run: npm run build
@@ -66,13 +66,20 @@ jobs:
 
       - name: Package VSIX
         run: npm run package
+        env:
+          PACKAGE_ARTIFACTS: ${{ runner.temp }}/package-artifacts
+
+      - name: Verify package identity receipt
+        run: node scripts/verify-package-receipt.cjs
+        env:
+          PACKAGE_ARTIFACTS: ${{ runner.temp }}/package-artifacts
 
       - name: Upload VSIX
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #v4
         with:
           name: squad-pod-vsix
-          path: '*.vsix'
+          path: ${{ runner.temp }}/package-artifacts/
 
   standalone-macos:
     runs-on: macos-latest
