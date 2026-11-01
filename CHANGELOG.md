@@ -18,6 +18,7 @@ All notable changes to Squad Pod are documented here.
 - Toolchain modernized: Node 22.13+, VS Code 1.107+, React 19, Vite 8, Vitest 4, ESLint 10, esbuild 0.28; CI on Ubuntu and Windows.
 - Activity detection rewritten for current Squad: orchestration log, decision inbox and per-agent folders identify the working member; startup no longer replays old files.
 - Diagnostics moved to the **Squad Pod** output channel (no more workspace debug logs or popups).
+- Retired the inherited Squad CLI release, insider-release and promote workflows: each is now a manual, report-only job with no token permissions, and a script test fails if any regains automatic triggers, write permissions, credentials, tag/release/branch-promotion commands or package publication. No release or publication automation is enabled (#155).
 
 ### Added
 - Custom character sheets from local asset directories, with validation, live reload, saved appearances and a stable fallback when sheets are removed.

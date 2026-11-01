@@ -55,7 +55,9 @@ Windows. It also runs standalone type/tests, build plus the read-only packaged
 acceptance helper, and synthetic owned-terminal acceptance on Ubuntu and Windows;
 macOS runs the standalone type/tests and those same two acceptance helpers. The
 office-control and live-activity browser helpers are not CI gates.
-The evidence-index verifier tests also run in the Ubuntu/Windows CI jobs.
+The evidence-index verifier, package receipt/link, acceptance-progress and
+release-workflow script tests (`scripts/*.test.cjs`) also run in the
+Ubuntu/Windows CI jobs.
 
 ### Standalone acceptance helpers
 
@@ -169,6 +171,24 @@ running VS Code host. For an installed-file identity comparison, see the
 VS Code installs the VSIX `extension/` payload and adds `__metadata` to the
 installed `package.json`, so compare the documented payload rather than the
 archive and installed manifest byte-for-byte.
+
+### Release automation
+
+Squad Pod has no automated release or publication path. The inherited Squad CLI
+**Squad Release**, **Squad Insider Release** and **Squad Promote** workflows are
+kept only as retired, report-only jobs: they run solely when started manually,
+have no token permissions, and write a job summary. They do not check out code,
+run tests, create tags or GitHub releases, merge or push branches, or publish
+packages. `node --test scripts/release-workflows.test.cjs`, which CI runs with
+the other script tests, fails if any of them regains those capabilities, for
+example after a Squad template refresh.
+
+The maintainer path is the ordinary **Squad Pod CI** run on `master`: it builds,
+audits and uploads the `squad-pod-vsix` artifact with its identity receipt. That
+artifact is a candidate, not a release. Marketplace publication is a separate
+owner and Scout step tracked in
+[#158](https://github.com/swigerb/squad-pod/issues/158); it requires explicit
+approval of the publisher, version, channel and exact artifact.
 
 ## Native VS Code and real Squad
 
