@@ -21,6 +21,14 @@ This is separate from the VSIX.
 
 Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradygaster/squad) agent team into animated characters in a virtual office.
 
+## Preview release scope
+
+The initial **0.1.0 pre-release** is the desktop VS Code extension, published by **Brian Swiger** as `brianswiger.squad-pod`. It is an early-access release, not a stable release or a claim of full Pixel Agents parity.
+
+Ordinary roster and file observation does not require Copilot CLI authentication or an AI task. Optional live CLI observations, runtime model attribution, transient task links, and actual CLI usage-export compatibility remain experimental; complete REAL producer acceptance is pending. Private CLI log observation remains off until you explicitly consent. Recent-directory suggestions are a separate metadata read and can be disabled with `squad-pod.directorySuggestions`.
+
+The local browser observer remains a separate, source-only tool. Standalone terminals, remote access, durable hierarchy/promotion, and physical mobile-device coverage are not part of this Marketplace release's acceptance. Unsupported and unverified capabilities remain identified below and in the [native acceptance plan](docs/native-acceptance.md); broader acceptance issues remain open.
+
 ## Features
 
 - Discover the team roster and show each visible member as a character at a desk.
@@ -38,6 +46,16 @@ Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradyga
 - VS Code 1.107 or later.
 - A Squad project with a `.squad/team.md` roster. Legacy `.ai-team/team.md` projects are also supported.
 - Node.js 22.13 or later to build from source.
+
+## Install the pre-release
+
+After publication, open [Squad Pod in Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=brianswiger.squad-pod), confirm the publisher is **Brian Swiger**, and choose the **Pre-Release** version in VS Code. You can also install it from a terminal:
+
+```powershell
+code --install-extension brianswiger.squad-pod --pre-release
+```
+
+Open a reviewed Squad project, then run **Squad Pod: Show Panel**. Installing or opening the office does not launch Squad or an AI task. Build tools and Node.js are only required for source builds, not for installing the Marketplace extension.
 
 ## Install from source
 

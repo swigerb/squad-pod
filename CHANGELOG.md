@@ -4,6 +4,14 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-01
+
+### Pre-release scope
+
+- Initial desktop VS Code pre-release under Brian Swiger's personal publisher, `brianswiger.squad-pod`, with supplied Squad Pod logos, author links, and GitHub Issues support.
+- Preview labeling and the Marketplace pre-release update channel are both explicit; the numeric extension version remains `0.1.0`.
+- Optional real-session/model/task observations and actual CLI usage-export compatibility remain experimental. Standalone/browser/mobile acceptance and full upstream parity are not claimed by this release; their outstanding evidence gates remain open.
+
 - Added consent-gated, opt-in live Squad member tool labels and context gauges from local Copilot CLI sessions, with strict metadata filtering and file-observation fallback.
 - Suggest recent Squad directories from local Copilot CLI working-directory metadata, with an opt-out setting and explicit save/launch actions.
 - Stateful furniture animates at active desks and supports manual on/off toggles.
@@ -18,6 +26,7 @@ All notable changes to Squad Pod are documented here.
 - Toolchain modernized: Node 22.13+, VS Code 1.107+, React 19, Vite 8, Vitest 4, ESLint 10, esbuild 0.28; CI on Ubuntu and Windows.
 - Activity detection rewritten for current Squad: orchestration log, decision inbox and per-agent folders identify the working member; startup no longer replays old files.
 - Diagnostics moved to the **Squad Pod** output channel (no more workspace debug logs or popups).
+- Retired the inherited Squad CLI release, insider-release and promote workflows: each is now a manual, report-only job with no token permissions, and a script test fails if any regains automatic triggers, write permissions, credentials, tag/release/branch-promotion commands or package publication. No release or publication automation is enabled (#155).
 
 ### Added
 - Custom character sheets from local asset directories, with validation, live reload, saved appearances and a stable fallback when sheets are removed.

@@ -4,6 +4,7 @@
   "description": "Pixel art office where your Squad agents come to life as animated characters",
   "version": "0.1.0",
   "publisher": "brianswiger",
+  "preview": true,
   "author": {
     "name": "Brian Swiger",
     "url": "https://www.mightybs.com/"
@@ -81,7 +82,7 @@
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "vsce package --githubBranch master --no-dependencies && node scripts/audit-pet-package.cjs && node --test scripts/package-links.test.cjs && node scripts/verify-package-links.cjs",
+    "package": "vsce package --pre-release --githubBranch master --no-dependencies && node scripts/audit-pet-package.cjs && node --test scripts/package-links.test.cjs && node scripts/verify-package-links.cjs",
     "check-types": "tsc --noEmit && npm run check-types --prefix webview-ui",
     "lint": "eslint src",
     "test": "vitest run",

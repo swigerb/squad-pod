@@ -72,6 +72,11 @@ test('personal branding uses packaged square PNG assets and a theme-aware README
   assert.equal(manifest.homepage, manifest.author.url);
   assert.equal(manifest.bugs.url, 'https://github.com/swigerb/squad-pod/issues');
   assert.equal(manifest.icon, 'assets/squad-pod-icon.png');
+  assert.equal(manifest.publisher, 'brianswiger');
+  assert.equal(manifest.version, '0.1.0');
+  assert.equal(manifest.preview, true);
+  assert.match(manifest.scripts.package, /^vsce package\b.*\s--pre-release\b/);
+  assert.match(readme, /code --install-extension brianswiger\.squad-pod --pre-release/);
 
   for (const [filename, size] of [
     [manifest.icon, 256],
