@@ -31,8 +31,8 @@ function reasonCategory(outcome, reason) {
   if (outcome === 'NOT-PRODUCED') return 'NOT-PRODUCED';
   if (typeof reason !== 'string' || reason.trim() === '') return 'UNKNOWN';
   if (/^NOT (?:EXECUTED|RUN|STARTED|ATTEMPTED)\b/i.test(reason.trim())) return 'UNEXECUTED';
-  const blockers = ['approval', 'environment', 'implementation']
-    .filter(term => new RegExp(`\\b${term}\\b`, 'i').test(reason));
+  const blocker = /^\s*(?:blocked\s+(?:by|pending|on)|waiting\s+for|awaiting|requires?)\s+(?:an?\s+)?(approval|environment|implementation)\b/i.exec(reason);
+  const blockers = blocker ? [blocker[1].toLowerCase()] : [];
   return blockers.length ? `BLOCKER (${blockers.join(', ')})` : 'UNKNOWN';
 }
 
@@ -131,8 +131,12 @@ async function generateAcceptanceProgress(directory) {
     ...subchecks.map(({ record }) => ({ scope: 'subcheck', record })),
     ...atomicLedger.rows.map(record => ({ scope: 'atomic', record })),
   ];
-  const partialCount = cases.filter(({ record, atoms }) =>
-    record.outcome !== 'PASS' && atoms.some(atom => atom.outcome === 'PASS')).length;
+  const isComplete = ({ record, atoms }) => record.outcome === 'PASS' &&
+    subchecks.filter(item => item.caseId === record.id)
+      .every(item => item.record.outcome === 'PASS' && item.atoms.every(atom => atom.outcome === 'PASS')) &&
+    atoms.every(atom => atom.outcome === 'PASS');
+  const incompleteCases = cases.filter(item => !isComplete(item));
+  const partialCount = incompleteCases.filter(({ atoms }) => atoms.some(atom => atom.outcome === 'PASS')).length;
   const lines = [
     `# Acceptance progress: ${display(ledger.runId)}`,
     '',
@@ -141,7 +145,7 @@ async function generateAcceptanceProgress(directory) {
     `- Cases: ${cases.length} (${formatCounts(caseOutcomes)})`,
     `- Mapped subchecks: ${subchecks.length} (${formatCounts(subcheckOutcomes)})`,
     `- Atomic statements: ${atomicLedger.rows.length} (${formatCounts(atomOutcomes)}); these and parsed prose groups are requirements, not an executable-test count.`,
-    `- Incomplete cases: ${cases.filter(item => item.record.outcome !== 'PASS').length}; partial cases with passing atomic rows: ${partialCount}.`,
+    `- Incomplete cases: ${incompleteCases.length}; partial cases with passing atomic rows: ${partialCount}.`,
     '',
     '## Evidence classes observed',
     '',
@@ -173,7 +177,8 @@ async function generateAcceptanceProgress(directory) {
 
   for (const { record, atoms } of cases) {
     const passingAtoms = atoms.filter(atom => atom.outcome === 'PASS').length;
-    const completeness = record.outcome === 'PASS' ? 'COMPLETE' :
+    const complete = isComplete({ record, atoms });
+    const completeness = complete ? 'COMPLETE' :
       passingAtoms ? 'PARTIAL; INCOMPLETE' : 'INCOMPLETE';
     lines.push(`### ${display(record.id)} — ${display(record.title)} — ${display(record.outcome)} (${completeness})`);
     lines.push(`Reason: ${JSON.stringify(record.reason ?? '<no reason supplied>')}`);

@@ -18,7 +18,13 @@ const atom = (id, outcome, why, mode, evidenceClass = null, evidenceRefs = []) =
   ({ id, caseId: 'N-01', subcheckId: id.slice(0, -5), outcome, reason: why,
     evidenceClass, evidenceRefs, eligibleEvidenceModes: [mode] });
 
-async function makeRun() {
+async function makeRun({
+  caseOutcome = 'BLOCKED',
+  caseReason = reason,
+  allSubchecksOutcome,
+  secondarySubcheckReason = 'Unclassified dependency delay',
+  secondaryAtomicReason = secondarySubcheckReason,
+} = {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'squad-acceptance-progress-'));
   roots.push(root);
   execFileSync('git', ['init', '--quiet'], { cwd: root });
@@ -30,11 +36,13 @@ async function makeRun() {
     subcheck('N-01-S003', 'expected', 'PASS', 'Direct evidence', 'NATIVE'),
     subcheck('N-01-S004', 'common', 'NOT-PRODUCED', 'Producer omitted source', 'REAL', 'C-01'),
   ];
+  if (allSubchecksOutcome) subchecks.forEach(item => { item.outcome = allSubchecksOutcome; });
+  subchecks[1].reason = secondarySubcheckReason;
   const ledger = { runId: 'test-run',
     commonRequirements: [{ id: 'C-01', requirement: 'Shared traceability obligation' }],
-    cases: [{ id: 'N-01', title: 'Sample case', outcome: 'BLOCKED', reason, subchecks }] };
+    cases: [{ id: 'N-01', title: 'Sample case', outcome: caseOutcome, reason: caseReason, subchecks }] };
   const rows = [
-    atom('N-01-S001-A001', 'BLOCKED', reason, 'NATIVE'), atom('N-01-S002-A001', 'BLOCKED', 'Unclassified dependency delay', 'BROWSER'),
+    atom('N-01-S001-A001', 'BLOCKED', reason, 'NATIVE'), atom('N-01-S002-A001', 'BLOCKED', secondaryAtomicReason, 'BROWSER'),
     atom('N-01-S003-A001', 'PASS', 'Direct evidence', 'NATIVE', 'NATIVE', ['evidence/native.json']), atom('N-01-S004-A001', 'NOT-PRODUCED', 'Producer omitted source', 'REAL'),
   ];
   const entries = await Promise.all([
@@ -73,12 +81,43 @@ test('keeps partially passing cases incomplete and preserves original IDs and ou
   assert.equal((report.match(/Shared traceability obligation/g) ?? []).length, 1);
 });
 
+test('marks recorded PASS case and subcheck incomplete when mapped atoms are not all PASS', async () => {
+  const report = await generateAcceptanceProgress(await makeRun({
+    caseOutcome: 'PASS',
+    allSubchecksOutcome: 'PASS',
+  }));
+  assert.match(report, /N-01 — Sample case — PASS \(PARTIAL; INCOMPLETE\)/);
+  assert.match(report, /- Incomplete cases: 1;/);
+  assert.match(report, /`N-01-S001-A001`=BLOCKED/);
+});
+
 test('keeps unexecuted, unknown, and NOT-PRODUCED reasons distinct', async () => {
   const report = await generateAcceptanceProgress(await makeRun());
   assert.match(report, /\*\*UNEXECUTED\*\*.*"NOT EXECUTED IN THIS RUN"/);
   assert.match(report, /\*\*UNKNOWN\*\*.*"Unclassified dependency delay"/);
   assert.match(report, /\*\*NOT-PRODUCED\*\*.*"Producer omitted source"/);
   assert.doesNotMatch(report, /BLOCKER \(approval|BLOCKER \(environment|BLOCKER \(implementation/);
+});
+
+test('classifies only explicit approval, environment, and implementation blockers', async () => {
+  const positive = await generateAcceptanceProgress(await makeRun({
+    caseReason: 'Blocked pending approval',
+    secondarySubcheckReason: 'Blocked by environment',
+    secondaryAtomicReason: 'Blocked by implementation',
+  }));
+  assert.match(positive, /\*\*BLOCKER \(approval\)\*\*/);
+  assert.match(positive, /\*\*BLOCKER \(environment\)\*\*/);
+  assert.match(positive, /\*\*BLOCKER \(implementation\)\*\*/);
+
+  const negative = await generateAcceptanceProgress(await makeRun({
+    caseReason: 'Approval already granted; screenshot still missing',
+    secondarySubcheckReason: 'Not blocked by environment',
+    secondaryAtomicReason: 'Implementation issue resolved',
+  }));
+  assert.match(negative, /\*\*UNKNOWN\*\*.*"Approval already granted; screenshot still missing"/);
+  assert.match(negative, /\*\*UNKNOWN\*\*.*"Not blocked by environment"/);
+  assert.match(negative, /\*\*UNKNOWN\*\*.*"Implementation issue resolved"/);
+  assert.doesNotMatch(negative, /BLOCKER \(approval|BLOCKER \(environment|BLOCKER \(implementation/);
 });
 
 test('leaves every committed run input byte-identical after reporting', async () => {
