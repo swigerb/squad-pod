@@ -19,9 +19,27 @@ test('accepts packaged Markdown without links or images', () => {
   assert.doesNotThrow(() => validatePackagedMarkdown('# Changelog', 'CHANGELOG.md'));
 });
 
-test('rejects repository links rewritten against main', () => {
-  const wrongBranch = packagedReadme.replace('/blob/master/', '/blob/main/');
-  assert.throws(() => validatePackagedMarkdown(wrongBranch, 'README.md'), /must target master/);
+test('allows valid repository issues, PRs, releases, pinned content and master raw images', () => {
+  const validDestinations = [
+    'https://github.com/swigerb/squad-pod/issues/new',
+    'https://github.com/swigerb/squad-pod/pull/163',
+    'https://github.com/swigerb/squad-pod/releases/tag/v0.1.0',
+    'https://github.com/swigerb/squad-pod/blob/4393a84c406bd032b71957b88c88db1dafd7e085/README.md',
+    'https://github.com/swigerb/squad-pod/raw/master/Screenshot.jpg',
+    'https://raw.githubusercontent.com/swigerb/squad-pod/master/Screenshot.jpg',
+  ].map((url, index) => `[Link ${index}](${url})`).join('\n');
+  assert.doesNotThrow(() => validatePackagedMarkdown(`${packagedReadme}\n${validDestinations}`, 'README.md'));
+});
+
+test('rejects main-branch repository content and image URLs only', () => {
+  for (const wrongUrl of [
+    'https://github.com/swigerb/squad-pod/blob/main/docs/testing.md',
+    'https://github.com/swigerb/squad-pod/raw/main/Screenshot.jpg',
+    'https://raw.githubusercontent.com/swigerb/squad-pod/main/Screenshot.jpg',
+  ]) {
+    const markdown = `${packagedReadme}\n![Wrong branch](${wrongUrl})`;
+    assert.throws(() => validatePackagedMarkdown(markdown, 'README.md'), /content URL must not target main/);
+  }
 });
 
 test('rejects unresolved relative links', () => {
