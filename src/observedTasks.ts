@@ -124,6 +124,9 @@ export class ObservedTasks {
     if (!task || terminal(task)) { return; }
     if (event.type === 'subagent.started' && task.state === 'observed' && event.instanceId) {
       task.instanceId = event.instanceId;
+      const retainedTerminal = [...this.tasks.values()].find(alias => alias !== task
+        && alias.sessionId === task.sessionId && alias.instanceId === event.instanceId && terminal(alias));
+      if (retainedTerminal) { task.state = retainedTerminal.state; }
       const selected = this.selections.get(event.instanceId);
       if (selected) {
         task.selectedAgentName = selected.name;
@@ -131,7 +134,7 @@ export class ObservedTasks {
       }
     }
     switch (event.type) {
-      case 'subagent.started': task.state = 'running'; break;
+      case 'subagent.started': if (!terminal(task)) { task.state = 'running'; } break;
       case 'subagent.completed': task.state = 'completed'; break;
       case 'subagent.failed': task.state = 'failed'; break;
       case 'subagent.aborted': task.state = 'aborted'; break;

@@ -80,6 +80,65 @@ describe('authoritative instance identity and transient hierarchy', () => {
     expect(transientSubagents(inventory.snapshot('session'), ['ada'])).toEqual([]);
   });
 
+  it.each([
+    ['completed', 'subagent.completed'],
+    ['failed', 'subagent.failed'],
+    ['aborted', 'subagent.aborted'],
+  ] as const)('does not revive a late alias after a retained %s instance is evicted', (state, terminalEvent) => {
+    const inventory = new ObservedTasks();
+    const accept = (type: string, id: string, instance?: string) => inventory.accept({
+      type, toolCallId: id, parentToolCallId: id === 'parent' ? '' : 'parent', toolName: 'task', squad: false, instanceId: instance,
+      ...(type === 'tool.execution_start' ? { task: { name: id, agent_type: 'explore', mode: 'background', description: '' } } : {}),
+    }, 'session', id === 'parent' ? 'ada' : null);
+
+    accept('tool.execution_start', 'parent');
+    accept('subagent.started', 'parent', 'parent-instance');
+    accept('tool.execution_start', 'call-a');
+    accept('subagent.started', 'call-a', 'shared-instance');
+    accept(terminalEvent, 'call-a');
+    accept('tool.execution_start', 'call-b');
+    accept('subagent.started', 'call-b', 'shared-instance');
+    expect(inventory.snapshot('session').tasks.find(task => task.toolCallId === 'call-b')?.state).toBe(state);
+    accept('tool.execution_start', 'call-c');
+    accept('subagent.started', 'call-c', 'independent-instance');
+
+    for (let i = 0; i < MAX_RECENT_TASKS - 1; i++) {
+      accept('tool.execution_start', `unrelated-${i}`);
+      accept('subagent.started', `unrelated-${i}`, `unrelated-instance-${i}`);
+      accept('subagent.completed', `unrelated-${i}`);
+    }
+
+    const tasks = inventory.snapshot('session').tasks;
+    expect(tasks.some(task => task.toolCallId === 'call-a')).toBe(false);
+    expect(tasks.find(task => task.toolCallId === 'call-b')?.state).toBe(state);
+    expect(transientSubagents(inventory.snapshot('session'), ['ada'])).toEqual([{
+      id: JSON.stringify(['session', 'instance', 'independent-instance']),
+      parentAgentId: 'ada',
+      name: 'call-c',
+    }]);
+  });
+
+  it('clears retained instance state when the inventory is reset', () => {
+    const inventory = new ObservedTasks();
+    const accept = (type: string, id: string, instance?: string) => inventory.accept({
+      type, toolCallId: id, parentToolCallId: id === 'parent' ? '' : 'parent', toolName: 'task', squad: false, instanceId: instance,
+      ...(type === 'tool.execution_start' ? { task: { name: id, agent_type: 'explore', mode: 'background', description: '' } } : {}),
+    }, 'session', id === 'parent' ? 'ada' : null);
+    accept('tool.execution_start', 'parent');
+    accept('subagent.started', 'parent', 'parent-instance');
+    accept('tool.execution_start', 'call-a');
+    accept('subagent.started', 'call-a', 'shared-instance');
+    accept('subagent.completed', 'call-a');
+
+    inventory.clear();
+    accept('tool.execution_start', 'parent');
+    accept('subagent.started', 'parent', 'parent-instance');
+    accept('tool.execution_start', 'call-b');
+    accept('subagent.started', 'call-b', 'shared-instance');
+
+    expect(inventory.snapshot('session').tasks.find(task => task.toolCallId === 'call-b')?.state).toBe('running');
+  });
+
   it.each([true, false])('correlates selected custom agents by envelope instance ID (selection first: %s)', first => {
     const inventory = new ObservedTasks();
     const accept = (type: string, data: object, agentId?: string, rosterId: string | null = null) => {
