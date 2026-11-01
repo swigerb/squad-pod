@@ -3,7 +3,16 @@
   "displayName": "Squad Pod",
   "description": "Pixel art office where your Squad agents come to life as animated characters",
   "version": "0.1.0",
-  "publisher": "squad-pod",
+  "publisher": "brianswiger",
+  "author": {
+    "name": "Brian Swiger",
+    "url": "https://www.mightybs.com/"
+  },
+  "homepage": "https://www.mightybs.com/",
+  "bugs": {
+    "url": "https://github.com/swigerb/squad-pod/issues"
+  },
+  "icon": "assets/squad-pod-icon.png",
   "engines": {
     "vscode": "^1.107.0",
     "node": ">=22.13.0"

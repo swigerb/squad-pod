@@ -1,4 +1,9 @@
-<img src="https://bradygaster.github.io/squad/assets/squad-logo.png" alt="Squad" width="100" align="left" style="margin-right: 12px;" />
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/swigerb/squad-pod/master/assets/squad-pod-logo-black.png" />
+    <img src="assets/squad-pod-logo-white.png" alt="Squad Pod: a pixel-art AI agent team" width="320" />
+  </picture>
+</p>
 
 # Squad Pod
 
@@ -170,6 +175,14 @@ The original [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) by 
 
 - Adopt a supported Squad event API when available.
 - Visualize team ceremonies in the office.
+
+## Author and support
+
+Squad Pod is a personal open-source project by [Brian Swiger](https://www.mightybs.com/), a software developer and cloud architect with more than 30 years of experience in software engineering, application modernization, and cloud delivery. His work spans C#, .NET, Python, and AI-powered systems.
+
+[Website](https://www.mightybs.com/) | [Brian on LinkedIn](https://www.linkedin.com/in/brianswiger/) | [MightyBS on LinkedIn](https://www.linkedin.com/company/mightybs/)
+
+For Squad Pod questions, bugs, or feature requests, [open a GitHub issue](https://github.com/swigerb/squad-pod/issues). Squad Pod is not an official Microsoft or GitHub product.
 
 ## Credits
 

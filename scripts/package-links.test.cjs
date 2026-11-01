@@ -6,6 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 const { masterBlobPrefix, validatePackagedMarkdown } = require('./package-links.cjs');
 
+const root = path.resolve(__dirname, '..');
 const verifyScript = path.join(__dirname, 'verify-package-links.cjs');
 const packagedReadme = [
   `[Testing guide](${masterBlobPrefix}docs/testing.md)`,
@@ -61,6 +62,30 @@ test('accepts packaged master links, preserved anchors, and HTTPS images', () =>
 
 test('accepts packaged Markdown without links or images', () => {
   assert.doesNotThrow(() => validatePackagedMarkdown('# Changelog', 'CHANGELOG.md'));
+});
+
+test('personal branding uses packaged square PNG assets and a theme-aware README logo', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  assert.equal(manifest.author.name, 'Brian Swiger');
+  assert.equal(manifest.author.url, 'https://www.mightybs.com/');
+  assert.equal(manifest.homepage, manifest.author.url);
+  assert.equal(manifest.bugs.url, 'https://github.com/swigerb/squad-pod/issues');
+  assert.equal(manifest.icon, 'assets/squad-pod-icon.png');
+
+  for (const [filename, size] of [
+    [manifest.icon, 256],
+    ['assets/squad-pod-logo-white.png', 640],
+    ['assets/squad-pod-logo-black.png', 640],
+  ]) {
+    const image = fs.readFileSync(path.join(root, filename));
+    assert.deepEqual(image.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    assert.equal(image.readUInt32BE(16), size, `${filename} width`);
+    assert.equal(image.readUInt32BE(20), size, `${filename} height`);
+  }
+
+  assert.match(readme, /<source media="\(prefers-color-scheme: dark\)" srcset="https:\/\/raw\.githubusercontent\.com\/swigerb\/squad-pod\/master\/assets\/squad-pod-logo-black\.png"/);
+  assert.match(readme, /<img src="assets\/squad-pod-logo-white\.png" alt="Squad Pod:/);
 });
 
 test('allows valid repository issues, PRs, releases, pinned content and master raw images', () => {
