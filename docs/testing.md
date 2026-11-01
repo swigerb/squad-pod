@@ -174,6 +174,15 @@ archive and installed manifest byte-for-byte.
 
 ### Release automation
 
+The initial release contract is the **0.1.0 desktop VS Code pre-release** under
+`brianswiger.squad-pod`, not a full native/REAL/standalone/mobile acceptance claim.
+`package.json` sets `preview: true` for listing presentation, and `npm run package`
+separately passes `--pre-release` to `vsce` for the update channel. CI therefore
+uploads a pre-release candidate. Verify both markers in the exact archived
+`extension.vsixmanifest`; neither a version number nor a successful build proves
+the intended channel. A future stable release requires an explicit owner
+decision and corresponding packaging/metadata changes.
+
 Squad Pod has no automated release or publication path. The inherited Squad CLI
 **Squad Release**, **Squad Insider Release** and **Squad Promote** workflows are
 kept only as retired, report-only jobs: they run solely when started manually,

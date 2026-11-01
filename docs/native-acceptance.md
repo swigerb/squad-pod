@@ -50,9 +50,35 @@ Do not claim acceptance on my behalf.
 
 This plan accepts a **specific installed build**, not a branch name or extension version; any later build requires a new manifest and rerun of affected cases. Master `4dbc53151aa36f025c281dc7bf69bb3c62c2c505`, tree `dc1453e62e3480e2d0c3c210f167f6358b357633`, is a **historical baseline**, not the source of every procedure now below. Scout's separately tracked `e9fde5616f0a85c9aa5c2238b5e8ec169b383e25` baseline likewise does not establish acceptance of later heads. Use the implementing references below and the installed artifact's exact manifest for later capabilities; do not transfer baseline evidence to new source.
 
-### Release-candidate identity
+### Initial desktop pre-release contract
 
-The current product under test is master source `25a14517f894f10e2e8169612499a04f8bcb49ce`, tree `e8bc96dc315b46d9926a0065a132e3d63636580c`. All three jobs in [master-push CI 41173070887](https://github.com/swigerb/squad-pod/actions/runs/41173070887) succeeded. These build and synthetic results do not establish NATIVE, REAL or physical-device acceptance.
+The owner selected **0.1.0 as a desktop VS Code pre-release** under
+`brianswiger.squad-pod` on November 1, 2026. Preview labeling and the Marketplace
+pre-release channel are separate, explicit metadata choices. This narrower first
+release does not declare the original 27-case suite complete or close its
+native/REAL/standalone/mobile evidence gates.
+
+Before publication, Scout records the final source, archive/channel markers and
+installed payload identity, then runs a bounded, isolated native release slice:
+installation/activation/reload; roster, keyboard details and charter navigation;
+default-off privacy and absence of unintended launches; representative office
+editing, undo/redo, Save/reload and pets; native exports/import draft/Reset and
+incoming-conflict recovery; and desktop/narrow-panel visibility. Record the
+selected subchecks against their existing N, L, V and X IDs, with before/after
+evidence and cleanup. A representative slice is not completion of every subcheck
+in those cases. Stop-ship defects cannot be waived by the pre-release label.
+
+Actual CLI producer/model/task/export compatibility stays experimental and
+pending; fixtures are not REAL evidence. Standalone terminals, remote access,
+durable hierarchy/promotion and physical mobile-device coverage are outside this
+Marketplace release's acceptance. Their original procedures and issue gates
+remain intact below. Private-log access, REAL launches, authentication and AI
+spending are not authorized by this contract. Final native-slice sign-off and
+approval of the exact retained VSIX still precede Marketplace publication.
+
+### Historical candidate references
+
+The following historical candidate was master source `25a14517f894f10e2e8169612499a04f8bcb49ce`, tree `e8bc96dc315b46d9926a0065a132e3d63636580c`. It is not the initial desktop pre-release candidate. All three jobs in [master-push CI 41173070887](https://github.com/swigerb/squad-pod/actions/runs/41173070887) succeeded. These build and synthetic results do not establish NATIVE, REAL or physical-device acceptance.
 
 | Package | CI artifact / extracted file | Bytes / SHA-256 |
 |---|---|---|

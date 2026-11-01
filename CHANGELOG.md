@@ -4,6 +4,14 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-01
+
+### Pre-release scope
+
+- Initial desktop VS Code pre-release under Brian Swiger's personal publisher, `brianswiger.squad-pod`, with supplied Squad Pod logos, author links, and GitHub Issues support.
+- Preview labeling and the Marketplace pre-release update channel are both explicit; the numeric extension version remains `0.1.0`.
+- Optional real-session/model/task observations and actual CLI usage-export compatibility remain experimental. Standalone/browser/mobile acceptance and full upstream parity are not claimed by this release; their outstanding evidence gates remain open.
+
 - Added consent-gated, opt-in live Squad member tool labels and context gauges from local Copilot CLI sessions, with strict metadata filtering and file-observation fallback.
 - Suggest recent Squad directories from local Copilot CLI working-directory metadata, with an opt-out setting and explicit save/launch actions.
 - Stateful furniture animates at active desks and supports manual on/off toggles.
