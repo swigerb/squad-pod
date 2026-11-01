@@ -1,123 +1,123 @@
 1
-00:00:01,062 --> 00:00:04,425
+00:00:01,100 --> 00:00:04,262
 Your AI team has a new headquarters. And yes,
 
 2
-00:00:04,450 --> 00:00:06,900
+00:00:04,462 --> 00:00:07,000
 the office has pets. Meet Squad Pod.
 
 3
-00:00:10,754 --> 00:00:13,692
+00:00:10,767 --> 00:00:13,492
 Squad Pod brings your Squad team into an animated
 
 4
-00:00:13,692 --> 00:00:17,492
+00:00:13,504 --> 00:00:16,942
 pixel art office in Visual Studio Code. Six built-in
 
 5
-00:00:17,492 --> 00:00:20,567
+00:00:16,954 --> 00:00:19,517
 character styles turn the roster into a team you
 
 6
-00:00:20,579 --> 00:00:21,579
+00:00:19,529 --> 00:00:20,492
 can actually see.
 
 7
-00:00:24,454 --> 00:00:27,917
+00:00:24,467 --> 00:00:28,042
 Watch characters wander, head back to their desks,
 read,
 
 8
-00:00:28,292 --> 00:00:33,004
+00:00:28,104 --> 00:00:33,054
 and type. Computers animate with desk activity.
 Here, synthetic
 
 9
-00:00:33,017 --> 00:00:35,079
+00:00:33,067 --> 00:00:35,279
 signals drive the action, so you can see the
 
 10
-00:00:35,092 --> 00:00:37,854
+00:00:35,292 --> 00:00:38,042
 experience without launching real AI work.
 
 11
-00:00:40,721 --> 00:00:43,321
+00:00:40,733 --> 00:00:43,533
 Open Squad Info to explore the people behind the
 
 12
-00:00:43,321 --> 00:00:48,196
+00:00:43,546 --> 00:00:48,571
 pixels: their roles, charter summaries, and observed
 activity. It's
 
 13
-00:00:48,208 --> 00:00:51,271
+00:00:48,583 --> 00:00:51,533
 a friendlier window into your team, not just another
 
 14
-00:00:51,271 --> 00:00:52,346
+00:00:51,546 --> 00:00:52,546
 wall of terminals.
 
 15
-00:00:55,208 --> 00:00:58,883
+00:00:55,233 --> 00:00:58,921
 Make the office your own. Arrange furniture, choose
 floors
 
 16
-00:00:58,896 --> 00:01:01,396
+00:00:58,933 --> 00:01:01,333
 and colors, and shape a space that fits your
 
 17
-00:01:01,408 --> 00:01:05,221
+00:01:01,346 --> 00:01:04,808
 squad. Undo a change, try another look, and save
 
 18
-00:01:05,233 --> 00:01:05,921
+00:01:04,821 --> 00:01:05,533
 when you're happy.
 
 19
-00:01:08,788 --> 00:01:11,538
+00:01:08,800 --> 00:01:11,825
 And then there are Claudio and Gitcat. They wander
 
 20
-00:01:11,550 --> 00:01:14,888
+00:01:11,838 --> 00:01:15,125
 around the office and react when clicked. No sprint
 
 21
-00:01:14,888 --> 00:01:19,913
+00:01:15,138 --> 00:01:20,100
 commitments. No status reports. Just outstanding
 contributions to team
 
 22
-00:01:19,913 --> 00:01:20,400
+00:01:20,112 --> 00:01:20,562
 morale.
 
 23
-00:01:23,254 --> 00:01:27,492
+00:01:23,267 --> 00:01:27,292
 Squad Pod observes your selected project. Live CLI
 activity
 
 24
-00:01:27,504 --> 00:01:30,804
+00:01:27,304 --> 00:01:30,404
 is opt-in, and launching Squad is an explicit
 action.
 
 25
-00:01:31,167 --> 00:01:35,029
+00:01:30,767 --> 00:01:34,679
 This showcase uses only synthetic data. The tiny
 office
 
 26
-00:01:35,029 --> 00:01:37,454
+00:01:34,692 --> 00:01:36,817
 is real; the workday is staged.
 
 27
-00:01:40,321 --> 00:01:44,121
+00:01:40,333 --> 00:01:44,033
 Big ideas. Tiny office. Bring your team to life
 
 28
-00:01:44,221 --> 00:01:47,508
+00:01:44,046 --> 00:01:47,121
 with Squad Pod. Find the project on GitHub, and
 
 29
-00:01:47,833 --> 00:01:49,733
+00:01:47,146 --> 00:01:48,896
 give your squad a place to call home.

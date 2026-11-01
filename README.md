@@ -20,8 +20,8 @@ Recorded from the actual production webview with a synthetic host and staged
 activity. No real AI tasks, private session logs, or customer data are shown.
 This is a product showcase, not native VS Code or real-session acceptance evidence.
 
-AI narration: Ava Multilingual.
-Music: Brian Swiger's supplied DaVinci AI-generated soundtrack.
+AI narration: Ava (US English).
+Music: Brian Swiger's supplied DaVinci AI-generated soundtrack. [Download the source MP3](assets/showcase/Squad-Pod-Soundtrack.mp3).
 
 **Local browser observer:** [Build/run and security instructions](standalone/README.md)
 for the private, authenticated, loopback-only office, read-only by default. It uses the same
