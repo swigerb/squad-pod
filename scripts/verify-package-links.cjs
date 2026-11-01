@@ -6,9 +6,10 @@ const { extractImageUrls, masterBlobPrefix, validatePackagedMarkdown } = require
 
 const root = path.resolve(__dirname, '..');
 const { name, version } = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-const archive = fs.readFileSync(path.join(root, `${name}-${version}.vsix`));
-const readme = readZipEntry(archive, 'extension/README.md').toString('utf8');
-const changelog = readZipEntry(archive, 'extension/CHANGELOG.md').toString('utf8');
+const vsixPath = process.argv[2] ? path.resolve(process.argv[2]) : path.join(root, `${name}-${version}.vsix`);
+const archive = fs.readFileSync(vsixPath);
+const readme = readZipEntry(archive, 'extension/readme.md').toString('utf8');
+const changelog = readZipEntry(archive, 'extension/changelog.md').toString('utf8');
 
 validatePackagedMarkdown(readme, 'README.md');
 validatePackagedMarkdown(changelog, 'CHANGELOG.md');
