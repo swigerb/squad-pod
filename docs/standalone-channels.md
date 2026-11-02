@@ -29,8 +29,21 @@ its existing revision-checked editor/settings/seat writes and browser-local layo
 import/export. Neither standalone profile advertises native asset-directory management,
 navigation, directory launches or consent writes. Snapshot asset delivery is unchanged.
 These descriptions do not grant authority, guarantee storage availability or replace
-transport validation. The UI still uses its existing `standalone`/`readOnly` flags;
-capability-driven UI migration is not implemented here.
+transport validation.
+
+The bounded layout-transfer UI now uses these capabilities: Settings import/export
+buttons require `importLayout`/`exportLayout`, and every local, incoming and retained
+recovery-copy export requires `exportLayoutSnapshot`. Unsupported buttons stay visible
+and disabled, with host-neutral unavailable text; their handlers do not send the action.
+Recovery storage wording follows `recoveryState`, including an in-memory-only warning
+and inspectable/copyable JSON when storage or export is unavailable. Existing native
+and standalone-control transfer defaults are unchanged; standalone observation still
+does not expose Settings. These are adapter-support checks, not new write authority.
+
+Remaining UI migration: settings/preferences, assets, details/navigation, directories,
+live consent/usage, editor/seat writes and recovery persistence itself still use existing
+`standalone`/`readOnly` assumptions. This slice does not make arbitrary injected clients
+safe across those other surfaces.
 
 This is a foundation slice of #174, not Canvas support or instance isolation.
 Canvas entry/theme/error UX, explicit validated current-root/exact-session authority,

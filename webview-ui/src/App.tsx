@@ -259,7 +259,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         }}
       >
         Loading office...
-        <LayoutConflict standalone={standalone} protection={editor.protection} onResolve={editor.resolveLayout} />
+        <LayoutConflict protection={editor.protection} onResolve={editor.resolveLayout} />
       </div>
     );
   }
@@ -424,7 +424,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
           {sourceStatus.error}
         </p>
       )}
-      <LayoutConflict standalone={standalone} protection={editor.protection} onResolve={editor.resolveLayout} />
+      <LayoutConflict protection={editor.protection} onResolve={editor.resolveLayout} />
       <AssetWarnings status={assetStatus} furniture={getOfficeState().layout.furniture} />
 
       <BottomToolbar

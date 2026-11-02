@@ -17,12 +17,14 @@ interface SettingsModalProps {
 
 export function SettingsModal({ standalone = false, assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
   const client = useHostClient();
+  const canExport = client.capabilities.actions.includes('exportLayout');
+  const canImport = client.capabilities.actions.includes('importLayout');
   const handleExport = () => {
-    client.send({ type: 'exportLayout' });
+    if (canExport) client.send({ type: 'exportLayout' });
   };
 
   const handleImport = () => {
-    client.send({ type: 'importLayout' });
+    if (canImport) client.send({ type: 'importLayout' });
   };
 
   return (
@@ -119,7 +121,7 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
           </p></>}
           <SourceStatusView status={sourceStatus} readOnly={standalone} />
           {!standalone && <AssetDirectories status={assetStatus} />}
-          {standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and browser-granted private/live log consent are unavailable. Live observation requires local CLI --live-activity opt-in. Import selects a browser file; export downloads validated JSON. Neither grants filesystem or terminal access.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
+          {standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and browser-granted private/live log consent are unavailable. Live observation requires local CLI --live-activity opt-in.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
             Automatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code&apos;s normal terminal and Copilot permission prompts.
             Live tools and context use an undocumented, best-effort Copilot CLI session format.
           </p>}
@@ -128,6 +130,7 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
             <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Layout</div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
+                disabled={!canExport}
                 onClick={handleExport}
                 style={{
                   flex: 1,
@@ -136,13 +139,15 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
                   color: 'var(--vscode-button-foreground)',
                   border: 'none',
                   borderRadius: '4px',
-                  cursor: 'pointer',
+                  cursor: canExport ? 'pointer' : 'not-allowed',
+                  opacity: canExport ? 1 : 0.5,
                   fontSize: '12px',
                 }}
               >
                 Export Layout
               </button>
               <button
+                disabled={!canImport}
                 onClick={handleImport}
                 style={{
                   flex: 1,
@@ -151,13 +156,20 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
                   color: 'var(--vscode-button-foreground)',
                   border: 'none',
                   borderRadius: '4px',
-                  cursor: 'pointer',
+                  cursor: canImport ? 'pointer' : 'not-allowed',
+                  opacity: canImport ? 1 : 0.5,
                   fontSize: '12px',
                 }}
               >
                 Import Layout
               </button>
             </div>
+            {!canExport && <p role="status">Layout export is unavailable in this host.</p>}
+            {!canImport && <p role="status">Layout import is unavailable in this host.</p>}
+            {standalone && (canImport || canExport) && <p role="status">
+              {canImport && 'Import selects a browser file. '}{canExport && 'Export downloads validated JSON. '}
+              Neither grants filesystem or terminal access.
+            </p>}
           </div>
         </div>
       </div>

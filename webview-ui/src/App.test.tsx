@@ -107,6 +107,38 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     ]);
   });
 
+  it('honors transfer restrictions in an injected client without standalone/readOnly flags', () => {
+    act(() => root.unmount());
+    const unrestricted = createHostClientFixture();
+    client = { ...unrestricted, capabilities: {
+      ...unrestricted.capabilities,
+      actions: unrestricted.capabilities.actions.filter(action =>
+        !['importLayout', 'exportLayout', 'exportLayoutSnapshot'].includes(action)),
+    } };
+    const acquireApi = vi.fn(() => { throw new Error('Must not acquire VS Code'); });
+    vi.stubGlobal('acquireVsCodeApi', acquireApi);
+    try {
+      root = createRoot(host);
+      act(() => root.render(<App client={client} />));
+      snapshot(imported, 'restricted');
+      click('Settings');
+      for (const label of ['Import Layout', 'Export Layout']) {
+        const button = [...host.querySelectorAll('button')].find(item => item.textContent === label);
+        expect(button?.disabled).toBe(true);
+        click(label);
+      }
+      expect(host.textContent).toContain('Layout import is unavailable in this host.');
+      expect(host.textContent).toContain('Layout export is unavailable in this host.');
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type))
+        .not.toEqual(expect.arrayContaining(['importLayout']));
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type))
+        .not.toEqual(expect.arrayContaining(['exportLayout']));
+      expect(acquireApi).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it.each(['ordinary', 'constructor', 'toString', '__proto__'])(
     'renders only own emitted member models in both detail surfaces for %s', async id => {
       act(() => root.unmount());
