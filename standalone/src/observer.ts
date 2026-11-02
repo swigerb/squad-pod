@@ -1,6 +1,6 @@
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { parseAllMembers, parseTeamRoster } from '../../src/teamParser.js';
+import { readDeclaredRoster } from '../../src/declaredRoster.js';
 import { parseRecordedUsage, unavailableUsage, MAX_USAGE_BYTES } from '../../src/recordedUsage.js';
 import { parseLayoutJson } from '../../src/layoutPersistence.js';
 import { createDefaultOfficeLayout } from '../../src/defaultOfficeLayout.js';
@@ -72,15 +72,12 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
         return null;
       }
     }
-    let squad = '.squad';
-    try { files.resolve(squad); }
-    catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') squad = '.ai-team';
-      else errors.push(String(error));
-    }
-    const team = read(path.join(squad, 'team.md'), 256 * 1024);
-    const roster = parseTeamRoster(team ?? '');
-    if (team !== null && (!/^##\s+Members/im.test(team) || !roster.length)) errors.push('Roster is empty or has no usable Members table.');
+    const declared = readDeclaredRoster({ files });
+    remainingBytes -= declared.byteLength;
+    const squad = declared.directory;
+    const roster = declared.members;
+    if (declared.status !== 'available') errors.push(declared.reason);
+    else if (!roster.length) errors.push('Roster is empty or has no usable Members table.');
     if (roster.length > 128 || roster.some(m => !/^[a-zA-Z0-9_-]{1,128}$/.test(m.slug)
       || m.name.length > 256 || m.role.length > 256) || new Set(roster.map(m => m.slug)).size !== roster.length) {
       errors.push('Roster exceeds bounds or has invalid/duplicate member identifiers.');
@@ -99,7 +96,7 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
         ? 'No local usage ledger. Live observation does not create recorded usage.'
         : 'Cannot read local usage ledger; see source diagnostics. Live observation does not create recorded usage.'),
       state: errorsBeforeLedger === errors.length ? 'missing' as const : 'error' as const }
-      : parseRecordedUsage(ledger, parseAllMembers(team ?? ''));
+      : parseRecordedUsage(ledger, declared.allMembers);
     usage.sourcePath = path.join(files.root, squad, 'log', 'usage.jsonl');
     const active = new Map<string, number>();
     const identities = new Map(roster.map(member => [member.slug, { id: member.slug, name: member.name }]));
@@ -165,7 +162,8 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
     return [
       { ...settings, ...preferences?.settings },
       { type: 'sourceStatus', status: {
-        workspaceRoot: files.root, squadDir: path.join(files.root, squad), teamFound: team !== null,
+        workspaceRoot: files.root, squadDir: path.join(files.root, squad),
+        teamFound: declared.status === 'available' || declared.status === 'invalid',
         observer: 'watching', nativeWatch: false, liveActivity: liveStatus,
         error: errors.length ? errors.slice(0, 8).join('\n').slice(0, 4096) : null,
       } },
