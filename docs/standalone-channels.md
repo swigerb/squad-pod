@@ -19,6 +19,25 @@ office commands before dispatch and rejects every observation-channel mutation s
 browser adapter separately validates server events. `/office` remains read-only:
 separate terminal authority never enables unsupported office mutations.
 
+`HostClient.capabilities` is an additive description of existing adapter support:
+an explicit allowlist of existing message action names plus recovery storage
+(`webview-state`, `browser-storage`, or `unavailable`). Unlisted actions are
+unsupported; the readiness handshake is mandatory and outside this allowlist.
+The VS Code profile describes its existing handlers. Standalone observation exposes
+only settings/detail reads and no recovery; opted-in control additionally describes
+its existing revision-checked editor/settings/seat writes and browser-local layout
+import/export. Neither standalone profile advertises native asset-directory management,
+navigation, directory launches or consent writes. Snapshot asset delivery is unchanged.
+These descriptions do not grant authority, guarantee storage availability or replace
+transport validation. The UI still uses its existing `standalone`/`readOnly` flags;
+capability-driven UI migration is not implemented here.
+
+This is a foundation slice of #174, not Canvas support or instance isolation.
+Canvas entry/theme/error UX, explicit validated current-root/exact-session authority,
+real per-instance office/editor/agent state, two-project/session tests, and integrated
+failed-init/disposal qualification remain required. No single-instance exemption applies;
+unproved native APIs and #173 runtime/live gates remain unchanged.
+
 The explicit local `--office-control` opt-in adds independent `POST /control-auth`
 authentication and a `/control` WebSocket. Its credential/cookie is neither the
 observation credential nor terminal authority. All endpoints keep exact loopback

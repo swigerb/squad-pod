@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
 import type { HostClient } from './hostClient.js';
+import { VSCODE_HOST_CAPABILITIES } from '../../src/core/hostCapabilities.js';
 import type { OutboundMessage, WebviewMessage } from '../../src/types.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { placeOverlay } from './components/AgentLabels.js';
@@ -80,6 +81,7 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     // Lifecycle tests advance 30s of polling; bundled asset bytes have separate acceptance coverage.
     fixture = createProviderFixture({ artifactRoot: path.join(repo, 'src', '__fixtures__'), extensionCode });
     client = {
+      capabilities: VSCODE_HOST_CAPABILITIES,
       send: (message) => fixture.send(message),
       subscribe: (listener) => {
         deliver = listener;

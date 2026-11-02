@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import type { OutboundMessage } from "../../../src/types.js";
 import type { HostClient } from "../hostClient.js";
+import { VSCODE_HOST_CAPABILITIES } from "../../../src/core/hostCapabilities.js";
 
 export type HostClientFixture = HostClient & {
   events: string[];
@@ -11,6 +12,7 @@ export function createHostClientFixture(): HostClientFixture {
   const listeners = new Set<(message: OutboundMessage) => void>();
   const events: string[] = [];
   return {
+    capabilities: VSCODE_HOST_CAPABILITIES,
     events,
     send: vi.fn((message) => {
       events.push(`send:${message.type}`);

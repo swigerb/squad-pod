@@ -1,4 +1,5 @@
 import type { HostClient } from '../hostClient.js';
+import { STANDALONE_CONTROL_CAPABILITIES, STANDALONE_OBSERVER_CAPABILITIES } from '../../../src/core/hostCapabilities.js';
 import type { OutboundMessage, WebviewMessage } from '../../../src/types.js';
 import { decodeEvent, isObserverLayout } from '../../../standalone/src/events.js';
 import { LayoutDraft } from '../office/editor/layoutDraft.js';
@@ -192,6 +193,7 @@ export function createBrowserClient(
     }
   }
   return {
+    capabilities: control ? STANDALONE_CONTROL_CAPABILITIES : STANDALONE_OBSERVER_CAPABILITIES,
     send(message) {
       if (disposed) { status('Disconnected'); return; }
       if (control && (message.type === 'exportLayout' || message.type === 'exportLayoutSnapshot')) {
