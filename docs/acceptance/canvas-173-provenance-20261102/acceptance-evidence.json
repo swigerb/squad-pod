@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "issue": 173,
+  "parentIssue": 172,
+  "status": "PARTIAL",
+  "disposition": {
+    "foundationEvidenceReadyForOwnerReview": true,
+    "foundationOwnerApproval": "NOT_APPROVED",
+    "release": "NO-GO",
+    "issueCompletion": "NO-GO",
+    "productionProgression": "NO-GO",
+    "architectureRecommendation": "Reserved for Homer and owner; this document makes no architecture decision."
+  },
+  "identity": {
+    "repository": "swigerb/squad-pod",
+    "artifactSourceCommit": "bd2bf14539b48d13eb153eb9f9a645c9a152bca8",
+    "configuredImmutableSourceCommit": "bd2bf14539b48d13eb153eb9f9a645c9a152bca8",
+    "sourcePath": "spikes/canvas-173",
+    "pluginVersion": "0.0.0",
+    "appVersion": "1.1.34",
+    "platform": "Windows",
+    "architecture": "x64",
+    "extensionProcessNode": "v24.22.1",
+    "evidenceRevision": {
+      "baseCommit": "bd2bf14539b48d13eb153eb9f9a645c9a152bca8",
+      "state": "UNCOMMITTED",
+      "identityMethod": "Canonical content identity: git hash-object on each evidence file; no evidence commit exists yet."
+    }
+  },
+  "provenance": {
+    "native": {
+      "observer": "Scout",
+      "class": "NATIVE_WITH_SYNTHETIC_CONTENT",
+      "source": "Owner-authorized acceptance-summary.json and native-digest-document.png only.",
+      "method": "Sanitized attribution of completed observation; editor did not repeat the native run or read raw receipts.",
+      "timing": "Summary reports three observation turns, 12.95 minutes within the approved 20 minutes; exact start/stop times not supplied."
+    },
+    "ci": {
+      "run": 41505247223,
+      "headCommit": "bd2bf14539b48d13eb153eb9f9a645c9a152bca8",
+      "result": "SUCCESS",
+      "attribution": "Coordinator-verified public CI; not independently rerun by editor and not native acceptance."
+    },
+    "fixtures": {
+      "source": "src/canvas173.test.ts",
+      "class": "FIXTURE",
+      "limits": "Existing fixture contracts are distinct from native observations; no fixture rerun or native typed-event proof claimed here."
+    }
+  },
+  "provedFoundations": {
+    "installation": "Native local catalog accepted the immutable public repository/subdirectory source; version 0.0.0 enabled with one canvas.",
+    "discovery": "Marketplace provider class discovered; fresh synthetic root, no project-local provider fallback.",
+    "rootAndSession": "Explicit canonical root equality only; exact joined-session snapshot and native document render passed.",
+    "artifacts": {
+      "comparisonObserver": "Scout",
+      "comparisonMethod": "Provider-reported on-disk hashes independently compared by Scout with immutable public Git bytes.",
+      "extension.mjs": { "sizeBytes": 1002, "sha256": "f2f47994b9ff9214946b3cd136c3c0a64f615ddf41243d04e3e0d78eab89c503", "matches": true },
+      "probe.mjs": { "sizeBytes": 19508, "sha256": "fbc40152a7b2a1950c4af12e2360ccc2d1c5984ed49874aaab80ce831d95a4c1", "matches": true },
+      "plugin.json": { "sizeBytes": 275, "sha256": "26ab48a14f26bca07cb28c66f6db45dcff3194a995bdfe26ab878aeac854f1f5", "matches": true },
+      "limits": "Observation-time on-disk bytes, not independent process-memory attestation, a sandbox, or an immutable compiled-code guarantee."
+    },
+    "closeReopen": "First close removed owned listener and refused TCP; same-instance reopen/snapshot passed with all three hashes matching; second close removed listener and refused TCP.",
+    "readBoundary": "Restrictive headers unchanged; one read-only snapshot per action; no history read.",
+    "inventoryBoundary": "No shell/CLI inventory or unrelated marketplace update invoked in this native pass."
+  },
+  "controlledRemoval": {
+    "actionCount": 1,
+    "action": "Verified QA details foreground native Enable plugin control: On to Off.",
+    "observedCombinedResult": "Provider exited, zero owned listeners, UI explicitly not installed and offering Install, native discovery provider absent.",
+    "separateUninstallButtonInvoked": false,
+    "limits": "One controlled action and its combined observed result; not independent disable and uninstall passes or universal toggle semantics."
+  },
+  "cleanup": {
+    "normalQaCatalogRemoval": "PASS",
+    "qaCatalogEntryAbsent": true,
+    "qaInstalledEntries": 0,
+    "freshSyntheticRootTrustRevokedAndUntrusted": true,
+    "providerExited": true,
+    "ownedListeners": 0,
+    "forcedRemovalUsed": false,
+    "otherRepositoryTrustChanged": false,
+    "grantClickPerformedByScout": false,
+    "grantOriginObserved": false
+  },
+  "remainingHardGates": [
+    { "gate": "production-product", "status": "NOT_PROVED", "remaining": "Production renderer, UI, assets, persistence and services; full user goal unchanged." },
+    { "gate": "typed-activity", "status": "NOT_PROVED", "remaining": "Actual typed subagent identity and timestamp integration into production." },
+    { "gate": "lifecycle-history", "status": "NOT_PROVED", "remaining": "Historical replay, resume, replacement, app exit and abrupt process loss." },
+    { "gate": "update-rollback", "status": "NOT_PROVED", "remaining": "Distinct approved-version update and rollback." },
+    { "gate": "runtime-api", "status": "NOT_PROVED", "remaining": "Exact bundled SDK/CLI versions, dependency guarantees and provisional API stability." },
+    { "gate": "compatibility-authority", "status": "NOT_PROVED", "remaining": "Other OS, remote/WSL, minimum version and general root authority beyond explicit canonical equality." },
+    { "gate": "owner-disposition", "status": "NOT_APPROVED", "remaining": "Explicit owner foundation disposition, architecture recommendation and full issue/epic acceptance." }
+  ],
+  "history": {
+    "preserved": ["docs/acceptance/canvas-173-native-20261102", "docs/acceptance/canvas-173-marketplace-20261102"],
+    "supersession": "Only explicitly observed fields at artifactSourceCommit gain new evidence. Earlier unknowns remain historical.",
+    "oldUiRefreshAnomaly": "Historical cause remains unknown; this run does not rewrite it."
+  },
+  "screenshot": {
+    "file": "native-digest-document.png",
+    "caption": "Actual native synthetic read-only document, static UI only; no app chrome. Not digest, host-identity or lifecycle proof.",
+    "sourceDimensions": [1710, 500],
+    "crop": { "x": 0, "y": 0, "width": 1710, "height": 500 },
+    "outputDimensions": [1710, 500],
+    "transformation": "Full-document lossless PNG re-encode; metadata stripped, decoded RGBA pixels equal to source.",
+    "sizeBytes": 86509,
+    "sha256": "161ab9fccc3deddab45847d4ff912bb336c836071262f50233c039731c6ca555"
+  },
+  "publication": {
+    "state": "LOCAL_UNCOMMITTED_REVIEW_ONLY",
+    "authorized": false,
+    "omitted": "Private catalog/provider identifiers, usernames beyond public repository identity, raw session/event IDs, local paths, ports, process IDs, capability URLs and raw receipts.",
+    "scope": "Two new evidence files only; no runtime, dependency, settings, trust, historical evidence, release or issue-disposition changes."
+  }
+}
