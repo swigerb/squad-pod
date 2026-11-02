@@ -1,8 +1,11 @@
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { syncBuiltinESMExports } from 'node:module';
 import { request } from 'node:http';
 import { existsSync, readFileSync, mkdtempSync, mkdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync, renameSync } from 'node:fs';
 import { join, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // Exercise the staged module without resolving or installing the host-injected SDK.
 const modulePath = '../spikes/canvas-173/com.github.copilot/extensions/canvas-173/probe.mjs';
@@ -52,10 +55,269 @@ function get(url: string, options: { method?: string; headers?: Record<string, s
     req.end();
   });
 }
-afterEach(async () => { await Promise.all(active.splice(0).map((probe) => probe.dispose())); });
+afterEach(async () => {
+  vi.restoreAllMocks();
+  syncBuiltinESMExports();
+  await Promise.all(active.splice(0).map((probe) => probe.dispose()));
+});
 afterAll(() => { rmSync(fixtureRoot, { recursive: true, force: true }); });
 
 describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
+  async function artifactFixture(projectLocal = false) {
+    const root = mkdtempSync(join(fixtureRoot, 'artifacts-'));
+    const directory = join(root, projectLocal ? '.github' : 'com.github.copilot', 'extensions', 'canvas-173');
+    mkdirSync(directory, { recursive: true });
+    const source = readFileSync(new URL(modulePath, import.meta.url));
+    writeFileSync(join(directory, 'probe.mjs'), source);
+    writeFileSync(join(directory, 'extension.mjs'), '// synthetic entry only\n');
+    writeFileSync(join(root, 'plugin.json'), '{"version":"0.0.0","private":"never-return"}');
+    const imported = await import(pathToFileURL(join(directory, 'probe.mjs')).href);
+    const probe = imported.createProbe((options: unknown) => options, ProbeError, {
+      moduleUrl: pathToFileURL(join(root, 'never-read-caller-path.mjs')).href,
+    });
+    active.push(probe);
+    probe.bind({ sessionId, on: () => () => {} });
+    await probe.canvas.open(openCtx());
+    return {
+      root, directory, probe,
+      snapshot: () => probe.canvas.actions[0].handler(ctx()).artifactProvenance,
+    };
+  }
+
+  it('hashes the actual module-relative artifacts independently without source, paths or commit claims', async () => {
+    const { probe } = fixture();
+    await probe.canvas.open(openCtx());
+    const provenance = probe.canvas.actions[0].handler(ctx()).artifactProvenance;
+    expect(provenance.scope).toBe('own-artifacts-at-observation-time');
+    expect(provenance.limitation).toContain('not immutable in-memory code');
+    expect(provenance.maxArtifactBytes).toEqual({ source: 262144, manifest: 16384 });
+    expect(provenance.readCapsBytes).toEqual({ source: 262145, manifest: 16385 });
+    for (const [label, url] of [
+      ['extension.mjs', new URL('../spikes/canvas-173/com.github.copilot/extensions/canvas-173/extension.mjs', import.meta.url)],
+      ['probe.mjs', new URL(modulePath, import.meta.url)],
+      ['plugin.json', new URL('../spikes/canvas-173/plugin.json', import.meta.url)],
+    ] as const) {
+      const bytes = readFileSync(url);
+      expect(provenance.artifacts[label]).toMatchObject({
+        status: 'available', sha256: createHash('sha256').update(bytes).digest('hex'), sizeBytes: bytes.length,
+      });
+      expect(provenance.artifacts[label].sha256).toMatch(/^[a-f0-9]{64}$/);
+    }
+    expect(provenance.artifacts['plugin.json'].version).toEqual({ status: 'available', value: '0.0.0' });
+    expect(JSON.stringify(provenance)).not.toContain(fileURLToPath(new URL('..', import.meta.url)));
+    expect(JSON.stringify(provenance)).not.toContain('import {');
+    expect(() => probe.canvas.actions[0].handler({ ...ctx(), input: { moduleUrl: 'file:///private' } })).toThrow('empty object');
+  });
+
+  it('uses observation-time bytes and never falls back to repository manifests for project-local loading', async () => {
+    const f = await artifactFixture(true);
+    expect(f.snapshot().artifacts['plugin.json']).toEqual({ status: 'unavailable', reason: 'unsupported-layout' });
+    const before = f.snapshot().artifacts['extension.mjs'].sha256;
+    writeFileSync(join(f.directory, 'extension.mjs'), '// changed after import\n');
+    const after = f.snapshot().artifacts['extension.mjs'];
+    expect(after.sha256).not.toBe(before);
+    expect(after.sha256).toBe(createHash('sha256').update('// changed after import\n').digest('hex'));
+    expect(JSON.stringify(f.snapshot())).not.toContain('never-return');
+  });
+
+  it('reports absent, malformed and unsafe manifest versions without exposing their values', async () => {
+    const f = await artifactFixture();
+    const manifest = join(f.root, 'plugin.json');
+    const observedManifest = async () => {
+      // Windows metadata observers can update ctime just after a fixture write.
+      // Keep production's conservative "changed" result; only settle this parser fixture.
+      let result;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        result = f.snapshot().artifacts['plugin.json'];
+        if (result.reason !== 'changed') {
+          return result;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return result;
+    };
+    unlinkSync(manifest);
+    expect(f.snapshot().artifacts['plugin.json']).toEqual({ status: 'unavailable', reason: 'missing' });
+    writeFileSync(manifest, '{private invalid');
+    expect(await observedManifest()).toMatchObject({
+      status: 'available', version: { status: 'unavailable', reason: 'malformed-manifest' },
+    });
+    for (const version of [undefined, null, 123, '../private', '1.2.3\nprivate', '1.2.3\n', '1.2.3\r\n', 'x'.repeat(65)]) {
+      writeFileSync(manifest, JSON.stringify({ version }));
+      expect((await observedManifest()).version).toEqual({ status: 'unavailable', reason: 'invalid-or-missing-version' });
+    }
+    writeFileSync(manifest, JSON.stringify({ version: '1.2.3-preview.1+build.2' }));
+    expect((await observedManifest()).version).toEqual({ status: 'available', value: '1.2.3-preview.1+build.2' });
+    writeFileSync(manifest, ' '.repeat(16385));
+    expect(f.snapshot().artifacts['plugin.json']).toEqual({ status: 'unavailable', reason: 'too-large' });
+  });
+
+  it('refuses oversized, missing, nonregular and linked fixed artifacts', async () => {
+    const f = await artifactFixture();
+    const entry = join(f.directory, 'extension.mjs');
+    writeFileSync(entry, Buffer.alloc(262144));
+    expect(f.snapshot().artifacts['extension.mjs']).toMatchObject({ status: 'available', sizeBytes: 262144 });
+    writeFileSync(entry, Buffer.alloc(262145));
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'too-large' });
+    unlinkSync(entry);
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'missing' });
+    mkdirSync(entry);
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'not-regular' });
+    rmSync(entry, { recursive: true });
+    // Directory junctions work on Windows without symlink privileges.
+    symlinkSync(selectedRoot, entry, process.platform === 'win32' ? 'junction' : 'dir');
+    const opens = vi.spyOn(fs, 'openSync');
+    syncBuiltinESMExports();
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'link' });
+    expect(opens.mock.calls.some(([path]) => path === entry)).toBe(false);
+    unlinkSync(entry);
+    const linkedTarget = join(f.root, 'synthetic-link-target');
+    writeFileSync(linkedTarget, 'synthetic linked content must not be read');
+    fs.linkSync(linkedTarget, entry);
+    opens.mockClear();
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'link' });
+    expect(opens.mock.calls.some(([path]) => path === entry)).toBe(false);
+    unlinkSync(entry);
+    writeFileSync(entry, '// synthetic');
+    const displaced = `${f.directory}-displaced`;
+    renameSync(f.directory, displaced);
+    symlinkSync(displaced, f.directory, process.platform === 'win32' ? 'junction' : 'dir');
+    opens.mockClear();
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'link' });
+    expect(opens.mock.calls.some(([path]) => path === entry)).toBe(false);
+    unlinkSync(f.directory);
+    renameSync(displaced, f.directory);
+  });
+
+  it('does no artifact opens for rejected context and redacts known and unexpected open errors', async () => {
+    const f = await artifactFixture();
+    const spy = vi.spyOn(fs, 'openSync');
+    syncBuiltinESMExports();
+    for (const context of [
+      { ...ctx(), sessionId: 'other' }, { ...ctx(), input: { path: selectedRoot } },
+      { ...ctx(), session: { workingDirectory: otherRoot } }, { ...ctx(), actionName: 'write' },
+    ]) {
+      expect(() => f.probe.canvas.actions[0].handler(context)).toThrow();
+    }
+    expect(spy).not.toHaveBeenCalled();
+    const snapshot = f.probe.canvas.actions[0].handler({
+      ...ctx(), moduleUrl: pathToFileURL(join(f.root, 'never-read-context-path.mjs')).href,
+    });
+    expect(snapshot.artifactProvenance.artifacts['probe.mjs'].status).toBe('available');
+    expect([...new Set(spy.mock.calls.map(([path]) => path))].sort()).toEqual([
+      join(f.directory, 'extension.mjs'), join(f.directory, 'probe.mjs'), join(f.root, 'plugin.json'),
+    ].sort());
+    for (const [code, reason] of [['EACCES', 'permission-denied'], ['EPERM', 'permission-denied'], ['EIO', 'io-error'], ['PRIVATE', 'unexpected-error'], ['__proto__', 'unexpected-error']]) {
+      spy.mockImplementation(() => { throw Object.assign(new Error(`private ${f.root}`), { code }); });
+      syncBuiltinESMExports();
+      expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'error', reason });
+      expect(JSON.stringify(f.snapshot())).not.toContain(f.root);
+    }
+  });
+
+  it.runIf(process.platform === 'win32')('accepts zero pathname device IDs but retains both stat-family identity checks', async () => {
+    const f = await artifactFixture();
+    const entry = join(f.directory, 'extension.mjs');
+    const originalLstat = fs.lstatSync;
+    const originalFstat = fs.fstatSync;
+    let pathCalls = 0;
+    let handleCalls = 0;
+    let changePath = false;
+    let changeHandle = false;
+    let changeInode = false;
+    vi.spyOn(fs, 'lstatSync').mockImplementation(((path: fs.PathLike, options: any) => {
+      const stat = (originalLstat as any)(path, options);
+      if (path === entry) {
+        Object.defineProperty(stat, 'dev', { value: changePath && ++pathCalls === 2 ? 1n : 0n });
+      }
+      return stat;
+    }) as any);
+    vi.spyOn(fs, 'fstatSync').mockImplementation(((fd: number, options: any) => {
+      const stat = (originalFstat as any)(fd, options);
+      Object.defineProperty(stat, 'dev', { value: changeHandle && ++handleCalls === 2 ? 817n : 816n });
+      if (changeInode) {
+        Object.defineProperty(stat, 'ino', { value: stat.ino + 1n });
+      }
+      return stat;
+    }) as any);
+    syncBuiltinESMExports();
+    expect(f.snapshot().artifacts['extension.mjs']).toMatchObject({
+      status: 'available', sha256: createHash('sha256').update(readFileSync(entry)).digest('hex'),
+    });
+    changePath = true;
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'changed' });
+    changePath = false;
+    changeHandle = true;
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'changed' });
+    changeHandle = false;
+    changeInode = true;
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'changed' });
+  });
+
+  it('rejects a fixed-file substitution between lstat and open before reading it', async () => {
+    const f = await artifactFixture();
+    const entry = join(f.directory, 'extension.mjs');
+    const originalOpen = fs.openSync;
+    const originalRead = fs.readSync;
+    let currentPath: fs.PathLike | undefined;
+    let replacementReads = 0;
+    const read = vi.spyOn(fs, 'readSync').mockImplementation((...args: any[]) => {
+      if (currentPath === entry) {
+        replacementReads++;
+      }
+      return (originalRead as any)(...args);
+    });
+    let replaced = false;
+    vi.spyOn(fs, 'openSync').mockImplementation((path, flags, mode) => {
+      if (path === entry && !replaced) {
+        replaced = true;
+        renameSync(entry, `${entry}-displaced`);
+        writeFileSync(entry, '// replacement that must not be read');
+      }
+      currentPath = path;
+      return originalOpen(path, flags, mode);
+    });
+    syncBuiltinESMExports();
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'changed' });
+    expect(read).toHaveBeenCalled();
+    expect(replacementReads).toBe(0);
+  });
+
+  it('caps reads during growth, detects same-size mutation and always closes opened handles', async () => {
+    const f = await artifactFixture();
+    const entry = join(f.directory, 'extension.mjs');
+    const originalRead = fs.readSync;
+    const closed: number[] = [];
+    const originalClose = fs.closeSync;
+    vi.spyOn(fs, 'closeSync').mockImplementation((fd) => { closed.push(fd); originalClose(fd); });
+    let first = true;
+    const read = vi.spyOn(fs, 'readSync').mockImplementation((...args: any[]) => {
+      if (first) { first = false; writeFileSync(entry, Buffer.alloc(300000)); closed.length = 0; }
+      return (originalRead as any)(...args);
+    });
+    syncBuiltinESMExports();
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'too-large' });
+    expect(read.mock.calls[0][3]).toBe(262145);
+    expect(closed).toHaveLength(3);
+    writeFileSync(entry, '1234');
+    first = true;
+    read.mockImplementation((...args: any[]) => {
+      if (first) {
+        first = false;
+        writeFileSync(entry, '5678');
+        fs.utimesSync(entry, new Date(0), new Date(0));
+        closed.length = 0;
+      }
+      return (originalRead as any)(...args);
+    });
+    syncBuiltinESMExports();
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'unavailable', reason: 'changed' });
+    read.mockImplementation(() => { throw new Error('private read failure'); });
+    syncBuiltinESMExports();
+    expect(f.snapshot().artifacts['extension.mjs']).toEqual({ status: 'error', reason: 'unexpected-error' });
+    expect(closed).toHaveLength(6);
+  });
+
   it('uses the bare host SDK import with exactly one read-only action and no dependency manifest', () => {
     const entry = readFileSync(new URL('../spikes/canvas-173/com.github.copilot/extensions/canvas-173/extension.mjs', import.meta.url), 'utf8');
     expect(entry).toContain('from "@github/copilot-sdk/extension"');

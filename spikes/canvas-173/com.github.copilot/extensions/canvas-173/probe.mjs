@@ -1,7 +1,8 @@
 import { createServer } from "node:http";
-import { randomBytes, timingSafeEqual } from "node:crypto";
-import { realpathSync, statSync } from "node:fs";
-import { isAbsolute } from "node:path";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { closeSync, constants, fstatSync, lstatSync, openSync, readSync, realpathSync, statSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const CANVAS_ID = "squad-pod-canvas-173";
 const INSTANCE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
@@ -12,7 +13,107 @@ const OPEN_INPUT = {
     type: "object", properties: { syntheticProjectRoot: { type: "string", minLength: 1, maxLength: 4096 } },
     required: ["syntheticProjectRoot"], additionalProperties: false,
 };
-const HTML = '<!doctype html><html lang="en"><meta charset="utf-8"><title>Canvas 173 probe</title><h1>Canvas 173: synthetic read-only UI</h1><p>No project file contents, prompts, tool results, or account data are read. Only explicitly supplied directory metadata is checked.</p><p>Security headers remain unchanged. The original probe rendered in one native host; universal embedding behavior remains unproven. Use the snapshot canvas action for bounded metadata.</p></html>';
+const HTML = '<!doctype html><html lang="en"><meta charset="utf-8"><title>Canvas 173 probe</title><h1>Canvas 173: synthetic read-only UI</h1><p>No prompts, tool results, account data, or unrelated project file contents are read. Only explicit directory metadata and bounded own-provider artifacts are checked.</p><p>Security headers remain unchanged. The original probe rendered in one native host; universal embedding behavior remains unproven. Use the snapshot canvas action for bounded metadata.</p></html>';
+
+const OWN_DIRECTORY = dirname(fileURLToPath(import.meta.url));
+const SOURCE_CAP = 256 * 1024;
+const MANIFEST_CAP = 16 * 1024;
+const normalized = (path) => process.platform === "win32" ? path.toLowerCase() : path;
+const sameMetadata = (a, b) => a.ino === b.ino &&
+    a.size === b.size && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs;
+const sameFile = (a, b) => a.dev === b.dev && sameMetadata(a, b);
+// Windows Node 24 pathname stats can report dev=0 while handle stats report the volume.
+// Keep strict device checks within each stat family and require a nonzero shared file ID.
+const sameOpenedFile = (pathStat, handleStat) => pathStat.ino !== 0n &&
+    (pathStat.dev === handleStat.dev || (process.platform === "win32" && pathStat.dev === 0n)) &&
+    sameMetadata(pathStat, handleStat);
+const unavailable = (reason) => ({ status: "unavailable", reason });
+function artifactError(error) {
+    if (error?.code === "ENOENT") return unavailable("missing");
+    if (error?.code === "ELOOP") return unavailable("link");
+    const reasons = { EACCES: "permission-denied", EPERM: "permission-denied", EIO: "io-error",
+        EMFILE: "resource-limit", ENFILE: "resource-limit", ENOTDIR: "not-directory" };
+    const reason = Object.hasOwn(reasons, error?.code) ? reasons[error.code] : undefined;
+    return { status: "error", reason: reason ?? "unexpected-error" };
+}
+
+// Fixed module-relative paths only. Never accept a path/URL from canvas input or createProbe.
+function readOwnArtifact(path, cap, manifest = false) {
+    let fd;
+    let result;
+    const observe = () => {
+        const directory = dirname(path);
+        // Reject ancestor junctions/symlinks too, without walking or searching ancestors.
+        if (normalized(realpathSync.native(directory)) !== normalized(resolve(directory))) return unavailable("link");
+        const before = lstatSync(path, { bigint: true });
+        if (before.isSymbolicLink()) return unavailable("link");
+        if (!before.isFile()) return unavailable("not-regular");
+        if (before.nlink !== 1n) return unavailable("link");
+        if (before.size > BigInt(cap)) return unavailable("too-large");
+        fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+        const opened = fstatSync(fd, { bigint: true });
+        if (!opened.isFile() || opened.nlink !== 1n || !sameOpenedFile(before, opened)) return unavailable("changed");
+        if (normalized(realpathSync.native(directory)) !== normalized(resolve(directory))) return unavailable("link");
+        const bytes = Buffer.alloc(cap + 1);
+        let length = 0;
+        while (length < bytes.length) {
+            const count = readSync(fd, bytes, length, bytes.length - length, length);
+            if (count === 0) break;
+            length += count;
+        }
+        if (length > cap) return unavailable("too-large");
+        const after = lstatSync(path, { bigint: true });
+        if (!sameFile(opened, fstatSync(fd, { bigint: true })) || !sameFile(before, after) ||
+            !sameOpenedFile(after, opened) ||
+            after.isSymbolicLink() || after.nlink !== 1n || BigInt(length) !== opened.size ||
+            normalized(realpathSync.native(directory)) !== normalized(resolve(directory))) return unavailable("changed");
+        const content = bytes.subarray(0, length);
+        const result = { status: "available", sha256: createHash("sha256").update(content).digest("hex"), sizeBytes: length };
+        if (manifest) {
+            let parsed;
+            try { parsed = JSON.parse(content.toString("utf8")); }
+            catch { result.version = unavailable("malformed-manifest"); }
+            if (!result.version) {
+                const version = parsed?.version;
+                result.version = typeof version === "string" && version.length <= 64 && !/[^0-9A-Za-z.+-]/.test(version) &&
+                    /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/.test(version)
+                    ? { status: "available", value: version } : unavailable("invalid-or-missing-version");
+            }
+        }
+        return result;
+    };
+    try {
+        result = observe();
+    } catch (error) {
+        result = artifactError(error);
+    } finally {
+        if (fd !== undefined) {
+            try { closeSync(fd); } catch (error) { result = artifactError(error); }
+        }
+    }
+    return result;
+}
+
+function artifactProvenance() {
+    // Package root is exactly ../../../ from com.github.copilot/extensions/canvas-173.
+    // A project-local .github/extensions/canvas-173 must never inspect repository plugin.json.
+    const extensions = dirname(OWN_DIRECTORY);
+    const namespace = dirname(extensions);
+    const packaged = basename(OWN_DIRECTORY) === "canvas-173" && basename(extensions) === "extensions" &&
+        basename(namespace) === "com.github.copilot";
+    return {
+        scope: "own-artifacts-at-observation-time",
+        limitation: "On-disk bytes, not immutable in-memory code or source-commit proof; concurrent privileged substitution cannot be excluded.",
+        maxArtifactBytes: { source: SOURCE_CAP, manifest: MANIFEST_CAP },
+        readCapsBytes: { source: SOURCE_CAP + 1, manifest: MANIFEST_CAP + 1 },
+        artifacts: {
+            "extension.mjs": readOwnArtifact(join(OWN_DIRECTORY, "extension.mjs"), SOURCE_CAP),
+            "probe.mjs": readOwnArtifact(join(OWN_DIRECTORY, "probe.mjs"), SOURCE_CAP),
+            "plugin.json": packaged ? readOwnArtifact(join(dirname(namespace), "plugin.json"), MANIFEST_CAP, true)
+                : unavailable("unsupported-layout"),
+        },
+    };
+}
 
 // Metadata only, on these explicit paths: no content reads, discovery, cwd or workspace fallback.
 function directoryIdentity(value) {
@@ -157,7 +258,7 @@ export function createProbe(createCanvas, CanvasError) {
         },
         actions: [{
             name: "snapshot",
-            description: "Return at most 32 sanitized event envelopes for this exact joined session and open instance.",
+            description: "Return bounded own-artifact provenance and at most 32 sanitized event envelopes for this exact joined session and open instance.",
             inputSchema: EMPTY_INPUT,
             handler: (ctx) => {
                 const entry = validate(ctx);
@@ -176,6 +277,7 @@ export function createProbe(createCanvas, CanvasError) {
                     sessionArtifactWorkspaceAvailable: typeof session.workspacePath === "string",
                     activeWorkingDirectoryAvailable: true,
                     runtime: runtimeProvenance(),
+                    artifactProvenance: artifactProvenance(),
                     listener: { scope: "this-instance", transport: "ipv4-loopback", port: entry.hosted.port },
                     model: { status: "unavailable" },
                     contextUsage: { status: "unavailable" },
