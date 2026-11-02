@@ -41,6 +41,14 @@ describe('shared selected-project reads', () => {
     expect(() => files.entries('link')).toThrow('symlinks');
   });
 
+  it('preserves a UTF-8 BOM only when a raw-content consumer requests it', () => {
+    fs.writeFileSync(path.join(root, 'source'), '\uFEFFdeclared');
+    const files = new ProjectFiles(root);
+    expect(files.read('source', 11)).toBe('declared');
+    expect(files.read('source', 11, { preserveBOM: true })).toBe('\uFEFFdeclared');
+    expect(() => files.read('source', 10, { preserveBOM: true })).toThrow('regular file');
+  });
+
   it('rejects a replaced selected root rather than adopting its new contents', () => {
     const selected = path.join(root, 'selected');
     fs.mkdirSync(selected);

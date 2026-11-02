@@ -6,6 +6,7 @@ import { createObserver } from './observer.js';
 import { ProjectFiles } from './projectFiles.js';
 import { decodeEvent } from './events.js';
 import { MAX_DECLARED_ROSTER_BYTES } from '../../src/declaredRoster.js';
+import { readTeamFile, readTeamRoster } from '../../src/teamParser.js';
 import type { OutboundMessage } from '../../src/types.js';
 
 const owned: string[] = [];
@@ -24,6 +25,26 @@ afterEach(() => {
 });
 
 describe('read-only selected-project observer', () => {
+  it('matches existing read API membership for accepted, refused and recovered sources', async () => {
+    const root = fixture();
+    const team = path.join(root, '.squad', 'team.md');
+    const original = readTeamFile(root)!;
+    const observer = createObserver(root, packageRoot);
+    try {
+      for (const content of [original, original.padEnd(MAX_DECLARED_ROSTER_BYTES + 1, ' '),
+        Buffer.from([0xff]), original.replace('test-agent-1', 'Mixed_Name-2')]) {
+        fs.writeFileSync(team, content);
+        const messages = await observer.snapshot();
+        const expected = readTeamRoster(root).map(member => ({ id: member.slug, name: member.name, role: member.role }));
+        const agents = messages.find(m => m.type === 'existingAgents');
+        expect(agents).toMatchObject({ agents: expected });
+        if (agents?.type !== 'existingAgents') throw new Error('Missing roster.');
+        expect(agents.agents).toHaveLength(expected.length);
+        expect(readTeamFile(root) === null).toBe(expected.length === 0);
+      }
+    } finally { observer.dispose(); }
+  });
+
   it('surfaces guarded roster failures without adopting the usable legacy roster', async () => {
     const root = fixture();
     fs.renameSync(path.join(root, '.squad'), path.join(root, '.ai-team'));

@@ -39,8 +39,11 @@ export class ProjectFiles {
     return target;
   }
 
-  /** Read bounded strict UTF-8; missing returns null, unsafe/changed sources throw. */
-  read(relative: string, limit: number): string | null {
+  /**
+   * Read bounded strict UTF-8; missing returns null, unsafe/changed sources throw.
+   * Raw-content consumers can preserve the BOM; other consumers keep decoder defaults.
+   */
+  read(relative: string, limit: number, options: { preserveBOM?: boolean } = {}): string | null {
     let fd: number | undefined;
     try {
       const target = this.resolve(relative);
@@ -60,7 +63,7 @@ export class ProjectFiles {
         || !sameFile(fs.lstatSync(target, { bigint: true }), opened)) {
         throw new Error('Source changed while reading; retry on next poll.');
       }
-      return new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, size));
+      return new TextDecoder('utf-8', { fatal: true, ignoreBOM: options.preserveBOM }).decode(buffer.subarray(0, size));
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw error;

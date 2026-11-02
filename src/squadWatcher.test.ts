@@ -1,7 +1,7 @@
 /// <reference types="vitest/globals" />
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
+import { readTeamFile, readTeamRoster } from './teamParser.js';
 import type { SourceStatus } from './types.js';
 import {
   parseSessionFile,
@@ -194,7 +194,7 @@ describe('SquadWatcher', () => {
   }
 
   beforeEach(() => {
-    root = fs.mkdtempSync(path.join(os.tmpdir(), 'squad pod watcher '));
+    root = fs.mkdtempSync(path.resolve('.squad-watcher-fixture-'));
     events = [];
     rosterChanges = 0;
   });
@@ -202,6 +202,30 @@ describe('SquadWatcher', () => {
   afterEach(() => {
     watcher?.dispose();
     fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('refreshes through the guarded legacy APIs after rejected content and recovery', () => {
+    const content = '# Synthetic team\n## Members\n| Name | Role | Charter |\n|---|---|---|\n'
+      + '| Ada | Developer | .squad/agents/Mixed_Name-2/charter.md |\n';
+    const snapshots: Array<{ raw: string | null; ids: string[] }> = [];
+    write('team.md', content);
+    watcher = new SquadWatcher(root, {
+      onRosterChanged: () => snapshots.push({
+        raw: readTeamFile(root), ids: readTeamRoster(root).map(member => member.slug),
+      }),
+      onAgentActivity: () => {},
+    }, { useFsWatch: false });
+    watcher.scan();
+    write('team.md', content.padEnd(256 * 1024 + 1, ' '));
+    watcher.scan();
+    expect(snapshots.at(-1)).toEqual({ raw: null, ids: [] });
+    write('team.md', content);
+    watcher.scan();
+    expect(snapshots.at(-1)).toEqual({ raw: content, ids: ['Mixed_Name-2'] });
+    fs.renameSync(path.join(root, '.squad'), path.join(root, '.ai-team'));
+    fs.mkdirSync(path.join(root, '.squad'));
+    watcher.scan();
+    expect(snapshots.at(-1)).toEqual({ raw: null, ids: [] });
   });
 
   it('does not replay existing history as live activity on startup', () => {

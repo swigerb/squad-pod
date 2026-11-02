@@ -1,12 +1,11 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { ProjectFiles } from './projectFiles.js';
+import type { ProjectFiles } from './projectFiles.js';
 import { SQUAD_DIR_NAMES } from './squadPaths.js';
+import { readTeamSource } from './teamSource.js';
 import { parseAllMembers, parseTeamRoster } from './teamParser.js';
 import type { SquadTeamMember } from './types.js';
 
 /** Existing observer team.md byte limit; oversize input is rejected, never truncated. */
-export const MAX_DECLARED_ROSTER_BYTES = 256 * 1024;
+export { MAX_TEAM_SOURCE_BYTES as MAX_DECLARED_ROSTER_BYTES } from './teamSource.js';
 
 /** The host supplies its already-authorized selected project, retaining root identity. */
 export interface DeclaredRosterContext {
@@ -29,32 +28,15 @@ export type DeclaredRoster = {
  * Availability is not authority to launch, write, or adopt runtime agents.
  */
 export function readDeclaredRoster({ files }: DeclaredRosterContext): DeclaredRoster {
-  let directory: DeclaredRoster['directory'] = SQUAD_DIR_NAMES[0];
-  let byteLength = 0;
-  const unavailable = (status: 'missing' | 'invalid' | 'unreadable', reason: string): DeclaredRoster =>
-    ({ status, directory, byteLength, members: [], allMembers: [], reason });
-  function selectDirectory(): DeclaredRoster['directory'] {
-    try {
-      if (!fs.statSync(files.resolve(SQUAD_DIR_NAMES[0])).isDirectory()) {
-        throw new Error('Preferred roster path is not a directory.');
-      }
-    }
-    catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {return SQUAD_DIR_NAMES[1];}
-      throw error;
-    }
-    return SQUAD_DIR_NAMES[0];
+  const source = readTeamSource(files);
+  const { directory, byteLength } = source;
+  if (source.status !== 'available') {
+    return { ...source, members: [], allMembers: [] };
   }
-  try {
-    directory = selectDirectory();
-    const source = files.read(path.join(directory, 'team.md'), MAX_DECLARED_ROSTER_BYTES);
-    if (selectDirectory() !== directory) {throw new Error('Selected roster directory changed.');}
-    if (source === null) {return unavailable('missing', 'No selected-project team.md found.');}
-    byteLength = Buffer.byteLength(source);
-    const allMembers = parseAllMembers(source);
-    if (!allMembers.length) {return unavailable('invalid', 'Roster is empty or has no usable Members table.');}
-    return { status: 'available', directory, byteLength, allMembers, members: parseTeamRoster(source) };
-  } catch (error) {
-    return unavailable('unreadable', `Cannot read selected-project roster: ${String(error)}`);
+  const allMembers = parseAllMembers(source.content);
+  if (!allMembers.length) {
+    return { status: 'invalid', directory, byteLength, members: [], allMembers: [],
+      reason: 'Roster is empty or has no usable Members table.' };
   }
+  return { status: 'available', directory, byteLength, allMembers, members: parseTeamRoster(source.content) };
 }

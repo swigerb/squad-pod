@@ -202,6 +202,44 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     });
   });
 
+  it('withholds rejected team sources through watcher refresh and Squad Info, then recovers', () => {
+    const team = path.join(fixture.workspaceRoot, '.squad', 'team.md');
+    const original = fs.readFileSync(team, 'utf8');
+    for (const content of [original.padEnd(256 * 1024 + 1, ' '), Buffer.from([0xff])]) {
+      fs.writeFileSync(team, content);
+      vi.advanceTimersByTime(2000);
+      expect(fixture.messages.filter(m => m.type === 'existingAgents').at(-1)).toMatchObject({ agents: [] });
+      fixture.send({ type: 'openSquadInfo' });
+      expect(fixture.messages.filter(m => m.type === 'squadInfoLoaded').at(-1)).toMatchObject({
+        info: { teamName: null, projectContext: null, members: [], hiddenMembers: [] },
+      });
+    }
+    const squad = path.dirname(team);
+    const legacy = path.join(fixture.workspaceRoot, '.ai-team');
+    fs.renameSync(squad, legacy);
+    fs.writeFileSync(path.join(legacy, 'team.md'), original);
+    fs.symlinkSync(legacy, squad, 'junction');
+    vi.advanceTimersByTime(2000);
+    expect(fixture.messages.filter(m => m.type === 'existingAgents').at(-1)).toMatchObject({ agents: [] });
+    fixture.send({ type: 'openSquadInfo' });
+    expect(fixture.messages.filter(m => m.type === 'squadInfoLoaded').at(-1)).toMatchObject({
+      info: { members: [], hiddenMembers: [] },
+    });
+    fs.unlinkSync(squad);
+    fs.mkdirSync(squad);
+    fs.writeFileSync(team, '# Synthetic team\n\n## Project Context\nSynthetic context.\n\n' + original);
+    vi.advanceTimersByTime(2000);
+    expect(fixture.messages.filter(m => m.type === 'existingAgents').at(-1)).toMatchObject({
+      agents: [{ id: 'ada' }, { id: 'grace' }],
+    });
+    fixture.send({ type: 'openSquadInfo' });
+    expect(fixture.messages.filter(m => m.type === 'squadInfoLoaded').at(-1)).toMatchObject({
+      info: { teamName: 'Synthetic team', projectContext: 'Synthetic context.',
+        members: [{ id: 'ada', name: 'Ada' }, { id: 'grace', name: 'Grace' }],
+        hiddenMembers: [{ name: 'Scribe', role: 'Scribe' }] },
+    });
+  });
+
   it('returns conflicting declarations separately with exact-name keys and refreshes without runtime inference', () => {
     const squad = path.join(fixture.workspaceRoot, '.squad');
     const charter = path.join(squad, 'agents', 'ada', 'charter.md');
