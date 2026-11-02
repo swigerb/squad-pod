@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useHostClient } from '../HostClientContext.js';
 import type { PodSettings, SourceStatus } from '../../../src/types.js';
 import { SourceStatusView } from './SourceStatusView.js';
@@ -17,6 +18,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ standalone = false, assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
   const client = useHostClient();
+  const id = useId();
   const canExport = client.capabilities.actions.includes('exportLayout');
   const canImport = client.capabilities.actions.includes('importLayout');
   const handleExport = () => {
@@ -29,6 +31,9 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
       style={{
         position: 'fixed',
         inset: 0,
@@ -74,9 +79,9 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label htmlFor="squad-pod-sound" style={{ fontSize: '13px' }}>Sound Notifications</label>
+            <label htmlFor={`${id}-sound`} style={{ fontSize: '13px' }}>Sound Notifications</label>
             <input
-              id="squad-pod-sound"
+              id={`${id}-sound`}
               type="checkbox"
               checked={settings.soundEnabled}
               onChange={() => onSoundChange(!settings.soundEnabled)}
@@ -85,9 +90,9 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label htmlFor="squad-pod-show-areas" style={{ fontSize: '13px' }}>Show Named Areas</label>
+            <label htmlFor={`${id}-areas`} style={{ fontSize: '13px' }}>Show Named Areas</label>
             <input
-              id="squad-pod-show-areas"
+              id={`${id}-areas`}
               type="checkbox"
               checked={settings.showAreas}
               onChange={() => onShowAreasChange(!settings.showAreas)}
@@ -97,9 +102,9 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
 
           {onToggleDebugMode && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="squad-pod-debug-view" style={{ fontSize: '13px' }}>Debug View</label>
+              <label htmlFor={`${id}-debug`} style={{ fontSize: '13px' }}>Debug View</label>
               <input
-                id="squad-pod-debug-view"
+                id={`${id}-debug`}
                 type="checkbox"
                 checked={isDebugMode}
                 onChange={onToggleDebugMode}
@@ -109,8 +114,8 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
           )}
 
           {!standalone && <><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label htmlFor="squad-pod-live-activity" style={{ fontSize: '13px' }}>Live Activity (opt-in)</label>
-            <input id="squad-pod-live-activity" type="checkbox"
+            <label htmlFor={`${id}-live`} style={{ fontSize: '13px' }}>Live Activity (opt-in)</label>
+            <input id={`${id}-live`} type="checkbox"
               checked={!!sourceStatus?.liveActivity && sourceStatus.liveActivity.state !== 'off'}
               onChange={(event) => client.send({ type: 'setLiveActivity', enabled: event.target.checked })} />
           </div>

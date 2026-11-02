@@ -65,23 +65,46 @@ Single-view defaults, layout/recovery formats, subscribe-before-ready ordering a
 source-loss processing are unchanged. In-place client/project replacement is not
 implemented here; callers must remount when changing clients/projects.
 
+The office panel is also an explicit DOM input boundary. Editor Delete/Backspace,
+rotation, undo/redo and Escape listeners attach to that mounted panel, not window.
+Native focus within the panel owns its bubbling keys: Tab to the existing focusable
+canvas or controls can transfer ownership without a pointer. Mounting never steals
+focus. Form/text/select/contenteditable/dialog input, composing keys and already
+handled events are left alone; an open modal blocks shortcuts only in its office.
+Settings now identifies its dialog, and settings/editor label-control pairs use
+React-generated IDs rather than cross-office duplicate IDs.
+
+The existing renderer's Space-pan and Alt-copy-preview key listeners attach to its
+canvas. Canvas/window blur cancels held Space and unfinished pointer gestures.
+Listener effects remove their exact handlers on cleanup, including StrictMode replay.
+Middle-button, wheel and touch gestures remain canvas-local; no global event
+blocking, project/session ownership or new renderer was introduced.
+
 `App.instances.test.tsx` mounts two real Apps with separate synthetic clients in
 the normal webview Vitest runner (jsdom, no pixel-render qualification). It checks
 distinct OfficeState objects and visible rosters, editor tool choices, drafts,
 undo/redo, recovery writes and routed save/detail messages; source-loss/empty-roster
 delivery, unmount/remount and a recovery-read failure in one leave the other live.
+Input cases additionally check peer selection/layout/history after focused
+shortcuts, keyboard-only ownership transfer, editable/modal exclusions, generated
+label routing and continued operation after peer unmount, with StrictMode coverage.
+Tool isolation is checked after the peer rerenders. Canvas navigation tests run
+the real handlers and inspect pan values passed to a stubbed drawing function;
+the game-loop scheduler and canvas context are synthetic. These are normal-runner
+state/routing regressions, **not pixel, browser-native input or native Canvas API
+qualification**.
 
 **Still outside this increment:** mutable module-level asset registries/loaders
 (floor/wall/carpet/pet/character templates, furniture catalog, tileset metadata,
 loading generations/diagnostics) and rendering/colorization caches remain shared.
-Audio enablement/context and window/document input routing (including editor
-keyboard shortcuts, canvas pan keys and DOM control IDs) are not instance-scoped.
-Distinct asset streams or simultaneous globally routed keyboard input are therefore
-not qualified as isolated. Host-side agent/session stores, adapter/transport lifetime,
+Audio enablement/context remains shared and untouched. Distinct asset streams and
+audio ownership are not qualified as isolated. Other document-level card dismissal/
+focus-trap listeners and non-editor DOM identities are not migrated by this boundary.
+Host-side agent/session stores, adapter/transport lifetime,
 default VS Code client acquisition and standalone server/terminal session ownership
 are unchanged. No new session identity or write authority is inferred from this seam.
 
-This is a bounded state-allocation foundation slice of #174, not Canvas support
+This is a bounded state-allocation and editor/canvas-input slice of #174, not Canvas support
 or full multi-instance acceptance.
 Canvas entry/theme/error UX, explicit validated current-root/exact-session authority,
 remaining shared-state/input isolation, two-project/session tests, and integrated

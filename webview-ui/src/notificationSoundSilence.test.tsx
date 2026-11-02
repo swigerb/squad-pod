@@ -98,7 +98,7 @@ describe('muted notification sound transitions at the App host boundary', () => 
   }
 
   function setSoundPreference(enabled: boolean): void {
-    const sound = host.querySelector<HTMLInputElement>('#squad-pod-sound');
+    const sound = host.querySelector<HTMLInputElement>('[id$="-sound"]');
     expect(sound).toBeDefined();
     expect(sound!.checked).not.toBe(enabled);
     act(() => sound!.click());

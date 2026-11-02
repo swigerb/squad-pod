@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useRef, useEffect, useState, useId } from 'react';
 import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, EditTool as EditToolType } from '../office/types.js';
@@ -429,6 +429,7 @@ function ColorSliders({
   onGestureStart?: () => void;
   onGestureEnd?: () => void;
 }) {
+  const colorizeId = useId();
   const handleChange = useCallback(
     (field: keyof FloorColor, value: number | boolean) => {
       onChange({ ...color, [field]: value });
@@ -533,9 +534,9 @@ function ColorSliders({
           type="checkbox"
           checked={!!color.colorize}
           onChange={(e) => handleChange('colorize', e.target.checked)}
-          id={`colorize-${label}`}
+          id={colorizeId}
         />
-        <label htmlFor={`colorize-${label}`} style={{ fontSize: '10px', color: TEXT_DIM, cursor: 'pointer' }}>
+        <label htmlFor={colorizeId} style={{ fontSize: '10px', color: TEXT_DIM, cursor: 'pointer' }}>
           Colorize
         </label>
       </div>}
@@ -590,6 +591,7 @@ export function EditorToolbar({
   hasSelection,
   onExpandGrid,
 }: EditorToolbarProps) {
+  const areaDirectoryId = useId();
   // Force re-render when tileset assets become available
   const [_assetTick, setAssetTick] = useState(0);
   const [newAreaLabel, setNewAreaLabel] = useState('');
@@ -739,11 +741,11 @@ export function EditorToolbar({
           ))}
           {selectedArea && (
             <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: '8px', marginTop: '8px' }}>
-              <label htmlFor="area-directory" style={{ display: 'block', marginBottom: '4px', fontSize: '10px', color: TEXT_DIM }}>
+              <label htmlFor={areaDirectoryId} style={{ display: 'block', marginBottom: '4px', fontSize: '10px', color: TEXT_DIM }}>
                 Map {selectedArea.label} to directory
               </label>
               <select
-                id="area-directory"
+                id={areaDirectoryId}
                 data-testid="area-directory"
                 value={selectedDirectoryId}
                 onChange={(event) => setSelectedDirectoryId(event.target.value)}

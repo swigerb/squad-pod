@@ -148,7 +148,8 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
     editor.handleUndo,
     editor.handleRedo,
     () => editor.handleEditorSelectionChange(null),
-    readOnly ? () => {} : editor.handleToggleEditMode
+    readOnly ? () => {} : editor.handleToggleEditMode,
+    containerRef,
   );
 
   const handleDeskClick = useCallback((agentId: string, screenX: number, screenY: number) => {
@@ -313,7 +314,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   }
 
   return (
-    <div className="office-panel" data-edit-mode={editor.isEditMode}
+    <div className="office-panel" data-office-input-root="" data-edit-mode={editor.isEditMode}
       data-following-agent={touchMobile ? followedAgentId ?? '' : undefined}
       ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
       <style>{`@keyframes pixel-agents-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} } .pixel-agents-pulse{animation:pixel-agents-pulse ${PULSE_ANIMATION_DURATION_SEC}s ease-in-out infinite}`}</style>

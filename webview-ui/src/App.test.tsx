@@ -677,11 +677,12 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       type: 'updateDirectoryName', id: 'saved-1', name: 'Native rename',
     });
     act(() => host.querySelector<HTMLButtonElement>('[aria-label="Close directories"]')!.click());
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
+    act(() => canvas.focus());
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
     expect(persisted!.draft!.furniture).toEqual([]);
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
     expect(persisted!.draft).toEqual(draft);
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
     expect(persisted!.draft).toEqual(layout);
   });
 
@@ -1288,9 +1289,9 @@ describe('settings and source UI with simulated host messages', () => {
     load();
     expect(isSoundEnabled()).toBe(false);
     click('Settings');
-    const sound = host.querySelector<HTMLInputElement>('#squad-pod-sound')!;
-    const debug = host.querySelector<HTMLInputElement>('#squad-pod-debug-view')!;
-    const showAreas = host.querySelector<HTMLInputElement>('#squad-pod-show-areas')!;
+    const sound = host.querySelector<HTMLInputElement>('[id$="-sound"]')!;
+    const debug = host.querySelector<HTMLInputElement>('[id$="-debug"]')!;
+    const showAreas = host.querySelector<HTMLInputElement>('[id$="-areas"]')!;
     expect(sound.checked).toBe(false);
     expect(debug.checked).toBe(false);
     expect(showAreas.checked).toBe(false);
@@ -1312,8 +1313,8 @@ describe('settings and source UI with simulated host messages', () => {
     click('Close');
     expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: false });
     click('Settings');
-    expect(host.querySelector<HTMLInputElement>('#squad-pod-debug-view')!.checked).toBe(false);
-    expect(host.querySelector<HTMLInputElement>('#squad-pod-show-areas')!.checked).toBe(true);
+    expect(host.querySelector<HTMLInputElement>('[id$="-debug"]')!.checked).toBe(false);
+    expect(host.querySelector<HTMLInputElement>('[id$="-areas"]')!.checked).toBe(true);
   });
 
   it('shows only host-reported observer status and labels absent producers/launch explicitly', () => {

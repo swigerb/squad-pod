@@ -1,9 +1,11 @@
-import { act } from 'react';
+import { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
 import { createHostClientFixture } from './__tests__/hostClientFixture.js';
 import { OfficeState } from './office/engine/officeState.js';
+import * as gameLoop from './office/engine/gameLoop.js';
+import * as renderer from './office/engine/renderer.js';
 import type { LayoutRecovery } from './office/editor/layoutDraft.js';
 import type { OfficeLayout } from './office/types.js';
 import type { OutboundMessage } from '../../src/types.js';
@@ -12,7 +14,7 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 describe('mounted office state ownership (synthetic independent hosts)', () => {
   const views: ReturnType<typeof view>[] = [];
-  function view() {
+  function view(strict = false) {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const client = createHostClientFixture();
@@ -25,7 +27,7 @@ describe('mounted office state ownership (synthetic independent hosts)', () => {
     let root: Root | null = null;
     const mount = () => {
       root = createRoot(host);
-      act(() => root!.render(<App client={client} />));
+      act(() => root!.render(strict ? <StrictMode><App client={client} /></StrictMode> : <App client={client} />));
     };
     const unmount = () => {
       act(() => root?.unmount());
@@ -46,12 +48,12 @@ describe('mounted office state ownership (synthetic independent hosts)', () => {
   const layout = (cols: number): OfficeLayout => ({
     version: 2, cols, rows: 15, tiles: Array(cols * 15).fill(1), furniture: [],
   });
-  const initialize = (office: ReturnType<typeof view>, cols: number, name: string) => {
+  const initialize = (office: ReturnType<typeof view>, cols: number, name: string, initial = layout(cols)) => {
     office.emit({ type: 'sourceStatus', status: {
       workspaceRoot: name, squadDir: `${name}/.squad`, teamFound: true,
       observer: 'watching', nativeWatch: false, error: null,
     } });
-    office.emit({ type: 'layoutLoaded', layout: layout(cols), revision: name, workspaceRoot: name });
+    office.emit({ type: 'layoutLoaded', layout: initial, revision: name, workspaceRoot: name });
     office.emit({ type: 'existingAgents', agents: [{
       id: name, name, role: 'Developer', paletteIndex: 0, seatId: null,
       status: 'idle', currentTask: null,
@@ -99,6 +101,7 @@ describe('mounted office state ownership (synthetic independent hosts)', () => {
     a.click('Edit Layout');
     b.click('Edit Layout');
     a.click('♥Pets');
+    b.emit({ type: 'agentStatus', agentId: 'beta', status: 'active' });
     expect(a.host.querySelector('[title="Pets"]')?.getAttribute('aria-pressed')).toBe('true');
     expect(b.host.querySelector('[title="Select"]')?.getAttribute('aria-pressed')).toBe('true');
     a.click('→');
@@ -134,6 +137,175 @@ describe('mounted office state ownership (synthetic independent hosts)', () => {
       expect(office.client.subscribe).toHaveBeenCalledOnce();
       expect(office.client.events.slice(0, 2)).toEqual(['subscribe', 'send:webviewReady']);
     }
+  });
+
+  it('scopes real canvas pan handlers, clears held keys on focus transfer and cleans up StrictMode mounts', () => {
+    const added = vi.spyOn(HTMLCanvasElement.prototype, 'addEventListener');
+    const removed = vi.spyOn(HTMLCanvasElement.prototype, 'removeEventListener');
+    const ctx = { setTransform: vi.fn(), imageSmoothingEnabled: false } as unknown as CanvasRenderingContext2D;
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, left: 0, top: 0, right: 200, bottom: 150, width: 200, height: 150, toJSON: () => ({}),
+    });
+    const frames = new Map<HTMLCanvasElement, () => void>();
+    vi.spyOn(gameLoop, 'startGameLoop').mockImplementation((canvas, callbacks) => {
+      const render = () => callbacks.render(ctx);
+      frames.set(canvas, render);
+      return () => { if (frames.get(canvas) === render) frames.delete(canvas); };
+    });
+    const draw = vi.spyOn(renderer, 'renderFrame').mockImplementation(() => {});
+    const a = view(true), b = view(true);
+    views.push(a, b);
+    a.mount(); initialize(a, 20, 'alpha');
+    b.mount(); initialize(b, 25, 'beta');
+    const canvasA = a.host.querySelector('canvas')!;
+    const canvasB = b.host.querySelector('canvas')!;
+    const pan = (canvas: HTMLCanvasElement) => {
+      frames.get(canvas)!();
+      return draw.mock.lastCall!.slice(7, 9);
+    };
+    const space = (canvas: HTMLCanvasElement, type = 'keydown') => {
+      const event = new KeyboardEvent(type, { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+      act(() => canvas.dispatchEvent(event));
+      return event;
+    };
+    const mouse = (canvas: HTMLCanvasElement, type: string, x: number, button = 0) => {
+      act(() => canvas.dispatchEvent(new MouseEvent(type, { button, bubbles: true, clientX: x, clientY: 60 })));
+    };
+    const beforeA = pan(canvasA), beforeB = pan(canvasB);
+    act(() => canvasA.focus());
+    expect(space(canvasA).defaultPrevented).toBe(true);
+    act(() => canvasB.focus());
+    // Returning by pointer must not resurrect A's held Space.
+    mouse(canvasA, 'mousedown', 60);
+    mouse(canvasA, 'mousemove', 80);
+    mouse(canvasA, 'mouseup', 80);
+    expect(pan(canvasA)).toEqual(beforeA);
+    expect(pan(canvasB)).toEqual(beforeB);
+    space(canvasA);
+    mouse(canvasA, 'mousedown', 60);
+    mouse(canvasA, 'mousemove', 80);
+    mouse(canvasA, 'mouseup', 80);
+    space(canvasA, 'keyup');
+    expect(pan(canvasA)).toEqual([Number(beforeA[0]) + 20, beforeA[1]]);
+    expect(pan(canvasB)).toEqual(beforeB);
+    a.click('Settings');
+    act(() => canvasB.focus());
+    expect(space(canvasB).defaultPrevented).toBe(true);
+    mouse(canvasB, 'mousedown', 60);
+    mouse(canvasB, 'mousemove', 70);
+    mouse(canvasB, 'mouseup', 70);
+    expect(pan(canvasB)).toEqual([Number(beforeB[0]) + 10, beforeB[1]]);
+    a.unmount();
+    expect(frames.has(canvasA)).toBe(false);
+    for (const type of ['keydown', 'keyup', 'blur']) {
+      const listeners = (spy: typeof added | typeof removed, canvas: HTMLCanvasElement) =>
+        spy.mock.calls.filter(([event], index) => event === type && spy.mock.contexts[index] === canvas).length;
+      expect(listeners(added, canvasA)).toBeGreaterThanOrEqual(2);
+      expect(listeners(added, canvasA) - listeners(removed, canvasA)).toBe(0);
+      expect(listeners(added, canvasB) - listeners(removed, canvasB)).toBe(1);
+    }
+    space(canvasB, 'keyup');
+    // Middle-button and wheel navigation still work after peer disposal.
+    mouse(canvasB, 'mousedown', 60, 1);
+    mouse(canvasB, 'mousemove', 70, 1);
+    mouse(canvasB, 'mouseup', 70, 1);
+    expect(pan(canvasB)).toEqual([Number(beforeB[0]) + 20, beforeB[1]]);
+    act(() => canvasB.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaX: 60 })));
+    expect(pan(canvasB)).toEqual([Number(beforeB[0]) - 40, beforeB[1]]);
+    expect(frames.size).toBe(1);
+  });
+
+  it.each([false, true])('routes focused editor input and survives owner disposal (StrictMode=%s)', strict => {
+    const rebuild = vi.spyOn(OfficeState.prototype, 'rebuildFromLayout');
+    const a = view(strict), b = view(strict);
+    views.push(a, b);
+    const furnished = (cols: number): OfficeLayout => ({
+      ...layout(cols), furniture: [{ uid: 'chair', type: 'chair', col: 2, row: 2, rotation: 0 }],
+    });
+    a.mount(); initialize(a, 20, 'alpha', furnished(20));
+    b.mount(); initialize(b, 25, 'beta', furnished(25));
+    const stateA = instance(rebuild.mock.contexts[0]);
+    const stateB = instance(rebuild.mock.contexts[1]);
+    a.click('Edit Layout'); b.click('Edit Layout');
+    const canvasA = a.host.querySelector('canvas')!;
+    const canvasB = b.host.querySelector('canvas')!;
+    const key = (target: Element, key: string, ctrlKey = false) => {
+      const event = new KeyboardEvent('keydown', { key, ctrlKey, bubbles: true, cancelable: true });
+      act(() => target.dispatchEvent(event));
+      return event;
+    };
+    const select = (canvas: HTMLCanvasElement) => act(() => {
+      canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 80, clientY: 80 }));
+      canvas.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 80, clientY: 80 }));
+    });
+    select(canvasA); select(canvasB);
+    expect(a.host.querySelector('[title="Delete (Del)"]')).not.toBeNull();
+    expect(b.host.querySelector('[title="Delete (Del)"]')).not.toBeNull();
+    a.click('→'); a.click('↓'); b.click('→'); b.click('↓');
+    const peer = b.recovery();
+    // Focus alone (as from Tab), without a pointer event, transfers ownership.
+    act(() => canvasA.focus());
+    key(canvasA, 'z', true);
+    expect(stateA.layout).toMatchObject({ cols: 21, rows: 15 });
+    expect(b.recovery()).toEqual(peer);
+    expect(b.host.querySelector('[title="Delete (Del)"]')).not.toBeNull();
+    key(canvasA, 'Delete');
+    expect(stateA.layout.furniture).toEqual([]);
+    expect(stateB.layout.furniture).toHaveLength(1);
+    expect(b.host.querySelector('[title="Delete (Del)"]')).not.toBeNull();
+    act(() => canvasB.focus());
+    key(canvasB, 'z', true);
+    expect(stateB.layout).toMatchObject({ cols: 26, rows: 15 });
+    expect(stateA.layout.furniture).toEqual([]);
+    key(canvasB, 'y', true);
+    expect(stateB.layout.rows).toBe(16);
+
+    for (const tag of ['input', 'textarea', 'select', 'div']) {
+      const control = document.createElement(tag);
+      if (tag === 'div') { control.setAttribute('contenteditable', ''); control.tabIndex = 0; }
+      b.host.querySelector('.office-panel')!.append(control);
+      act(() => control.focus());
+      const before = b.recovery();
+      expect(key(control, 'z', true).defaultPrevented).toBe(false);
+      expect(key(control, 'Delete').defaultPrevented).toBe(false);
+      expect(b.recovery()).toEqual(before);
+      control.remove();
+    }
+    // A modal blocks only its office, even when focus is programmatically on its canvas.
+    a.click('Settings');
+    act(() => canvasA.focus());
+    const beforeModal = a.recovery();
+    expect(key(canvasA, 'z', true).defaultPrevented).toBe(false);
+    expect(a.recovery()).toEqual(beforeModal);
+    act(() => canvasB.focus());
+    key(canvasB, 'z', true);
+    expect(stateB.layout.rows).toBe(15);
+    a.unmount();
+    act(() => canvasB.focus());
+    key(canvasB, 'z', true);
+    expect(stateB.layout).toMatchObject({ cols: 25, rows: 15 });
+    key(canvasB, 'y', true);
+    expect(stateB.layout).toMatchObject({ cols: 26, rows: 15 });
+    b.click('● Save Layout');
+    expect(b.client.send).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'saveLayout', workspaceRoot: 'beta', layout: expect.objectContaining({ cols: 26, rows: 15 }),
+    }));
+  });
+
+  it('keeps generated settings label/control identity local to its office', () => {
+    const a = view(), b = view();
+    views.push(a, b);
+    a.mount(); initialize(a, 20, 'alpha');
+    b.mount(); initialize(b, 25, 'beta');
+    a.click('Settings'); b.click('Settings');
+    const label = (office: typeof a) => [...office.host.querySelectorAll('label')]
+      .find(item => item.textContent === 'Show Named Areas')!;
+    expect(label(a).htmlFor).not.toBe(label(b).htmlFor);
+    expect(b.host.contains(label(b).control)).toBe(true);
+    act(() => label(b).click());
+    expect(b.client.send).toHaveBeenCalledWith({ type: 'setShowAreas', enabled: true });
+    expect(a.client.send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'setShowAreas' }));
   });
 
   it('keeps the surviving office live across peer source loss, unmount, fresh mount and recovery-read failure', async () => {
