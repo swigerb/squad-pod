@@ -1,12 +1,44 @@
 import { createServer } from "node:http";
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { realpathSync, statSync } from "node:fs";
+import { isAbsolute } from "node:path";
 
 const CANVAS_ID = "squad-pod-canvas-173";
 const INSTANCE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EVENT_TYPES = new Set(["session.start", "session.resume", "session.idle", "assistant.turn_start"]);
 const EMPTY_INPUT = { type: "object", properties: {}, additionalProperties: false };
-const HTML = '<!doctype html><html lang="en"><meta charset="utf-8"><title>Canvas 173 probe</title><h1>Canvas 173: synthetic read-only UI</h1><p>No project files, prompts, tool results, or account data are read.</p><p>Native framing is deliberately blocked pending a source-grounded embedding-origin contract. Use the snapshot canvas action for bounded metadata.</p></html>';
+const OPEN_INPUT = {
+    type: "object", properties: { syntheticProjectRoot: { type: "string", minLength: 1, maxLength: 4096 } },
+    required: ["syntheticProjectRoot"], additionalProperties: false,
+};
+const HTML = '<!doctype html><html lang="en"><meta charset="utf-8"><title>Canvas 173 probe</title><h1>Canvas 173: synthetic read-only UI</h1><p>No project file contents, prompts, tool results, or account data are read. Only explicitly supplied directory metadata is checked.</p><p>Security headers remain unchanged. The original probe rendered in one native host; universal embedding behavior remains unproven. Use the snapshot canvas action for bounded metadata.</p></html>';
+
+// Metadata only, on these explicit paths: no content reads, discovery, cwd or workspace fallback.
+function directoryIdentity(value) {
+    if (typeof value !== "string" || value.length === 0 || value.length > 4096 ||
+        /[\x00-\x1f\x7f]/.test(value) || !isAbsolute(value) ||
+        (process.platform === "win32" && (!/^[A-Za-z]:[\\/]/.test(value) || value.slice(2).includes(":"))) ||
+        (process.platform !== "win32" && value.startsWith("//"))) throw new Error("invalid");
+    const canonical = realpathSync.native(value);
+    if (process.platform === "win32" && !/^[A-Za-z]:[\\/]/.test(canonical)) throw new Error("nonlocal");
+    const stat = statSync(canonical, { bigint: true });
+    if (!stat.isDirectory()) throw new Error("not directory");
+    return { canonical: process.platform === "win32" ? canonical.toLowerCase() : canonical, dev: stat.dev, ino: stat.ino };
+}
+const sameDirectory = (a, b) => a.canonical === b.canonical && a.dev === b.dev && a.ino === b.ino;
+
+function runtimeProvenance() {
+    const available = (value, valid) => valid ? { status: "available", value } : { status: "unavailable" };
+    return {
+        scope: "extension-process",
+        node: available(process.version, /^v\d+\.\d+\.\d+$/.test(process.version)),
+        platform: available(process.platform, ["win32", "linux", "darwin", "aix", "freebsd", "openbsd", "sunos", "android", "netbsd"].includes(process.platform)),
+        arch: available(process.arch, ["arm", "arm64", "ia32", "loong64", "mips", "mipsel", "ppc", "ppc64", "riscv64", "s390", "s390x", "x64"].includes(process.arch)),
+        sdkVersion: { status: "unavailable" },
+        appVersion: { status: "unavailable" },
+    };
+}
 
 /** Project only allowlisted event envelope fields; never traverse event.data. */
 export function sanitizeEvent(event) {
@@ -29,27 +61,34 @@ export function sanitizeEvent(event) {
 export function createProbe(createCanvas, CanvasError) {
     let session;
     let unsubscribe;
+    let providerId;
     let disposed = false;
     const instances = new Map();
     const fail = (code, message) => { throw new CanvasError(code, message); };
-    const validate = (ctx, input = false) => {
+    const validate = (ctx) => {
         if (disposed) fail("probe_disposed", "Provider is closed");
         if (!session) fail("probe_not_ready", "Joined session is not ready");
         if (ctx?.sessionId !== session.sessionId) fail("probe_session_mismatch", "Exact joined session required");
-        if (ctx.canvasId !== CANVAS_ID || !INSTANCE_ID.test(ctx.instanceId ?? "") ||
+        if (ctx.canvasId !== CANVAS_ID || typeof ctx.instanceId !== "string" || !INSTANCE_ID.test(ctx.instanceId) ||
             typeof ctx.extensionId !== "string" || ctx.extensionId.length === 0 || ctx.extensionId.length > 256) {
             fail("probe_context_invalid", "Invalid canvas context");
         }
-        if (input && ctx.input !== undefined &&
-            (ctx.input === null || typeof ctx.input !== "object" || Array.isArray(ctx.input) ||
-                Object.getOwnPropertyNames(ctx.input).length !== 0)) {
-            fail("probe_input_invalid", "Only an empty object or omitted input is supported");
-        }
         const entry = instances.get(ctx.instanceId);
-        if (entry && entry.extensionId !== ctx.extensionId) {
+        if ((providerId && providerId !== ctx.extensionId) || (entry && entry.extensionId !== ctx.extensionId)) {
             fail("probe_provider_mismatch", "Instance belongs to another provider");
         }
         return entry;
+    };
+    const bindRoot = (ctx, selectedPath, bound) => {
+        let selected;
+        let active;
+        try {
+            selected = directoryIdentity(selectedPath);
+            active = directoryIdentity(ctx.session?.workingDirectory);
+        } catch { fail("probe_root_unavailable", "Explicit local directories and active session context are required"); }
+        if (!sameDirectory(selected, active)) fail("probe_root_mismatch", "Exact active directory match required");
+        if (bound && !sameDirectory(selected, bound)) fail("probe_root_changed", "Instance root binding has changed; close before replacement");
+        return selected;
     };
     const subscribe = () => {
         if (!unsubscribe) unsubscribe = session.on((event) => {
@@ -78,13 +117,22 @@ export function createProbe(createCanvas, CanvasError) {
     const canvas = createCanvas({
         id: CANVAS_ID,
         displayName: "Canvas 173 feasibility probe",
-        description: "Synthetic read-only probe of exact joined-session metadata; native embedding remains gated.",
-        inputSchema: EMPTY_INPUT,
+        description: "Synthetic read-only probe bound to an explicitly selected root matching the exact joined session active directory.",
+        inputSchema: OPEN_INPUT,
         open: async (ctx) => {
-            let entry = validate(ctx, true);
+            let entry = validate(ctx);
+            if (!ctx.input || typeof ctx.input !== "object" || Array.isArray(ctx.input) ||
+                Object.getOwnPropertyNames(ctx.input).length !== 1 ||
+                !Object.hasOwn(ctx.input, "syntheticProjectRoot")) {
+                fail("probe_input_invalid", "Only an explicit syntheticProjectRoot is supported");
+            }
+            const selectedPath = ctx.input.syntheticProjectRoot;
+            if (entry) bindRoot(ctx, entry.selectedPath, entry.root);
+            const root = bindRoot(ctx, selectedPath, entry?.root);
             if (!entry) {
                 if (instances.size >= 4) fail("probe_instance_limit", "At most four instances are supported");
-                entry = { extensionId: ctx.extensionId, events: [], ready: undefined };
+                providerId ??= ctx.extensionId;
+                entry = { extensionId: ctx.extensionId, selectedPath, root, events: [], ready: undefined };
                 instances.set(ctx.instanceId, entry);
                 entry.ready = startServer();
                 try { subscribe(); } catch {
@@ -98,7 +146,8 @@ export function createProbe(createCanvas, CanvasError) {
                 if (disposed || instances.get(ctx.instanceId) !== entry) {
                     fail("probe_closed", "Instance closed while opening");
                 }
-                return { title: "Canvas 173 (embedding gated)", url: hosted.url };
+                entry.hosted = hosted;
+                return { title: "Canvas 173 (synthetic root bound)", url: hosted.url };
             } catch (error) {
                 if (instances.get(ctx.instanceId) === entry) instances.delete(ctx.instanceId);
                 if (instances.size === 0 && unsubscribe) { unsubscribe(); unsubscribe = undefined; }
@@ -111,14 +160,23 @@ export function createProbe(createCanvas, CanvasError) {
             description: "Return at most 32 sanitized event envelopes for this exact joined session and open instance.",
             inputSchema: EMPTY_INPUT,
             handler: (ctx) => {
-                const entry = validate(ctx, true);
+                const entry = validate(ctx);
+                if (ctx.input !== undefined &&
+                    (ctx.input === null || typeof ctx.input !== "object" || Array.isArray(ctx.input) ||
+                        Object.getOwnPropertyNames(ctx.input).length !== 0)) {
+                    fail("probe_input_invalid", "Only an empty object or omitted action input is supported");
+                }
                 if (ctx.actionName !== "snapshot") fail("probe_action_unknown", "Unknown action");
                 if (!entry) fail("probe_instance_missing", "Open the instance first");
+                if (!entry.hosted) fail("probe_instance_not_ready", "Instance is not ready");
+                bindRoot(ctx, entry.selectedPath, entry.root);
                 return {
-                    joinedSessionId: session.sessionId,
-                    selectedProjectRoot: { status: "unavailable", reason: "Working directory is not selected-project root authority" },
+                    exactJoinedSession: true,
+                    selectedProjectRoot: { status: "matched", scope: "explicit-synthetic-root-equality-only" },
                     sessionArtifactWorkspaceAvailable: typeof session.workspacePath === "string",
-                    activeWorkingDirectoryAvailable: typeof ctx.session?.workingDirectory === "string",
+                    activeWorkingDirectoryAvailable: true,
+                    runtime: runtimeProvenance(),
+                    listener: { scope: "this-instance", transport: "ipv4-loopback", port: entry.hosted.port },
                     model: { status: "unavailable" },
                     contextUsage: { status: "unavailable" },
                     replay: "unproven; subscription only, no history reads",
@@ -149,7 +207,7 @@ export function createProbe(createCanvas, CanvasError) {
     };
 }
 
-/** Serve only a static synthetic page under a per-instance capability, with framing denied. */
+/** Serve only a static synthetic page under a per-instance capability, preserving restrictive headers. */
 async function startServer() {
     const secret = randomBytes(32).toString("base64url");
     const path = `/${secret}/`;
@@ -181,5 +239,5 @@ async function startServer() {
         server.listen(0, "127.0.0.1", resolve);
     });
     host = `127.0.0.1:${server.address().port}`;
-    return { server, url: `http://${host}${path}` };
+    return { server, url: `http://${host}${path}`, port: server.address().port };
 }
