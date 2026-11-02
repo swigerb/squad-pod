@@ -4,6 +4,7 @@
   "parentIssue": 172,
   "status": "PARTIAL",
   "disposition": {
+    "scope": "NOT_APPROVED and NO-GO findings describe evidence preparation only, including the owner-disposition gate; they are not permanent or current owner-state assertions.",
     "foundationEvidenceReadyForOwnerReview": true,
     "foundationOwnerApproval": "NOT_APPROVED",
     "release": "NO-GO",
@@ -23,8 +24,8 @@
     "extensionProcessNode": "v24.22.1",
     "evidenceRevision": {
       "baseCommit": "bd2bf14539b48d13eb153eb9f9a645c9a152bca8",
-      "state": "UNCOMMITTED",
-      "identityMethod": "Canonical content identity: git hash-object on each evidence file; no evidence commit exists yet."
+      "state": "RESOLVE_FROM_CONTAINING_GIT_COMMIT",
+      "identityMethod": "Resolve this evidence revision from its containing Git commit: git log -1 --format=%H -- docs/acceptance/canvas-173-provenance-20261102/acceptance-evidence.json, run in the committed checkout being reviewed. No self-referential commit SHA is embedded; artifactSourceCommit remains the tested source."
     }
   },
   "provenance": {
@@ -107,8 +108,9 @@
     "sha256": "161ab9fccc3deddab45847d4ff912bb336c836071262f50233c039731c6ca555"
   },
   "publication": {
-    "state": "LOCAL_UNCOMMITTED_REVIEW_ONLY",
+    "state": "OWNER_APPROVAL_REQUIRED",
     "authorized": false,
+    "authorizationPolicy": "authorized records evidence-preparation authorization only, not live owner approval. Public publication or issue mutations require explicit owner approval for the intended action; this artifact neither grants authorization nor asserts the owner's current disposition.",
     "omitted": "Private catalog/provider identifiers, usernames beyond public repository identity, raw session/event IDs, local paths, ports, process IDs, capability URLs and raw receipts.",
     "scope": "Two new evidence files only; no runtime, dependency, settings, trust, historical evidence, release or issue-disposition changes."
   }
