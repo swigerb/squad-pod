@@ -46,11 +46,26 @@ observation remains partial; the bubble does not claim complete task coverage.
 
 Completed, failed, aborted, idle, unavailable, switched and stale sources withhold
 the bubble rather than retaining old text. Source staleness uses the existing
-adapter's five-minute no-new-bytes boundary; it is not an invented tool duration.
+five-minute no-new-bytes boundary; it is not an invented tool duration.
 Standalone transport disconnect also invalidates the task snapshot; reconnect
 must receive fresh current metadata before summaries can reappear.
 Existing details/Telemetry continue to expose their separately bounded source
 information and unavailable/partial states.
+
+The filesystem-free `ActivitySource` owns this freshness/loss policy and ordered
+lifecycle publication over sanitized `LiveEvent` batches. Adapters supply a full
+selected session identity, reset/change revision, source modification time,
+poll-time clock sample and bounded-replay indicator. The CLI uses file size as
+the revision: mtime-only touches and later arrivals do not refresh it; changed
+bytes/reset use `min(poll time, mtime)`, and age **at or above** five minutes clears
+state. Source event timestamps remain separate from this source-freshness clock.
+On stale changed input, adapters must honor `requiresReseed` with a bounded reset
+read before accepting the batch. Selection authority changes call
+`resetSelection` before discovery/`select`; missing/failed sources call `lost`,
+and disable/disposal calls `stop`. Reconnect validates/reads before `replay`,
+which publishes activity, source status, models, then tasks. Discovery, path
+authorization, consent and bounded I/O remain exclusively in the CLI adapter;
+this seam adds no joined-session producer or Canvas runtime.
 
 The **Task bubbles** toggle affects this view only, including read-only
 standalone viewers. It sends no host command, saves no project setting, grants no

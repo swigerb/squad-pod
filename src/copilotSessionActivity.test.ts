@@ -1,5 +1,4 @@
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -10,6 +9,9 @@ import type { LiveEvent } from './copilotSessionActivity.js';
 import type { LiveSourceStatus, OutboundMessage } from './types.js';
 import { MAX_OBSERVED_TASKS, MAX_RECENT_TASKS, TASK_ID_MAX_LENGTH } from './observedTasks.js';
 import { TASK_DESCRIPTION_DISPLAY_MAX_LENGTH } from './constants.js';
+import { projectActivityEvent } from './activityProjection.js';
+import { ActivityLifecycle, type ActivitySourceContext } from './activityLifecycle.js';
+import { ActivitySource, type ActivitySourceBatch } from './activitySource.js';
 
 vi.mock('node:fs', { spy: true });
 
@@ -19,6 +21,115 @@ export const spawnLines = (name = 'ada', task = 'run') =>
   line('tool.execution_start', { toolName: 'task', toolCallId: task,
     arguments: { name, agent_type: 'general-purpose', mode: 'background', description: 'Build tests', prompt: secret } })
   + line('subagent.started', { toolCallId: task, agentName: 'general-purpose' }, { agentId: `internal-${task}` });
+
+describe('source-independent sanitized event projection', () => {
+  it('seeds normalized events silently and preserves injected session identity and source bounds', () => {
+    let source: ActivitySourceContext = { sessionId: 'exact-session-identity', limited: true };
+    const messages: OutboundMessage[] = [];
+    const lifecycle = vi.fn();
+    const projection = new ActivityLifecycle({
+      source: () => source, roster: () => [{ id: 'ada' }],
+      post: message => messages.push(message), lifecycle,
+    });
+    const event = (type: string, toolCallId: string): LiveEvent => ({
+      type, toolCallId, toolName: '', parentToolCallId: '', squad: false,
+      agentScoped: false, agentInstanceId: '',
+    });
+    const task = (id: string): LiveEvent => ({
+      ...event('tool.execution_start', id), toolName: 'task',
+      task: { name: 'ada', agent_type: 'general-purpose', mode: 'background', description: 'Replay fixture' },
+    });
+    projection.seed([
+      task('historical'), event('subagent.started', 'historical'), event('subagent.completed', 'historical'),
+      task('running'), event('subagent.started', 'running'),
+    ]);
+    expect(messages).toEqual([]);
+    expect(lifecycle).not.toHaveBeenCalled();
+    projection.replayActivity();
+    projection.publishTasks();
+    expect(lifecycle.mock.calls).toEqual([['ada', true, 'Replay fixture']]);
+    expect(messages).toEqual([{ type: 'observedTasks', snapshot: {
+      sessionId: 'exact-session-identity', limited: true,
+      tasks: [expect.objectContaining({ sessionId: 'exact-session-identity', toolCallId: 'running', state: 'running' })],
+    } }]);
+    projection.clear();
+    source = { sessionId: 'replacement-session', limited: false };
+    projection.seed([task('reused-call')]);
+    projection.publishTasks();
+    expect(messages.at(-1)).toEqual({ type: 'observedTasks', snapshot: {
+      sessionId: 'replacement-session', limited: false,
+      tasks: [expect.objectContaining({ sessionId: 'replacement-session', toolCallId: 'reused-call', state: 'observed' })],
+    } });
+  });
+
+  it('projects a record without I/O, retaining only supported fields and source provenance', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const record = {
+      type: 'subagent.started', agentId: 'instance', timestamp, credentials: secret,
+      data: { toolCallId: 'call', parentToolCallId: 'parent', model: 'runtime-model',
+        prompt: secret, arguments: { prompt: secret }, result: secret, futureField: secret },
+    };
+    const original = structuredClone(record);
+    const open = vi.spyOn(fs, 'openSync');
+    const list = vi.spyOn(fs, 'opendirSync');
+    const stat = vi.spyOn(fs, 'statSync');
+    try {
+      const event = projectActivityEvent(record);
+      expect(event).toEqual({
+        type: 'subagent.started', activityAt: Date.parse(timestamp), toolName: '',
+        toolCallId: 'call', parentToolCallId: 'parent', squad: false, agentScoped: true,
+        agentInstanceId: 'instance', instanceId: 'instance', identityOmitted: false,
+        modelObservation: { model: 'runtime-model', kind: 'subagent-model',
+          source: 'subagent.started.model', timestamp },
+      });
+      expect(record).toEqual(original);
+      record.data.model = secret;
+      expect(event?.modelObservation?.model).toBe('runtime-model');
+      expect(JSON.stringify(event)).not.toContain(secret);
+      expect(open).not.toHaveBeenCalled();
+      expect(list).not.toHaveBeenCalled();
+      expect(stat).not.toHaveBeenCalled();
+    } finally { vi.restoreAllMocks(); }
+  });
+
+  it.each([
+    'subagent.selected', 'subagent.started', 'subagent.completed', 'subagent.failed',
+    'subagent.aborted', 'subagent.configured', 'tool.execution_start', 'tool.execution_complete',
+    'assistant.message', 'session.start', 'session.resume', 'session.model_change',
+    'session.model_deselected', 'session.shutdown',
+  ])('keeps the CLI decoder and direct record boundary equivalent for %s', type => {
+    const record = {
+      type, agentId: 'instance', timestamp: '2026-10-30T12:34:56.000Z',
+      data: { toolCallId: 'call', parentToolCallId: 'parent', agentName: 'Ada', toolName: 'task',
+        arguments: { name: 'Research', agent_type: 'explore', mode: 'background',
+          description: 'Inspect fixture', prompt: secret }, result: secret, unknown: secret },
+      unknown: secret,
+    };
+    const event = projectActivityEvent(record);
+    expect(event?.type).toBe(type);
+    expect(parseLiveEvent(JSON.stringify(record))).toEqual(event);
+    expect(JSON.stringify(event)).not.toContain(secret);
+  });
+
+  it.each([null, undefined, [], 42, 'not a record', {}, { type: 'future.event', data: { prompt: secret } }])(
+    'ignores unsupported records without manufacturing activity: %j', record => {
+      expect(projectActivityEvent(record)).toBeNull();
+    },
+  );
+
+  it('preserves cancellation, identity rejection and absent timestamps without inventing freshness', () => {
+    const record = { type: 'subagent.completed', agentId: ' invalid ',
+      timestamp: 'not-a-source-time',
+      data: { toolCallId: 'call', parentToolCallId: ' invalid ', cancelled: true, credentials: secret } };
+    expect(projectActivityEvent(record)).toEqual({
+      type: 'subagent.aborted', toolName: '', toolCallId: 'call', parentToolCallId: '',
+      squad: false, agentScoped: true, agentInstanceId: '', instanceId: undefined,
+      activityAt: undefined, identityOmitted: true,
+    });
+    expect(parseLiveEvent(JSON.stringify(record))).toEqual(projectActivityEvent(record));
+    expect(parseLiveEvent('{invalid JSON')).toBeNull();
+  });
+});
 
 describe('read-only Copilot live activity with synthetic homes', () => {
   let home: string;
@@ -58,7 +169,7 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     now = Date.now();
-    home = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-live-test-'));
+    home = fs.mkdtempSync(path.join(process.cwd(), '.squad-live-test-'));
     workspace = path.join(home, 'workspace');
     fs.mkdirSync(workspace);
     messages = [];
@@ -88,6 +199,375 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(stat).not.toHaveBeenCalled();
     vi.restoreAllMocks();
   });
+
+  it('uses the validation clock sample, not the clock after a bounded read, for freshness', () => {
+    session('clock-sample', marked(spawnLines()));
+    const read = EventTail.prototype.read;
+    vi.spyOn(EventTail.prototype, 'read').mockImplementationOnce(function (file, emit) {
+      const result = read.call(this, file, emit);
+      now += LIVE_STALE_MS;
+      return result;
+    });
+    reader.start(false);
+    expect(statuses.at(-1)?.state).toBe('following');
+    expect(lifecycle.mock.calls).toEqual([['ada', true, 'Build tests']]);
+    reader.poll();
+    expect(statuses.at(-1)?.state).toBe('searching');
+    expect(lifecycle.mock.calls.at(-1)).toEqual(['ada', false, null]);
+  });
+
+  it('matches ordered normalized-source freshness, loss, recovery, identity and reset decisions to CLI', () => {
+    now = Math.floor(now / 1000) * 1000;
+    const origin = now;
+    const activityAt = now - 60_000;
+    const timestamp = new Date(activityAt).toISOString();
+    const event = (type: string, fields: Partial<LiveEvent> = {}): LiveEvent => ({
+      type, toolName: '', toolCallId: '', parentToolCallId: '', squad: false,
+      agentScoped: false, agentInstanceId: '', ...fields,
+    });
+    const seed = [
+      event('subagent.selected', { squad: true }),
+      event('tool.execution_start', { toolName: 'task', toolCallId: 'run',
+        task: { name: 'ada', agent_type: 'general-purpose', mode: 'background', description: 'Inspect fixture' } }),
+      event('subagent.started', { toolCallId: 'run', instanceId: 'member', agentScoped: true,
+        agentInstanceId: 'member', activityAt, modelObservation: {
+          model: 'runtime-model', kind: 'subagent-model', source: 'subagent.started.model', timestamp,
+        } }),
+      event('tool.execution_start', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view', file: 'test.ts' }),
+      event('tool.execution_complete', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view',
+        context: { contextTokens: 123, maxContextTokens: 456 } }),
+      event('tool.execution_start', { toolCallId: 'tool2', parentToolCallId: 'run', toolName: 'view', file: 'test.ts' }),
+    ];
+    const initialContent = marked(taskCall('run', 'ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run', model: 'runtime-model' }, { agentId: 'member', timestamp })
+      + line('tool.execution_start', { toolCallId: 'tool', parentToolCallId: 'run',
+        toolName: 'view', arguments: { path: 'test.ts' } })
+      + line('tool.execution_complete', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view',
+        toolTelemetry: { metrics: { context_current_tokens: 123, context_token_limit: 456 } } })
+      + line('tool.execution_start', { toolCallId: 'tool2', parentToolCallId: 'run',
+        toolName: 'view', arguments: { path: 'test.ts' } }));
+    let content = initialContent;
+    let file = session('fresh-session', content);
+    const cli: unknown[] = [];
+    const normalized: unknown[] = [];
+    let preferredId: string | null | undefined;
+    reader = new CopilotSessionActivity({
+      workspaceRoot: workspace, copilotHome: home, roster: () => roster, now: () => now,
+      post: m => cli.push(m), lifecycle: (...args) => cli.push(args), status: s => cli.push(s),
+      sessionSelection: () => ({ preferredId, excludedIds: [] }),
+    });
+    const direct = new ActivitySource({
+      roster: () => roster, now: () => now, post: m => normalized.push(m),
+      lifecycle: (...args) => normalized.push(args), status: s => normalized.push(s),
+    });
+    const equivalent = () => {
+      expect(normalized).toEqual(cli);
+      expect(JSON.stringify(normalized)).not.toContain(secret);
+      cli.length = 0;
+      normalized.length = 0;
+    };
+    const expectCleared = (state: 'off' | 'searching' | 'error') => {
+      expect(normalized).toContainEqual(['ada', false, null]);
+      expect(normalized).toContainEqual({ type: 'agentToolsClear', agentId: 'ada' });
+      expect(normalized).toContainEqual({ type: 'agentContextUsage', agentId: 'ada',
+        contextTokens: null, maxContextTokens: null });
+      expect(normalized).toContainEqual({ type: 'observedTasks',
+        snapshot: { sessionId: null, tasks: [], limited: false } });
+      expect(normalized).toContainEqual({ type: 'liveModels',
+        snapshot: { sessionId: null, session: null, members: {} } });
+      expect(normalized.at(-1)).toEqual({ state, sessionId: null });
+    };
+    const facts = (reset = false, modifiedAt = origin): ActivitySourceBatch => ({
+      reset, revision: Buffer.byteLength(content), modifiedAt, observedAt: now, limited: false, events: [],
+    });
+    const feed = (batch: ActivitySourceBatch, reseed = false) => {
+      expect(direct.requiresReseed(batch)).toBe(reseed);
+      direct.accept(reseed ? { ...batch, reset: true, events: seed } : batch);
+      reader.poll();
+      equivalent();
+    };
+    const open = vi.mocked(fs.openSync);
+    const stat = vi.mocked(fs.statSync);
+    const list = vi.mocked(fs.opendirSync);
+    open.mockClear(); stat.mockClear(); list.mockClear();
+    direct.select('fresh-session');
+    direct.accept({ ...facts(true), events: seed });
+    expect(open).not.toHaveBeenCalled();
+    expect(stat).not.toHaveBeenCalled();
+    expect(list).not.toHaveBeenCalled();
+    reader.start(false);
+    equivalent();
+
+    // Neither arrival/reconnect nor an mtime-only touch extends byte freshness.
+    now = origin + LIVE_STALE_MS - 1;
+    fs.utimesSync(file, new Date(now), new Date(now));
+    feed(facts(false, now));
+    direct.accept(facts(false, now));
+    direct.replay();
+    reader.replay();
+    expect(normalized).toContainEqual(['ada', true, 'Inspect fixture', activityAt]);
+    equivalent();
+    now++;
+    direct.accept(facts(false, now));
+    reader.poll();
+    expect(normalized).toContainEqual({ type: 'agentToolsClear', agentId: 'ada' });
+    expect(normalized).toContainEqual({ type: 'agentContextUsage', agentId: 'ada',
+      contextTokens: null, maxContextTokens: null });
+    expect(normalized.at(-1)).toEqual({ state: 'searching', sessionId: 'fresh-se' });
+    equivalent();
+    direct.accept(facts());
+    direct.replay();
+    reader.replay();
+    expect(normalized).not.toContainEqual(['ada', true, 'Inspect fixture', activityAt]);
+    equivalent();
+
+    // Byte growth with an old mtime stays stale; a later changed read can recover.
+    content += line('assistant.message', {});
+    fs.writeFileSync(file, content);
+    fs.utimesSync(file, new Date(origin), new Date(origin));
+    feed({ ...facts(), events: [event('assistant.message')] }, true);
+    now += 1000;
+    content += line('assistant.message', {});
+    fs.writeFileSync(file, content);
+    fs.utimesSync(file, new Date(now + 60_000), new Date(now + 60_000));
+    // Future source mtime is clamped to now, never used as activity time.
+    feed(facts(false, now + 60_000), true);
+    expect(direct.requiresReseed(facts())).toBe(false);
+    direct.accept(facts());
+    direct.replay();
+    reader.replay();
+    expect(normalized).toContainEqual(['ada', true, 'Inspect fixture', activityAt]);
+    equivalent();
+
+    now += LIVE_STALE_MS;
+    direct.accept(facts(false, now + 60_000));
+    reader.poll();
+    expect(normalized.at(-1)).toEqual({ state: 'searching', sessionId: 'fresh-se' });
+    equivalent();
+    // Future mtime did not buy extra lifetime; current changed bytes recover again.
+    content += line('assistant.message', {});
+    fs.writeFileSync(file, content);
+    fs.utimesSync(file, new Date(now), new Date(now));
+    feed(facts(false, now), true);
+
+    // Truncation/reset silently reconstructs; no historical start/finish telemetry.
+    content = marked('');
+    fs.writeFileSync(file, content);
+    fs.utimesSync(file, new Date(now), new Date(now));
+    direct.accept({ ...facts(true, now), events: [seed[0]] });
+    reader.poll();
+    expect(normalized).toContainEqual(['ada', false, null]);
+    expect(normalized).not.toContainEqual(expect.objectContaining({ type: 'agentToolStart' }));
+    equivalent();
+
+    content += initialContent;
+    fs.appendFileSync(file, initialContent);
+    fs.utimesSync(file, new Date(now), new Date(now));
+    feed({ ...facts(false, now), events: seed });
+    fs.unlinkSync(file);
+    direct.lost('searching');
+    reader.poll();
+    expectCleared('searching');
+    equivalent();
+    file = session('fresh-session', content);
+    direct.select('fresh-session');
+    direct.accept({ ...facts(true, now), events: seed });
+    reader.poll();
+    equivalent();
+    vi.spyOn(EventTail.prototype, 'read').mockImplementationOnce(function () {
+      this.limited = true;
+      throw Object.assign(new Error('synthetic transport failure'), { code: 'EACCES' });
+    });
+    direct.lost('error', true);
+    reader.poll();
+    expectCleared('error');
+    equivalent();
+    // Coverage learned before an interrupted read remains unknown/partial on replay.
+    direct.stop();
+    reader.stop();
+    equivalent();
+    direct.replay();
+    reader.replay();
+    expect(normalized.at(-1)).toEqual({ type: 'observedTasks',
+      snapshot: { sessionId: null, tasks: [], limited: true } });
+    equivalent();
+    direct.select('fresh-session');
+    direct.accept({ ...facts(true, now), events: seed });
+    reader.start(false);
+    equivalent();
+
+    // Explicit unavailable identity never falls back, then an exact identity switches.
+    preferredId = null;
+    direct.resetSelection();
+    direct.searching();
+    reader.poll();
+    expectCleared('searching');
+    equivalent();
+    const nextSession = '12345678-1234-4123-8123-123456789012';
+    session(nextSession, content);
+    preferredId = nextSession;
+    direct.resetSelection();
+    direct.select(nextSession);
+    direct.accept({ ...facts(true, now), events: seed });
+    reader.poll();
+    equivalent();
+    direct.stop();
+    reader.stop();
+    expectCleared('off');
+    equivalent();
+    open.mockClear(); stat.mockClear(); list.mockClear();
+    direct.replay();
+    reader.replay();
+    reader.poll();
+    equivalent();
+    expect(open).not.toHaveBeenCalled();
+    expect(stat).not.toHaveBeenCalled();
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it.each(['completed', 'failed', 'aborted'] as const)(
+    'matches a direct normalized feed to CLI replay, reconciliation and %s removal', terminal => {
+      // These normalized inputs are authored independently of the CLI envelopes below.
+      const event = (type: string, fields: Partial<LiveEvent> = {}): LiveEvent => ({
+        type, toolName: '', toolCallId: '', parentToolCallId: '', squad: false,
+        agentScoped: false, agentInstanceId: '', ...fields,
+      });
+      const dispatch = (id: string, name: string, agentType: string, parent = '') => event('tool.execution_start', {
+        toolName: 'task', toolCallId: id, parentToolCallId: parent,
+        task: { name, agent_type: agentType, mode: 'background', description: 'Inspect fixture' },
+      });
+      const started = (id: string, instance: string, activityAt?: number) => event('subagent.started', {
+        toolCallId: id, agentScoped: true, agentInstanceId: instance, instanceId: instance, activityAt,
+      });
+      const sourceTime = now - 60_000;
+      const timestamp = new Date(sourceTime).toISOString();
+      const normalizedSeed = [
+        event('subagent.selected', { squad: true }),
+        dispatch('run', 'ada', 'general-purpose'),
+        { ...started('run', 'member-instance', sourceTime), modelObservation: {
+          model: 'runtime-model', kind: 'subagent-model' as const,
+          source: 'subagent.started.model' as const, timestamp,
+        } },
+        dispatch('child', 'Research', 'explore', 'run'),
+        started('child', 'child-instance', sourceTime),
+      ];
+      const cliSeed = marked(taskCall('run', 'ada', 'general-purpose')
+        + line('subagent.started', { toolCallId: 'run', model: 'runtime-model', unknown: secret },
+          { agentId: 'member-instance', timestamp, unknown: secret })
+        + taskCall('child', 'Research', 'explore', 'run')
+        + line('subagent.started', { toolCallId: 'child' }, { agentId: 'child-instance', timestamp }));
+      const file = session('normalized-session', cliSeed);
+      const directMessages: OutboundMessage[] = [];
+      const directLifecycle = vi.fn();
+      const source: ActivitySourceContext = { sessionId: 'normalized-session', limited: false };
+      const direct = new ActivityLifecycle({
+        source: () => source, roster: () => roster, post: message => directMessages.push(message),
+        lifecycle: directLifecycle, now: () => now,
+      });
+      const expectEquivalent = () => {
+        expect(directMessages).toEqual(messages);
+        expect(directLifecycle.mock.calls).toEqual(lifecycle.mock.calls);
+        expect(JSON.stringify(directMessages)).not.toContain(secret);
+      };
+      const publishDirectReplay = () => {
+        direct.replayActivity();
+        direct.publishModels();
+        direct.publishTasks();
+      };
+      const open = vi.spyOn(fs, 'openSync');
+      const list = vi.spyOn(fs, 'opendirSync');
+      const stat = vi.spyOn(fs, 'statSync');
+      direct.clear();
+      direct.publishModels();
+      direct.seed(normalizedSeed);
+      publishDirectReplay();
+      direct.publishTasks();
+      expect(open).not.toHaveBeenCalled();
+      expect(list).not.toHaveBeenCalled();
+      expect(stat).not.toHaveBeenCalled();
+      reader.start(false);
+      expectEquivalent();
+      expect(directLifecycle.mock.calls).toEqual([['ada', true, 'Inspect fixture', sourceTime]]);
+      expect(inventory()).toMatchObject({ sessionId: source.sessionId, limited: false,
+        tasks: [
+          { toolCallId: 'run', agentId: 'ada', state: 'running' },
+          { toolCallId: 'child', agentId: null, parentToolCallId: 'run', state: 'running' },
+        ] });
+      expect(messages.filter(message => message.type === 'liveModels').at(-1)?.snapshot)
+        .toMatchObject({ session: null, members: { ada: {
+          model: 'runtime-model', source: 'subagent.started.model', timestamp,
+        } } });
+
+      const feed = (normalized: LiveEvent[], cli: string) => {
+        directMessages.length = 0;
+        messages.length = 0;
+        for (const input of normalized) {direct.accept(input);}
+        direct.publishTasks();
+        fs.appendFileSync(file, cli);
+        reader.poll();
+        expectEquivalent();
+      };
+      // Dispatch completion and duplicate dispatch do not complete/rename the child.
+      feed([
+        event('tool.execution_complete', { toolCallId: 'child' }),
+        dispatch('child', 'renamed', 'general-purpose', 'run'),
+        dispatch('alias', 'Research', 'explore', 'run'),
+        started('alias', 'child-instance', sourceTime - 1000),
+      ], line('tool.execution_complete', { toolCallId: 'child', result: secret })
+        + taskCall('child', 'renamed', 'general-purpose', 'run')
+        + taskCall('alias', 'Research', 'explore', 'run')
+        + line('subagent.started', { toolCallId: 'alias' },
+          { agentId: 'child-instance', timestamp: new Date(sourceTime - 1000).toISOString() }));
+      expect(inventory().tasks.find(row => row.toolCallId === 'child')).toMatchObject({
+        name: 'Research', agentId: null, state: 'running',
+      });
+
+      // A late authoritative selection reconciles every running alias, without roster promotion.
+      feed([event('subagent.selected', {
+        agentScoped: true, agentInstanceId: 'child-instance', instanceId: 'child-instance',
+        selectedAgentName: 'grace', activityAt: sourceTime,
+      })], line('subagent.selected', { agentName: 'grace' }, { agentId: 'child-instance', timestamp }));
+      expect(inventory().tasks.filter(row => row.instanceId === 'child-instance')
+        .every(row => row.agentId === 'grace' && row.state === 'running')).toBe(true);
+      expect(lifecycle.mock.calls.at(-1)).toEqual(['grace', true, 'Inspect fixture', sourceTime]);
+      feed([event(`subagent.${terminal}`, {
+        toolCallId: 'alias', agentScoped: true, agentInstanceId: 'child-instance',
+        instanceId: 'child-instance', activityAt: sourceTime,
+      }), started('child', 'child-instance', sourceTime - 2000)],
+      line(`subagent.${terminal}`, { toolCallId: 'alias' }, { agentId: 'child-instance', timestamp })
+        + line('subagent.started', { toolCallId: 'child' },
+          { agentId: 'child-instance', timestamp: new Date(sourceTime - 2000).toISOString() }));
+      expect(inventory().tasks.filter(row => row.instanceId === 'child-instance')
+        .every(row => row.state === terminal)).toBe(true);
+      expect(lifecycle.mock.calls.filter(call => call[0] === 'grace' && !call[1])).toHaveLength(1);
+
+      // Reconnect is a pure replay, not an ingestion timestamp or historical telemetry.
+      messages.length = 0;
+      directMessages.length = 0;
+      direct.publishTasks(); // The CLI validates/polls before replaying its current state.
+      publishDirectReplay();
+      reader.replay();
+      expectEquivalent();
+      expect(lifecycle.mock.calls.at(-1)).toEqual(['ada', true, 'Inspect fixture', sourceTime]);
+
+      const boundedCalls = Array.from({ length: MAX_OBSERVED_TASKS + 1 }, (_, index) => `bounded-${index}`);
+      feed(boundedCalls.map(id => dispatch(id, 'Unknown', 'explore', 'run')),
+        boundedCalls.map(id => taskCall(id, 'Unknown', 'explore', 'run')).join(''));
+      expect(inventory().tasks).toHaveLength(MAX_OBSERVED_TASKS);
+      expect(inventory().limited).toBe(true);
+      expect(inventory().tasks.filter(row => row.agentId !== null).map(row => row.agentId)).toEqual(['ada']);
+
+      // Source-loss detection remains the adapter's job; the same clear removes all state.
+      messages.length = 0;
+      directMessages.length = 0;
+      direct.clear();
+      fs.unlinkSync(file);
+      reader.poll();
+      expectEquivalent();
+      expect(inventory()).toEqual({ sessionId: null, tasks: [], limited: false });
+      expect(statuses.at(-1)?.state).toBe('searching');
+    },
+  );
 
   it('lets a host snapshot clock drive bounded reads without creating an automatic timer', () => {
     const file = session('session', marked(spawnLines()));
