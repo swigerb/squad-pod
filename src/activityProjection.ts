@@ -16,7 +16,11 @@ const sourceTimestamp = (value: unknown): number | undefined => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-/** Sanitized activity shared by source adapters and the in-memory task inventory. */
+/**
+ * Normalized, sanitized activity shared by source adapters and ActivityLifecycle.
+ * Producers may construct this contract directly; CLI envelopes are only one adapter input.
+ * Raw prompts, arguments/results and unknown envelope fields are not part of this contract.
+ */
 export interface LiveEvent {
   type: string;
   activityAt?: number;
