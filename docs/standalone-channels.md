@@ -80,6 +80,23 @@ Listener effects remove their exact handlers on cleanup, including StrictMode re
 Middle-button, wheel and touch gestures remain canvas-local; no global event
 blocking, project/session ownership or new renderer was introduced.
 
+Notification audio is owned by a `NotificationSound` controller allocated inside
+each office's `useExtensionMessages` hook. Settings hydration, local setting changes,
+host `soundEnabled` events and the existing known-member active-to-non-active chime
+all use that controller, with no mutable global audio fallback. Before settings
+hydration it stays silent; standalone settings still wait for host acknowledgement.
+Settings and mounting never create an AudioContext. Only the existing notification
+request does, subject to browser permission/user-gesture restrictions; blocked or
+unsupported audio stays silent without prompts, retries or invented status.
+Unexpected context, resume, node/scheduling and cleanup failures emit operation-only
+`[NotificationSound]` console errors, never exception contents or notification data.
+Partial node setup is cleaned up; close rejections are handled asynchronously.
+Browser restrictions are silent only during context creation/resume, not node setup.
+Mute cancels that owner's scheduled notes and invalidates pending resume work.
+Unmount additionally closes only its context. Effect replay reactivates the controller
+without reviving old work; any later legitimate request lazily creates a fresh runtime.
+No global preference store or injected host client is disposed by audio cleanup.
+
 `App.instances.test.tsx` mounts two real Apps with separate synthetic clients in
 the normal webview Vitest runner (jsdom, no pixel-render qualification). It checks
 distinct OfficeState objects and visible rosters, editor tool choices, drafts,
@@ -94,17 +111,24 @@ the game-loop scheduler and canvas context are synthetic. These are normal-runne
 state/routing regressions, **not pixel, browser-native input or native Canvas API
 qualification**.
 
+`notificationSoundSilence.test.tsx` uses the same normal runner with two real
+StrictMode Apps, independent synthetic host clients and controlled AudioContext/node
+fakes. It checks distinct enablement, message-triggered playback, silence, local
+setting routing, peer survival and owned-node/context cleanup. Deferred/denied resume,
+mute/unmute, dispose/reactivate and synchronous-host StrictMode replay are covered.
+This proves scheduling/ownership behavior only, **not native audible/device or
+browser permission qualification**.
+
 **Still outside this increment:** mutable module-level asset registries/loaders
 (floor/wall/carpet/pet/character templates, furniture catalog, tileset metadata,
 loading generations/diagnostics) and rendering/colorization caches remain shared.
-Audio enablement/context remains shared and untouched. Distinct asset streams and
-audio ownership are not qualified as isolated. Other document-level card dismissal/
+Distinct asset streams are not qualified as isolated. Other document-level card dismissal/
 focus-trap listeners and non-editor DOM identities are not migrated by this boundary.
 Host-side agent/session stores, adapter/transport lifetime,
 default VS Code client acquisition and standalone server/terminal session ownership
 are unchanged. No new session identity or write authority is inferred from this seam.
 
-This is a bounded state-allocation and editor/canvas-input slice of #174, not Canvas support
+This is a bounded state-allocation, editor/canvas-input and notification-audio slice of #174, not Canvas support
 or full multi-instance acceptance.
 Canvas entry/theme/error UX, explicit validated current-root/exact-session authority,
 remaining shared-state/input isolation, two-project/session tests, and integrated

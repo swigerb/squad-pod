@@ -12,7 +12,7 @@ import {
   type AgentSnapshot,
   type AgentStatus,
 } from '../office/engine/agentSync.js';
-import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
+import { NotificationSound } from '../notificationSound.js';
 import type { DirectoryCatalog, LiveModelSnapshot, PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
@@ -104,6 +104,11 @@ export function useExtensionMessages(
   standalone = false,
 ): ExtensionMessageState {
   const client = useHostClient();
+  const [sound] = useState(() => new NotificationSound());
+  useEffect(() => {
+    sound.activate();
+    return () => sound.dispose();
+  }, [sound]);
   const [observedTasks, setObservedTasks] = useState<ObservedTaskSnapshot | null>(null);
   const [liveModels, setLiveModels] = useState<LiveModelSnapshot | null>(null);
   const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
@@ -160,12 +165,12 @@ export function useExtensionMessages(
   const updateSetting = useCallback((setting: keyof PodSettings, enabled: boolean) => {
     if (!standalone) {
       setSettings((prev) => ({ ...prev, [setting]: enabled }));
-      if (setting === 'soundEnabled' && soundSettingsLoadedRef.current) setSoundEnabled(enabled);
+      if (setting === 'soundEnabled' && soundSettingsLoadedRef.current) sound.setEnabled(enabled);
     }
     const type = setting === 'soundEnabled' ? 'setSoundEnabled'
       : setting === 'debugEnabled' ? 'setDebugEnabled' : 'setShowAreas';
     client.send({ type, enabled });
-  }, [client, standalone]);
+  }, [client, standalone, sound]);
 
   useEffect(() => {
     const rejectLegacySprites = (type: string) => {
@@ -349,7 +354,7 @@ export function useExtensionMessages(
           }));
           applyAgentStatus(getOfficeState(), id, status);
           if (previous === 'active' && status !== 'active') {
-            playDoneSound();
+            sound.playDoneSound();
           }
           if (status === 'idle') {
             getOfficeState().setAgentTool(id, null);
@@ -534,7 +539,7 @@ export function useExtensionMessages(
             debugEnabled: message.debugEnabled,
             showAreas: message.showAreas === true,
           });
-          setSoundEnabled(message.soundEnabled);
+          sound.setEnabled(message.soundEnabled);
           break;
         }
 
@@ -594,7 +599,7 @@ export function useExtensionMessages(
         }
 
         case 'soundEnabled': {
-          if (soundSettingsLoadedRef.current) setSoundEnabled(message.enabled);
+          if (soundSettingsLoadedRef.current) sound.setEnabled(message.enabled);
           break;
         }
 
@@ -697,7 +702,7 @@ export function useExtensionMessages(
 
     return unsubscribe;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly, standalone]);
+  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly, standalone, sound]);
 
   return {
     observedTasks,

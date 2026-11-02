@@ -6,7 +6,6 @@ import { contextGauge } from './office/toolUtils.js';
 import { createHostClientFixture } from './__tests__/hostClientFixture.js';
 import type { HostClientFixture } from './__tests__/hostClientFixture.js';
 import type { OutboundMessage } from '../../src/types.js';
-import { setSoundEnabled } from './notificationSound.js';
 import type { ObservedTask } from '../../src/observedTasks.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -30,7 +29,6 @@ describe('live tools and context through the App boundary', () => {
   });
   beforeEach(() => {
     client = createHostClientFixture();
-    setSoundEnabled(false);
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     host = document.createElement('div');
     document.body.appendChild(host);

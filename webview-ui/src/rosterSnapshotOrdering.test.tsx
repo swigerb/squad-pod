@@ -2,7 +2,6 @@ import { act } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
-import { setSoundEnabled } from './notificationSound.js';
 import type { OutboundMessage } from '../../src/types.js';
 import type { OfficeLayout } from './office/types.js';
 import { createHostClientFixture } from './__tests__/hostClientFixture.js';
@@ -45,7 +44,6 @@ describe('roster snapshot ordering at the App host boundary', () => {
 
   beforeEach(() => {
     client = createHostClientFixture();
-    setSoundEnabled(false);
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     host = document.createElement('div');
     document.body.appendChild(host);
@@ -56,7 +54,6 @@ describe('roster snapshot ordering at the App host boundary', () => {
   afterEach(() => {
     act(() => root.unmount());
     host.remove();
-    setSoundEnabled(true);
     vi.restoreAllMocks();
   });
 

@@ -2,7 +2,6 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
-import { isSoundEnabled } from './notificationSound.js';
 import { resetPetTemplates } from './office/sprites/petSpriteData.js';
 import type { DirectoryCatalog, OutboundMessage, SourceStatus } from '../../src/types.js';
 import type { AssetSnapshot } from '../../src/manifestAssets.js';
@@ -1287,7 +1286,6 @@ describe('settings and source UI with simulated host messages', () => {
   it('restores both settings on startup/reload, sends changes, and persists Debug Close as off', () => {
     send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: false });
     load();
-    expect(isSoundEnabled()).toBe(false);
     click('Settings');
     const sound = host.querySelector<HTMLInputElement>('[id$="-sound"]')!;
     const debug = host.querySelector<HTMLInputElement>('[id$="-debug"]')!;
@@ -1296,7 +1294,7 @@ describe('settings and source UI with simulated host messages', () => {
     expect(debug.checked).toBe(false);
     expect(showAreas.checked).toBe(false);
     act(() => sound.click());
-    expect(isSoundEnabled()).toBe(true);
+    expect(sound.checked).toBe(true);
     expect(client.send).toHaveBeenCalledWith({ type: 'setSoundEnabled', enabled: true });
     act(() => debug.click());
     expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: true });
@@ -1308,11 +1306,11 @@ describe('settings and source UI with simulated host messages', () => {
     act(() => root.render(<App client={client} />));
     send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: true, showAreas: true });
     load();
-    expect(isSoundEnabled()).toBe(false);
     expect(host.textContent).toContain('opt-in live member lifecycle, tools and context');
     click('Close');
     expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: false });
     click('Settings');
+    expect(host.querySelector<HTMLInputElement>('[id$="-sound"]')!.checked).toBe(false);
     expect(host.querySelector<HTMLInputElement>('[id$="-debug"]')!.checked).toBe(false);
     expect(host.querySelector<HTMLInputElement>('[id$="-areas"]')!.checked).toBe(true);
   });
