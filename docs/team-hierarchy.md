@@ -57,7 +57,8 @@ contract in the audited roster/config/state surfaces. Those criteria remain
 unsupported; the transient view is not their implementation. A manually edited
 roster remains authoritative but is not evidence that a producer promoted a
 teammate. The [technical unsupported disposition](https://github.com/swigerb/squad-pod/issues/111#issuecomment-6533950112)
-is recorded on issue #111; native and real-producer acceptance remain separate.
+is recorded on issue #111. This unsupported capability is distinct from the
+supported session-local display and its evidence below.
 
 The [scoped actual CLI 1.0.105 capture](acceptance/real-producer-20261101-011/producer-summary.json)
 observed one `subagent.started` / `subagent.completed` pair with the same envelope
@@ -67,7 +68,29 @@ Root `Squad` selection was produced; a child custom-agent selection was not.
 Inspection excluded tool arguments, descriptions, prompts and outputs. No roster
 identity is inferred from the requested task. This is actual producer metadata,
 not live native visualization, promotion/durable-hierarchy evidence or completion
-of #111/R-06. Those remaining gates stay open.
+of #111/R-06. That earlier capture did not execute the live display.
+
+The [subsequent native identity evidence](acceptance/hierarchy-20261102-011/summary.json)
+separates two observations on the frozen published 0.1.1 Windows archive:
+
+- **NATIVE + REAL:** one approved fresh CLI 1.0.105 session completed in 31.5
+  seconds, exit 0, with two matched start/completion instances and an explicit
+  child-parent call. The native office displayed Ada's temporary child and its
+  parent annotation, then removed it on completion without changing the roster.
+- **NATIVE + FIXTURE:** authored session events exercise same-instance aliases,
+  terminal/late-event suppression, dispatch versus lifecycle completion,
+  selected-instance reconciliation to an existing member, name-only
+  non-promotion, failure/cancellation, activity-clear separation, and actual
+  five-minute source staleness. A later rendered marker confirms event
+  consumption for negative dispatch/late-event assertions.
+
+The fixture cases do not establish that a real producer emitted custom-agent
+selection, failures, cancellation, or durable membership events. The earlier
+exit-1 run remains a separate incomplete attempt, not relabeled as this clean
+run. Raw logs, prompts, outputs, session identifiers and screenshots remain
+local. This is evidence for the supported #111 adaptation, not complete
+R-06/F-01, standalone, other-version or full-suite acceptance; those broader
+requirements remain with #157 and #4/#7/#8.
 
 The shared webview supports the same snapshot protocol in any host. Standalone
 live observation is default-off and requires local CLI consent via

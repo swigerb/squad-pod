@@ -68,8 +68,12 @@ selected subchecks against their existing N, L, V and X IDs, with before/after
 evidence and cleanup. A representative slice is not completion of every subcheck
 in those cases. Stop-ship defects cannot be waived by the pre-release label.
 
-Actual CLI producer/model/task/export compatibility stays experimental and
-pending; fixtures are not REAL evidence. Standalone terminals, remote access,
+At initial publication, actual CLI producer/model/task/export compatibility was
+experimental and pending; fixtures are not REAL evidence. Subsequent
+[actual-export/native-import evidence](acceptance/real-producer-20261101-011/producer-summary.json)
+and [native identity evidence](acceptance/hierarchy-20261102-011/summary.json)
+qualify only their explicitly observed CLI 1.0.105 and published 0.1.1 slices,
+not the original full suite. Standalone terminals, remote access,
 durable hierarchy/promotion and physical mobile-device coverage are outside this
 Marketplace release's acceptance. Their original procedures and issue gates
 remain intact below. Private-log access, REAL launches, authentication and AI
@@ -125,10 +129,10 @@ if ($expected -cne $report.tarball.sha256 -or $expected -cne $download) {
 |---|---|
 | Transient hierarchy and selected-instance identity (#111) | [#114](https://github.com/swigerb/squad-pod/pull/114), merged as `6296485e0f4f8997273ca0ae413b9616e6c531c5`. Durable hierarchy/promotion remain unsupported, not implemented by this transient view. |
 | Authoritative emitted runtime models (#110) | [#116](https://github.com/swigerb/squad-pod/pull/116), merged as `c22d27dd2bc720436d35e9f3deb66f82cc7cb62e`. F-01's emitted-model procedure requires this source; it is separate from declared preferences. |
-| Explicit historical CLI usage import (#109) | [#113](https://github.com/swigerb/squad-pod/pull/113), merged as `3f43faeaa82ddda0aead93fa0c057707b14e5fb9`. Source-pinned fixture acceptance only; real-export acceptance remains open and standalone has no importer authority. |
+| Explicit historical CLI usage import (#109) | [#113](https://github.com/swigerb/squad-pod/pull/113), merged as `3f43faeaa82ddda0aead93fa0c057707b14e5fb9`. The [scoped actual CLI 1.0.105 export/native 0.1.1 import](acceptance/real-producer-20261101-011/producer-summary.json) is separately evidenced; other-version/resume and full U-01/R-05 acceptance are not inferred. Standalone has no importer authority. |
 | Standalone opted-in live observation (#112) | [#115](https://github.com/swigerb/squad-pod/pull/115), implementing adapter/model integration at `dee622a7cb23e7a7280009fa4ff7c9e646e675d4` plus subsequent fixes and acceptance refinements. This branch integrates the three refs above; record the exact final frozen source SHA and tarball digest from its PR evidence, not an earlier baseline or branch name. Native/REAL acceptance remains separate. |
 
-Implementing references in the applicability table carry the stated CI and maintainer evidence for each feature. All of that is implementation/synthetic evidence, **not user-run observation of an approved project, real Squad-session acceptance, native VS Code acceptance, or physical mobile-device acceptance**. Rerun affected cases against each later installed build.
+Implementing PR references carry the stated CI and maintainer evidence for each feature; those checks alone are implementation/synthetic evidence, **not native, real-session or physical-device acceptance**. Separately linked native/REAL reports qualify only their declared artifacts and subchecks. Rerun affected cases against each later installed build.
 
 | Outcome | Use when |
 |---|---|
@@ -456,6 +460,11 @@ Prepare `acceptance-input.txt` with a few nonsecret sentences. A harmless unique
 - **Cleanup:** Do not create a ledger or convert raw metrics JSON to fill a producer gap. No ledger/fields means that ledger integration is NOT-PRODUCED even if missing-source UI is correct. Forget the selected export; retain only approved redacted evidence. No new paid run/export is authorized by this case.
 
 ### R-06: Observed transient tasks, explicit links, and clearing
+
+The [scoped #111 identity evidence](acceptance/hierarchy-20261102-011/summary.json)
+combines an actual fresh producer/native lifecycle observation with separately
+labeled native fixture identity and clearing cases. It does not complete every
+R-06 subcheck below or change this case's acceptance scope.
 
 - **Setup:** Rebuilt, installed artifact containing #80; R-01's approvals and source qualification. Open **Telemetry > Observed transient tasks**. Use actual metadata when produced. Exercise unavailable/edge-case combinations only in the approved fixture log root using the recipe below, with a separate result and evidence class for every subcheck.
 - **Actions:** Observe a `task` start before its lifecycle start, then its actual started and terminal events. Compare two same-name calls with distinct IDs, an unknown name, a non-general-purpose call using a roster slug, and a valid general-purpose roster match. Observe an explicit parent call and child link; exercise unknown, self and cyclic parents in fixtures. Send dispatch/tool completion before lifecycle completion; replay a repeated start and late conflicting lifecycle in fixtures. Exercise bounded/truncated metadata and task-history limits. Cancel consent/turn live off, observe staleness, lose/replace the fixture source, reconnect/reopen the panel, and change to a fresh session reusing a call ID. Test **Clear activity** in Telemetry separately from disabling live activity. Compare the roster file/character count and recorded-usage snapshot before and after.

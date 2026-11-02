@@ -113,6 +113,11 @@ Enable **Live Activity** in Settings and accept the VS Code confirmation to turn
 
 **Telemetry → Observed transient tasks** lists task calls from that same consented session, separately from recorded usage. Names, types, modes and bounded descriptions are display metadata, not durable membership. Only explicit same-session parent calls are linked; missing or cyclic parents are unknown. Unknown/non-general-purpose calls stay unattributed unless a matching custom-agent selection supplies an exact roster identity. Running child calls appear near their visible roster ancestor with **Subtask / Parent** labels; a small pointer is used only if modest crowding displaces a label. Producer instance IDs deduplicate them, not display names. An authoritative selected roster identity uses the existing member character without changing its seat or appearance. Temporary characters never become roster members or saved preferences, and disappear on completion, failure, cancellation, ended parents or source clearing. The in-memory list retains at most 64 tasks (16 recent completions), flags omitted data/shortened fields, and restores only in-flight calls on startup. Switching sessions, stale/lost sources and disabling Live Activity clear the list. [Identity contract and source evidence](docs/team-hierarchy.md) explain why durable hierarchy and automatic roster promotion remain unsupported.
 
+The [native identity check](docs/acceptance/hierarchy-20261102-011/summary.json)
+records an actual CLI 1.0.105 parent/child lifecycle in published 0.1.1 on Windows,
+plus separately labeled native fixture identity and clearing cases. It is not a
+durable-hierarchy, standalone, other-version or full-acceptance claim.
+
 ### Launch Squad in a directory
 
 In VS Code, open **Directories** to browse for a folder or enter its path manually. Workspace folders and saved directories each have an explicit **Launch** action. Squad Pod submits `copilot --agent squad` to a new terminal only after you select **Launch**; workspace trust and the Copilot CLI on `PATH` are required. Squad Pod does not auto-launch.
