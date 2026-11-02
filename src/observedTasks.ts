@@ -1,4 +1,4 @@
-import type { LiveEvent } from './copilotSessionActivity.js';
+import type { LiveEvent } from './activityProjection.js';
 
 export const MAX_OBSERVED_TASKS = 64;
 export const MAX_RECENT_TASKS = 16;
