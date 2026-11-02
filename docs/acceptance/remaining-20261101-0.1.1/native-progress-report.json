@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "runId": "remaining-20261101-0.1.1",
+  "product": {
+    "identity": "brianswiger.squad-pod",
+    "version": "0.1.1",
+    "source": "e1e0f017a6d6a54895ecb2acec71c6d79b816fc9",
+    "tree": "c685e3a0332e770c30fd3b6e13008a0cc6a65edc",
+    "integratedSource": "dcfc588a7fd096d22665ec632f523e06f6e01db5",
+    "vsixSha256": "cad389f28392d8f02a75fa5a81a3deb9497d8991655d5a7ffe52324c4e722128",
+    "publishedArchiveNotRebuilt": true,
+    "installedPayloadFilesCompared": 190,
+    "vscodeVersion": "1.144.0",
+    "vscodeCommit": "2c33b50b16c472efe58357d1d2a8a5414bc23fbf",
+    "platform": "Windows x64"
+  },
+  "evidenceClass": "NATIVE+FIXTURE",
+  "executor": "Scout agent-driven installed native UI, not human execution.",
+  "exportInvestigation": {
+    "runId": "remaining-20261101-0.1.1",
+    "utc": "2026-11-02T01:27:26.499Z",
+    "issue": 123,
+    "case": "L-02 native destination subchecks",
+    "evidenceClass": "NATIVE+FIXTURE",
+    "productSha": "e1e0f017a6d6a54895ecb2acec71c6d79b816fc9",
+    "packageSha256": "cad389f28392d8f02a75fa5a81a3deb9497d8991655d5a7ffe52324c4e722128",
+    "expectedSourceSerializationSha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13",
+    "nativeDialogClassification": "Actual Windows native file dialog; files.simpleDialog.enable=false; no injected VS Code dialog result.",
+    "files": [
+      {
+        "name": "native-default-new.json",
+        "method": "Native pointer focus and keyboard absolute filename",
+        "bytes": 38649,
+        "sha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13"
+      },
+      {
+        "name": "native-default-navigation.json",
+        "method": "Normal native address navigation and keyboard unique basename",
+        "bytes": 38649,
+        "sha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13"
+      },
+      {
+        "name": "squad-pod-layout.json",
+        "method": "Actual default-name output after UIA ValuePattern readback claimed a different absent target",
+        "bytes": 38649,
+        "sha256": "cc19ce4a8948a682f747b2665179904225755d9798ff153f268425adc87aab13"
+      }
+    ],
+    "requestedUiaTargetRemainsAbsent": true,
+    "uiaMismatchReproduced": "UIA ValuePattern changed filename text and passed readback, but native Save used squad-pod-layout.json. Repeating against that existing run-owned default produced Confirm Save As for squad-pod-layout.json, not the absent requested target.",
+    "confirmation": "No selected; then Cancel. No overwrite accepted. Existing output hash remains identical to source serialization.",
+    "officeBaselineSha256": "e302e1da0de37857e7ac1be5838012d35039adec54acc8b33f976673f0ff6445",
+    "officeBaselineUnchanged": true,
+    "safeProcedure": "Use pointer focus plus actual keyboard filename entry, or ordinary native address navigation plus a unique basename. Verify the approved target is absent before submission, and verify exact saved bytes afterward. Do not trust UIA ValuePattern text readback as proof of the effective native Save target.",
+    "inferenceLimit": "The current automation mismatch is reproduced. The original historical helper/run was not reconstructed, so its exact cause is not retroactively certified. No product-source fault or product fix is established by this comparison.",
+    "fullL02Accepted": false
+  },
+  "settingsExport": {
+    "case": "L-02 Settings export with dirty import and Reset",
+    "evidenceClass": "NATIVE+FIXTURE",
+    "persistedBaselineSha256": "e302e1da0de37857e7ac1be5838012d35039adec54acc8b33f976673f0ff6445",
+    "nativeSettingsExportSha256": "e302e1da0de37857e7ac1be5838012d35039adec54acc8b33f976673f0ff6445",
+    "settingsExportMatchesPersistedOfficeNotImportedDraft": true,
+    "importedDraftRemainedDirtyAfterExport": true,
+    "nativeResetClearedDirtyStateWithoutDiskWrite": true
+  },
+  "cliUsageFixture": {
+    "runId": "remaining-20261101-0.1.1",
+    "utc": "2026-11-01T20:23:13.6239632-05:00",
+    "case": "U-01",
+    "evidenceClass": "NATIVE+FIXTURE",
+    "productSha": "e1e0f017a6d6a54895ecb2acec71c6d79b816fc9",
+    "vsixSha256": "cad389f28392d8f02a75fa5a81a3deb9497d8991655d5a7ffe52324c4e722128",
+    "fixtureSha256": "635f6fbe1af64991db2663fd08332e54ed376adb99403c9314e50500bb0dc223",
+    "results": [
+      "Repeated manual refresh preserved quantities without duplicate accumulation.",
+      "Clear activity preserved separate CLI quantities and missing-ledger state.",
+      "Native per-model token quantities matched the selected synthetic JSON.",
+      "Malformed selected fixture withheld quantities instead of retaining stale success.",
+      "Forget export cleared quantities and disabled refresh/forget controls."
+    ],
+    "selectedFixtureRestored": true,
+    "realExportCompatibilityProved": false,
+    "fullCaseAccepted": false,
+    "consentCancellation": "Not proved. Native prompt was observed, then was no longer present before the attempted Cancel action. No assertion about its dismissing actor or cause is made."
+  },
+  "recordedLedgerFixture": {
+    "runId": "remaining-20261101-0.1.1",
+    "utc": "2026-11-01T20:31:01.1409149-05:00",
+    "case": "U-01",
+    "evidenceClass": "NATIVE+FIXTURE",
+    "productSha": "e1e0f017a6d6a54895ecb2acec71c6d79b816fc9",
+    "vsixSha256": "cad389f28392d8f02a75fa5a81a3deb9497d8991655d5a7ffe52324c4e722128",
+    "emptyUnavailable": true,
+    "duplicateUsageEventsCountedNotDeduplicated": true,
+    "duplicateStartsCountedOnce": true,
+    "partialTotals": {
+      "outputTokens": 43,
+      "producerEstimatedCost": 0.022,
+      "inputTokens": 207
+    },
+    "coverage": {
+      "invalidLines": 1,
+      "unlinked": 1,
+      "pendingFinalLine": true,
+      "coveredTurns": 1,
+      "usageReports": 3,
+      "attemptedTurns": 1
+    },
+    "rewriteReplacesRatherThanAccumulates": true,
+    "absentBaselineRestored": true,
+    "fixtureRetainedNotDeleted": true,
+    "realLedgerProductionClaimed": false,
+    "fullCaseAccepted": false
+  },
+  "rosterFixture": {
+    "runId": "remaining-20261101-0.1.1",
+    "utc": "2026-11-01T20:32:42.0679319-05:00",
+    "cases": [
+      "N-02",
+      "N-03"
+    ],
+    "evidenceClass": "NATIVE+FIXTURE",
+    "productSha": "e1e0f017a6d6a54895ecb2acec71c6d79b816fc9",
+    "vsixSha256": "cad389f28392d8f02a75fa5a81a3deb9497d8991655d5a7ffe52324c4e722128",
+    "renameWithoutChangingCharterSlug": true,
+    "rowReorderWithExactVisibleRoster": true,
+    "disposableMissingCharterMemberAddedAndRemoved": true,
+    "expandedRemovedMemberNotRetained": true,
+    "missingCharterExplicitlyUnavailable": true,
+    "originalRosterBytesRestored": true,
+    "persistentSeatOrAppearanceContinuityClaimed": false,
+    "fullCasesAccepted": false
+  },
+  "nativeRecreationAndMetadata": {
+    "fullNativeHostReloadRestoredExactFourMemberRoster": true,
+    "hiddenServicesRemainSeparatelyIdentified": true,
+    "activityFeedStartedAtZeroAfterReload": true,
+    "declaredCharterAndJsonModelMetadataSeparateFromUnavailableRuntime": true,
+    "keyboardDisclosureAndNativeCharterNavigationObserved": true,
+    "noExcludedAiExtensionInCapturedRunningExtensionView": true,
+    "liveObserverAndAutomaticLaunchObservedOff": true,
+    "internalNoReadMonitorAvailable": false
+  },
+  "observationIndex": [
+    {
+      "name": "export-dialog-comparison-proof.json",
+      "bytes": 2515,
+      "sha256": "d98cb8bdd4bd06e341c52542677ff2e2486d71f44d1427cb995a48cd984aaf19"
+    },
+    {
+      "name": "cli-native-quantity-proof.json",
+      "bytes": 1119,
+      "sha256": "de44a1104d75dc37ce21ef67f0d7156497695c8857a9670c6a4a451d292fc98b"
+    },
+    {
+      "name": "ledger-native-proof.json",
+      "bytes": 895,
+      "sha256": "13d620c760f3780c5038d66b2fd65938f94d0bdab143754af9e3e237bf9215d1"
+    },
+    {
+      "name": "roster-native-proof.json",
+      "bytes": 689,
+      "sha256": "61d80ab783cf598dcffcc274e2b1df4591a95569d337b3fb8ff305f98455da6e"
+    }
+  ],
+  "full27CaseAcceptance": false,
+  "fullCasesClaimedComplete": 0,
+  "historicalPassesTransferred": false,
+  "limitations": [
+    "Actual producer export and identity/lifecycle acceptance requires separately approved real data or a controlled real run.",
+    "The historical failed export run was not reconstructed. The current native UIA filename mismatch and a safe supported procedure are proved.",
+    "Separate exact-file consent cancellation was inconclusive; no claim about the actor or cause of the prompt dismissal.",
+    "Empty ledger source reports ready with no totals, not a fictional empty enum. The initial checker expectation was corrected without product changes.",
+    "Full minimum-version, platform, standalone, physical-device and all-case/subcheck coverage remain separate."
+  ],
+  "publicWritesThisRun": false,
+  "realOrPaidTaskLaunches": 0,
+  "privateLogsRead": false,
+  "cleanup": {
+    "ownedHostStopped": true,
+    "ownedRosterCharterLayoutBytesRestored": true,
+    "generatedModelConfigAndLedgerRetainedOutsideActivePaths": true,
+    "originalPrivacySettingsRestored": true,
+    "syntheticCliHomeFiles": 0,
+    "filesDeleted": false,
+    "normalProfilesTouched": false,
+    "realOrPaidTaskLaunches": 0,
+    "privateLogsRead": false
+  }
+}
