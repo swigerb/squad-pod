@@ -3,6 +3,11 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectFiles } from './projectFiles.js';
 
+vi.mock('node:fs', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return { ...actual };
+});
+
 describe('shared selected-project reads', () => {
   let root: string;
   beforeEach(() => {
