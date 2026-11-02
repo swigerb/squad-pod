@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_CLI_1_0_105_REAL_EXPORT_AND_NATIVE_IMPORT_PASS",
+  "evidenceClass": "NATIVE+REAL_EXPORT",
+  "product": {
+    "identity": "brianswiger.squad-pod",
+    "version": "0.1.1",
+    "source": "e1e0f017a6d6a54895ecb2acec71c6d79b816fc9",
+    "vsixSha256": "cad389f28392d8f02a75fa5a81a3deb9497d8991655d5a7ffe52324c4e722128",
+    "installedPayloadFilesCompared": 190,
+    "platform": "Windows x64",
+    "vscodeVersion": "1.144.0",
+    "nativeEvidenceAppliesToFrozenPublishedArchive": true
+  },
+  "producer": {
+    "cliVersion": "1.0.105",
+    "agent": "squad",
+    "squadCoordinatorVersion": "1.1.0",
+    "coordinatorSha256": "6acda44629e92d60393481de3570c5b3910dbd997aced1937de89e4feaa653c0",
+    "syntheticProject": true,
+    "rootSessions": 1,
+    "freshSession": true,
+    "resumed": false,
+    "producerCwdMetadataMatchesApprovedProject": true,
+    "completedExitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 34.18,
+    "approvedCreditAndTimeLimitsRetained": true,
+    "originalFixtureFilesChanged": 0
+  },
+  "actualExport": {
+    "bytes": 4031,
+    "sha256": "ea3b51c531ad3e18bf78c6f8a3f75ad36f2d39a5a68c770fa10dd4f0dded0daa",
+    "parserState": "ready",
+    "boundSelectedFileState": "ready",
+    "projectedMetrics": {
+      "sessionStartTime": "2026-11-02T02:42:04.061Z",
+      "userRequests": 1,
+      "premiumRequests": 1,
+      "apiDurationMs": 24950,
+      "nanoAiu": 506282850,
+      "modelCount": 1,
+      "models": [
+        {
+          "model": "gpt-6-luna",
+          "requests": 6,
+          "premiumRequests": 1,
+          "inputTokens": 114703,
+          "outputTokens": 1584,
+          "cacheReadTokens": 82644,
+          "cacheWriteTokens": 32041,
+          "reasoningTokens": 1076,
+          "nanoAiu": 506282850
+        }
+      ]
+    },
+    "rawFileFieldsTypesNestingAndNullDistinctionsUnmodifiedLocally": true,
+    "rawExportPublished": false
+  },
+  "nativeImport": {
+    "explicitNativeReadConsentClicked": true,
+    "quantitiesMatchedActualExport": true,
+    "twoRefreshesDidNotAccumulate": true,
+    "clearActivityKeptSeparateMetrics": true,
+    "modelQuantitiesMatchedWithoutCrossSourceSums": true,
+    "unavailableRuntimeAndAttributionNotInvented": true,
+    "forgetClearedSelection": true,
+    "actualSourceBytesUnchanged": true,
+    "liveLogObserverStayedOff": true,
+    "separateSquadLedger": "NOT_PRODUCED; missing remains unavailable, not zero."
+  },
+  "actualLifecycleMetadata": {
+    "source": "Only the known newly generated session; bounded metadata projection after completion.",
+    "rootSquadSelectionProduced": true,
+    "childStarts": 1,
+    "childCompletions": 1,
+    "sameEnvelopeInstanceAndSpawnCallAcrossStartAndCompletion": true,
+    "emittedChildAgentName": "general-purpose",
+    "emittedChildModel": "gpt-6-luna",
+    "explicitParentCallReferences": 4,
+    "allParentCallReferencesResolveToObservedCalls": true,
+    "childCustomAgentSelectionProduced": false,
+    "actualRosterIdentityInferred": false,
+    "toolArgumentsDescriptionsPromptsOrOutputsExtracted": false,
+    "sourceEventLinesOver64KiB": 1,
+    "liveNativeHierarchyVisualizationAccepted": false,
+    "durableHierarchyOrAutomaticPromotionAccepted": false
+  },
+  "cleanup": {
+    "producerProcessExited": true,
+    "ownedNativeHostStopped": true,
+    "originalProjectAndActualExportUnchanged": true,
+    "nativeEmptyCliHomeFileCount": 0,
+    "normalProfilesTouched": false,
+    "existingPrivateHomesOrLogsRead": false,
+    "newAuthenticationPerformed": false,
+    "additionalAiSessionStarted": false,
+    "rawEventsPromptsOutputsAndScreenshotsPublished": false
+  },
+  "limitations": [
+    "Compatibility evidence covers this observed CLI 1.0.105 fresh completed export and published 0.1.1 native import, not other producer versions or resumed histories.",
+    "Imported metrics remain historical, unverified as runtime/agent attribution or complete all-agent accounting. Native units are not USD and are not summed across overlapping sources.",
+    "One child lifecycle and explicit parent/instance fields were produced. No child custom-agent selection was emitted; generic general-purpose is not a roster identity.",
+    "The real run completed before native inspection. No live native subagent visualization, durable hierarchy, promotion, full R-06/F-01 or broader 27-case acceptance is claimed.",
+    "The raw actual export and raw events remain local. The proposed provenance-disclosure update does not rebuild or replace the accepted Marketplace archive."
+  ]
+}

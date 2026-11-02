@@ -472,9 +472,20 @@ The importer projects the Copilot CLI **1.0.105 shipped `UsageGetMetricsResult`*
 declaration and raw `JSON.stringify(metrics)` writer inspected in
 [#102 artifact 1](https://github.com/swigerb/squad-pod/issues/102/artifacts/1).
 [`cli-usage-1.0.105.synthetic.json`](../src/__fixtures__/cli-usage-1.0.105.synthetic.json)
-is authored from that contract, not an observed export. Actual producer version is
-unverified; file location and session start are not identity or completeness evidence.
-Native accumulator overlap, resumed history and all-agent coverage remain unknown.
+is authored from that contract, not an observed export. The file format does not
+record its producer version; file location and session start are not identity or
+completeness evidence. Native accumulator overlap, resumed history and all-agent
+coverage remain unknown.
+
+The [scoped actual-producer check](acceptance/real-producer-20261101-011/producer-summary.json)
+used installed CLI 1.0.105 with the public Squad coordinator in one fresh,
+completed, non-resumed synthetic project session. Its unmodified 4,031-byte export
+was selected with explicit native consent in published Squad Pod 0.1.1 on Windows;
+the 190 installed payload files matched the frozen archive. Reported quantities,
+model breakdowns, refresh, activity clearing, unknown attribution and Forget were
+checked without altering the source. Raw export and session events remain local.
+This establishes compatibility for that observed producer/file, not every CLI
+version, resumed history, complete U-01/R-05 or the full native/REAL suite.
 
 Interpreted JSON pointers: `/sessionStartTime`, `/totalUserRequests`,
 `/totalPremiumRequestCost`, `/totalApiDurationMs`, optional `/totalNanoAiu`, and

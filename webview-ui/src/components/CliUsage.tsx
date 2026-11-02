@@ -43,7 +43,8 @@ export function CliUsage({ snapshot, readOnly, onAction }: {
     <details>
       <summary>CLI import provenance and limits</summary>
       <p>Contract: Copilot CLI 1.0.105 shipped UsageGetMetricsResult projection. Actual export version is not recorded by the producer and is unverified.
-        {' '}Synthetic fixture validation only; real-export acceptance pending.</p>
+        {' '}Compatibility evidence covers one fresh, completed CLI 1.0.105 session and native Windows import.
+        {' '}Other producer versions and resumed sessions are not certified.</p>
       <p>Source: {snapshot?.sourcePath ?? 'No selected export'}. Checked: {snapshot?.checkedAt ?? 'not checked'}.</p>
       <p>One selected file replaces the previous snapshot, including on repeated refresh. No multi-file or cross-source sums.
         {' '}Unknown fields are ignored; agent/provider/token-detail data, currentModel, last-call tokens and code-change paths are not displayed.

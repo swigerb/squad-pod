@@ -59,6 +59,16 @@ roster remains authoritative but is not evidence that a producer promoted a
 teammate. The [technical unsupported disposition](https://github.com/swigerb/squad-pod/issues/111#issuecomment-6533950112)
 is recorded on issue #111; native and real-producer acceptance remain separate.
 
+The [scoped actual CLI 1.0.105 capture](acceptance/real-producer-20261101-011/producer-summary.json)
+observed one `subagent.started` / `subagent.completed` pair with the same envelope
+instance ID and spawning call ID, plus four explicit parent-call references.
+The emitted child name was `general-purpose`, not an authoritative roster identity.
+Root `Squad` selection was produced; a child custom-agent selection was not.
+Inspection excluded tool arguments, descriptions, prompts and outputs. No roster
+identity is inferred from the requested task. This is actual producer metadata,
+not live native visualization, promotion/durable-hierarchy evidence or completion
+of #111/R-06. Those remaining gates stay open.
+
 The shared webview supports the same snapshot protocol in any host. Standalone
 live observation is default-off and requires local CLI consent via
 `--live-activity`; the read-only browser cannot enable session-log reads.

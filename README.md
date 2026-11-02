@@ -133,8 +133,10 @@ file. **Refresh selected export** rereads it manually; **Forget export**, worksp
 and extension restart discard the in-memory selection. Nothing is written to the source.
 Premium-request cost and nano-AI units retain their native units, **never USD**; model
 quantities and the Squad ledger are not summed together. Missing data stays missing.
-The importer currently has source-pinned **synthetic fixture evidence only**:
-real-export compatibility and native VS Code acceptance remain pending.
+The [CLI 1.0.105 compatibility check](docs/acceptance/real-producer-20261101-011/producer-summary.json)
+used an actual, completed `copilot --agent squad` export and native Windows import
+in the published 0.1.1 extension. This covers one fresh session, not other CLI
+versions or resumed histories.
 Session/workspace/agent attribution and completeness are unknown. Standalone import
 is unavailable. See the [CLI import contract and acceptance limits](docs/native-acceptance.md#cli-import-contract)
 for provenance, interpreted fields and safety bounds.
