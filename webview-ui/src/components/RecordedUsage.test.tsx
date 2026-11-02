@@ -105,7 +105,10 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
       expect(section.textContent).toContain('Session identity: unknown');
       expect(section.textContent).toContain('Completion, resumed history and all-agent coverage: unknown');
       expect(section.textContent).toContain('Historical model: synthetic-model');
-      expect(section.textContent).toContain('real-export acceptance pending');
+      expect(section.textContent).toContain('one fresh, completed CLI 1.0.105 session and native Windows import');
+      expect(section.textContent).toContain('Other producer versions and resumed sessions are not certified');
+      expect(section.textContent).toContain('Actual export version is not recorded by the producer and is unverified');
+      expect(section.textContent).not.toContain('real-export acceptance pending');
       expect(host.querySelector('[aria-label="Recorded Squad usage"]')?.textContent).toContain('No usage totals available');
       expect(host.textContent).toContain('Activity events (0)');
       expect(addAgent).not.toHaveBeenCalled();
