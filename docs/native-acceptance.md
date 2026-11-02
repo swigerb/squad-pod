@@ -1,5 +1,12 @@
 # Native VS Code and real Squad acceptance
 
+> **Stable 1.0 scope:** This document preserves the comprehensive historical
+> parity campaign and its evidence. The maintainer-selected
+> [stable Squad-native release contract](testing.md#stable-10-release-scope)
+> defines the 1.0 transition gates. It does not turn unexecuted historical cases
+> into passes or add durable hierarchy, automatic promotion or physical mobile
+> support.
+
 > **Execution handoff:** The user and Microsoft Scout run this plan after approval. Writing this plan does not authorize installation, authentication, AI spending, private-log access, deletion, or publication. No native or real-session result is preapproved.
 
 ## Copy-ready Scout instruction
