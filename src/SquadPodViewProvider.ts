@@ -15,8 +15,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, SourceStatus, PodSettings, DirectoryCatalog } from './types.js';
 import { parseCharterModel, readModelConfig } from './declaredModels.js';
-import { parseCharterDetails } from './charterDetails.js';
-import { ProjectFiles } from './projectFiles.js';
+import { readMemberCharter } from './memberCharter.js';
 import {
   WORKSPACE_KEY_LAYOUT,
   VIEW_ID,
@@ -1195,17 +1194,6 @@ function getNonce(): string {
   return nonce;
 }
 
-const MAX_AGENT_CHARTER_BYTES = 64 * 1024;
-
-function readAgentCharter(workspaceRoot: string, filePath: string): string {
-  const files = new ProjectFiles(workspaceRoot);
-  const source = files.read(path.relative(workspaceRoot, filePath), MAX_AGENT_CHARTER_BYTES);
-  if (source === null) {
-    throw Object.assign(new Error('Charter is missing.'), { code: 'ENOENT' });
-  }
-  return source;
-}
-
 function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo | null {
   const agents = getAgents();
   const agent = agents.get(agentId);
@@ -1213,27 +1201,11 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
     return null;
   }
 
+  const charter = readMemberCharter({ workspaceRoot, isCurrentMember: id => getAgents().has(id) }, agentId);
+  if (charter.charterStatus === 'unavailable') {return null;}
+  const { charterSummary, charterContent, charterStatus, expertise, responsibilities, boundaries } = charter;
   const squadDir = resolveSquadDir(workspaceRoot);
-  let charterSummary: string | null = null;
-  let charterContent: string | null = null;
-  let charterStatus: AgentDetailInfo['charterStatus'] = 'missing';
-  let expertise: string | null = null;
-  let responsibilities: string | null = null;
-  let boundaries: string | null = null;
   const charterPath = path.join(squadDir, 'agents', agentId, 'charter.md');
-  try {
-    const source = readAgentCharter(workspaceRoot, charterPath);
-    charterContent = source;
-    charterStatus = 'available';
-    ({ charterSummary, expertise, responsibilities, boundaries } = parseCharterDetails(source));
-  } catch (error) {
-    charterSummary = null;
-    charterContent = null;
-    charterStatus = (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'unreadable';
-    expertise = null;
-    responsibilities = null;
-    boundaries = null;
-  }
 
   // Scan log directory for recent activity
   const recentActivity: string[] = [];

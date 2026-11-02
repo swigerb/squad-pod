@@ -144,7 +144,8 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     expect(fixture.messages.filter((m) => m.type === 'existingAgents').at(-1))
       .toMatchObject({ agents: [expect.objectContaining({ id: 'grace' })] });
     const before = details().length;
-    for (const agentId of ['unknown', 'ada']) {
+    const read = vi.spyOn(require('node:fs'), 'readSync');
+    for (const agentId of ['unknown', 'ada', 'Ada', 'grace-task', '../grace']) {
       fixture.send({ type: 'requestAgentDetail', agentId });
       fixture.send({ type: 'openSquadAgent', agentId });
     }
@@ -152,6 +153,37 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     expect(fixture.calls.documents).toEqual([]);
     expect(fixture.calls.commands).toEqual([]);
     expect(fixture.calls.information).toEqual([]);
+    expect(read).not.toHaveBeenCalled();
+    read.mockRestore();
+  });
+
+  it('uses the exact parsed mixed-case/underscore ID without aliasing it', () => {
+    const squad = path.join(fixture.workspaceRoot, '.squad');
+    const team = path.join(squad, 'team.md');
+    const id = '_Ada_2';
+    fs.writeFileSync(team, fs.readFileSync(team, 'utf8').replace('/agents/ada/', `/agents/${id}/`));
+    fs.renameSync(path.join(squad, 'agents', 'ada'), path.join(squad, 'agents', id));
+    vi.advanceTimersByTime(2000);
+    const before = details().length;
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    fixture.send({ type: 'requestAgentDetail', agentId: '_ada_2' });
+    expect(details()).toHaveLength(before);
+    const content = fs.readFileSync(path.join(squad, 'agents', id, 'charter.md'), 'utf8');
+    fixture.send({ type: 'requestAgentDetail', agentId: id });
+    expect(details().at(-1)?.detail).toMatchObject({
+      id, charterStatus: 'available', charterContent: content,
+      expertise: 'Ada expertise', responsibilities: '- Ada responsibilities',
+      boundaries: expect.stringContaining('Ada boundaries'),
+    });
+  });
+
+  it('keeps unstructured readable charter content without inventing rich fields', () => {
+    fs.writeFileSync(path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'charter.md'), 'unstructured');
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(details().at(-1)?.detail).toMatchObject({
+      charterStatus: 'available', charterContent: 'unstructured', charterSummary: null,
+      expertise: null, responsibilities: null, boundaries: null,
+    });
   });
 
   it('sends visible Squad Info roster entries keyed by parsed charter IDs', () => {
