@@ -2,13 +2,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { sameDirectoryPath } from './directories.js';
 import { findCopilotSession, listCopilotSessions, readSessionCwd, resolveCopilotHome } from './copilotSessionState.js';
-import type { LiveSourceStatus } from './types.js';
-import { ActivityLifecycle, type ActivityLifecycleOptions } from './activityLifecycle.js';
+import { ActivitySource, type ActivitySourceOptions } from './activitySource.js';
 import { projectActivityEvent, type LiveEvent } from './activityProjection.js';
 export type { LiveEvent } from './activityProjection.js';
 export { exactLiveAgent, liveToolLabel } from './activityLifecycle.js';
 
-export const LIVE_STALE_MS = 5 * 60_000;
+export { LIVE_STALE_MS } from './activitySource.js';
 export const SEED_BYTES = 2 * 1024 * 1024;
 export const MAX_LINE_BYTES = 64 * 1024;
 /** Decode CLI JSONL through the shared sanitizer; raw records never leave the projector. */
@@ -118,10 +117,9 @@ export interface LiveSessionSelection {
   reason?: string;
 }
 
-interface ActivityOptions extends Omit<ActivityLifecycleOptions, 'source'> {
+interface ActivityOptions extends ActivitySourceOptions {
   workspaceRoot: string;
   copilotHome?: string;
-  status: (status: LiveSourceStatus) => void;
   sessionSelection?: () => LiveSessionSelection;
 }
 
@@ -132,19 +130,15 @@ export class CopilotSessionActivity {
   private session: { id: string; dir: string } | undefined;
   private tail = new EventTail();
   private discoveryAt = -Infinity;
-  private lastBytesAt = 0;
-  private lastSize = -1;
-  private stale = false;
-  private source: LiveSourceStatus = { state: 'off', sessionId: null };
   private preferredId: string | null | undefined;
-  private projection: ActivityLifecycle;
+  private projection: ActivitySource;
 
   constructor(private options: ActivityOptions) {
-    this.projection = new ActivityLifecycle({
-      source: () => ({ sessionId: this.session?.id ?? null, limited: this.tail.limited }),
+    this.projection = new ActivitySource({
       roster: () => this.options.roster(),
       post: message => this.options.post(message),
       lifecycle: (...args) => this.options.lifecycle(...args),
+      status: status => this.options.status(status),
       now: () => (this.options.now ?? Date.now)(),
     });
   }
@@ -162,25 +156,16 @@ export class CopilotSessionActivity {
     this.enabled = false;
     if (this.timer) {clearInterval(this.timer);}
     this.timer = undefined;
-    this.projection.clear();
+    this.projection.stop();
     this.session = undefined;
     this.discoveryAt = -Infinity;
-    this.stale = false;
     this.preferredId = undefined;
-    this.setSource('off');
   }
 
   replay(): void {
     // Validate the current source before replay; a reconnect must not revive stale state.
     if (this.enabled) { this.poll(); }
-    this.replayCurrent();
-  }
-
-  private replayCurrent(): void {
-    this.projection.replayActivity();
-    this.options.status(this.source);
-    this.projection.publishModels();
-    this.projection.publishTasks();
+    this.projection.replay();
   }
 
   poll(): void {
@@ -190,12 +175,12 @@ export class CopilotSessionActivity {
       const selection = this.options.sessionSelection?.();
       if (selection?.preferredId !== this.preferredId) {
         this.preferredId = selection?.preferredId;
-        this.projection.clear();
+        this.projection.resetSelection();
         this.session = undefined;
         this.discoveryAt = -Infinity;
       }
       if (selection?.preferredId === null) {
-        this.setSource('searching');
+        this.projection.searching();
         return;
       }
       if (now - this.discoveryAt >= 5000) {
@@ -212,54 +197,30 @@ export class CopilotSessionActivity {
             throw error;
           }
         });
-        if (match?.id !== this.session?.id) {
-          this.projection.clear();
+        if (this.projection.select(match?.id ?? null)) {
           this.session = match;
           this.tail = new EventTail();
-          this.lastSize = -1;
-          this.stale = false;
-          if (match) {this.projection.publishModels();}
         }
       }
-      if (!this.session) { this.setSource('searching'); return; }
+      if (!this.session) { this.projection.searching(); return; }
       const file = path.join(this.session.dir, 'events.jsonl');
       const events: LiveEvent[] = [];
       let stat = this.tail.read(file, event => events.push(event));
-      if (this.stale && (this.tail.reset || stat.size !== this.lastSize)) {
+      if (this.projection.requiresReseed({ reset: this.tail.reset, revision: stat.size })) {
         this.tail = new EventTail();
         events.length = 0;
         stat = this.tail.read(file, event => events.push(event));
       }
-      if (this.tail.reset || stat.size !== this.lastSize) {
-        this.lastBytesAt = Math.min(now, stat.mtimeMs);
-        this.lastSize = stat.size;
-      }
-      if (now - this.lastBytesAt >= LIVE_STALE_MS) {
-        this.projection.clear();
-        this.stale = true;
-        this.setSource('searching');
-        return;
-      }
-      this.stale = false;
-      if (this.tail.reset) {
-        this.projection.seed(events);
-      } else {
-        for (const event of events) {this.projection.accept(event);}
-      }
-      this.setSource('following');
-      if (this.tail.reset) {this.replayCurrent();}
-      this.projection.publishTasks();
+      this.projection.accept({
+        reset: this.tail.reset, revision: stat.size, modifiedAt: stat.mtimeMs,
+        observedAt: now, limited: this.tail.limited, events,
+      });
     } catch (error) {
-      this.projection.clear();
       this.session = undefined;
-      this.stale = false;
       this.discoveryAt = -Infinity;
-      this.setSource((error as NodeJS.ErrnoException).code === 'ENOENT' ? 'searching' : 'error');
+      this.projection.lost(
+        (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'searching' : 'error', this.tail.limited,
+      );
     }
-  }
-
-  private setSource(state: LiveSourceStatus['state']): void {
-    this.source = { state, sessionId: this.session?.id.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 8) || null };
-    this.options.status(this.source);
   }
 }

@@ -46,7 +46,8 @@ export function exactLiveAgent(name: string, roster: readonly { id: string; fold
 
 /**
  * Source-independent in-memory reduction of sanitized events. The adapter owns consent,
- * source validation/freshness and clear-before-source-change; no filesystem or host API is used.
+ * source validation; ActivitySource owns freshness and clear-before-source-change.
+ * No filesystem or host API is used.
  */
 export class ActivityLifecycle {
   private tasks = new Map<string, {

@@ -1,5 +1,4 @@
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -12,6 +11,7 @@ import { MAX_OBSERVED_TASKS, MAX_RECENT_TASKS, TASK_ID_MAX_LENGTH } from './obse
 import { TASK_DESCRIPTION_DISPLAY_MAX_LENGTH } from './constants.js';
 import { projectActivityEvent } from './activityProjection.js';
 import { ActivityLifecycle, type ActivitySourceContext } from './activityLifecycle.js';
+import { ActivitySource, type ActivitySourceBatch } from './activitySource.js';
 
 vi.mock('node:fs', { spy: true });
 
@@ -169,7 +169,7 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     now = Date.now();
-    home = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-live-test-'));
+    home = fs.mkdtempSync(path.join(process.cwd(), '.squad-live-test-'));
     workspace = path.join(home, 'workspace');
     fs.mkdirSync(workspace);
     messages = [];
@@ -198,6 +198,231 @@ describe('read-only Copilot live activity with synthetic homes', () => {
     expect(list).not.toHaveBeenCalled();
     expect(stat).not.toHaveBeenCalled();
     vi.restoreAllMocks();
+  });
+
+  it('uses the validation clock sample, not the clock after a bounded read, for freshness', () => {
+    session('clock-sample', marked(spawnLines()));
+    const read = EventTail.prototype.read;
+    vi.spyOn(EventTail.prototype, 'read').mockImplementationOnce(function (file, emit) {
+      const result = read.call(this, file, emit);
+      now += LIVE_STALE_MS;
+      return result;
+    });
+    reader.start(false);
+    expect(statuses.at(-1)?.state).toBe('following');
+    expect(lifecycle.mock.calls).toEqual([['ada', true, 'Build tests']]);
+    reader.poll();
+    expect(statuses.at(-1)?.state).toBe('searching');
+    expect(lifecycle.mock.calls.at(-1)).toEqual(['ada', false, null]);
+  });
+
+  it('matches ordered normalized-source freshness, loss, recovery, identity and reset decisions to CLI', () => {
+    now = Math.floor(now / 1000) * 1000;
+    const origin = now;
+    const activityAt = now - 60_000;
+    const timestamp = new Date(activityAt).toISOString();
+    const event = (type: string, fields: Partial<LiveEvent> = {}): LiveEvent => ({
+      type, toolName: '', toolCallId: '', parentToolCallId: '', squad: false,
+      agentScoped: false, agentInstanceId: '', ...fields,
+    });
+    const seed = [
+      event('subagent.selected', { squad: true }),
+      event('tool.execution_start', { toolName: 'task', toolCallId: 'run',
+        task: { name: 'ada', agent_type: 'general-purpose', mode: 'background', description: 'Inspect fixture' } }),
+      event('subagent.started', { toolCallId: 'run', instanceId: 'member', agentScoped: true,
+        agentInstanceId: 'member', activityAt, modelObservation: {
+          model: 'runtime-model', kind: 'subagent-model', source: 'subagent.started.model', timestamp,
+        } }),
+      event('tool.execution_start', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view', file: 'test.ts' }),
+      event('tool.execution_complete', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view',
+        context: { contextTokens: 123, maxContextTokens: 456 } }),
+      event('tool.execution_start', { toolCallId: 'tool2', parentToolCallId: 'run', toolName: 'view', file: 'test.ts' }),
+    ];
+    const initialContent = marked(taskCall('run', 'ada', 'general-purpose')
+      + line('subagent.started', { toolCallId: 'run', model: 'runtime-model' }, { agentId: 'member', timestamp })
+      + line('tool.execution_start', { toolCallId: 'tool', parentToolCallId: 'run',
+        toolName: 'view', arguments: { path: 'test.ts' } })
+      + line('tool.execution_complete', { toolCallId: 'tool', parentToolCallId: 'run', toolName: 'view',
+        toolTelemetry: { metrics: { context_current_tokens: 123, context_token_limit: 456 } } })
+      + line('tool.execution_start', { toolCallId: 'tool2', parentToolCallId: 'run',
+        toolName: 'view', arguments: { path: 'test.ts' } }));
+    let content = initialContent;
+    let file = session('fresh-session', content);
+    const cli: unknown[] = [];
+    const normalized: unknown[] = [];
+    let preferredId: string | null | undefined;
+    reader = new CopilotSessionActivity({
+      workspaceRoot: workspace, copilotHome: home, roster: () => roster, now: () => now,
+      post: m => cli.push(m), lifecycle: (...args) => cli.push(args), status: s => cli.push(s),
+      sessionSelection: () => ({ preferredId, excludedIds: [] }),
+    });
+    const direct = new ActivitySource({
+      roster: () => roster, now: () => now, post: m => normalized.push(m),
+      lifecycle: (...args) => normalized.push(args), status: s => normalized.push(s),
+    });
+    const equivalent = () => {
+      expect(normalized).toEqual(cli);
+      expect(JSON.stringify(normalized)).not.toContain(secret);
+      cli.length = 0;
+      normalized.length = 0;
+    };
+    const expectCleared = (state: 'off' | 'searching' | 'error') => {
+      expect(normalized).toContainEqual(['ada', false, null]);
+      expect(normalized).toContainEqual({ type: 'agentToolsClear', agentId: 'ada' });
+      expect(normalized).toContainEqual({ type: 'agentContextUsage', agentId: 'ada',
+        contextTokens: null, maxContextTokens: null });
+      expect(normalized).toContainEqual({ type: 'observedTasks',
+        snapshot: { sessionId: null, tasks: [], limited: false } });
+      expect(normalized).toContainEqual({ type: 'liveModels',
+        snapshot: { sessionId: null, session: null, members: {} } });
+      expect(normalized.at(-1)).toEqual({ state, sessionId: null });
+    };
+    const facts = (reset = false, modifiedAt = origin): ActivitySourceBatch => ({
+      reset, revision: Buffer.byteLength(content), modifiedAt, observedAt: now, limited: false, events: [],
+    });
+    const feed = (batch: ActivitySourceBatch, reseed = false) => {
+      expect(direct.requiresReseed(batch)).toBe(reseed);
+      direct.accept(reseed ? { ...batch, reset: true, events: seed } : batch);
+      reader.poll();
+      equivalent();
+    };
+    const open = vi.mocked(fs.openSync);
+    const stat = vi.mocked(fs.statSync);
+    const list = vi.mocked(fs.opendirSync);
+    open.mockClear(); stat.mockClear(); list.mockClear();
+    direct.select('fresh-session');
+    direct.accept({ ...facts(true), events: seed });
+    expect(open).not.toHaveBeenCalled();
+    expect(stat).not.toHaveBeenCalled();
+    expect(list).not.toHaveBeenCalled();
+    reader.start(false);
+    equivalent();
+
+    // Neither arrival/reconnect nor an mtime-only touch extends byte freshness.
+    now = origin + LIVE_STALE_MS - 1;
+    fs.utimesSync(file, new Date(now), new Date(now));
+    feed(facts(false, now));
+    direct.accept(facts(false, now));
+    direct.replay();
+    reader.replay();
+    expect(normalized).toContainEqual(['ada', true, 'Inspect fixture', activityAt]);
+    equivalent();
+    now++;
+    direct.accept(facts(false, now));
+    reader.poll();
+    expect(normalized).toContainEqual({ type: 'agentToolsClear', agentId: 'ada' });
+    expect(normalized).toContainEqual({ type: 'agentContextUsage', agentId: 'ada',
+      contextTokens: null, maxContextTokens: null });
+    expect(normalized.at(-1)).toEqual({ state: 'searching', sessionId: 'fresh-se' });
+    equivalent();
+    direct.accept(facts());
+    direct.replay();
+    reader.replay();
+    expect(normalized).not.toContainEqual(['ada', true, 'Inspect fixture', activityAt]);
+    equivalent();
+
+    // Byte growth with an old mtime stays stale; a later changed read can recover.
+    content += line('assistant.message', {});
+    fs.writeFileSync(file, content);
+    fs.utimesSync(file, new Date(origin), new Date(origin));
+    feed({ ...facts(), events: [event('assistant.message')] }, true);
+    now += 1000;
+    content += line('assistant.message', {});
+    fs.writeFileSync(file, content);
+    fs.utimesSync(file, new Date(now + 60_000), new Date(now + 60_000));
+    // Future source mtime is clamped to now, never used as activity time.
+    feed(facts(false, now + 60_000), true);
+    expect(direct.requiresReseed(facts())).toBe(false);
+    direct.accept(facts());
+    direct.replay();
+    reader.replay();
+    expect(normalized).toContainEqual(['ada', true, 'Inspect fixture', activityAt]);
+    equivalent();
+
+    now += LIVE_STALE_MS;
+    direct.accept(facts(false, now + 60_000));
+    reader.poll();
+    expect(normalized.at(-1)).toEqual({ state: 'searching', sessionId: 'fresh-se' });
+    equivalent();
+    // Future mtime did not buy extra lifetime; current changed bytes recover again.
+    content += line('assistant.message', {});
+    fs.writeFileSync(file, content);
+    fs.utimesSync(file, new Date(now), new Date(now));
+    feed(facts(false, now), true);
+
+    // Truncation/reset silently reconstructs; no historical start/finish telemetry.
+    content = marked('');
+    fs.writeFileSync(file, content);
+    fs.utimesSync(file, new Date(now), new Date(now));
+    direct.accept({ ...facts(true, now), events: [seed[0]] });
+    reader.poll();
+    expect(normalized).toContainEqual(['ada', false, null]);
+    expect(normalized).not.toContainEqual(expect.objectContaining({ type: 'agentToolStart' }));
+    equivalent();
+
+    content += initialContent;
+    fs.appendFileSync(file, initialContent);
+    fs.utimesSync(file, new Date(now), new Date(now));
+    feed({ ...facts(false, now), events: seed });
+    fs.unlinkSync(file);
+    direct.lost('searching');
+    reader.poll();
+    expectCleared('searching');
+    equivalent();
+    file = session('fresh-session', content);
+    direct.select('fresh-session');
+    direct.accept({ ...facts(true, now), events: seed });
+    reader.poll();
+    equivalent();
+    vi.spyOn(EventTail.prototype, 'read').mockImplementationOnce(function () {
+      this.limited = true;
+      throw Object.assign(new Error('synthetic transport failure'), { code: 'EACCES' });
+    });
+    direct.lost('error', true);
+    reader.poll();
+    expectCleared('error');
+    equivalent();
+    // Coverage learned before an interrupted read remains unknown/partial on replay.
+    direct.stop();
+    reader.stop();
+    equivalent();
+    direct.replay();
+    reader.replay();
+    expect(normalized.at(-1)).toEqual({ type: 'observedTasks',
+      snapshot: { sessionId: null, tasks: [], limited: true } });
+    equivalent();
+    direct.select('fresh-session');
+    direct.accept({ ...facts(true, now), events: seed });
+    reader.start(false);
+    equivalent();
+
+    // Explicit unavailable identity never falls back, then an exact identity switches.
+    preferredId = null;
+    direct.resetSelection();
+    direct.searching();
+    reader.poll();
+    expectCleared('searching');
+    equivalent();
+    const nextSession = '12345678-1234-4123-8123-123456789012';
+    session(nextSession, content);
+    preferredId = nextSession;
+    direct.resetSelection();
+    direct.select(nextSession);
+    direct.accept({ ...facts(true, now), events: seed });
+    reader.poll();
+    equivalent();
+    direct.stop();
+    reader.stop();
+    expectCleared('off');
+    equivalent();
+    open.mockClear(); stat.mockClear(); list.mockClear();
+    direct.replay();
+    reader.replay();
+    reader.poll();
+    equivalent();
+    expect(open).not.toHaveBeenCalled();
+    expect(stat).not.toHaveBeenCalled();
+    expect(list).not.toHaveBeenCalled();
   });
 
   it.each(['completed', 'failed', 'aborted'] as const)(
