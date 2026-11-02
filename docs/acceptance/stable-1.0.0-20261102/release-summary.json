@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "status": "CANDIDATE_READY_FOR_OWNER_PUBLICATION_APPROVAL",
+  "releaseScope": "Stable Squad-native 1.0.0; original all-surface parity campaign superseded by explicit maintainer scope, not passed.",
+  "identity": "brianswiger.squad-pod",
+  "version": "1.0.0",
+  "channel": "stable",
+  "candidateSource": "24f6b341b686f31a12231d954ed58e2273cc53ed",
+  "candidateTree": "baf5c41a7c81afa78144e100516d67c6b7b1895f",
+  "candidateVsix": {
+    "name": "squad-pod-1.0.0.vsix",
+    "bytes": 3208585,
+    "sha256": "1684acc0c56f3f7401961a1da122636a3c27b73e2b133993ce5a7bb72702ddec"
+  },
+  "predecessor": {
+    "version": "0.1.1",
+    "sha256": "cad389f28392d8f02a75fa5a81a3deb9497d8991655d5a7ffe52324c4e722128",
+    "matchedOfficialGalleryDigest": true
+  },
+  "runtimeComparison": {
+    "entries": 180,
+    "identical": 179,
+    "different": [
+      "extension/dist/webview/assets/index.js"
+    ],
+    "sourceDifference": "Previously merged CLI usage compatibility disclosure only; no parser, lifecycle, persistence or office behavior changes.",
+    "affectedCoverage": "12 RecordedUsage component regressions plus rendered native CLI import provenance inspection."
+  },
+  "targetedValidation": {
+    "packageAndRetiredWorkflowAndReceiptGuards": "27 passed",
+    "affectedUsageComponent": "12 passed",
+    "typeChecks": "passed",
+    "productionBuild": "passed",
+    "packagedAssetsNoticesBoundariesLinksAndStableChannel": "passed"
+  },
+  "nativeTransition": {
+    "evidenceClass": "NATIVE with synthetic project; not REAL AI or physical-device evidence",
+    "platform": "Windows x64",
+    "vscodeVersion": "1.144.0",
+    "predecessorInstalledFirst": true,
+    "sameProfileUpgradeWithoutUninstall": true,
+    "candidatePayloadFilesCompared": 191,
+    "candidateRegisteredStable": true,
+    "renderedSurfaces": [
+      "office roster and controls",
+      "Settings",
+      "Squad Info and Ada details",
+      "Directories with no launch history",
+      "Layout controls",
+      "Telemetry and expanded CLI import provenance"
+    ],
+    "savedLayoutBytesUnchanged": true,
+    "savedSettingsBytesUnchanged": true,
+    "memberAppearancesAndSeatsUnchanged": true,
+    "globalPreferencesUnchanged": true,
+    "soundDisabledAndAreasEnabledRetained": true,
+    "liveActivityRemainedOff": true,
+    "fixtureCliHomeRemainedEmpty": true,
+    "ownedHostsClosedGracefully": true
+  },
+  "executionNotes": [
+    "Harness process-identity comparison was corrected to compare UTC timestamps rather than PowerShell date string formatting; no wrong process was closed.",
+    "Iframe screenshot capture was rejected by CDP; the subsequent actual top-level native workbench capture succeeded and remains local."
+  ],
+  "exclusions": [
+    "No full 27-case campaign completion.",
+    "No new real or paid AI session, private-log read, authentication change or normal-profile modification.",
+    "No minimum-VS-Code, native macOS/Linux, standalone REAL, phone/tablet or remote-access certification.",
+    "No durable hierarchy or automatic roster promotion implementation.",
+    "No public write, Marketplace upload, GitHub release or issue closure at evidence creation."
+  ],
+  "publicationPolicy": "Only this sanitized summary is proposed for publication. Raw native snapshots, local paths, screenshots and state databases remain local."
+}
