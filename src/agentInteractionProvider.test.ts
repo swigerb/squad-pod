@@ -115,6 +115,29 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     expect(fixture.calls.commands).toHaveLength(1);
   });
 
+  it('keeps rich legacy charters while preferring .squad when both directories exist', () => {
+    const squad = path.join(fixture.workspaceRoot, '.squad');
+    const legacy = path.join(fixture.workspaceRoot, '.ai-team');
+    fs.renameSync(squad, legacy);
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(details().at(-1)?.detail).toMatchObject({
+      charterStatus: 'available', charterSummary: agents[0].summary,
+      expertise: 'Ada expertise', responsibilities: '- Ada responsibilities',
+      boundaries: expect.stringContaining('Ada boundaries'),
+    });
+    fs.mkdirSync(squad);
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(details().at(-1)?.detail).toMatchObject({ charterStatus: 'missing', charterContent: null });
+  });
+
+  it('withholds malformed UTF-8 rather than displaying replacement characters', () => {
+    fs.writeFileSync(path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'charter.md'), Buffer.from([0xff]));
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(details().at(-1)?.detail).toMatchObject({
+      charterStatus: 'unreadable', charterContent: null, charterSummary: null, expertise: null,
+    });
+  });
+
   it('does not disclose or open files for unknown or removed agents', () => {
     fixture.removeAgent('ada');
     vi.advanceTimersByTime(2000);

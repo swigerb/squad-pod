@@ -15,6 +15,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, SourceStatus, PodSettings, DirectoryCatalog } from './types.js';
 import { parseCharterModel, readModelConfig } from './declaredModels.js';
+import { ProjectFiles } from './projectFiles.js';
 import {
   WORKSPACE_KEY_LAYOUT,
   VIEW_ID,
@@ -1196,46 +1197,12 @@ function getNonce(): string {
 const MAX_AGENT_CHARTER_BYTES = 64 * 1024;
 
 function readAgentCharter(workspaceRoot: string, filePath: string): string {
-  let fd: number | undefined;
-  try {
-    const root = fs.realpathSync(workspaceRoot);
-    const relative = path.relative(workspaceRoot, filePath);
-    if (relative.split(path.sep).includes('..') || path.isAbsolute(relative)) {throw new Error('Charter escapes selected workspace.');}
-    const target = path.join(root, relative);
-    const guard = () => {
-      let current = root;
-      for (const part of relative.split(path.sep)) {
-        current = path.join(current, part);
-        if (fs.lstatSync(current).isSymbolicLink() || fs.realpathSync(current) !== current) {throw new Error('Charter symlinks/junctions are not observed.');}
-      }
-    };
-    const sameFile = (a: fs.BigIntStats, b: fs.BigIntStats) =>
-      a.ino === b.ino && (a.dev === b.dev || (process.platform === 'win32' && a.dev === 0n));
-    guard();
-    const before = fs.lstatSync(target, { bigint: true });
-    if (!before.isFile() || before.size > BigInt(MAX_AGENT_CHARTER_BYTES)) {throw new Error('Charter is not a regular file within 64 KiB.');}
-    fd = fs.openSync(target, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
-    if (!sameFile(before, fs.fstatSync(fd, { bigint: true }))) {throw new Error('Charter changed while opening.');}
-    const stat = fs.fstatSync(fd);
-    if (!stat.isFile()) { throw new Error('Charter is not a regular file.'); }
-    if (stat.size > MAX_AGENT_CHARTER_BYTES) {
-      throw new Error('Charter exceeds the 64 KiB detail limit.');
-    }
-    const buffer = Buffer.alloc(Math.min(stat.size + 1, MAX_AGENT_CHARTER_BYTES + 1));
-    const bytes = fs.readSync(fd, buffer, 0, buffer.length, 0);
-    const after = fs.fstatSync(fd);
-    guard();
-    if (fs.realpathSync(workspaceRoot) !== root || !sameFile(fs.lstatSync(target, { bigint: true }), fs.fstatSync(fd, { bigint: true }))) {
-      throw new Error('Charter path changed while reading.');
-    }
-    if (bytes !== stat.size || after.size !== stat.size
-      || after.mtimeMs !== stat.mtimeMs || after.ctimeMs !== stat.ctimeMs) {
-      throw new Error('Charter changed while reading.');
-    }
-    return new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, bytes));
-  } finally {
-    if (fd !== undefined) { fs.closeSync(fd); }
+  const files = new ProjectFiles(workspaceRoot);
+  const source = files.read(path.relative(workspaceRoot, filePath), MAX_AGENT_CHARTER_BYTES);
+  if (source === null) {
+    throw Object.assign(new Error('Charter is missing.'), { code: 'ENOENT' });
   }
+  return source;
 }
 
 function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo | null {
