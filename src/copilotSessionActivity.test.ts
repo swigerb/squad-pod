@@ -10,6 +10,7 @@ import type { LiveEvent } from './copilotSessionActivity.js';
 import type { LiveSourceStatus, OutboundMessage } from './types.js';
 import { MAX_OBSERVED_TASKS, MAX_RECENT_TASKS, TASK_ID_MAX_LENGTH } from './observedTasks.js';
 import { TASK_DESCRIPTION_DISPLAY_MAX_LENGTH } from './constants.js';
+import { projectActivityEvent } from './activityProjection.js';
 
 vi.mock('node:fs', { spy: true });
 
@@ -19,6 +20,76 @@ export const spawnLines = (name = 'ada', task = 'run') =>
   line('tool.execution_start', { toolName: 'task', toolCallId: task,
     arguments: { name, agent_type: 'general-purpose', mode: 'background', description: 'Build tests', prompt: secret } })
   + line('subagent.started', { toolCallId: task, agentName: 'general-purpose' }, { agentId: `internal-${task}` });
+
+describe('source-independent sanitized event projection', () => {
+  it('projects a record without I/O, retaining only supported fields and source provenance', () => {
+    const timestamp = '2026-10-30T12:34:56.000Z';
+    const record = {
+      type: 'subagent.started', agentId: 'instance', timestamp, credentials: secret,
+      data: { toolCallId: 'call', parentToolCallId: 'parent', model: 'runtime-model',
+        prompt: secret, arguments: { prompt: secret }, result: secret, futureField: secret },
+    };
+    const original = structuredClone(record);
+    const open = vi.spyOn(fs, 'openSync');
+    const list = vi.spyOn(fs, 'opendirSync');
+    const stat = vi.spyOn(fs, 'statSync');
+    try {
+      const event = projectActivityEvent(record);
+      expect(event).toEqual({
+        type: 'subagent.started', activityAt: Date.parse(timestamp), toolName: '',
+        toolCallId: 'call', parentToolCallId: 'parent', squad: false, agentScoped: true,
+        agentInstanceId: 'instance', instanceId: 'instance', identityOmitted: false,
+        modelObservation: { model: 'runtime-model', kind: 'subagent-model',
+          source: 'subagent.started.model', timestamp },
+      });
+      expect(record).toEqual(original);
+      record.data.model = secret;
+      expect(event?.modelObservation?.model).toBe('runtime-model');
+      expect(JSON.stringify(event)).not.toContain(secret);
+      expect(open).not.toHaveBeenCalled();
+      expect(list).not.toHaveBeenCalled();
+      expect(stat).not.toHaveBeenCalled();
+    } finally { vi.restoreAllMocks(); }
+  });
+
+  it.each([
+    'subagent.selected', 'subagent.started', 'subagent.completed', 'subagent.failed',
+    'subagent.aborted', 'subagent.configured', 'tool.execution_start', 'tool.execution_complete',
+    'assistant.message', 'session.start', 'session.resume', 'session.model_change',
+    'session.model_deselected', 'session.shutdown',
+  ])('keeps the CLI decoder and direct record boundary equivalent for %s', type => {
+    const record = {
+      type, agentId: 'instance', timestamp: '2026-10-30T12:34:56.000Z',
+      data: { toolCallId: 'call', parentToolCallId: 'parent', agentName: 'Ada', toolName: 'task',
+        arguments: { name: 'Research', agent_type: 'explore', mode: 'background',
+          description: 'Inspect fixture', prompt: secret }, result: secret, unknown: secret },
+      unknown: secret,
+    };
+    const event = projectActivityEvent(record);
+    expect(event?.type).toBe(type);
+    expect(parseLiveEvent(JSON.stringify(record))).toEqual(event);
+    expect(JSON.stringify(event)).not.toContain(secret);
+  });
+
+  it.each([null, undefined, [], 42, 'not a record', {}, { type: 'future.event', data: { prompt: secret } }])(
+    'ignores unsupported records without manufacturing activity: %j', record => {
+      expect(projectActivityEvent(record)).toBeNull();
+    },
+  );
+
+  it('preserves cancellation, identity rejection and absent timestamps without inventing freshness', () => {
+    const record = { type: 'subagent.completed', agentId: ' invalid ',
+      timestamp: 'not-a-source-time',
+      data: { toolCallId: 'call', parentToolCallId: ' invalid ', cancelled: true, credentials: secret } };
+    expect(projectActivityEvent(record)).toEqual({
+      type: 'subagent.aborted', toolName: '', toolCallId: 'call', parentToolCallId: '',
+      squad: false, agentScoped: true, agentInstanceId: '', instanceId: undefined,
+      activityAt: undefined, identityOmitted: true,
+    });
+    expect(parseLiveEvent(JSON.stringify(record))).toEqual(projectActivityEvent(record));
+    expect(parseLiveEvent('{invalid JSON')).toBeNull();
+  });
+});
 
 describe('read-only Copilot live activity with synthetic homes', () => {
   let home: string;
