@@ -4,6 +4,15 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-01
+
+### Documentation
+
+- Lead the Marketplace overview with the Squad Pod tagline and feature benefits.
+- Move the separate local browser observer guidance below extension installation and usage.
+- Keep preview-channel labeling concise and separate compatibility/privacy notes from the product introduction.
+- Preserve the showcase, credits, and existing extension behavior.
+
 ## [0.1.0] - 2026-11-01
 
 ### Pre-release scope

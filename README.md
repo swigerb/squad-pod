@@ -7,6 +7,22 @@
 
 # Squad Pod
 
+**Your Squad AI team, but make it pixel art.**
+
+Bring your [Squad](https://github.com/bradygaster/squad) agent team into an animated pixel-art office in VS Code. Follow team activity, explore each agent's details, and build an office with its own layout, furniture, colors, and pets.
+
+Available as a **pre-release** from [Brian Swiger](https://marketplace.visualstudio.com/publishers/brianswiger).
+
+## Features
+
+- **See your team at work.** Discover your Squad roster and watch animated characters walk, type, and read in the office.
+- **Explore each agent.** Open charter summaries, declared model metadata, observed tasks, and recent activity in Squad Info.
+- **Follow live activity.** Opt in to matching local Copilot CLI sessions for member tool labels, source-reported runtime models, transient subtasks, and context gauges when those fields are available.
+- **Make the office yours.** Edit floors, walls, furniture, colors, carpets, named Areas, and Claudio and Gitcat pets.
+- **Launch on your terms.** Save directories and explicitly launch Squad in a new VS Code terminal.
+- **Review activity and usage.** Browse observed events, source-provided usage and model history, and manually selected CLI usage exports in Telemetry.
+- **Bring your own assets.** Add local furniture, pets, and character sheets; use animated furniture at active desks and toggle supported states manually.
+
 ## See Squad Pod in action
 
 [![Watch Squad Pod: Big ideas. Tiny office. Animated office preview.](https://raw.githubusercontent.com/swigerb/squad-pod/master/assets/showcase/Squad-Pod-Sizzle-preview.gif)](https://raw.githubusercontent.com/swigerb/squad-pod/master/assets/showcase/Squad-Pod-Sizzle.mp4)
@@ -16,46 +32,11 @@
 Big ideas. Tiny office. Meet the pixel squad, watch characters walk and work at
 their computers, explore the office controls, and meet Claudio and Gitcat.
 
-Recorded from the actual production webview with a synthetic host and staged
-activity. No real AI tasks, private session logs, or customer data are shown.
-This is a product showcase, not native VS Code or real-session acceptance evidence.
+The showcase uses staged activity in the production office renderer. It contains
+no private session logs or customer data.
 
 AI narration: Ava (US English).
 Music: Brian Swiger's supplied DaVinci AI-generated soundtrack. [Download the source MP3](assets/showcase/Squad-Pod-Soundtrack.mp3).
-
-**Local browser observer:** [Build/run and security instructions](standalone/README.md)
-for the private, authenticated, loopback-only office, read-only by default. It uses the same
-production renderer, observes only an explicitly selected project, and has no
-workspace writes. Optional owned terminals use separate authentication and
-`copilot --agent squad`; observation stays read-only. Separate `--office-control`
-opt-in and authentication enable selected-project layout editing, seat persistence,
-sound/debug/Areas settings, browser JSON import/export and revision-protected draft
-recovery. Native dialogs, directory management and private-log consent remain unavailable.
-This is separate from the VSIX.
-
-**Your Squad AI team, but make it pixel art.**
-
-Squad Pod is a VS Code extension that turns a [Squad](https://github.com/bradygaster/squad) agent team into animated characters in a virtual office.
-
-## Preview release scope
-
-The initial **0.1.0 pre-release** is the desktop VS Code extension, published by **Brian Swiger** as `brianswiger.squad-pod`. It is an early-access release, not a stable release or a claim of full Pixel Agents parity.
-
-Ordinary roster and file observation does not require Copilot CLI authentication or an AI task. Optional live CLI observations, runtime model attribution, transient task links, and actual CLI usage-export compatibility remain experimental; complete REAL producer acceptance is pending. Private CLI log observation remains off until you explicitly consent. Recent-directory suggestions are a separate metadata read and can be disabled with `squad-pod.directorySuggestions`.
-
-The local browser observer remains a separate, source-only tool. Standalone terminals, remote access, durable hierarchy/promotion, and physical mobile-device coverage are not part of this Marketplace release's acceptance. Unsupported and unverified capabilities remain identified below and in the [native acceptance plan](docs/native-acceptance.md); broader acceptance issues remain open.
-
-## Features
-
-- Discover the team roster and show each visible member as a character at a desk.
-- Animate activity inferred from changes to Squad files.
-- Show six built-in character identities with authored walk, typing, and reading poses.
-- Opt in to live member tool labels and context gauges from local Copilot CLI sessions.
-- View visible members' charter summaries, declared scope, observed status/task, and recent activity in Squad Info.
-- Design the office with floors, walls, furniture, colors, carpets, named Areas, and pets.
-- Manage directories and explicitly launch Squad in a new VS Code terminal.
-- Browse activity and available recorded usage in the Telemetry drawer.
-- Add local furniture, pets, and character sheets; stateful furniture animates at active desks and supports manual toggles.
 
 ## Requirements
 
@@ -65,7 +46,7 @@ The local browser observer remains a separate, source-only tool. Standalone term
 
 ## Install the pre-release
 
-After publication, open [Squad Pod in Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=brianswiger.squad-pod), confirm the publisher is **Brian Swiger**, and choose the **Pre-Release** version in VS Code. You can also install it from a terminal:
+Open [Squad Pod in Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=brianswiger.squad-pod), confirm the publisher is **Brian Swiger**, and choose the **Pre-Release** version in VS Code. You can also install it from a terminal:
 
 ```powershell
 code --install-extension brianswiger.squad-pod --pre-release
@@ -122,6 +103,8 @@ Choose **Layout** in the toolbar to edit the office:
 
 The VS Code setting **`squad-pod.autoShowPanel`** focuses the panel once when the extension activates. It is off by default; changes apply the next time the extension activates. It does not launch Squad.
 
+Roster and file observation does not require Copilot CLI authentication or an AI task. Live CLI log observation is a separate opt-in; recent-directory suggestions are a separate metadata read that you can disable with `squad-pod.directorySuggestions`.
+
 In the office's **Settings**, sound notifications play a short chime when an active agent becomes inactive; **Debug View** opens agent and layout diagnostics; and **Show Named Areas** toggles the Area overlay. You can also add or unload local asset directories and import or export layouts.
 
 Enable **Live Activity** in Settings and accept the VS Code confirmation to turn on `squad-pod.liveActivity` (off by default). It reads local Copilot CLI session metadata and `events.jsonl` for the newest Squad session matching the observed workspace. Exact roster matches animate existing members; running transient calls with explicit member parents can appear as temporary subtask characters. Short task descriptions, tool names, file basenames, command names and context counts are used; prompts, other arguments and outputs are never displayed or stored. Turning it off stops reading and clears live displays. Settings shows whether the source is off, searching, following or unavailable.
@@ -166,6 +149,7 @@ Descriptions inferred from those files are labeled **File activity hint**, not l
 
 - File-observed activity is approximate. Opt-in live activity reads best-effort local Copilot CLI session files, not a supported Squad Pod event API. The model projection is pinned to the shipped Copilot CLI 1.0.105 event declarations; this contract does not prove that a particular real session emitted a field. Unmatched members remain unattributed; stale or missing sessions fall back to file observations. Bounded scans may miss older in-flight members. Context gauges appear only when a live member's tool completion includes context metrics.
 - Directory launches do not switch the office's observed project.
+- Durable team hierarchy, automatic roster promotion, and remote access are not supported. The standalone observer is loopback-only; physical phone and tablet behavior is not yet verified.
 
 ## Testing and acceptance
 
@@ -174,9 +158,19 @@ start, automated checks, synthetic acceptance helpers, VSIX verification, and
 committed evidence packages. Native VS Code and real Squad testing is a separate,
 approval-gated process in the [native acceptance plan](docs/native-acceptance.md).
 
+Showcase recordings use a synthetic host and staged activity to demonstrate the office. They are not native-host or real-producer acceptance evidence.
+
 ## Custom assets
 
 Add a local asset directory in **Settings** for furniture, pets, and character sheets. Folder layouts, supported images, reload behavior, and import limits are described in [Custom asset manifests](docs/custom-assets.md).
+
+## Local browser observer
+
+You can also run the office in a browser with the separate, source-only local observer. It uses the same production renderer, observes an explicitly selected project, and is authenticated and loopback-only. Observation is read-only by default.
+
+Separate authenticated options enable selected-project office controls and owned terminals. Office controls include layout editing, seat persistence, sound/debug/Areas settings, browser JSON import/export, and revision-protected draft recovery. Owned terminals explicitly run `copilot --agent squad`; neither option changes the read-only observation boundary. Native dialogs, directory management, and browser-managed private-log consent are unavailable in the observer.
+
+See the [build/run and security instructions](standalone/README.md) for startup options and authentication requirements. The observer is separate from the Marketplace extension.
 
 ## Architecture
 
