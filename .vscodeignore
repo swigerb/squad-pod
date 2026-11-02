@@ -12,6 +12,7 @@ out/**
 src/**
 webview-ui/**
 standalone/**
+spikes/**
 scripts/**
 docs/**
 assets/showcase/**

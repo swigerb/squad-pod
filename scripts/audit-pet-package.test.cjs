@@ -86,12 +86,16 @@ test('rejects nested source maps', () => {
   );
 });
 
-test('rejects source, tooling, evidence, standalone, and native-terminal payloads', () => {
+test('rejects source, tooling, evidence, standalone, spikes, and native-terminal payloads', () => {
   for (const forbidden of [
     'extension/src/extension.ts',
     'extension/scripts/audit.cjs',
     'extension/acceptance-evidence/result.json',
     'extension/standalone/server.js',
+    'extension/spikes/canvas-173/plugin.json',
+    'extension/spikes/canvas-173/com.github.copilot/extensions/canvas-173/extension.mjs',
+    'extension/spikes/canvas-173/com.github.copilot/extensions/canvas-173/probe.mjs',
+    'extension/dist/spikes/other/payload.json',
     'extension/node_modules/node-pty/build/pty.node',
     'extension/dist/webview-ui/src/main.tsx',
     'extension/dist/esbuild.js',
