@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "status": "SUPPORTED_TRANSIENT_IDENTITY_NATIVE_EVIDENCE",
+  "scope": "Issue #111 supported session-local adaptation; not durable hierarchy, complete R-06/F-01 or full-suite acceptance.",
+  "product": {
+    "identity": "brianswiger.squad-pod",
+    "version": "0.1.1",
+    "source": "e1e0f017a6d6a54895ecb2acec71c6d79b816fc9",
+    "vsixSha256": "cad389f28392d8f02a75fa5a81a3deb9497d8991655d5a7ffe52324c4e722128",
+    "installedPayloadFilesCompared": 190,
+    "platform": "Windows native VS Code",
+    "productOrPublishedPackageChanged": false
+  },
+  "real": {
+    "evidenceClass": "NATIVE+REAL",
+    "producer": "Copilot CLI 1.0.105 with Squad 1.1.0 coordinator",
+    "freshSyntheticProjectSession": true,
+    "resumed": false,
+    "elapsedSeconds": 31.5,
+    "exitCode": 0,
+    "sessionErrors": 0,
+    "maxAiCredits": 30,
+    "processCeilingSeconds": 180,
+    "rootSessions": 1,
+    "matchedStartCompletionInstances": 2,
+    "explicitParentCall": true,
+    "rosterParentRunningVisible": true,
+    "temporaryChildAndParentAnnotationVisible": true,
+    "childRemovedAfterCompletion": true,
+    "duplicateRenderedIdentities": false,
+    "rosterUnchanged": true,
+    "partialCoverageAndTruncationDisclosed": true,
+    "rawSourceAndImagesPublished": false
+  },
+  "nativeFixtures": {
+    "evidenceClass": "NATIVE+FIXTURE",
+    "completedUtc": "2026-11-02T12:34:05.783Z",
+    "realProducerLaunches": 0,
+    "aiSpending": 0,
+    "cases": [
+      {
+        "name": "parent-existing-roster",
+        "outcome": "PASS"
+      },
+      {
+        "name": "dispatch-not-character",
+        "outcome": "PASS"
+      },
+      {
+        "name": "child-start",
+        "outcome": "PASS"
+      },
+      {
+        "name": "same-instance-one-character",
+        "outcome": "PASS"
+      },
+      {
+        "name": "dispatch-complete-not-terminal",
+        "outcome": "PASS"
+      },
+      {
+        "name": "terminal-alias-removes-character",
+        "outcome": "PASS"
+      },
+      {
+        "name": "late-events-no-resurrection",
+        "outcome": "PASS"
+      },
+      {
+        "name": "before-authoritative-selection",
+        "outcome": "PASS"
+      },
+      {
+        "name": "selection-reconciles-existing-member",
+        "outcome": "PASS"
+      },
+      {
+        "name": "name-alone-not-promotion",
+        "outcome": "PASS"
+      },
+      {
+        "name": "cancelled-removes-character",
+        "outcome": "PASS"
+      },
+      {
+        "name": "failure-child-started",
+        "outcome": "PASS"
+      },
+      {
+        "name": "failed-removes-character",
+        "outcome": "PASS"
+      },
+      {
+        "name": "stale-child-started",
+        "outcome": "PASS"
+      },
+      {
+        "name": "clear-activity-keeps-live-task",
+        "outcome": "PASS"
+      },
+      {
+        "name": "actual-five-minute-stale-clearing",
+        "outcome": "PASS"
+      }
+    ],
+    "negativeAssertionConsumptionProofs": [
+      {
+        "name": "proof-shared-instance",
+        "outcome": "PASS"
+      },
+      {
+        "name": "dispatch-event-consumed-still-running",
+        "outcome": "PASS"
+      },
+      {
+        "name": "proof-terminal-alias",
+        "outcome": "PASS"
+      },
+      {
+        "name": "late-events-consumed-still-terminal",
+        "outcome": "PASS"
+      }
+    ],
+    "negativeAssertionMethod": "A later distinct rendered task marker proves the observer consumed the preceding dispatch/late lifecycle event before unchanged-state assertions.",
+    "staleWaitElapsedMs": 310447,
+    "sourceUnchangedDuringStaleWait": true,
+    "originalProjectFilesUnchanged": true
+  },
+  "earlierAttempt": {
+    "evidenceClass": "NATIVE+REAL_WITH_PRODUCER_ERROR",
+    "exitCode": 1,
+    "errorType": "persistence",
+    "keptSeparateFromCleanRun": true,
+    "diagnosis": "Windows sharing hazard reproduced in the monitoring harness; corrected shared reader used for the clean run. Exact earlier error causality is not conclusively established."
+  },
+  "disposition": {
+    "supported": "Roster-authoritative, explicit-parent, instance-deduplicated transient characters with lifecycle and stale/source clearing.",
+    "unsupported": "Pinned Squad 1.1.0 has no audited durable parent hierarchy or authoritative automatic roster-promotion contract.",
+    "realChildCustomAgentSelection": "NOT-PRODUCED; selected-instance reconciliation is native fixture evidence only.",
+    "fullR06F01AndPlatformSuiteComplete": false,
+    "broaderTrackers": [
+      157,
+      4,
+      7,
+      8,
+      142
+    ]
+  },
+  "cleanup": {
+    "bothOwnedNativeHostsAndRealProducerStopped": true,
+    "observersRevokedThroughNativeControls": true,
+    "normalProfilesTouched": false,
+    "existingPrivateHomesRead": false,
+    "rawLogsOutputsAndScreenshotsPublished": false
+  },
+  "localEvidenceSha256": {
+    "realReceipt": "bf7ab1be003e90a191f6875f58cb5ba4338d147f1318cba0814fa41ae05df12e",
+    "realRenderedObservations": "2e9d6ed8f12507b34d0f6ae157e973c42c5db7ad74cdf5d1956befe76514b2f7",
+    "fixtureCases": "a575be673e8db3af257594c37886ba5fc3abdf42ea916069377f347a2ecea0cf",
+    "consumedEventProofs": "8ebb3ea303644d6e20a20c18f58b8c5b791183992a808b54bf22412b037a339c",
+    "fixtureCleanup": "e2564c36ae58f1cf4d2a7a9bbc52f318894e5a204b708767fd8540f9ca211a9d"
+  },
+  "limitations": [
+    "The real running child row was outside its nested scroll viewport; the temporary character/parent annotation were visible. No all-frame canvas-geometry claim.",
+    "Fixture selection, cancellation, failure and aliases do not assert that the real producer emitted those combinations.",
+    "Other CLI versions, resumed histories, standalone/native platform/device parity and all remaining full-suite subchecks are not certified.",
+    "No paid run, raw-data publication, new Marketplace version or broader issue closure is authorized by this record."
+  ]
+}
