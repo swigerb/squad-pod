@@ -7,6 +7,7 @@ const test = require('node:test');
 const { masterBlobPrefix, validatePackagedMarkdown } = require('./package-links.cjs');
 
 const root = path.resolve(__dirname, '..');
+const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const verifyScript = path.join(__dirname, 'verify-package-links.cjs');
 const packagedReadme = [
   `[Testing guide](${masterBlobPrefix}docs/testing.md)`,
@@ -16,6 +17,15 @@ const packagedReadme = [
   `[License](${masterBlobPrefix}LICENSE)`,
   '<img src="https://example.com/squad.png" alt="Squad">',
 ].join('\n');
+
+function packageEntries({ preview = false, preRelease, version = manifest.version, publisher = manifest.publisher, galleryFlags = 'Public' } = {}) {
+  return {
+    'extension/readme.md': packagedReadme,
+    'extension/changelog.md': '# Changelog',
+    'extension/package.json': JSON.stringify({ ...manifest, preview }),
+    'extension.vsixmanifest': `<PackageManifest><Metadata><Identity Id="${manifest.name}" Version="${version}" Publisher="${publisher}" /><GalleryFlags>${galleryFlags}</GalleryFlags><Properties>${preRelease === undefined ? '' : `<Property Id="Microsoft.VisualStudio.Code.PreRelease" Value="${preRelease}" />`}</Properties></Metadata></PackageManifest>`,
+  };
+}
 
 function storedZip(entries) {
   const localRecords = [];
@@ -77,9 +87,11 @@ test('personal branding uses square PNG assets and HTTPS theme-aware original lo
   const lockfile = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   assert.equal(lockfile.version, manifest.version);
   assert.equal(lockfile.packages[''].version, manifest.version);
-  assert.equal(manifest.preview, true);
-  assert.match(manifest.scripts.package, /^vsce package\b.*\s--pre-release\b/);
-  assert.match(readme, /code --install-extension brianswiger\.squad-pod --pre-release/);
+  assert.equal(manifest.preview, false);
+  assert.match(manifest.scripts.package, /^vsce package\b/);
+  assert.doesNotMatch(manifest.scripts.package, /--pre-release\b/);
+  assert.match(readme, /code --install-extension brianswiger\.squad-pod\r?\n/);
+  assert.doesNotMatch(readme, /code --install-extension[^\r\n]*--pre-release/);
 
   for (const [filename, size] of [
     [manifest.icon, 256],
@@ -117,14 +129,17 @@ test('storefront leads with the extension pitch and keeps observer guidance belo
   const tagline = readme.indexOf('**Your Squad AI team, but make it pixel art.**');
   const features = readme.indexOf('## Features');
   const showcase = readme.indexOf('## See Squad Pod in action');
-  const installation = readme.indexOf('## Install the pre-release');
+  const installation = readme.search(/^## Install\r?$/m);
   const observer = readme.indexOf('## Local browser observer');
   assert(tagline >= 0 && tagline < features && features < showcase);
   assert(installation >= 0 && observer > installation);
   assert(!readme.includes('## Preview release scope'));
   assert(readme.includes('Opt in to matching local Copilot CLI sessions'));
-  assert(readme.includes('## Known limitations'));
-  assert(readme.includes('Durable team hierarchy, automatic roster promotion, and remote access are not supported.'));
+  assert(readme.includes('## Compatibility and privacy'));
+  assert(readme.includes('not permanent reporting lines or automatic roster promotions'));
+  assert(readme.includes('not a remote-access service or a supported phone/tablet product'));
+  assert(readme.includes('docs/testing.md#stable-10-release-scope'));
+  assert(readme.includes('Switch to Release Version'));
   assert(readme.includes('Squad-Pod-Sizzle-preview.gif'));
 });
 
@@ -157,13 +172,38 @@ test('archive verifier reads the exact lowercase Markdown entries emitted by vsc
   t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
 
   const archivePath = path.join(tempDir, 'lowercase.vsix');
-  fs.writeFileSync(archivePath, storedZip({
-    'extension/readme.md': packagedReadme,
-    'extension/changelog.md': '# Changelog',
-  }));
+  fs.writeFileSync(archivePath, storedZip(packageEntries()));
   const result = spawnSync(process.execPath, [verifyScript, archivePath], { encoding: 'utf8' });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   assert.match(result.stdout, /PASS packaged README and CHANGELOG links/);
+  assert.match(result.stdout, /PASS stable VSIX identity/);
+});
+
+test('archive verifier rejects mismatched identity and either pre-release marker', t => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-stable-package-'));
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+  for (const [options, expected] of [
+    [{ preview: true }, /preview listing label/],
+    [{ galleryFlags: 'Public, Preview' }, /preview gallery flag/],
+    [{ preRelease: 'true' }, /pre-release update channel/],
+    [{ version: '0.0.0' }, /VSIX Version/],
+    [{ publisher: 'wrong-publisher' }, /VSIX Publisher/],
+  ]) {
+    const archivePath = path.join(tempDir, 'invalid.vsix');
+    fs.writeFileSync(archivePath, storedZip(packageEntries(options)));
+    const result = spawnSync(process.execPath, [verifyScript, archivePath], { encoding: 'utf8' });
+    assert.notEqual(result.status, 0, JSON.stringify(options));
+    assert.match(result.stderr, expected);
+  }
+});
+
+test('archive verifier accepts an explicit false pre-release property', t => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-stable-channel-'));
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+  const archivePath = path.join(tempDir, 'stable.vsix');
+  fs.writeFileSync(archivePath, storedZip(packageEntries({ preRelease: 'false' })));
+  const result = spawnSync(process.execPath, [verifyScript, archivePath], { encoding: 'utf8' });
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 });
 
 test('archive verifier rejects uppercase Markdown entry names', t => {

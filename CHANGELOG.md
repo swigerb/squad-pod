@@ -4,6 +4,22 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-02
+
+### Stable Squad-native release
+
+- Graduate `brianswiger.squad-pod` to the stable Marketplace channel. The extension identity and persisted data formats are unchanged; preview labeling and pre-release packaging are removed.
+- Present the complete Squad-native feature set: animated roster, agent details and charters, opt-in live tools/models/context, task bubbles and temporary subagents, the full office editor, named Areas, seating, pets, custom assets, protected layout recovery, directory launches, and telemetry/usage.
+- Rewrite the README around installation, feature benefits and practical workflows. Replace blanket upstream-parity framing with an explicit Squad-native comparison and linked technical compatibility details.
+- Document upgrading from 0.1.x without uninstalling, preserving settings and workspace state.
+- Keep the authenticated local browser companion separate from the Marketplace extension, with its office-control and owned-terminal options documented.
+- Define stable release criteria independently of the original all-surface parity campaign. Historical results remain unchanged; durable hierarchy, automatic roster promotion, remote access and physical mobile support are outside 1.0.
+- Add package checks for the exact stable version, publisher, listing label and update channel. Publication remains an explicitly approved owner action; retired workflows stay report-only.
+
+This release changes distribution metadata, documentation and packaging guards,
+not the office runtime or the underlying Squad/Copilot producer contracts.
+Earlier release notes below describe their original implementation checkpoints.
+
 ## [0.1.1] - 2026-11-01
 
 ### Documentation

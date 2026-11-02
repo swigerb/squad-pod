@@ -172,16 +172,64 @@ VS Code installs the VSIX `extension/` payload and adds `__metadata` to the
 installed `package.json`, so compare the documented payload rather than the
 archive and installed manifest byte-for-byte.
 
+## Stable 1.0 release scope
+
+On 2026-11-02 the maintainer selected **stable Squad-native 1.0**, replacing
+unqualified Pixel Agents parity as the release contract. This is a scope decision,
+not a blanket PASS for the original 27-case campaign. Existing evidence and
+BLOCKED/NOT-PRODUCED outcomes remain attached to their original artifacts.
+
+| Surface | 1.0 contract |
+|---|---|
+| Marketplace product | Stable `brianswiger.squad-pod` VS Code extension; unchanged extension identity and persisted-data formats. |
+| Desktop compatibility | VS Code `^1.107.0` is the declared API minimum. Native release acceptance targets Windows x64/current stable; that does not certify every VS Code version or native macOS/Linux combination. CI separately covers the platforms described above. |
+| Office functionality | Roster/details, editor, assets, pets, Areas, seats, recovery, explicit directories/launch, telemetry and local observation ship as documented in the README. |
+| Optional producer integration | Copilot CLI 1.0.105 bounded local observation and explicit usage import; show only emitted fields and authoritative identities. Prior real/native evidence remains version- and artifact-scoped. |
+| Team identity | Squad roster is authoritative. Parent-linked tasks are temporary. Durable reporting hierarchies and automatic roster promotion are outside 1.0, not approximated by task names. |
+| Browser companion | Separate source-only, authenticated, loopback desktop-browser tool. Office control and owned terminals require separate authority; it is not included in the VSIX or published to npm. |
+| Out of scope | Remote hosting, persistent browser credentials, physical phone/tablet support, Claude-specific lifecycle semantics and universal native-platform/producer-version certification. |
+
+### Stable release gates
+
+For the stable transition, retain the previous source evidence
+and execute the following against the exact new candidate:
+
+1. Match manifest/lockfile version, publisher, stable package channel and listing label; retain source/tree and VSIX SHA-256.
+2. Run the existing targeted package/link/release-workflow guards, type checks and production build. Preserve CI's normal platform gates.
+3. Compare the candidate runtime and bundled assets with the prior published 0.1.1 payload. Any runtime change requires affected-case reruns. The already-merged CLI usage provenance disclosure is covered by its component regressions and native Telemetry inspection; it does not change parsing or activity semantics.
+4. Install and open the exact candidate in an isolated current Windows VS Code profile. Exercise roster/details, Settings, Telemetry, Directories and Layout; confirm no implicit AI launch or live-log consent.
+5. Exercise a 0.1.1-to-1.0.0 upgrade in that isolated profile, retaining the synthetic saved layout, seat/appearance state and settings. Do not uninstall the predecessor or touch normal profiles.
+6. Require owner approval of the artifact, public wording and individual tracker dispositions. After publication, confirm the public stable version/channel and installed payload.
+
+Stop for data loss, unintended launch, privacy-boundary failure or wrong-member
+attribution. New defects are not waived by this narrower contract. New actual AI
+runs, credentials and private-log access remain separately approved; they are not
+required to relabel an unchanged runtime as stable.
+
+### Tracker disposition
+
+Close the broad trackers only with explicit links to the stable release and
+its candidate evidence, distinguishing completed distribution work from replaced
+requirements:
+
+| Tracker | Stable 1.0 disposition |
+|---|---|
+| #142 | Complete with the stable publication, installation/update evidence and owner-approved manual publication path. The retired automated-publishing proposal is superseded, not implemented. |
+| #157 | Supersede the all-case acceptance campaign with the stable transition gates above. Preserve every original result; do not claim the full campaign passed. |
+| #7 | Complete the shipped Squad-native office/editor scope. Claude-specific hierarchy/promotion and exhaustive historical parity criteria are superseded by the documented contract. |
+| #8 | Close the original browser/mobile parity proposal as superseded by the separate local desktop companion. Physical mobile and remote product support are not being delivered or certified. |
+| #4 | Complete the modernization and stable Squad-native product; supersede the blanket upstream-parity objective with the explicit feature comparison. |
+
+The release receipt and issue comments record actual completion and closure
+reasons. This scope document alone does not establish publication or acceptance.
+
 ### Release automation
 
-The initial release contract is the **0.1.0 desktop VS Code pre-release** under
-`brianswiger.squad-pod`, not a full native/REAL/standalone/mobile acceptance claim.
-`package.json` sets `preview: true` for listing presentation, and `npm run package`
-separately passes `--pre-release` to `vsce` for the update channel. CI therefore
-uploads a pre-release candidate. Verify both markers in the exact archived
-`extension.vsixmanifest`; neither a version number nor a successful build proves
-the intended channel. A future stable release requires an explicit owner
-decision and corresponding packaging/metadata changes.
+`package.json` uses `preview: false` and `npm run package` omits `--pre-release`.
+The archive verifier checks both the packaged extension metadata and
+`extension.vsixmanifest`; the release number alone does not establish the channel.
+Users on 0.1.x pre-release can choose **Switch to Release Version** in VS Code
+without uninstalling or changing the extension identity.
 
 Squad Pod has no automated release or publication path. The inherited Squad CLI
 **Squad Release**, **Squad Insider Release** and **Squad Promote** workflows are
@@ -195,9 +243,12 @@ example after a Squad template refresh.
 The maintainer path is the ordinary **Squad Pod CI** run on `master`: it builds,
 audits and uploads the `squad-pod-vsix` artifact with its identity receipt. That
 artifact is a candidate, not a release. Marketplace publication is a separate
-owner and Scout step tracked in
-[#158](https://github.com/swigerb/squad-pod/issues/158); it requires explicit
-approval of the publisher, version, channel and exact artifact.
+owner and Scout step; it requires explicit approval of the publisher, version,
+channel and exact artifact. The initial pre-release publication is retained in
+[#158](https://github.com/swigerb/squad-pod/issues/158); it is not authority to
+publish a later version. Publish the approved archive without rebuilding it.
+Prefer a higher-version corrective release if needed; unpublishing is not an
+automatic or reversible rollback.
 
 ## Native VS Code and real Squad
 

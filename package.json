@@ -2,9 +2,9 @@
   "name": "squad-pod",
   "displayName": "Squad Pod",
   "description": "Pixel art office where your Squad agents come to life as animated characters",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "publisher": "brianswiger",
-  "preview": true,
+  "preview": false,
   "author": {
     "name": "Brian Swiger",
     "url": "https://www.mightybs.com/"
@@ -14,6 +14,17 @@
     "url": "https://github.com/swigerb/squad-pod/issues"
   },
   "icon": "assets/squad-pod-icon.png",
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "squad",
+    "copilot",
+    "pixel-art",
+    "agents",
+    "office"
+  ],
   "engines": {
     "vscode": "^1.107.0",
     "node": ">=22.13.0"
@@ -82,7 +93,7 @@
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "vsce package --pre-release --githubBranch master --no-dependencies && node scripts/audit-pet-package.cjs && node --test scripts/package-links.test.cjs && node scripts/verify-package-links.cjs",
+    "package": "vsce package --githubBranch master --no-dependencies && node scripts/audit-pet-package.cjs && node --test scripts/package-links.test.cjs && node scripts/verify-package-links.cjs",
     "check-types": "tsc --noEmit && npm run check-types --prefix webview-ui",
     "lint": "eslint src",
     "test": "vitest run",
