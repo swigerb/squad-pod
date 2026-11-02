@@ -15,6 +15,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, SourceStatus, PodSettings, DirectoryCatalog } from './types.js';
 import { parseCharterModel, readModelConfig } from './declaredModels.js';
+import { parseCharterDetails } from './charterDetails.js';
 import { ProjectFiles } from './projectFiles.js';
 import {
   WORKSPACE_KEY_LAYOUT,
@@ -1224,33 +1225,7 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
     const source = readAgentCharter(workspaceRoot, charterPath);
     charterContent = source;
     charterStatus = 'available';
-    const lines = source.split(/\r?\n/);
-    const titleIndex = lines.findIndex(line => /^\s*#\s+/.test(line));
-    const paragraphLines: string[] = [];
-    if (titleIndex >= 0) {
-      let index = titleIndex + 1;
-      while (index < lines.length && !lines[index].trim()) {
-        index++;
-      }
-      while (index < lines.length && lines[index].trim() && !/^\s*#{1,6}\s+/.test(lines[index])) {
-        paragraphLines.push(lines[index].trim());
-        index++;
-      }
-    }
-
-    if (paragraphLines.length > 0) {
-      const paragraph = paragraphLines.join(' ');
-      // Take first 2-3 sentences
-      const sentences = paragraph.split(/\.\s+/);
-      charterSummary = sentences.slice(0, 3).join('. ');
-      if (!charterSummary.endsWith('.')) {
-        charterSummary += '.';
-      }
-    }
-    expertise = source.split(/\r?\n/).map(line => /^\s*[-*]\s+\*\*Expertise:\*\*\s*(.+)$/i.exec(line)?.[1]?.trim() ?? '')
-      .find(Boolean) ?? null;
-    responsibilities = extractDeclaredSection(source, ['Responsibilities', 'What I Own']);
-    boundaries = extractDeclaredSection(source, ['Boundaries']);
+    ({ charterSummary, expertise, responsibilities, boundaries } = parseCharterDetails(source));
   } catch (error) {
     charterSummary = null;
     charterContent = null;
@@ -1334,18 +1309,4 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
     lastActiveAt: agent.lastActiveAt,
     lastActiveAtStatus: agent.lastActiveAtStatus,
   };
-}
-
-function extractDeclaredSection(source: string, headings: string[]): string | null {
-  const lines = source.split(/\r?\n/);
-  const heading = new RegExp(`^#{1,6}\\s+(?:${headings.map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s*#*\\s*$`, 'i');
-  const start = lines.findIndex(line => heading.test(line.trim()));
-  if (start < 0) {return null;}
-  const section: string[] = [];
-  for (const line of lines.slice(start + 1)) {
-    if (/^#{1,6}\s+/.test(line.trim())) {break;}
-    if (line.trim()) {section.push(line.trim());}
-  }
-  const text = section.join('\n').trim();
-  return text ? text.slice(0, 4096) : null;
 }
