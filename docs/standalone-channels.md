@@ -45,9 +45,46 @@ live consent/usage, editor/seat writes and recovery persistence itself still use
 `standalone`/`readOnly` assumptions. This slice does not make arbitrary injected clients
 safe across those other surfaces.
 
-This is a foundation slice of #174, not Canvas support or instance isolation.
+### Mounted office state ownership (#174 increment)
+
+Each mounted `ConnectedOffice`, beneath the existing `HostClientProvider`, now
+allocates its own `OfficeState` and `EditorState`. Its stable getter is the only
+office-state path used by `useExtensionMessages`, `useEditorActions`, camera/card
+handlers, labels/debug UI and the existing `OfficeCanvas` renderer. There is no
+module-global office/editor fallback. Layouts, characters/seats, transient subagents,
+pets, selection/hover/camera fields and editor tool/color/selection fields belong
+to that mounted office. The already hook-local `LayoutDraft`, undo/redo history,
+pan/zoom, roster/activity/detail correlation and channel subscription now operate
+on that same office instead of a shared singleton.
+
+Unmount drops that instance and unsubscribes its channel; it does not dispose an
+injected client or reset a peer. Remount starts fresh scene/editor objects, with
+draft recovery only through the existing client's recovery state and layout
+handshake. Recovery-read failure never mounts the office or subscribes/sends ready.
+Single-view defaults, layout/recovery formats, subscribe-before-ready ordering and
+source-loss processing are unchanged. In-place client/project replacement is not
+implemented here; callers must remount when changing clients/projects.
+
+`App.instances.test.tsx` mounts two real Apps with separate synthetic clients in
+the normal webview Vitest runner (jsdom, no pixel-render qualification). It checks
+distinct OfficeState objects and visible rosters, editor tool choices, drafts,
+undo/redo, recovery writes and routed save/detail messages; source-loss/empty-roster
+delivery, unmount/remount and a recovery-read failure in one leave the other live.
+
+**Still outside this increment:** mutable module-level asset registries/loaders
+(floor/wall/carpet/pet/character templates, furniture catalog, tileset metadata,
+loading generations/diagnostics) and rendering/colorization caches remain shared.
+Audio enablement/context and window/document input routing (including editor
+keyboard shortcuts, canvas pan keys and DOM control IDs) are not instance-scoped.
+Distinct asset streams or simultaneous globally routed keyboard input are therefore
+not qualified as isolated. Host-side agent/session stores, adapter/transport lifetime,
+default VS Code client acquisition and standalone server/terminal session ownership
+are unchanged. No new session identity or write authority is inferred from this seam.
+
+This is a bounded state-allocation foundation slice of #174, not Canvas support
+or full multi-instance acceptance.
 Canvas entry/theme/error UX, explicit validated current-root/exact-session authority,
-real per-instance office/editor/agent state, two-project/session tests, and integrated
+remaining shared-state/input isolation, two-project/session tests, and integrated
 failed-init/disposal qualification remain required. No single-instance exemption applies;
 unproved native APIs and #173 runtime/live gates remain unchanged.
 

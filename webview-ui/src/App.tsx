@@ -26,14 +26,7 @@ import { HostClientProvider, useHostClient } from './HostClientContext.js';
 import { defaultHostClient, defaultHostError, type HostClient } from './hostClient.js';
 import type { CameraRequest } from './office/engine/viewport.js';
 
-const officeStateRef = { current: null as OfficeState | null };
-const editorState = new EditorState();
 const unsupportedHostMessage = 'Squad Pod needs its supported VS Code host. Run “Squad Pod: Show Panel” from VS Code; standalone browser transport is not available in this build.';
-
-function getOfficeState(): OfficeState {
-  if (!officeStateRef.current) officeStateRef.current = new OfficeState();
-  return officeStateRef.current;
-}
 
 export default function App({
   client = defaultHostClient,
@@ -87,6 +80,11 @@ function ConnectedApp({ readOnly, standalone }: { readOnly: boolean; standalone:
 
 function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryState: unknown; readOnly: boolean; standalone: boolean }) {
   const client = useHostClient();
+  // The stable getter feeds the same instance to message hooks, editor and renderer.
+  const [{ getOfficeState, editorState }] = useState(() => {
+    const officeState = new OfficeState();
+    return { getOfficeState: () => officeState, editorState: new EditorState() };
+  });
   const editor = useEditorActions(getOfficeState, editorState, recoveryState, readOnly);
   const { observedTasks, liveModels, recordedUsage, cliUsage, assetStatus, settings, sourceStatus, directoryCatalog, directoryError, directoryNotice, updateSetting, agents, agentTools, agentStatuses, agentTasks, layoutReady, noWorkspace, agentDetail, setAgentDetail, agentDetails, requestAgentDetail, squadInfo, setSquadInfo, telemetryEvents, clearTelemetry } = useExtensionMessages(
     getOfficeState,
@@ -112,7 +110,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
     getOfficeState().cameraFollowId = null;
     setFollowedAgentId(null);
     setCameraRequest(previous => ({ id: (previous?.id ?? 0) + 1, agentId }));
-  }, []);
+  }, [getOfficeState]);
 
   useEffect(() => {
     if (!standalone) { setTouchMobile(false); return; }
@@ -133,7 +131,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       getOfficeState().cameraFollowId = null;
       if (followedAgentId) setFollowedAgentId(null);
     } else getOfficeState().cameraFollowId = followedAgentId;
-  }, [agents, followedAgentId, touchMobile]);
+  }, [agents, followedAgentId, touchMobile, getOfficeState]);
 
   useEffect(() => {
     if (agentDetail && !agents.includes(agentDetail.id)) {
@@ -162,7 +160,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
     setAgentDetail(null);
     setCardPosition({ x: screenX, y: screenY });
     requestAgentDetail(agentId);
-  }, [requestAgentDetail, setAgentDetail, touchMobile]);
+  }, [requestAgentDetail, setAgentDetail, touchMobile, getOfficeState]);
 
   const handleCloseCard = useCallback(() => {
     setAgentDetail(null);
@@ -201,7 +199,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       members, totalAgents: members.length,
       activeAgents: members.filter((member) => member.isActive).length,
     };
-  }, [agentStatuses, agentTasks, agents, readOnly, standalone, sourceStatus?.workspaceRoot, squadInfo]);
+  }, [agentStatuses, agentTasks, agents, readOnly, standalone, sourceStatus?.workspaceRoot, squadInfo, getOfficeState]);
 
   const visibleSquadInfo = isSquadInfoOpen ? currentSquadInfo : null;
   const handleRequestSquadDetail = useCallback((agentId: string) => {

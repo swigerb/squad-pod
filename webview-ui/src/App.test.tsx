@@ -410,9 +410,6 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     const assignments = vi.spyOn(OfficeState.prototype, 'getSeatAssignments');
     root = createRoot(host);
     act(() => root.render(<App client={client} standalone readOnly={readOnly} />));
-    // App's OfficeState outlives remounts; drop roster members leaked by earlier tests so
-    // test-agent-1 is seated fresh instead of reusing a stale randomly placed character.
-    send({ type: 'existingAgents', agents: [] });
     const chairCols = [2, 5, 8, 11];
     snapshot({ ...imported, furniture: chairCols.flatMap((col, index) => [
       { uid: `desk-${index}`, type: 'desk', col, row: 1, rotation: 0 },
