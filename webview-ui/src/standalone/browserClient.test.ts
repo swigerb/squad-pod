@@ -18,6 +18,62 @@ class Socket {
 afterEach(() => vi.useRealTimers());
 describe('production browser HostClient adapter', () => {
   const layout: OfficeLayout = { version: 2, cols: 2, rows: 2, tiles: [1, 1, 1, 1], furniture: [] };
+  it('advertises only existing observer reads and keeps writes, recovery and navigation unavailable', () => {
+    const status = vi.fn();
+    const ws = new Socket();
+    const createSocket = vi.fn(() => ws as unknown as WebSocket);
+    const client = createBrowserClient(status, createSocket, 'http://127.0.0.1:1234');
+    expect(client.capabilities).toEqual({
+      actions: ['getSettings', 'requestAgentDetail'], recoveryState: 'unavailable',
+    });
+    expect(createSocket).not.toHaveBeenCalled();
+    const unsubscribe = connectOffice(client, vi.fn());
+    try {
+      ws.open();
+      expect(createSocket).toHaveBeenCalledExactlyOnceWith('ws://127.0.0.1:1234/office');
+      expect(client.getState()).toBeUndefined();
+      expect(() => client.setState({})).toThrow('disabled in this read-only observer');
+      const count = ws.send.mock.calls.length;
+      const unsupported = [
+        { type: 'saveLayout' as const, layout },
+        { type: 'addAssetDirectory' as const },
+        { type: 'importLayout' as const },
+        { type: 'exportLayout' as const },
+        { type: 'focusAgent' as const, agentId: 'fixture' },
+      ];
+      for (const message of unsupported) {
+        expect(client.capabilities.actions).not.toContain(message.type);
+        client.send(message);
+        expect(status).toHaveBeenLastCalledWith('Read-only: this operation is unavailable; nothing was saved or launched.');
+      }
+      expect(ws.send).toHaveBeenCalledTimes(count);
+    } finally { unsubscribe(); client.dispose(); }
+  });
+
+  it('describes opted-in control without enabling native actions or bypassing readiness', () => {
+    const f = controlled();
+    try {
+      expect([...f.client.capabilities.actions].sort()).toEqual([
+        'getSettings', 'requestAgentDetail',
+        'saveLayout', 'saveAgentSeats', 'setSoundEnabled', 'setDebugEnabled', 'setShowAreas',
+        'importLayout', 'exportLayout', 'exportLayoutSnapshot',
+      ].sort());
+      expect(f.client.capabilities.recoveryState).toBe('browser-storage');
+      expect(Object.isFrozen(f.client.capabilities)).toBe(true);
+      expect(Object.isFrozen(f.client.capabilities.actions)).toBe(true);
+      f.client.send({ type: 'saveLayout', layout });
+      expect(f.sockets[0].send).not.toHaveBeenCalled();
+      expect(f.received).toHaveBeenLastCalledWith(expect.objectContaining({
+        type: 'layoutError', error: expect.stringContaining('not ready'),
+      }));
+      f.ready();
+      const count = f.sockets[0].send.mock.calls.length;
+      f.client.send({ type: 'openSquadAgent', agentId: 'fixture' });
+      f.client.send({ type: 'removeAssetDirectory', directory: 'fixture' });
+      expect(f.sockets[0].send).toHaveBeenCalledTimes(count);
+    } finally { f.unsubscribe(); f.client.dispose(); }
+  });
+
   it('clears task-derived displays on disconnect without granting authority or replaying old snapshots', async () => {
     vi.useFakeTimers();
     const sockets: Socket[] = [];

@@ -80,8 +80,9 @@ async function main() {
       assert.equal(await bubble.count(), 0, 'default-off source has no invented summary');
       assert.equal(fixture.reads.length, 0, 'default-off does not inspect a home');
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
-      await page.locator('#squad-pod-live-activity').click();
-      await page.waitForFunction(() => document.querySelector('#squad-pod-live-activity').checked);
+      await page.getByRole('dialog', { name: 'Settings', exact: true }).getByLabel('Live Activity (opt-in)', { exact: true }).click();
+      await page.waitForFunction(() => [...document.querySelectorAll('[role="dialog"][aria-label="Settings"] label')]
+        .find(label => label.textContent === 'Live Activity (opt-in)')?.control?.checked === true);
       await page.getByRole('button', { name: '×', exact: true }).click();
       fixture.append(spawn() + tool('read', 'view', { path: `C:\\private\\${secret}.ts` }));
       await page.waitForFunction(() =>

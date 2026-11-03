@@ -22,6 +22,21 @@ describe("VS Code host client adapter", () => {
     const client = createVSCodeClient(acquireApi, new EventTarget());
     const message: WebviewMessage = { type: "setShowAreas", enabled: true };
 
+    expect(client.capabilities.recoveryState).toBe("webview-state");
+    expect([...client.capabilities.actions].sort()).toEqual([
+      "getSettings", "requestAgentDetail",
+      "saveLayout", "saveAgentSeats", "setSoundEnabled", "setDebugEnabled", "setShowAreas",
+      "addAssetDirectory", "removeAssetDirectory",
+      "importLayout", "exportLayout", "exportLayoutSnapshot",
+      "focusAgent", "openSquadAgent", "openSquadInfo",
+      "getDirectories", "addDirectory", "updateDirectoryName", "changeDirectoryPath",
+      "removeDirectory", "forgetDirectoryLaunch", "launchDirectory",
+      "selectCliUsage", "refreshCliUsage", "clearCliUsage", "setLiveActivity",
+      "diagnosticReport",
+    ].sort());
+    expect(Object.isFrozen(client.capabilities)).toBe(true);
+    expect(Object.isFrozen(client.capabilities.actions)).toBe(true);
+    expect(api.postMessage).not.toHaveBeenCalled();
     client.send(message);
     expect(acquireApi).toHaveBeenCalledOnce();
     expect(api.postMessage).toHaveBeenCalledWith(message);

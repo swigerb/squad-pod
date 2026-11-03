@@ -1,4 +1,4 @@
-import { act, useState } from 'react';
+import { act, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -374,10 +374,11 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
     const getOffice = () => office;
     const panRef = { current: { x: 0, y: 0 } };
     function Harness() {
+      const boundary = useRef(host);
       actions = useEditorActions(getOffice, editorState, undefined);
       useEditorKeyboard(actions.isEditMode, editorState, actions.handleDeleteSelected,
         actions.handleRotateSelected, actions.handleUndo, actions.handleRedo,
-        () => actions.handleEditorSelectionChange(null), actions.handleToggleEditMode);
+        () => actions.handleEditorSelectionChange(null), actions.handleToggleEditMode, boundary);
       return withClient(<OfficeCanvas officeState={office} editorState={editorState}
         isEditMode={actions.isEditMode} editorTick={actions.editorTick} zoom={1} panRef={panRef}
         onEditorSelectionChange={actions.handleEditorSelectionChange}
@@ -410,7 +411,7 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
   }
 
   function key(key: string, ctrlKey = false) {
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey, bubbles: true })));
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey, bubbles: true })));
   }
 
   function drag(col: number, row: number, alt = false) {

@@ -2,7 +2,6 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
-import { isSoundEnabled } from './notificationSound.js';
 import { resetPetTemplates } from './office/sprites/petSpriteData.js';
 import type { DirectoryCatalog, OutboundMessage, SourceStatus } from '../../src/types.js';
 import type { AssetSnapshot } from '../../src/manifestAssets.js';
@@ -105,6 +104,38 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(client.events.slice(0, 3)).toEqual([
       'subscribe', 'send:webviewReady', 'send:diagnosticReport',
     ]);
+  });
+
+  it('honors transfer restrictions in an injected client without standalone/readOnly flags', () => {
+    act(() => root.unmount());
+    const unrestricted = createHostClientFixture();
+    client = { ...unrestricted, capabilities: {
+      ...unrestricted.capabilities,
+      actions: unrestricted.capabilities.actions.filter(action =>
+        !['importLayout', 'exportLayout', 'exportLayoutSnapshot'].includes(action)),
+    } };
+    const acquireApi = vi.fn(() => { throw new Error('Must not acquire VS Code'); });
+    vi.stubGlobal('acquireVsCodeApi', acquireApi);
+    try {
+      root = createRoot(host);
+      act(() => root.render(<App client={client} />));
+      snapshot(imported, 'restricted');
+      click('Settings');
+      for (const label of ['Import Layout', 'Export Layout']) {
+        const button = [...host.querySelectorAll('button')].find(item => item.textContent === label);
+        expect(button?.disabled).toBe(true);
+        click(label);
+      }
+      expect(host.textContent).toContain('Layout import is unavailable in this host.');
+      expect(host.textContent).toContain('Layout export is unavailable in this host.');
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type))
+        .not.toEqual(expect.arrayContaining(['importLayout']));
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type))
+        .not.toEqual(expect.arrayContaining(['exportLayout']));
+      expect(acquireApi).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it.each(['ordinary', 'constructor', 'toString', '__proto__'])(
@@ -378,9 +409,6 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     const assignments = vi.spyOn(OfficeState.prototype, 'getSeatAssignments');
     root = createRoot(host);
     act(() => root.render(<App client={client} standalone readOnly={readOnly} />));
-    // App's OfficeState outlives remounts; drop roster members leaked by earlier tests so
-    // test-agent-1 is seated fresh instead of reusing a stale randomly placed character.
-    send({ type: 'existingAgents', agents: [] });
     const chairCols = [2, 5, 8, 11];
     snapshot({ ...imported, furniture: chairCols.flatMap((col, index) => [
       { uid: `desk-${index}`, type: 'desk', col, row: 1, rotation: 0 },
@@ -648,11 +676,12 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       type: 'updateDirectoryName', id: 'saved-1', name: 'Native rename',
     });
     act(() => host.querySelector<HTMLButtonElement>('[aria-label="Close directories"]')!.click());
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
+    act(() => canvas.focus());
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
     expect(persisted!.draft!.furniture).toEqual([]);
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
     expect(persisted!.draft).toEqual(draft);
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
     expect(persisted!.draft).toEqual(layout);
   });
 
@@ -1257,16 +1286,15 @@ describe('settings and source UI with simulated host messages', () => {
   it('restores both settings on startup/reload, sends changes, and persists Debug Close as off', () => {
     send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: false });
     load();
-    expect(isSoundEnabled()).toBe(false);
     click('Settings');
-    const sound = host.querySelector<HTMLInputElement>('#squad-pod-sound')!;
-    const debug = host.querySelector<HTMLInputElement>('#squad-pod-debug-view')!;
-    const showAreas = host.querySelector<HTMLInputElement>('#squad-pod-show-areas')!;
+    const sound = host.querySelector<HTMLInputElement>('[id$="-sound"]')!;
+    const debug = host.querySelector<HTMLInputElement>('[id$="-debug"]')!;
+    const showAreas = host.querySelector<HTMLInputElement>('[id$="-areas"]')!;
     expect(sound.checked).toBe(false);
     expect(debug.checked).toBe(false);
     expect(showAreas.checked).toBe(false);
     act(() => sound.click());
-    expect(isSoundEnabled()).toBe(true);
+    expect(sound.checked).toBe(true);
     expect(client.send).toHaveBeenCalledWith({ type: 'setSoundEnabled', enabled: true });
     act(() => debug.click());
     expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: true });
@@ -1278,13 +1306,13 @@ describe('settings and source UI with simulated host messages', () => {
     act(() => root.render(<App client={client} />));
     send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: true, showAreas: true });
     load();
-    expect(isSoundEnabled()).toBe(false);
     expect(host.textContent).toContain('opt-in live member lifecycle, tools and context');
     click('Close');
     expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: false });
     click('Settings');
-    expect(host.querySelector<HTMLInputElement>('#squad-pod-debug-view')!.checked).toBe(false);
-    expect(host.querySelector<HTMLInputElement>('#squad-pod-show-areas')!.checked).toBe(true);
+    expect(host.querySelector<HTMLInputElement>('[id$="-sound"]')!.checked).toBe(false);
+    expect(host.querySelector<HTMLInputElement>('[id$="-debug"]')!.checked).toBe(false);
+    expect(host.querySelector<HTMLInputElement>('[id$="-areas"]')!.checked).toBe(true);
   });
 
   it('shows only host-reported observer status and labels absent producers/launch explicitly', () => {

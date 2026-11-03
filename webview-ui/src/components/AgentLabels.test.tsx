@@ -199,14 +199,49 @@ describe('AgentLabels over canvas characters', () => {
 
   it('isolates native Space activation from the canvas global pan shortcut', () => {
     render(2, true);
+    const canvas = host.querySelector('canvas')!;
+    const button = label();
+    button.focus();
     const key = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
-    act(() => label().dispatchEvent(key));
+    act(() => button.dispatchEvent(key));
     expect(key.defaultPrevented).toBe(false);
-    // The global shortcut still pans when the canvas, not a button, owns input.
+    expect(document.activeElement).toBe(button);
+    const unfocusedKey = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+    act(() => canvas.dispatchEvent(unfocusedKey));
+    expect(unfocusedKey.defaultPrevented).toBe(false);
+    // Dispatching a synthetic key does not transfer native focus to the canvas.
+    canvas.focus();
+    expect(document.activeElement).toBe(canvas);
     const canvasKey = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
-    act(() => host.querySelector('canvas')!.dispatchEvent(canvasKey));
+    act(() => canvas.dispatchEvent(canvasKey));
     expect(canvasKey.defaultPrevented).toBe(true);
-    window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space' }));
+    const drag = () => {
+      for (const [type, x] of [['mousedown', 10], ['mousemove', 30], ['mouseup', 30]] as const) {
+        act(() => canvas.dispatchEvent(new MouseEvent(type, {
+          bubbles: true, button: 0, clientX: x, clientY: 10,
+        })));
+      }
+    };
+    const before = { ...panRef.current };
+    drag();
+    expect(panRef.current).toEqual({ x: before.x + 20, y: before.y });
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', bubbles: true })));
+    const after = { ...panRef.current };
+    drag();
+    expect(panRef.current).toEqual(after);
+
+    for (const tag of ['input', 'textarea']) {
+      const input = document.createElement(tag);
+      host.appendChild(input);
+      input.focus();
+      const textKey = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+      act(() => input.dispatchEvent(textKey));
+      expect(textKey.defaultPrevented).toBe(false);
+      const staleCanvasKey = new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true });
+      act(() => canvas.dispatchEvent(staleCanvasKey));
+      expect(staleCanvasKey.defaultPrevented).toBe(false);
+      input.remove();
+    }
   });
 
   it('cancels its position update on unmount', () => {

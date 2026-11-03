@@ -106,7 +106,8 @@ async function main() {
         await page.getByText('File observer: Watching', { exact: false }).waitFor();
         await page.getByText('Live CLI observer: off', { exact: true }).waitFor();
         await page.getByRole('button', { name: 'Observation settings and consent', exact: true }).click();
-        assert.equal(await page.locator('#squad-pod-live-activity').isChecked(), false);
+        assert.equal(await page.getByRole('dialog', { name: 'Settings', exact: true })
+          .getByLabel('Live Activity (opt-in)', { exact: true }).isChecked(), false);
         await page.getByRole('button', { name: '×', exact: true }).click();
         const outbound = await page.evaluate(() => window.__petAcceptance.outbound);
         assert.equal(outbound.some(message => message.type === 'launchDirectory'), false, 'fixture must never launch a terminal');

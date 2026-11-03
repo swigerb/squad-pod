@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, type RefObject } from 'react';
 import type { EditorState } from '../office/editor/editorState.js';
+import { acceptsOfficeKey } from '../officeInput.js';
 
 export function useEditorKeyboard(
   isEditMode: boolean,
@@ -9,16 +10,15 @@ export function useEditorKeyboard(
   onUndo: () => void,
   onRedo: () => void,
   onDeselect: () => void,
-  onExitEditMode: () => void
+  onExitEditMode: () => void,
+  boundary: RefObject<HTMLElement | null>,
 ) {
   useEffect(() => {
-    if (!isEditMode) return;
+    const root = boundary.current;
+    if (!isEditMode || !root) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target;
-      if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"], [role="dialog"]')) {
-        return;
-      }
+      if (!acceptsOfficeKey(root, e)) return;
 
       if ((e.key === 'Delete' || e.key === 'Backspace') && editorState.selectedFurnitureUid) {
         e.preventDefault();
@@ -45,7 +45,7 @@ export function useEditorKeyboard(
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditMode, editorState.selectedFurnitureUid, onDelete, onRotate, onUndo, onRedo, onDeselect, onExitEditMode]);
+    root.addEventListener('keydown', handleKeyDown);
+    return () => root.removeEventListener('keydown', handleKeyDown);
+  }, [isEditMode, editorState.selectedFurnitureUid, onDelete, onRotate, onUndo, onRedo, onDeselect, onExitEditMode, boundary]);
 }

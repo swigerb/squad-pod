@@ -104,8 +104,9 @@ async function main() {
       await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
       assert.equal(fixture.reads.length, 0, 'default-off must read no home');
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
-      await page.locator('#squad-pod-live-activity').click();
-      await page.waitForFunction(() => document.querySelector('#squad-pod-live-activity').checked);
+      await page.getByRole('dialog', { name: 'Settings', exact: true }).getByLabel('Live Activity (opt-in)', { exact: true }).click();
+      await page.waitForFunction(() => [...document.querySelectorAll('[role="dialog"][aria-label="Settings"] label')]
+        .find(label => label.textContent === 'Live Activity (opt-in)')?.control?.checked === true);
       await page.getByRole('button', { name: '×', exact: true }).click();
       fixture.append(spawn());
       await page.locator('[data-agent-label="ada"] [aria-label="Active"]').waitFor();

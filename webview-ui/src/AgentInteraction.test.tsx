@@ -7,10 +7,10 @@ import { execFileSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
 import type { HostClient } from './hostClient.js';
+import { VSCODE_HOST_CAPABILITIES } from '../../src/core/hostCapabilities.js';
 import type { OutboundMessage, WebviewMessage } from '../../src/types.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { placeOverlay } from './components/AgentLabels.js';
-import { setSoundEnabled } from './notificationSound.js';
 import { parseCliUsage } from '../../src/cliUsage.js';
 import type { RecordedUsageSnapshot } from '../../src/recordedUsage.js';
 
@@ -80,6 +80,7 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
     // Lifecycle tests advance 30s of polling; bundled asset bytes have separate acceptance coverage.
     fixture = createProviderFixture({ artifactRoot: path.join(repo, 'src', '__fixtures__'), extensionCode });
     client = {
+      capabilities: VSCODE_HOST_CAPABILITIES,
       send: (message) => fixture.send(message),
       subscribe: (listener) => {
         deliver = listener;
@@ -184,7 +185,6 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
   });
 
   it('labels comment-only history as a file hint and expires open current-task text through the real watcher', () => {
-    setSoundEnabled(false);
     const historyPath = path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'history.md');
     const history = '# History\n\n## Learnings\n<!-- Append only work actually completed. -->';
     fs.writeFileSync(historyPath, history);
@@ -221,7 +221,6 @@ describe('real App -> compiled provider -> real message handler -> card (mocked 
   });
 
   it('loads a delayed correlated charter without resurrecting its expired file hint in AgentCard', () => {
-    setSoundEnabled(false);
     fs.appendFileSync(path.join(fixture.workspaceRoot, '.squad', 'agents', 'ada', 'history.md'),
       '\n- Synthetic completed work\n');
     act(() => vi.advanceTimersByTime(2000));
