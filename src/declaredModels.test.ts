@@ -1,15 +1,16 @@
-import fs from 'fs';
-import * as os from 'os';
+import * as fs from 'node:fs';
 import * as path from 'path';
-import { syncBuiltinESMExports } from 'module';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MAX_MODEL_CONFIG_BYTES, parseCharterModel, parseModelConfig, readModelConfig } from './declaredModels.js';
+import { ProjectFiles } from './projectFiles.js';
+
+vi.mock('node:fs', async importOriginal => ({ ...await importOriginal<typeof import('node:fs')>() }));
 
 const sourcePath = '.squad/config.json';
 const parse = (content: string, name = 'Ada') => parseModelConfig(content, name, sourcePath);
 const roots: string[] = [];
 function fixture(config?: string): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pod-models-'));
+  const root = fs.mkdtempSync(path.resolve('.declared-models-fixture-'));
   roots.push(root);
   fs.mkdirSync(path.join(root, '.squad'));
   if (config !== undefined) {fs.writeFileSync(path.join(root, '.squad', 'config.json'), config);}
@@ -17,7 +18,6 @@ function fixture(config?: string): string {
 }
 afterEach(() => {
   vi.restoreAllMocks();
-  syncBuiltinESMExports();
   for (const root of roots.splice(0)) {fs.rmSync(root, { recursive: true, force: true });}
 });
 
@@ -104,8 +104,8 @@ describe('declared JSON model metadata', () => {
   it('reports permission failures without retaining values', () => {
     const root = fixture('{}');
     vi.spyOn(fs, 'openSync').mockImplementation(() => {throw Object.assign(new Error('denied'), { code: 'EACCES' });});
-    syncBuiltinESMExports();
-    expect(readModelConfig(root, 'Ada')[0]).toMatchObject({ state: 'unreadable', diagnostic: expect.stringContaining('denied'), values: [] });
+    expect(readModelConfig(root, 'Ada')[0]).toMatchObject({ state: 'unreadable', diagnostic: expect.stringContaining('EACCES'), values: [] });
+    expect(JSON.stringify(readModelConfig(root, 'Ada'))).not.toContain('denied');
   });
 
   it('withholds changing reads and never reads oversized files', () => {
@@ -117,7 +117,6 @@ describe('declared JSON model metadata', () => {
       fs.appendFileSync(file, ' ');
       return bytes;
     });
-    syncBuiltinESMExports();
     expect(readModelConfig(root, 'Ada')[0]).toMatchObject({ state: 'ambiguous', values: [] });
     read.mockClear();
     fs.truncateSync(file, MAX_MODEL_CONFIG_BYTES + 1);
@@ -139,7 +138,6 @@ describe('declared JSON model metadata', () => {
       }
       return originalOpen(file, flags, mode);
     });
-    syncBuiltinESMExports();
     const result = readModelConfig(root, 'Ada')[0];
     expect(result.state).not.toBe('ready');
     expect(result.values).toEqual([]);
@@ -160,9 +158,172 @@ describe('declared JSON model metadata', () => {
       }
       return bytes;
     });
-    syncBuiltinESMExports();
     const result = readModelConfig(root, 'Ada')[0];
     expect(result.state).not.toBe('ready');
     expect(result.values).toEqual([]);
+  });
+
+  it('uses guarded preferred and genuinely absent-preferred legacy sources without resolving conflicts', () => {
+    const root = fixture('{"defaultModel":"auto","agentModelOverrides":{"Ada":"exact","ada":"wrong"}}');
+    fs.mkdirSync(path.join(root, '.ai-team'));
+    fs.writeFileSync(path.join(root, '.ai-team', 'config.json'), '{"defaultModel":"legacy"}');
+    expect(readModelConfig(root, 'Ada')[0].values).toEqual([
+      { key: 'defaultModel', value: 'auto' }, { key: 'agentModelOverrides["Ada"]', value: 'exact' },
+    ]);
+    fs.renameSync(path.join(root, '.squad'), path.join(root, 'original-squad'));
+    expect(readModelConfig(root, 'Ada')[0]).toMatchObject({
+      sourcePath: path.join(root, '.ai-team', 'config.json'), state: 'ready',
+      values: [{ key: 'defaultModel', value: 'legacy' }],
+    });
+  });
+
+  it.each(['file', 'linked', 'inaccessible'])('never falls back from an invalid %s preferred source', kind => {
+    const root = fixture();
+    fs.renameSync(path.join(root, '.squad'), path.join(root, '.ai-team'));
+    fs.writeFileSync(path.join(root, '.ai-team', 'config.json'), '{"defaultModel":"legacy-secret"}');
+    if (kind === 'file') {fs.writeFileSync(path.join(root, '.squad'), 'not a directory');}
+    else if (kind === 'linked') {
+      fs.symlinkSync(path.join(root, '.ai-team'), path.join(root, '.squad'), 'junction');
+    } else {
+      const inspect = ProjectFiles.prototype.inspect;
+      vi.spyOn(ProjectFiles.prototype, 'inspect').mockImplementation(function (relative) {
+        return relative === '.squad'
+          ? { status: 'unreadable', fingerprint: 'refused', reason: 'Refused.', retry: true }
+          : inspect.call(this, relative);
+      });
+    }
+    const sources = readModelConfig(root, 'Ada');
+    expect(sources[0]).toMatchObject({
+      sourcePath: path.join(root, '.squad', 'config.json'), state: 'unreadable', values: [],
+    });
+    expect(JSON.stringify(sources)).not.toContain('legacy-secret');
+  });
+
+  it.each(['preferred-appears', 'directory-replaced', 'root-replaced'])('withholds declarations when %s during reading', change => {
+    const container = fixture();
+    const root = path.join(container, 'selected');
+    fs.mkdirSync(root);
+    fs.mkdirSync(path.join(root, '.ai-team'));
+    fs.writeFileSync(path.join(root, '.ai-team', 'config.json'), '{"defaultModel":"legacy"}');
+    const read = ProjectFiles.prototype.read;
+    vi.spyOn(ProjectFiles.prototype, 'read').mockImplementationOnce(function (...args) {
+      const content = read.call(this, ...args);
+      if (change === 'preferred-appears') {fs.mkdirSync(path.join(root, '.squad'));}
+      else if (change === 'directory-replaced') {
+        fs.renameSync(path.join(root, '.ai-team'), path.join(root, 'original-team'));
+        fs.mkdirSync(path.join(root, '.ai-team'));
+        fs.renameSync(path.join(root, 'original-team', 'config.json'), path.join(root, '.ai-team', 'config.json'));
+      } else {
+        fs.renameSync(root, path.join(container, 'original-root'));
+        fs.mkdirSync(root);
+        fs.mkdirSync(path.join(root, '.ai-team'));
+        fs.writeFileSync(path.join(root, '.ai-team', 'config.json'), '{"defaultModel":"replacement"}');
+      }
+      return content;
+    });
+    const sources = readModelConfig(root, 'Ada');
+    expect(sources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ state: 'ambiguous', values: [] }),
+    ]));
+    expect(sources.every(source => source.values.length === 0)).toBe(true);
+  });
+
+  it('does not turn a disappeared observed file into ordinary absence', () => {
+    const root = fixture('{}');
+    vi.spyOn(ProjectFiles.prototype, 'read').mockImplementationOnce(() => {
+      fs.unlinkSync(path.join(root, '.squad', 'config.json'));
+      return null;
+    });
+    expect(readModelConfig(root, 'Ada')[0]).toMatchObject({ state: 'ambiguous', values: [] });
+  });
+
+  it.each(['relative', 'missing', 'file'])('returns sanitized explicit refusals for a %s selected root', kind => {
+    const root = fixture();
+    const selected = kind === 'relative' ? '.' : path.join(root, kind);
+    if (kind === 'file') {fs.writeFileSync(selected, 'not a directory');}
+    const sources = readModelConfig(selected, 'Ada');
+    expect(sources).toHaveLength(3);
+    expect(sources.every(source => source.state === 'unreadable' && source.values.length === 0)).toBe(true);
+    expect(sources.map(source => source.sourcePath)).toEqual(kind === 'relative'
+      ? ['.squad/config.json', 'squad.config.ts', '.squad/squad.config.ts']
+      : [path.join(selected, '.squad', 'config.json'), path.join(selected, 'squad.config.ts'),
+        path.join(selected, '.squad', 'squad.config.ts')]);
+    if (kind !== 'relative') {
+      expect(sources.every(source => !source.diagnostic.includes(selected))).toBe(true);
+    }
+  });
+
+  it('inspects executable sources for presence only, never reading their contents', () => {
+    const root = fixture('{}');
+    for (const relative of ['squad.config.ts', path.join('.squad', 'squad.config.ts')]) {
+      fs.writeFileSync(path.join(root, relative), 'throw new Error("NEVER EXECUTE OR READ");');
+    }
+    const read = vi.spyOn(ProjectFiles.prototype, 'read');
+    const bytes = vi.spyOn(fs, 'readSync');
+    expect(readModelConfig(root, 'Ada').map(source => source.state)).toEqual(['ready', 'unsupported', 'unsupported']);
+    expect(read.mock.calls.map(call => call[0])).toEqual([path.join('.squad', 'config.json')]);
+    expect(bytes).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks directory authority after executable metadata inspection too', () => {
+    const root = fixture('{}');
+    fs.renameSync(path.join(root, '.squad'), path.join(root, '.ai-team'));
+    fs.writeFileSync(path.join(root, 'squad.config.ts'), 'never read');
+    const inspect = ProjectFiles.prototype.inspect;
+    let changed = false;
+    vi.spyOn(ProjectFiles.prototype, 'inspect').mockImplementation(function (relative) {
+      const observed = inspect.call(this, relative);
+      if (relative === 'squad.config.ts' && !changed) {
+        changed = true;
+        fs.mkdirSync(path.join(root, '.squad'));
+      }
+      return observed;
+    });
+    expect(readModelConfig(root, 'Ada')).toEqual([
+      expect.objectContaining({ state: 'ambiguous', values: [] }),
+      expect.objectContaining({ state: 'ambiguous', values: [] }),
+      expect.objectContaining({ state: 'ambiguous', values: [] }),
+    ]);
+  });
+
+  it('sanitizes actual read refusals while preserving independent executable presence', () => {
+    const root = fixture('{"defaultModel":"withheld"}');
+    fs.writeFileSync(path.join(root, 'squad.config.ts'), 'never read');
+    vi.spyOn(fs, 'readSync').mockImplementation(() => {
+      throw Object.assign(new Error('private source contents and native path'), { code: 'EACCES' });
+    });
+    const sources = readModelConfig(root, 'Ada');
+    expect(sources[0]).toMatchObject({
+      state: 'unreadable', diagnostic: 'Filesystem inspection/read failed (EACCES).', values: [],
+    });
+    expect(sources[1]).toMatchObject({ state: 'unsupported', values: [] });
+    expect(JSON.stringify(sources)).not.toContain('private source contents');
+  });
+
+  it('refuses linked executable sources without content reads', () => {
+    const root = fixture('{}');
+    fs.writeFileSync(path.join(root, 'squad.config.ts'), 'never read');
+    fs.writeFileSync(path.join(root, '.squad', 'squad.config.ts'), 'never read');
+    const lstat = fs.lstatSync;
+    vi.spyOn(fs, 'lstatSync').mockImplementation((...args: Parameters<typeof fs.lstatSync>) => {
+      const stat = lstat(...args);
+      return String(args[0]).endsWith('squad.config.ts') ? Object.assign(stat, { isSymbolicLink: () => true }) : stat;
+    });
+    const bytes = vi.spyOn(fs, 'readSync');
+    expect(readModelConfig(root, 'Ada').map(source => source.state)).toEqual(['ready', 'unreadable', 'unreadable']);
+    expect(bytes).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses file links and executable directories rather than reporting supported presence', () => {
+    const root = fixture('{}');
+    const lstat = fs.lstatSync;
+    vi.spyOn(fs, 'lstatSync').mockImplementation((...args: Parameters<typeof fs.lstatSync>) => {
+      const stat = lstat(...args);
+      return String(args[0]).endsWith('config.json') ? Object.assign(stat, { isSymbolicLink: () => true }) : stat;
+    });
+    fs.mkdirSync(path.join(root, 'squad.config.ts'));
+    const sources = readModelConfig(root, 'Ada');
+    expect(sources[0]).toMatchObject({ state: 'unreadable', values: [] });
+    expect(sources[1]).toMatchObject({ state: 'unreadable', values: [] });
   });
 });
