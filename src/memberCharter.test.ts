@@ -84,6 +84,23 @@ describe('host-authorized exact-member charter service', () => {
     expect(readMemberCharter(context, 'ada').charterSummary).toBe('Preferred content.');
   });
 
+  it.each(['file', 'dangling junction'])('refuses a preferred %s instead of reading legacy charters', kind => {
+    write('ada', source, '.ai-team');
+    const preferred = path.join(root, '.squad');
+    if (kind === 'file') { fs.writeFileSync(preferred, 'invalid directory'); }
+    else { fs.symlinkSync(path.join(root, 'absent'), preferred, 'junction'); }
+    const read = vi.spyOn(ProjectFiles.prototype, 'read');
+    try {
+      expect(readMemberCharter(context, 'ada')).toMatchObject({
+        charterStatus: 'unreadable', charterContent: null, expertise: null,
+      });
+      expect(read).not.toHaveBeenCalled();
+      expect(readMemberCharter(context, 'unknown').charterStatus).toBe('unavailable');
+      expect(read).not.toHaveBeenCalled();
+    } finally { fs.unlinkSync(preferred); }
+    expect(readMemberCharter(context, 'ada').charterContent).toBe(source);
+  });
+
   it('distinguishes missing, empty and unstructured readable input', () => {
     expect(readMemberCharter(context, 'ada').charterStatus).toBe('missing');
     for (const content of ['', 'not a markdown charter']) {

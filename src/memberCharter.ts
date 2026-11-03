@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import { parseCharterDetails, type CharterDetails } from './charterDetails.js';
 import { ProjectFiles } from './projectFiles.js';
-import { resolveSquadDir } from './squadPaths.js';
+import { selectTeamSourceDirectory } from './teamSource.js';
 
 /** Host-authorized project and live exact membership; neither is discovered here. */
 export interface MemberCharterContext {
@@ -21,6 +21,7 @@ export type MemberCharter = CharterDetails & (
  * The host owns project/session authority and membership freshness. Canonicalizing
  * its explicit root does not authorize a Canvas session. IDs are never normalized;
  * preserve roster IDs while refusing path syntax rather than imposing new slugs.
+ * Legacy charters are eligible only when the preferred .squad directory is absent.
  */
 export function readMemberCharter(context: MemberCharterContext, id: string): MemberCharter {
   const empty = (charterStatus: Exclude<MemberCharter['charterStatus'], 'available'>): MemberCharter => ({
@@ -33,8 +34,8 @@ export function readMemberCharter(context: MemberCharterContext, id: string): Me
   }
   try {
     const files = new ProjectFiles(context.workspaceRoot);
-    const directory = resolveSquadDir(files.root);
-    const relative = path.join(path.relative(files.root, directory), 'agents', id, 'charter.md');
+    const directory = selectTeamSourceDirectory(files);
+    const relative = path.join(directory, 'agents', id, 'charter.md');
     if (!context.isCurrentMember(id)) {return empty('unavailable');}
     const source = files.read(relative, 64 * 1024);
     if (!context.isCurrentMember(id)) {return empty('unavailable');}

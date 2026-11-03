@@ -250,9 +250,8 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     const team = path.join(fixture.workspaceRoot, '.squad', 'team.md');
     const original = fs.readFileSync(team, 'utf8');
     const nativeFs = require('node:fs') as typeof fs;
-    const open = nativeFs.openSync;
     let replaced = false;
-    const opened = vi.spyOn(nativeFs, 'openSync').mockImplementation(open);
+    const bytes = vi.spyOn(nativeFs, 'readSync');
     const schedule = globalThis.setInterval;
     vi.spyOn(globalThis, 'setInterval').mockImplementation((callback, delay, ...args) => {
       // Mutate only this synthetic roster immediately before the real baseline.
@@ -273,8 +272,7 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     expect(source).toMatchObject({ status: {
       teamFound: false, error: expect.stringContaining('selected-project roster source unavailable'),
     } });
-    const readFlags = nativeFs.constants.O_RDONLY | (nativeFs.constants.O_NOFOLLOW ?? 0);
-    const rosterReads = () => opened.mock.calls.filter(([file, flags]) => file === team && flags === readFlags).length;
+    const rosterReads = () => bytes.mock.calls.filter(call => call[3] === 256 * 1024 + 1).length;
     const readsAtBaseline = rosterReads();
     expect(readsAtBaseline).toBe(refusal === 'oversize' ? 0 : 1);
     fixture.messages.length = 0;
@@ -307,7 +305,7 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
       const schedule = globalThis.setInterval;
       let transitioned = false;
       const nativeFs = require('node:fs') as typeof fs;
-      const opened = vi.spyOn(nativeFs, 'openSync');
+      const bytes = vi.spyOn(nativeFs, 'readSync');
       vi.spyOn(globalThis, 'setInterval').mockImplementation((callback, delay, ...args) => {
         if (delay === 2000 && !transitioned) {
           transitioned = true;
@@ -332,8 +330,7 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
       expect(fixture.messages.filter(m => m.type === 'sourceStatus').at(-1)).toMatchObject({
         status: { teamFound: true, error: null },
       });
-      const readFlags = nativeFs.constants.O_RDONLY | (nativeFs.constants.O_NOFOLLOW ?? 0);
-      const reads = () => opened.mock.calls.filter(([file, flags]) => file === team && flags === readFlags).length;
+      const reads = () => bytes.mock.calls.filter(call => call[3] === 256 * 1024 + 1).length;
       expect(reads()).toBe(1);
       fixture.messages.length = 0;
       vi.advanceTimersByTime(1100);
@@ -343,6 +340,37 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
       expect(reads()).toBe(1);
     },
   );
+
+  it('clears status and roster on actual cached-source read denial, then restores the same source', () => {
+    const nativeFs = require('node:fs') as typeof fs;
+    const team = path.join(fixture.workspaceRoot, '.squad', 'team.md');
+    const identity = nativeFs.statSync(team).ino;
+    const read = nativeFs.readSync;
+    const denied = vi.spyOn(nativeFs, 'readSync').mockImplementation((fd, buffer, offset, length, position) => {
+      if (nativeFs.fstatSync(fd).ino === identity) {
+        throw Object.assign(new Error('private synthetic details'), { code: 'EACCES' });
+      }
+      return read(fd, buffer, offset, length, position);
+    });
+    fixture.messages.length = 0;
+    vi.advanceTimersByTime(2000);
+    const statusIndex = fixture.messages.findIndex(m => m.type === 'sourceStatus' && !m.status.teamFound);
+    expect(statusIndex).toBeGreaterThanOrEqual(0);
+    expect(fixture.messages.findIndex(m => m.type === 'existingAgents')).toBeGreaterThan(statusIndex);
+    expect(fixture.messages.filter(m => m.type === 'existingAgents').at(-1)).toMatchObject({ agents: [] });
+    expect(fixture.messages[statusIndex]).toMatchObject({ status: { error: expect.stringContaining('(EACCES)') } });
+    fixture.messages.length = 0;
+    vi.advanceTimersByTime(2000);
+    expect(fixture.messages.filter(m => ['sourceStatus', 'existingAgents'].includes(m.type))).toEqual([]);
+    denied.mockRestore();
+    vi.advanceTimersByTime(2000);
+    const recoveryIndex = fixture.messages.findIndex(m => m.type === 'sourceStatus' && m.status.teamFound);
+    expect(recoveryIndex).toBeGreaterThanOrEqual(0);
+    expect(fixture.messages.findIndex(m => m.type === 'existingAgents')).toBeGreaterThan(recoveryIndex);
+    expect(fixture.messages.filter(m => m.type === 'existingAgents').at(-1)).toMatchObject({
+      agents: [{ id: 'ada' }, { id: 'grace' }],
+    });
+  });
 
   it('delivers activity observed during asset preparation only after layout and the startup roster', () => {
     fixture.dispose();

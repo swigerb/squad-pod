@@ -24,11 +24,18 @@ describe('shared selected-project reads', () => {
     expect(() => new ProjectFiles('.')).toThrow('absolute');
     const files = new ProjectFiles(root);
     expect(files.read('source', 8)).toBe('declared');
+    expect(files.probe('source', 8)).toBe(true);
+    expect(files.probe('missing', 8)).toBe(false);
+    expect(() => files.probe('source', 7)).toThrow('regular file');
+    fs.writeFileSync(path.join(root, 'empty'), '');
+    const bytes = vi.spyOn(fs, 'readSync');
+    expect(files.probe('empty', 0)).toBe(true);
+    expect(bytes.mock.calls.map(call => call[3])).toEqual([1]);
     expect(files.read('missing', 8)).toBeNull();
     expect(() => files.read('source', 7)).toThrow('regular file');
     fs.writeFileSync(path.join(root, 'invalid'), Buffer.from([0xff]));
     expect(() => files.read('invalid', 8)).toThrow();
-    expect(files.entries('.')).toEqual(['invalid', 'source']);
+    expect(files.entries('.')).toEqual(['empty', 'invalid', 'source']);
   });
 
   it('keeps metadata fingerprints stable across a guarded read', () => {
@@ -46,10 +53,12 @@ describe('shared selected-project reads', () => {
   it('refuses traversal and internal junctions even when they point inside the root', () => {
     const files = new ProjectFiles(root);
     expect(() => files.read(path.join('..', 'outside'), 8)).toThrow('escapes');
+    expect(() => files.probe(path.join('..', 'outside'), 8)).toThrow('escapes');
     fs.mkdirSync(path.join(root, 'directory'));
     fs.writeFileSync(path.join(root, 'directory', 'source'), 'withheld');
     fs.symlinkSync(path.join(root, 'directory'), path.join(root, 'link'), 'junction');
     expect(() => files.read(path.join('link', 'source'), 8)).toThrow('symlinks');
+    expect(() => files.probe(path.join('link', 'source'), 8)).toThrow('symlinks');
     expect(() => files.entries('link')).toThrow('symlinks');
   });
 
@@ -93,5 +102,12 @@ describe('shared selected-project reads', () => {
       return size;
     });
     expect(() => files.read('source', 8)).toThrow('changed while reading');
+    vi.mocked(fs.readSync).mockImplementationOnce((fd, buffer, offset, length, position) => {
+      const size = read(fd, buffer, offset, length, position);
+      fs.renameSync(path.join(root, 'source'), path.join(root, 'replacement'));
+      fs.writeFileSync(path.join(root, 'source'), 'declared');
+      return size;
+    });
+    expect(() => files.probe('source', 8)).toThrow('changed while reading');
   });
 });

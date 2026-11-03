@@ -95,8 +95,8 @@ export function readTeamSource(files: ProjectFiles): TeamSource {
 
 /**
  * Per-watcher, in-memory guarded source state. The authorized root identity is
- * retained for its lifetime; unchanged metadata reuses only this project's last
- * bounded validation. Refusals participate in invalidation, not just file stamps.
+ * retained for its lifetime; unchanged metadata reuses this project's content only
+ * after a guarded one-byte read probe. Refusals participate in invalidation.
  */
 export class TeamSourceState {
   private files: ProjectFiles | undefined;
@@ -110,16 +110,24 @@ export class TeamSourceState {
 
   scan(): { source: TeamSource; changed: boolean } {
     let next: NonNullable<TeamSourceState['previous']>;
+    let fingerprint = 'project-unavailable';
+    let directory: TeamSource['directory'] = SQUAD_DIR_NAMES[0];
     try {
       this.files ??= new ProjectFiles(this.selectedRoot);
       const probe = inspectTeamSource(this.files);
+      fingerprint = probe.fingerprint;
+      directory = probe.directory;
       if (this.previous && !this.previous.retry && this.previous.fingerprint === probe.fingerprint && !probe.retry) {
-        return { source: this.previous.source, changed: false };
+        if (this.previous.source.status !== 'available'
+          || (this.files.probe(path.join(probe.directory, 'team.md'), MAX_TEAM_SOURCE_BYTES)
+            && inspectTeamSource(this.files).fingerprint === probe.fingerprint)) {
+          return { source: this.previous.source, changed: false };
+        }
       }
       next = { fingerprint: probe.fingerprint, ...readProbedTeamSource(this.files, probe) };
     } catch (error) {
-      next = { fingerprint: 'project-unavailable', retry: true,
-        source: { status: 'unreadable', directory: SQUAD_DIR_NAMES[0], byteLength: 0,
+      next = { fingerprint, retry: true,
+        source: { status: 'unreadable', directory, byteLength: 0,
           reason: projectFileDiagnostic(error) } };
     }
     const prior = this.previous;

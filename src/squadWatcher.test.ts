@@ -608,7 +608,7 @@ describe('SquadWatcher', () => {
     expect(statuses).toHaveLength(2);
     expect(statuses.at(-1)).toMatchObject({ teamFound: true, error: null });
     expect(read).not.toHaveBeenCalled();
-    expect(readBytes).toHaveBeenCalledTimes(1);
+    expect(readBytes.mock.calls.map(call => call[3])).toEqual([256 * 1024 + 1, 1]);
   });
 
   it('retains native-watch errors alongside refusal, clears recovered errors, and ignores late disposed errors', () => {

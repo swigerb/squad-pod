@@ -61,9 +61,20 @@ export class ProjectFiles {
       for (const part of rel.split(path.sep).filter(Boolean)) {
         current = path.join(current, part);
         stat = fs.lstatSync(current, { bigint: true });
-        // Windows may finalize creation ctime on the first read-only open.
-        // Keep read-time ctime checks in read(), not in the polling fingerprint.
-        stamps.push(`${stat.dev}:${stat.ino}:${stat.mode}:${stat.size}:${stat.mtimeNs}`);
+        if (process.platform === 'win32' && stat.isFile()) {
+          // A first open finalizes Windows creation-time metadata. Fingerprint
+          // the handle's current ctime rather than the pre-open fast-path value.
+          const fd = fs.openSync(current, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+          try {
+            const opened = fs.fstatSync(fd, { bigint: true });
+            if (!sameFile(stat, opened) || !opened.isFile()
+              || stat.size !== opened.size || stat.mtimeNs !== opened.mtimeNs) {
+              throw new ProjectFileError('Source changed while inspecting.');
+            }
+            stat = opened;
+          } finally { fs.closeSync(fd); }
+        }
+        stamps.push(`${stat.dev}:${stat.ino}:${stat.mode}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`);
         if (stat.isSymbolicLink()) { throw new ProjectFileError('Project symlinks/junctions are not observed.'); }
       }
       if (this.resolve(relative) !== target) { throw new ProjectFileError('Project source changed.'); }
@@ -103,6 +114,21 @@ export class ProjectFiles {
    * Raw-content consumers can preserve the BOM; other consumers keep decoder defaults.
    */
   read(relative: string, limit: number, options: { preserveBOM?: boolean } = {}): string | null {
+    const buffer = this.readBytes(relative, limit, false);
+    return buffer === null ? null
+      : new TextDecoder('utf-8', { fatal: true, ignoreBOM: options.preserveBOM }).decode(buffer);
+  }
+
+  /**
+   * Revalidate current read access through the same bounded object guards as read().
+   * Attempt a one-byte read even at EOF; missing returns false, refusals throw.
+   * This establishes readability, not content equality or UTF-8 validity.
+   */
+  probe(relative: string, limit: number): boolean {
+    return this.readBytes(relative, limit, true) !== null;
+  }
+
+  private readBytes(relative: string, limit: number, probe: boolean): Buffer | null {
     let fd: number | undefined;
     try {
       const target = this.resolve(relative);
@@ -113,16 +139,17 @@ export class ProjectFiles {
       if (!sameFile(before, opened) || !opened.isFile() || opened.size > BigInt(limit)) {
         throw new ProjectFileError('Source changed while opening.');
       }
-      const buffer = Buffer.alloc(limit + 1);
+      const buffer = Buffer.alloc(probe ? 1 : limit + 1);
       const size = fs.readSync(fd, buffer, 0, buffer.length, 0);
       const after = fs.fstatSync(fd, { bigint: true });
-      if (size > limit || opened.size !== BigInt(size) || after.size !== opened.size
+      const expected = probe && opened.size > 0n ? 1n : opened.size;
+      if (size > limit || expected !== BigInt(size) || after.size !== opened.size
         || opened.mtimeNs !== after.mtimeNs || opened.ctimeNs !== after.ctimeNs
         || this.resolve(relative) !== target
         || !sameFile(fs.lstatSync(target, { bigint: true }), opened)) {
         throw new ProjectFileError('Source changed while reading; retry on next poll.');
       }
-      return new TextDecoder('utf-8', { fatal: true, ignoreBOM: options.preserveBOM }).decode(buffer.subarray(0, size));
+      return buffer.subarray(0, size);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw error;
