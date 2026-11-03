@@ -3,7 +3,7 @@ import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, EditTool as EditToolType } from '../office/types.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
-import { FLOOR_PATTERNS, getFloorSprite } from '../office/floorTiles.js';
+import { FLOOR_PATTERNS, type FloorAssets } from '../office/floorTiles.js';
 import type { CarpetAssets } from '../office/sprites/carpetTiles.js';
 import type { SpriteData } from '../office/types.js';
 import {
@@ -19,6 +19,7 @@ import { DEFAULT_FLOOR_COLOR } from '../constants.js';
 
 // ─── Props ─────────────────────────────────────────────────────
 export interface EditorToolbarProps {
+  floorAssets: FloorAssets;
   carpetAssets: CarpetAssets;
   editorState: EditorState;
   isEditMode: boolean;
@@ -547,6 +548,7 @@ function ColorSliders({
 
 // ─── Main Component ────────────────────────────────────────────
 export function EditorToolbar({
+  floorAssets,
   carpetAssets,
   editorState,
   isEditMode,
@@ -830,7 +832,7 @@ export function EditorToolbar({
                   title={`Floor ${type}${itemId ? ` (${formatItemLabel(itemId)})` : ''}`}
                   aria-pressed={editorState.tileType === type}
                 >
-                  <SpritePreview sprite={getFloorSprite(patternIndex)} size={22} />
+                  <SpritePreview sprite={floorAssets.getFloorSprite(patternIndex)} size={22} />
                 </button>
               );
             })}

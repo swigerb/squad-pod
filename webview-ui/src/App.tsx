@@ -352,6 +352,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       />
 
       {!touchMobile && <EditorToolbar
+        floorAssets={getOfficeState().floorAssets}
         carpetAssets={getOfficeState().carpetAssets}
         editorState={editorState}
         isEditMode={editor.isEditMode}

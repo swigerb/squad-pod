@@ -9,11 +9,10 @@ import type { LayoutRecovery } from './office/editor/layoutDraft.js';
 import type { OfficeLayout } from './office/types.js';
 import { createHostClientFixture } from './__tests__/hostClientFixture.js';
 import type { HostClientFixture } from './__tests__/hostClientFixture.js';
-import { getFloorSprite, setFloorSprites } from './office/floorTiles.js';
-import { getWallSprite, setWallSprites } from './office/wallTiles.js';
 import { getCharacterSprites, setCharacterTemplates } from './office/sprites/defaultCharacters.js';
 import { createVSCodeClient } from './hostClient.js';
 import { OfficeState } from './office/engine/officeState.js';
+import { getColorizedSprite } from './office/colorize.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -93,8 +92,6 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     if (touchPointsDescriptor) Object.defineProperty(navigator, 'maxTouchPoints', touchPointsDescriptor);
     else Reflect.deleteProperty(navigator, 'maxTouchPoints');
     resetPetTemplates();
-    setFloorSprites([]);
-    setWallSprites([]);
     setCharacterTemplates([]);
     vi.restoreAllMocks();
   });
@@ -543,6 +540,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   });
 
   it('guards legacy sprite payloads at the real adapter boundary without replacing valid assets', () => {
+    const rebuild = vi.spyOn(OfficeState.prototype, 'rebuildFromLayout');
     const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});
     act(() => root.unmount());
     const adapter = createVSCodeClient(() => ({
@@ -552,6 +550,9 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     act(() => root.render(<App client={adapter} />));
     const dispatch = (message: unknown) => act(() => window.dispatchEvent(new MessageEvent('message', { data: message })));
     dispatch({ type: 'layoutLoaded', layout: imported, revision: 'legacy-test' });
+    const office = rebuild.mock.contexts.at(-1)! as OfficeState;
+    const { getFloorSprite } = office.floorAssets;
+    const { getWallSprite } = office.wallAssets;
     const tile = { width: 2, height: 1, pixels: [0xabcdef80, 0] };
     const sprite = [['#abcdef80', '']];
     const frames = { 0: [sprite], 1: [sprite], 2: [sprite], 3: [sprite] };
@@ -575,10 +576,14 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       expect(diagnostic).toHaveBeenCalledWith(expect.stringContaining(`${type}: unsupported legacy sprite format`));
       expect(host.textContent).toContain(`${type}: unsupported legacy sprite format`);
     }
+    const color = { h: 0, s: 0, b: 0, c: 0 };
+    const furnitureBefore = getColorizedSprite('legacy-manifest-furniture-reload', [['#abcdef']], color);
     dispatch({ type: 'manifestAssetsLoaded', snapshot: {
       furniture: [], floors: [[['#123456']]], walls: Array.from({ length: 16 }, () => [['#654321']]),
       carpets: [], pets: [], directories: [], diagnostics: ['Manifest warning retained'],
     } });
+    expect(getColorizedSprite('legacy-manifest-furniture-reload', [['#123456']], color)).not.toBe(furnitureBefore);
+    expect(getColorizedSprite('legacy-manifest-furniture-reload', [], color)).toEqual([['#123456']]);
     expect(getFloorSprite(0)).toEqual([['#123456']]);
     expect(getWallSprite([0], 1, 1, 0, 0).sprite).toEqual([['#654321']]);
     expect(host.textContent).toContain('characterSpritesLoaded: unsupported legacy sprite format');

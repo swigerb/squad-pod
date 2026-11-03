@@ -17,9 +17,13 @@ import { getAnimationFrames, getOnStateType } from '../layout/furnitureCatalog.j
 import { appearanceFromIndex, type AgentSnapshot } from './agentSync.js';
 import { transientSubagents, type ObservedTaskSnapshot } from '../../../../src/observedTasks.js';
 import { createCarpetAssets } from '../sprites/carpetTiles.js';
+import { createFloorAssets } from '../floorTiles.js';
+import { createWallAssets } from '../wallTiles.js';
 
 export class OfficeState {
   readonly carpetAssets = createCarpetAssets();
+  readonly floorAssets = createFloorAssets();
+  readonly wallAssets = createWallAssets();
   layout: OfficeLayout;
   tileMap: number[][];
   seats: Seat[];

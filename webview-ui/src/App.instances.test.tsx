@@ -94,6 +94,7 @@ describe('mounted office state ownership (synthetic independent hosts)', () => {
       type: 'manifestAssetsLoaded',
       snapshot: { carpets, floors: [], walls: [], furniture: [], pets: [], directories: [], diagnostics: [] },
     });
+
     load(a, [sheet(false)]);
     load(b, [sheet(true), sheet(true)]);
     expect(stateA.carpetAssets.revision).toBe(1);
@@ -124,6 +125,64 @@ describe('mounted office state ownership (synthetic independent hosts)', () => {
     load(a, [sheet(false)]);
     expect(style(a, 1).disabled).toBe(false);
     expect(stateB.carpetAssets.getCarpetPreview(0, CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR)).toEqual(resultB);
+  });
+
+  it('routes floor/wall snapshots and real floor picker previews to the owning office', () => {
+    const previewPixels = new WeakMap<HTMLCanvasElement, string[]>();
+    vi.mocked(HTMLCanvasElement.prototype.getContext).mockImplementation(function (this: HTMLCanvasElement) {
+      if (!this.closest('button[title^="Floor "]')) return null;
+      const pixels: string[] = [];
+      previewPixels.set(this, pixels);
+      const ctx = {
+        fillStyle: '', imageSmoothingEnabled: false,
+        clearRect: () => { pixels.length = 0; },
+        fillRect: () => { pixels.push(ctx.fillStyle); },
+      };
+      return ctx as unknown as CanvasRenderingContext2D;
+    });
+    const rebuild = vi.spyOn(OfficeState.prototype, 'rebuildFromLayout');
+    const a = view(), b = view();
+    views.push(a, b);
+    a.mount(); initialize(a, 20, 'alpha');
+    b.mount(); initialize(b, 20, 'beta');
+    const stateA = instance(rebuild.mock.contexts[0]);
+    const stateB = instance(rebuild.mock.contexts[1]);
+    const stateColor = { h: 35, s: 40, b: 15, c: 0 };
+    const load = (target: typeof a, hex: string | null) => target.emit({
+      type: 'manifestAssetsLoaded',
+      snapshot: {
+        floors: hex ? Array.from({ length: 9 }, () => [[hex]]) : [],
+        walls: hex ? Array.from({ length: 16 }, () => [[hex]]) : [],
+        carpets: [], furniture: [], pets: [], directories: [], diagnostics: [],
+      },
+    });
+    load(a, '#20406080'); load(b, '#a0c0e040');
+    expect(stateA.floorAssets.revision).toBe(stateB.floorAssets.revision);
+    expect(stateA.wallAssets.revision).toBe(stateB.wallAssets.revision);
+    const previewA = vi.spyOn(stateA.floorAssets, 'getFloorSprite');
+    const previewB = vi.spyOn(stateB.floorAssets, 'getFloorSprite');
+    a.click('Edit Layout'); b.click('Edit Layout');
+    a.click('▦Floor'); b.click('▦Floor');
+    expect(a.host.querySelector('[title^="Floor 10"]')).not.toBeNull();
+    expect(b.host.querySelector('[title^="Floor 10"]')).not.toBeNull();
+    expect(previewA.mock.results.some(result => result.value[0][0] === '#20406080')).toBe(true);
+    expect(previewB.mock.results.some(result => result.value[0][0] === '#a0c0e040')).toBe(true);
+    const pixels = (target: typeof a) => previewPixels.get(target.host.querySelector<HTMLCanvasElement>('[title^="Floor 10"] canvas')!);
+    expect(pixels(a)).toEqual(['#20406080']);
+    expect(pixels(b)).toEqual(['#a0c0e040']);
+    const floorB = stateB.floorAssets.getColorizedFloorSprite(0, stateColor);
+    const wallB = stateB.wallAssets.getColorizedWallSprite([0], 1, 1, 0, 0, stateColor).sprite;
+    load(a, null);
+    expect(stateA.floorAssets.hasFloorSprites()).toBe(false);
+    expect(stateA.wallAssets.hasWallSprites()).toBe(false);
+    load(a, '#123456');
+    expect(pixels(a)).toEqual(['#123456']);
+    expect(pixels(b)).toEqual(['#a0c0e040']);
+    expect(stateB.floorAssets.revision).toBe(1);
+    expect(stateB.wallAssets.revision).toBe(1);
+    expect(stateB.floorAssets.getColorizedFloorSprite(0, stateColor)).toBe(floorB);
+    expect(stateB.wallAssets.getColorizedWallSprite([0], 1, 1, 0, 0, stateColor).sprite).toBe(wallB);
+    expect(previewB.mock.results.every(result => result.value[0][0] === '#a0c0e040')).toBe(true);
   });
 
   it('separates real canvas rosters, editor tools, layout history, recovery and outbound messages', async () => {
