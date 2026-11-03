@@ -31,17 +31,23 @@ const openCtx = (instanceId = 'synthetic-panel') => ({
 });
 function fixture() {
   let handler: ((event: unknown) => void) | undefined;
+  const callbacks: Array<(event: unknown) => void> = [];
   let subscriptions = 0;
+  const unsubscribed: Array<(event: unknown) => void> = [];
   const probe = createProbe((options: unknown) => options, ProbeError);
   active.push(probe);
   probe.bind({
     sessionId, workspacePath: 'synthetic-artifact-workspace-not-project',
     on(callback: (event: unknown) => void) {
-      handler = callback; subscriptions++;
-      return () => { handler = undefined; subscriptions--; };
+      handler = callback; callbacks.push(callback); subscriptions++;
+      return () => {
+        unsubscribed.push(callback);
+        if (handler === callback) handler = undefined;
+        subscriptions--;
+      };
     },
   });
-  return { probe, emit: (event: unknown) => handler?.(event), subscriptions: () => subscriptions };
+  return { probe, callbacks, unsubscribed, emit: (event: unknown) => handler?.(event), subscriptions: () => subscriptions };
 }
 function get(url: string, options: { method?: string; headers?: Record<string, string>; path?: string } = {}) {
   return new Promise<{ status: number; headers: Record<string, unknown>; body: string }>((resolve, reject) => {
@@ -200,6 +206,7 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
       expect(() => f.probe.canvas.actions[0].handler(context)).toThrow();
     }
     expect(spy).not.toHaveBeenCalled();
+    await f.probe.canvas.open(openCtx());
     const snapshot = f.probe.canvas.actions[0].handler({
       ...ctx(), moduleUrl: pathToFileURL(join(f.root, 'never-read-context-path.mjs')).href,
     });
@@ -399,7 +406,7 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
     expect(JSON.stringify(snapshot)).not.toContain('synthetic-artifact');
   });
 
-  it('bounds and sanitizes event envelopes without raw producer data or opaque agent IDs', async () => {
+  it('projects bounded opaque correlations without raw IDs, arbitrary text or payload traversal', async () => {
     const f = fixture();
     await f.probe.canvas.open(openCtx());
     const event = {
@@ -407,27 +414,56 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
       id: '00000000-0000-4000-8000-000000000001', parentId: '00000000-0000-4000-8000-000000000002',
       agentId: 'private-agent', data: { prompt: '<secret>', cwd: 'private-root', model: 'private-model' },
     };
-    f.emit(event); f.emit(event);
+    f.emit(event);
     const action = f.probe.canvas.actions[0].handler;
-    expect(action(ctx()).events).toEqual([{
-      type: 'session.idle', timestamp: event.timestamp, eventId: event.id, parentEventId: event.parentId,
-    }]);
-    expect(sanitizeEvent({ ...event, timestamp: '2026-02-31T16:00:00Z', id: '<secret>', parentId: 'opaque' })).toEqual({ type: 'session.idle' });
+    const projected = action(ctx()).events[0];
+    expect(projected).toMatchObject({
+      type: 'session.idle', producerTime: { status: 'valid' }, receiptTime: { status: 'valid' },
+      event: { status: 'available' }, previousEvent: { status: 'available' }, actor: { status: 'available' },
+      toolCall: { status: 'unavailable', reason: 'not-applicable' },
+    });
+    f.emit({ ...event, id: event.parentId, parentId: event.id });
+    const next = action(ctx()).events[1];
+    expect(next.previousEvent.alias).toBe(projected.event.alias);
+    expect(next.event.alias).toBe(projected.previousEvent.alias);
+    expect(next.actor.alias).toBe(projected.actor.alias);
+    expect(next.actor.alias).not.toBe(next.event.alias);
+    const invalid = sanitizeEvent({ ...event, timestamp: '2026-02-31T16:00:00Z', id: '<secret>', parentId: 'opaque' });
+    expect(invalid).toMatchObject({
+      producerTime: { status: 'unavailable', reason: 'invalid-or-unsupported-format' },
+      event: { status: 'unavailable', reason: 'invalid-or-oversized' },
+      previousEvent: { status: 'unavailable', reason: 'invalid-or-oversized' },
+    });
     expect(sanitizeEvent({ ...event, type: 'user.message' })).toBeUndefined();
     expect(sanitizeEvent({ ...event, type: '<arbitrary>' })).toBeUndefined();
-    expect(sanitizeEvent({ type: 'session.start', get data() { throw new Error('must not inspect data'); } })).toEqual({ type: 'session.start' });
+    expect(sanitizeEvent({ type: 'session.start', get data() { throw new Error('must not inspect data'); } }))
+      .toMatchObject({ type: 'session.start', actor: { status: 'unavailable', reason: 'missing' } });
+    for (const type of ['tool.execution_start', 'tool.execution_complete']) {
+      f.emit({ ...event, type, data: { toolCallId: 'private-tool', get arguments() { throw new Error('private'); },
+        get result() { throw new Error('private'); } } });
+    }
+    const tools = action(ctx()).events.slice(-2);
+    expect(tools[0].toolCall.alias).toBe(tools[1].toolCall.alias);
+    expect(tools[0].toolCall.status).toBe('available');
+    const serialized = JSON.stringify(action(ctx()));
+    for (const privateValue of [event.id, event.parentId, event.agentId, 'private-tool', '<secret>', 'private-root', event.timestamp]) {
+      expect(serialized).not.toContain(privateValue);
+    }
     for (let i = 0; i < 80; i++) {
       f.emit({ type: 'assistant.turn_start' });
     }
     expect(action(ctx()).events).toHaveLength(32);
+    expect(action(ctx()).observation).toMatchObject({ accepted: 84, retained: 32, eventEvictions: 52,
+      previousEventMeaning: 'chronologically-previous-event; not agent hierarchy' });
     const snapshot = action(ctx());
     snapshot.events.length = 0;
     expect(action(ctx()).events).toHaveLength(32);
   });
 
-  it('opens idempotently, isolates instances, caps servers and closes/reopens with fresh capability', async () => {
+  it('reuses listeners, isolates instances, caps servers and closes/reopens with fresh capability', async () => {
     const f = fixture();
-    const [a, b] = await Promise.all([f.probe.canvas.open(openCtx()), f.probe.canvas.open(openCtx())]);
+    const a = await f.probe.canvas.open(openCtx());
+    const b = await f.probe.canvas.open(openCtx());
     expect(a.url).toBe(b.url);
     expect(f.subscriptions()).toBe(1);
     f.emit({ type: 'session.idle' });
@@ -453,6 +489,211 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
     await expect(get(reopened.url)).rejects.toThrow();
     await expect(get(second.url)).rejects.toThrow();
     await expect(f.probe.canvas.open(openCtx())).rejects.toThrow('Provider is closed');
+  });
+
+  it('immediately revokes all observations on context change and rejects queued callbacks until a new matching open', async () => {
+    const f = fixture();
+    const action = f.probe.canvas.actions[0].handler;
+    await f.probe.canvas.open(openCtx());
+    await f.probe.canvas.open(openCtx('second'));
+    const first = f.callbacks[0];
+    const second = f.callbacks[1];
+    first({ type: 'session.idle', agentId: 'private-before-revoke' });
+    const generation = action(ctx()).observation.generation;
+    second({ type: 'session.context_changed', get data() { throw new Error('never follow context root'); } });
+    expect(f.subscriptions()).toBe(0);
+    for (const id of ['synthetic-panel', 'second']) {
+      expect(() => action(ctx(id))).toThrow('new matching open callback');
+    }
+    first({ type: 'session.idle', agentId: 'queued-old' });
+    await expect(f.probe.canvas.open({ ...openCtx(), session: { workingDirectory: otherRoot } }))
+      .rejects.toMatchObject({ code: 'probe_root_mismatch' });
+    expect(f.subscriptions()).toBe(0);
+    await f.probe.canvas.open(openCtx());
+    first({ type: 'session.idle' }); second({ type: 'session.context_changed' });
+    const fresh = action(ctx());
+    expect(fresh.observation.generation).not.toBe(generation);
+    expect(fresh.events).toEqual([]);
+    expect(fresh.observation).toMatchObject({ accepted: 0, ignored: 0, retainedAliases: 0, aliasEvictions: 0 });
+    expect(() => action(ctx('second'))).toThrow('new matching open callback');
+    await f.probe.canvas.open(openCtx('second'));
+    expect(f.subscriptions()).toBe(2);
+    const old = [...f.callbacks];
+    await f.probe.canvas.onClose(ctx());
+    expect(f.subscriptions()).toBe(1);
+    await f.probe.canvas.open(openCtx());
+    for (const callback of old.slice(0, 3)) callback({ type: 'session.idle' });
+    expect(action(ctx()).events).toEqual([]);
+    await f.probe.dispose();
+    expect(f.subscriptions()).toBe(0);
+    old.forEach((callback) => callback({ type: 'session.context_changed' }));
+  });
+
+  it('revokes on replaced host root context without following workspacePath or reviving on snapshot', async () => {
+    const f = fixture();
+    await f.probe.canvas.open(openCtx());
+    const action = f.probe.canvas.actions[0].handler;
+    const old = f.callbacks[0];
+    old({ type: 'session.idle' });
+    expect(() => action({ ...ctx(), session: { workingDirectory: otherRoot } })).toThrow('Exact active directory');
+    expect(f.subscriptions()).toBe(0);
+    expect(() => action(ctx())).toThrow('new matching open callback');
+    await f.probe.canvas.open(openCtx());
+    old({ type: 'session.idle' });
+    expect(action(ctx()).events).toEqual([]);
+    expect(action(ctx()).sessionArtifactWorkspaceAvailable).toBe(true);
+  });
+
+  it('starts fresh generations on replacement host opens and close/reopen with owned unsubscribe', async () => {
+    const f = fixture();
+    const action = f.probe.canvas.actions[0].handler;
+    const first = await f.probe.canvas.open(openCtx());
+    f.callbacks[0]({ type: 'session.idle', agentId: 'private-agent' });
+    const before = action(ctx());
+    const replacement = await f.probe.canvas.open(openCtx());
+    expect(replacement.url).toBe(first.url);
+    expect(f.subscriptions()).toBe(1);
+    f.callbacks[0]({ type: 'session.idle' });
+    const after = action(ctx());
+    expect(after.events).toEqual([]);
+    expect(after.observation.generation).not.toBe(before.observation.generation);
+    await f.probe.canvas.onClose(ctx());
+    expect(f.subscriptions()).toBe(0);
+    await f.probe.canvas.open(openCtx());
+    f.callbacks[1]({ type: 'session.context_changed' });
+    expect(action(ctx()).events).toEqual([]);
+    expect(action(ctx()).observation.generation).not.toBe(after.observation.generation);
+    expect(f.subscriptions()).toBe(1);
+  });
+
+  it('owns unsubscribe even when context revocation occurs synchronously during registration', async () => {
+    const probe = createProbe((options: unknown) => options, ProbeError);
+    active.push(probe);
+    const unsubscribe = vi.fn();
+    probe.bind({ sessionId, on(callback: (event: unknown) => void) {
+      callback({ type: 'session.context_changed' });
+      return unsubscribe;
+    } });
+    await expect(probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_observation_revoked' });
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    await probe.dispose();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears every observation before upstream unsubscribe and stays revoked if cleanup throws', async () => {
+    const probe = createProbe((options: unknown) => options, ProbeError);
+    active.push(probe);
+    const callbacks: Array<(event: unknown) => void> = [];
+    const cleanups: number[] = [];
+    const observed: string[] = [];
+    probe.bind({ sessionId, on(callback: (event: unknown) => void) {
+      const index = callbacks.length;
+      callbacks.push(callback);
+      return () => {
+        cleanups.push(index);
+        for (const id of ['synthetic-panel', 'second']) {
+          try { probe.canvas.actions[0].handler(ctx(id)); observed.push('stale-snapshot'); }
+          catch (error) { observed.push((error as ProbeError).code); }
+        }
+        throw new Error('private upstream cleanup error');
+      };
+    } });
+    await probe.canvas.open(openCtx());
+    await probe.canvas.open(openCtx('second'));
+    callbacks[0]({ type: 'session.context_changed' });
+    expect(cleanups).toEqual([0, 1]);
+    expect(observed).toEqual(Array(4).fill('probe_observation_revoked'));
+    callbacks.forEach((callback) => callback({ type: 'session.idle' }));
+    await probe.dispose();
+    expect(cleanups).toEqual([0, 1]);
+  });
+
+  it('does not let an invalidated pending open return stale results or erase its newer generation', async () => {
+    const f = fixture();
+    const opening = f.probe.canvas.open(openCtx());
+    const rejected = expect(opening).rejects.toMatchObject({ code: 'probe_closed' });
+    f.callbacks[0]({ type: 'session.context_changed' });
+    const replacement = f.probe.canvas.open(openCtx());
+    await rejected;
+    await replacement;
+    expect(f.probe.canvas.actions[0].handler(ctx()).events).toEqual([]);
+    expect(f.subscriptions()).toBe(1);
+  });
+
+  it('replaces pre-ready opens with an empty fresh observation and owns each unsubscribe exactly once', async () => {
+    const f = fixture();
+    const action = f.probe.canvas.actions[0].handler;
+    await f.probe.canvas.open(openCtx());
+    const previousGeneration = action(ctx()).observation.generation;
+    await f.probe.canvas.onClose(ctx());
+
+    const opening = f.probe.canvas.open(openCtx());
+    const rejected = expect(opening).rejects.toMatchObject({ code: 'probe_closed' });
+    const stale = f.callbacks[1];
+    stale({ type: 'session.idle', agentId: 'private-pre-replacement' });
+    const replacement = f.probe.canvas.open(openCtx());
+    expect(f.callbacks).toHaveLength(3);
+    expect(f.unsubscribed).toEqual(f.callbacks.slice(0, 2));
+    expect(f.subscriptions()).toBe(1);
+    stale({ type: 'session.idle', agentId: 'private-queued-old' });
+    stale({ type: 'session.context_changed' });
+    await rejected;
+    const hosted = await replacement;
+    const fresh = action(ctx());
+    expect(fresh.events).toEqual([]);
+    expect(fresh.observation).toMatchObject({
+      accepted: 0, ignored: 0, retainedAliases: 0, eventEvictions: 0, aliasEvictions: 0,
+    });
+    expect(fresh.observation.generation).not.toBe(previousGeneration);
+    expect((await get(hosted.url)).status).toBe(200);
+    f.callbacks[2]({ type: 'session.idle', agentId: 'private-fresh' });
+    expect(action(ctx()).events).toHaveLength(1);
+    expect(action(ctx()).events[0].actor.alias).toBe(`${fresh.observation.generation}-actor-1`);
+    await f.probe.dispose();
+    expect(f.unsubscribed).toEqual(f.callbacks);
+    expect(f.subscriptions()).toBe(0);
+    f.callbacks.forEach((callback) => callback({ type: 'session.context_changed' }));
+    await expect(get(hosted.url)).rejects.toThrow();
+  });
+
+  it('bounds FIFO alias storage, discloses eviction and never reuses evicted correlations', async () => {
+    const f = fixture();
+    await f.probe.canvas.open(openCtx());
+    const action = f.probe.canvas.actions[0].handler;
+    f.emit({ type: 'session.idle', agentId: 'first-private' });
+    const first = action(ctx()).events[0].actor.alias;
+    for (let i = 0; i < 128; i++) f.emit({ type: 'session.idle', agentId: `private-${i}` });
+    f.emit({ type: 'session.idle', agentId: 'first-private' });
+    f.emit({ type: 'tool.execution_start', agentId: 'x'.repeat(257), data: { toolCallId: 'x'.repeat(257) } });
+    f.emit({ type: 'unknown.private', data: 'secret' });
+    const snapshot = action(ctx());
+    expect(snapshot.observation).toMatchObject({ accepted: 131, ignored: 1, retained: 32, eventEvictions: 99,
+      retainedAliases: 128, aliasEvictions: 2, limits: { events: 32, aliases: 128, idCharacters: 256 } });
+    expect(snapshot.events.at(-2).actor.alias).not.toBe(first);
+    expect(snapshot.events.at(-1)).toMatchObject({
+      actor: { status: 'unavailable', reason: 'invalid-or-oversized' },
+      toolCall: { status: 'unavailable', reason: 'invalid-or-oversized' },
+    });
+    snapshot.events[0].actor.alias = 'mutated';
+    expect(JSON.stringify(action(ctx()))).not.toContain('mutated');
+    expect(JSON.stringify(action(ctx()))).not.toContain('private');
+  });
+
+  it('distinguishes missing, null previous-event, invalid and unsupported time fields honestly', () => {
+    const empty = sanitizeEvent({ type: 'session.idle', parentId: null });
+    expect(empty).toMatchObject({
+      event: { status: 'unavailable', reason: 'missing' }, previousEvent: { status: 'none' },
+      actor: { status: 'unavailable', reason: 'missing' }, producerTime: { status: 'unavailable', reason: 'missing' },
+    });
+    expect(empty.receiptTime.unixMs).toBeGreaterThan(0);
+    for (const timestamp of ['2026-11-02T16:00:00Z', '2026-11-02T16:00:00.1Z', '2026-11-02T16:00:00.012Z']) {
+      expect(sanitizeEvent({ type: 'session.start', timestamp }).producerTime).toEqual({ status: 'valid' });
+    }
+    for (const timestamp of [null, 123, '2026-02-31T16:00:00Z', '2026-11-02T24:00:00Z',
+      '2026-11-02T16:00:00+00:00', 'secret'.repeat(1000)]) {
+      expect(sanitizeEvent({ type: 'session.start', timestamp }).producerTime)
+        .toEqual({ status: 'unavailable', reason: 'invalid-or-unsupported-format' });
+    }
   });
 
   it('rejects callbacks before binding and refuses session replacement in the same provider', async () => {

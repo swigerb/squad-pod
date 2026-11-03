@@ -4,6 +4,19 @@
 // plus a 16 KiB plugin.json only in the known namespaced package layout (reads cap + 1
 // byte to detect growth). No caller paths, source contents, commit proof or immutable
 // in-memory-code guarantee are provided.
+// Public contract reference, not installed SDK version proof:
+// github/copilot-sdk v1.0.28 nodejs/src/{extension.ts,canvas.ts,session.ts,
+// generated/session-events.ts,generated/rpc.ts}. session.on envelopes use parentId for the previous
+// EVENT, never agent hierarchy. Only six allowlisted types, UUID event IDs and bounded
+// opaque actor/toolCallId correlations are projected as volatile generation aliases.
+// Per instance: 32 events, 128 shared FIFO aliases, 256-character IDs; eviction counts
+// disclose partial coverage. Producer timestamps expose validity only (UTC ISO subset);
+// absent actor IDs do not prove a root actor. No event.data except toolCallId is read.
+// context_changed clears every observation synchronously without reading its data.
+// Only a new matching host open callback reattaches; workspacePath grants no authority.
+// Close/dispose clears state and owns unsubscribe; old queued callbacks cannot revive it.
+// A replacement open callback retains the bounded listener but starts a fresh generation,
+// including when the preceding open is still awaiting initial listener readiness.
 import { createCanvas, joinSession, CanvasError } from "@github/copilot-sdk/extension";
 import { createProbe } from "./probe.mjs";
 

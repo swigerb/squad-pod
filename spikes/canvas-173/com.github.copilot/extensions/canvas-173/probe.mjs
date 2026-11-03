@@ -7,7 +7,11 @@ import { fileURLToPath } from "node:url";
 const CANVAS_ID = "squad-pod-canvas-173";
 const INSTANCE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const EVENT_TYPES = new Set(["session.start", "session.resume", "session.idle", "assistant.turn_start"]);
+const EVENT_TYPES = new Set(["session.start", "session.resume", "session.idle", "assistant.turn_start",
+    "tool.execution_start", "tool.execution_complete"]);
+const EVENT_LIMIT = 32;
+const ALIAS_LIMIT = 128;
+const ID_LIMIT = 256;
 const EMPTY_INPUT = { type: "object", properties: {}, additionalProperties: false };
 const OPEN_INPUT = {
     type: "object", properties: { syntheticProjectRoot: { type: "string", minLength: 1, maxLength: 4096 } },
@@ -141,31 +145,78 @@ function runtimeProvenance() {
     };
 }
 
-/** Project only allowlisted event envelope fields; never traverse event.data. */
-export function sanitizeEvent(event) {
-    if (!event || !EVENT_TYPES.has(event.type)) return undefined;
-    const result = { type: event.type };
-    if (typeof event.timestamp === "string" &&
-        /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(event.timestamp)) {
-        const time = Date.parse(event.timestamp);
-        if (Number.isFinite(time) &&
-            new Date(time).toISOString().replace(".000Z", "Z") ===
-            event.timestamp.replace(/\.0{3}Z$/, "Z")) result.timestamp = event.timestamp;
+function observation() {
+    return { generation: randomBytes(16).toString("hex"), events: [], aliases: new Map(),
+        nextAlias: 0, accepted: 0, ignored: 0, eventEvictions: 0, aliasEvictions: 0 };
+}
+function alias(state, kind, value, uuid = false) {
+    if (value === undefined) return unavailable("missing");
+    if (typeof value !== "string" || value.length === 0 || value.length > ID_LIMIT ||
+        (uuid && !UUID.test(value))) return unavailable("invalid-or-oversized");
+    const key = `${kind}:${value}`;
+    if (!state.aliases.has(key)) {
+        if (state.aliases.size === ALIAS_LIMIT) {
+            state.aliases.delete(state.aliases.keys().next().value);
+            state.aliasEvictions++;
+        }
+        state.aliases.set(key, `${state.generation}-${kind}-${++state.nextAlias}`);
     }
-    if (typeof event.id === "string" && UUID.test(event.id)) result.eventId = event.id;
-    if (typeof event.parentId === "string" && UUID.test(event.parentId)) result.parentEventId = event.parentId;
-    // agentId is documented as an opaque string, so it is intentionally not exported.
-    return result;
+    return { status: "available", alias: state.aliases.get(key) };
+}
+function producerTime(value) {
+    if (value === undefined) return unavailable("missing");
+    // Validate a bounded UTC ISO subset without retaining producer-controlled strings.
+    if (typeof value !== "string" || value.length > 24 ||
+        !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(value)) {
+        return unavailable("invalid-or-unsupported-format");
+    }
+    const time = Date.parse(value);
+    const canonical = value.replace(/(?:\.(\d{1,3}))?Z$/, (_, fraction = "") => `.${fraction.padEnd(3, "0")}Z`);
+    return Number.isFinite(time) && new Date(time).toISOString() === canonical
+        ? { status: "valid" } : unavailable("invalid-or-unsupported-format");
+}
+
+/** Project public v1.0.28 envelopes and toolCallId only; raw values never leave volatile state. */
+export function sanitizeEvent(event, state = observation()) {
+    if (!event || !EVENT_TYPES.has(event.type)) return undefined;
+    return {
+        type: event.type,
+        event: alias(state, "event", event.id, true),
+        previousEvent: event.parentId === null ? { status: "none" } : alias(state, "event", event.parentId, true),
+        actor: alias(state, "actor", event.agentId),
+        toolCall: event.type.startsWith("tool.execution_")
+            ? alias(state, "tool", event.data?.toolCallId) : unavailable("not-applicable"),
+        receiptTime: { status: "valid", unixMs: Date.now() },
+        producerTime: producerTime(event.timestamp),
+    };
 }
 
 /** Build the real SDK canvas declaration with injectable SDK constructors for synthetic tests. */
 export function createProbe(createCanvas, CanvasError) {
     let session;
-    let unsubscribe;
     let providerId;
     let disposed = false;
     const instances = new Map();
     const fail = (code, message) => { throw new CanvasError(code, message); };
+    const release = (unsubscribe) => {
+        try { unsubscribe?.(); } catch { /* Authority stays revoked if upstream cleanup fails. */ }
+    };
+    const revoke = (entry) => {
+        const state = entry.observation;
+        entry.observation = undefined;
+        if (!state) return;
+        state.events.length = 0;
+        state.aliases.clear();
+        state.nextAlias = state.accepted = state.ignored = state.eventEvictions = state.aliasEvictions = 0;
+        const unsubscribe = state.unsubscribe;
+        state.unsubscribe = undefined;
+        return unsubscribe;
+    };
+    const revokeAll = () => {
+        // Clear all authority before calling upstream code, which may be reentrant.
+        const subscriptions = [...instances.values()].map(revoke);
+        subscriptions.forEach(release);
+    };
     const validate = (ctx) => {
         if (disposed) fail("probe_disposed", "Provider is closed");
         if (!session) fail("probe_not_ready", "Joined session is not ready");
@@ -186,33 +237,50 @@ export function createProbe(createCanvas, CanvasError) {
         try {
             selected = directoryIdentity(selectedPath);
             active = directoryIdentity(ctx.session?.workingDirectory);
-        } catch { fail("probe_root_unavailable", "Explicit local directories and active session context are required"); }
-        if (!sameDirectory(selected, active)) fail("probe_root_mismatch", "Exact active directory match required");
-        if (bound && !sameDirectory(selected, bound)) fail("probe_root_changed", "Instance root binding has changed; close before replacement");
+        } catch { revokeAll(); fail("probe_root_unavailable", "Explicit local directories and active session context are required"); }
+        if (!sameDirectory(selected, active)) { revokeAll(); fail("probe_root_mismatch", "Exact active directory match required"); }
+        if (bound && !sameDirectory(selected, bound)) { revokeAll(); fail("probe_root_changed", "Instance root binding has changed; close before replacement"); }
         return selected;
     };
-    const subscribe = () => {
-        if (!unsubscribe) unsubscribe = session.on((event) => {
-            const metadata = sanitizeEvent(event);
-            if (!metadata || disposed) return;
-            for (const entry of instances.values()) {
-                if (entry.events.some((item) => metadata.eventId && item.eventId === metadata.eventId)) continue;
-                entry.events.push(metadata);
-                if (entry.events.length > 32) entry.events.shift();
-            }
-        });
+    const subscribe = (entry) => {
+        if (entry.observation) return;
+        const state = observation();
+        entry.observation = state;
+        try {
+            const unsubscribe = session.on((event) => {
+                if (disposed || entry.observation !== state) return;
+                if (event?.type === "session.context_changed") { revokeAll(); return; }
+                const metadata = sanitizeEvent(event, state);
+                if (!metadata) { state.ignored++; return; }
+                state.accepted++;
+                state.events.push(metadata);
+                if (state.events.length > EVENT_LIMIT) { state.events.shift(); state.eventEvictions++; }
+            });
+            if (typeof unsubscribe !== "function") throw new Error("invalid subscription");
+            if (entry.observation === state) state.unsubscribe = unsubscribe;
+            else unsubscribe(); // A synchronous context event can revoke during registration.
+        } catch {
+            release(revoke(entry));
+            fail("probe_subscription_failed", "Session event subscription failed");
+        }
     };
-    const closeEntry = async (entry) => {
-        const hosted = await entry.ready;
+    const requireObservation = (entry) => {
+        if (!entry.observation) {
+            fail("probe_observation_revoked", "Observation revoked; a new matching open callback is required");
+        }
+        return entry.observation;
+    };
+    const closeEntry = (entry) => entry.closing ??= (async () => {
+        let hosted;
+        try { hosted = await entry.ready; } catch { return; }
         hosted.server.closeAllConnections();
         await new Promise((resolve, reject) => hosted.server.close((error) => error ? reject(error) : resolve()));
-        entry.events.length = 0;
-    };
+    })();
     const close = async (ctx) => {
         const entry = validate(ctx);
         if (!entry) return;
+        release(revoke(entry));
         instances.delete(ctx.instanceId);
-        if (instances.size === 0 && unsubscribe) { unsubscribe(); unsubscribe = undefined; }
         await closeEntry(entry);
     };
     const canvas = createCanvas({
@@ -230,28 +298,30 @@ export function createProbe(createCanvas, CanvasError) {
             const selectedPath = ctx.input.syntheticProjectRoot;
             if (entry) bindRoot(ctx, entry.selectedPath, entry.root);
             const root = bindRoot(ctx, selectedPath, entry?.root);
+            // Replacement revokes even before listener readiness; pending opens own generations too.
+            if (entry) release(revoke(entry));
             if (!entry) {
                 if (instances.size >= 4) fail("probe_instance_limit", "At most four instances are supported");
                 providerId ??= ctx.extensionId;
-                entry = { extensionId: ctx.extensionId, selectedPath, root, events: [], ready: undefined };
+                entry = { extensionId: ctx.extensionId, selectedPath, root, observation: undefined, ready: undefined };
                 instances.set(ctx.instanceId, entry);
                 entry.ready = startServer();
-                try { subscribe(); } catch {
-                    instances.delete(ctx.instanceId);
-                    await closeEntry(entry);
-                    fail("probe_subscription_failed", "Session event subscription failed");
-                }
             }
+            let openingObservation;
             try {
+                subscribe(entry);
+                openingObservation = requireObservation(entry);
                 const hosted = await entry.ready;
-                if (disposed || instances.get(ctx.instanceId) !== entry) {
+                if (disposed || instances.get(ctx.instanceId) !== entry || entry.observation !== openingObservation) {
                     fail("probe_closed", "Instance closed while opening");
                 }
                 entry.hosted = hosted;
                 return { title: "Canvas 173 (synthetic root bound)", url: hosted.url };
             } catch (error) {
+                if (openingObservation && entry.observation && entry.observation !== openingObservation) throw error;
+                release(revoke(entry));
                 if (instances.get(ctx.instanceId) === entry) instances.delete(ctx.instanceId);
-                if (instances.size === 0 && unsubscribe) { unsubscribe(); unsubscribe = undefined; }
+                await closeEntry(entry);
                 if (error instanceof CanvasError) throw error;
                 fail("probe_open_failed", "Loopback server could not start");
             }
@@ -271,6 +341,7 @@ export function createProbe(createCanvas, CanvasError) {
                 if (!entry) fail("probe_instance_missing", "Open the instance first");
                 if (!entry.hosted) fail("probe_instance_not_ready", "Instance is not ready");
                 bindRoot(ctx, entry.selectedPath, entry.root);
+                const state = requireObservation(entry);
                 return {
                     exactJoinedSession: true,
                     selectedProjectRoot: { status: "matched", scope: "explicit-synthetic-root-equality-only" },
@@ -282,7 +353,16 @@ export function createProbe(createCanvas, CanvasError) {
                     model: { status: "unavailable" },
                     contextUsage: { status: "unavailable" },
                     replay: "unproven; subscription only, no history reads",
-                    events: entry.events.map((event) => ({ ...event })),
+                    observation: {
+                        generation: state.generation, scope: "this-instance-live-subscription-only",
+                        limits: { events: EVENT_LIMIT, aliases: ALIAS_LIMIT, idCharacters: ID_LIMIT },
+                        accepted: state.accepted, ignored: state.ignored, retained: state.events.length,
+                        eventEvictions: state.eventEvictions, aliasEvictions: state.aliasEvictions,
+                        retainedAliases: state.aliases.size,
+                        previousEventMeaning: "chronologically-previous-event; not agent hierarchy",
+                        correlation: "volatile; evicted IDs receive fresh aliases; no history or completeness claim",
+                    },
+                    events: structuredClone(state.events),
                 };
             },
         }],
@@ -300,7 +380,7 @@ export function createProbe(createCanvas, CanvasError) {
         async dispose() {
             if (disposed) return;
             disposed = true;
-            if (unsubscribe) { unsubscribe(); unsubscribe = undefined; }
+            revokeAll();
             const entries = [...instances.values()];
             instances.clear();
             await Promise.all(entries.map(closeEntry));
