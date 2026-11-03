@@ -57,7 +57,7 @@ it.each([[1, 1], [2, 2], [4, 3]])('anchors transient links to interpolated walki
     expect(ctx.setTransform).toHaveBeenCalledWith(dpr, 0, 0, dpr, 0, 0);
     expect(ctx.moveTo).toHaveBeenCalledWith(32 * zoom + pan.current.x, 24 * zoom + pan.current.y);
     expect(ctx.lineTo).toHaveBeenCalledWith(40 * zoom + pan.current.x, 40 * zoom + pan.current.y);
-    expect(frame.mock.lastCall?.[5]).toEqual([parent, child]);
+    expect(frame.mock.lastCall?.[6]).toEqual([parent, child]);
   } finally {
     act(() => root.unmount());
     vi.restoreAllMocks();
@@ -245,7 +245,7 @@ it('renders a moving followed character at the camera center until manual touch 
     drawFrame();
     expect(pan.current.x).toBe(firstPan.x - 64);
     expect(center()).toEqual({ x: 400, y: 300 });
-    expect(rendered.mock.lastCall?.slice(6, 9)).toEqual([2, pan.current.x, pan.current.y]);
+    expect(rendered.mock.lastCall?.slice(7, 10)).toEqual([2, pan.current.x, pan.current.y]);
 
     const canvas = host.querySelector('canvas')!;
     const dispatch = (type: string, points: number[]) => {
@@ -622,7 +622,7 @@ describe('zoom keeps the office in view', () => {
   /** Office rectangle actually handed to the renderer on the latest frame. */
   function renderedOffice() {
     const args = frame.mock.lastCall!;
-    const zoom = args[6] as number, x = args[7] as number, y = args[8] as number;
+    const zoom = args[7] as number, x = args[8] as number, y = args[9] as number;
     return { zoom, x, y, width: 20 * TILE_SIZE * zoom, height: 15 * TILE_SIZE * zoom };
   }
 

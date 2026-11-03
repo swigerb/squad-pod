@@ -125,16 +125,28 @@ mute/unmute, dispose/reactivate and synchronous-host StrictMode replay are cover
 This proves scheduling/ownership behavior only, **not native audible/device or
 browser permission qualification**.
 
+Carpet assets now belong to each `OfficeState`: sheet copies, derived palettes,
+local revision and the 1024-entry FIFO recolor cache are created by
+`createCarpetAssets`. Manifest delivery, the existing engine/carpet renderer,
+toolbar previews/availability and paint validation all use that owner. The
+context-keyed carpet layer checks both asset-object identity and local revision,
+including rebinding one context between offices with equal revisions. Reloading
+one owner's carpets clears only its recolor cache; peer layers remain reusable.
+Palette-key and marching-square helpers are pure. Normal-runner regressions use
+two offices in the **same JavaScript realm**, distinct sheets, reload/recovery,
+picker sprite data, paint validation, bounded cache eviction and shared-context
+rendering. Canvas contexts remain synthetic; this is not native pixel qualification.
+
 **Still outside this increment:** mutable module-level asset registries/loaders
-(floor/wall/carpet/pet/character templates, furniture catalog, tileset metadata,
-loading generations/diagnostics) and rendering/colorization caches remain shared.
-Distinct asset streams are not qualified as isolated. Other document-level card dismissal/
+(floor/wall/pet/character templates, furniture catalog, tileset metadata,
+loading generations/diagnostics) and their rendering/colorization caches remain shared.
+Distinct non-carpet asset streams are not qualified as isolated. Other document-level card dismissal/
 focus-trap listeners and non-editor DOM identities are not migrated by this boundary.
 Host-side agent/session stores, adapter/transport lifetime,
 default VS Code client acquisition and standalone server/terminal session ownership
 are unchanged. No new session identity or write authority is inferred from this seam.
 
-This is a bounded state-allocation, editor/canvas-input and notification-audio slice of #174, not Canvas support
+This is a bounded state-allocation, editor/canvas-input, notification-audio and carpet-assets slice of #174, not Canvas support
 or full multi-instance acceptance.
 Canvas entry/theme/error UX, explicit validated current-root/exact-session authority,
 remaining shared-state/input isolation, two-project/session tests, and integrated

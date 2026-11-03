@@ -4,7 +4,6 @@ import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, OfficeLayout } from '../office/types.js';
 import { applyTilePaint, applyErase, applyFurniturePlace, planFurnitureMove, planFurnitureRotate, commitFurniturePlan, applyCarpetPaint, applyCarpetErase, pickCarpet, getFurnitureAt, setFurnitureColor } from '../office/editor/editorActions.js';
-import { hasCarpetVariant } from '../office/sprites/carpetTiles.js';
 import { CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR } from '../constants.js';
 import { UndoHistory } from '../office/editor/undoHistory.js';
 import { ZOOM_DEFAULT_DPR_FACTOR, ZOOM_MIN, ZOOM_MAX, MAX_COLS, MAX_ROWS } from '../constants.js';
@@ -292,7 +291,7 @@ export function useEditorActions(getOfficeState: () => OfficeState, editorState:
         }
       } else if (editorState.tool === EditTool.CARPET_PAINT) {
         const layout = officeState.getLayout();
-        editorState.transformError = hasCarpetVariant(editorState.carpetVariant)
+        editorState.transformError = officeState.carpetAssets.hasCarpetVariant(editorState.carpetVariant)
           ? null : 'Carpet style is unavailable. Check the asset diagnostics.';
         if (!editorState.transformError) {
           const next = applyCarpetPaint(layout, col, row, {
