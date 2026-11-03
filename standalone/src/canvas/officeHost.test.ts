@@ -5,7 +5,7 @@ import { request, type IncomingHttpHeaders } from 'node:http';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { WebSocket } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import type { CanvasDefinition } from '@github/copilot-sdk/extension';
 import * as observers from '../observer.js';
 import { startCanvasOfficeHost, type CanvasOfficeHost } from './officeHost.js';
@@ -99,6 +99,16 @@ async function controlCookie(host: CanvasOfficeHost) {
     { Origin: url.origin, 'Content-Type': 'application/json' });
   expect(result.status).toBe(204);
   return result.headers['set-cookie']![0].split(';')[0];
+}
+function waitForSocketClose(socket: WebSocket, label: string) {
+  return new Promise<void>((resolve, reject) => {
+    const onClose = () => { clearTimeout(timeout); resolve(); };
+    const timeout = setTimeout(() => {
+      socket.off('close', onClose);
+      reject(new Error(`${label} did not close within 2000ms after host disposal`));
+    }, 2000);
+    socket.once('close', onClose);
+  });
 }
 async function save(client: Awaited<ReturnType<typeof connect>>, message: unknown, expectedRevision: string | null) {
   const requestId = client.results.length + 1;
@@ -214,6 +224,7 @@ describe('isolated default read-only Canvas office host', () => {
   });
 
   it('keeps viewer/control exchanges independent and single-use; reloads the unchanged VS Code layout format', async () => {
+    const upgrades = vi.spyOn(WebSocketServer.prototype, 'handleUpgrade');
     const { host, options } = await launch();
     const url = new URL(host.url);
     const viewer = new URLSearchParams(url.hash.slice(1)).get('c');
@@ -228,6 +239,7 @@ describe('isolated default read-only Canvas office host', () => {
     expect((await http(host, '/office-context', 'GET', undefined, { Cookie: readCookie })).body)
       .toContain('"controlAuthorized":false');
     expect(await refused(host, { Origin: url.origin, Cookie: readCookie }, '/control')).toBe(403);
+    const viewerClient = await connect(host, readCookie);
     const control = await connect(host, cookie, true);
     const initial = control.messages.find(message => message.type === 'layoutLoaded')!;
     if (initial.type !== 'layoutLoaded') throw new Error('Missing layout');
@@ -253,8 +265,25 @@ describe('isolated default read-only Canvas office host', () => {
     expect(snapshot.find(message => message.type === 'settingsLoaded')).toMatchObject({ showAreas: true });
     expect(snapshot.find(message => message.type === 'existingAgents')).toMatchObject({ agents: [{ id: 'lisa', seatId: 'seat-1' }] });
     expect(await refused(host, { Origin: url.origin, Cookie: cookie }, '/terminal')).toBe(403);
-    await host.dispose();
-    expect(control.socket.readyState).not.toBe(WebSocket.OPEN);
+    const servers = [...new Set(upgrades.mock.contexts as WebSocketServer[])];
+    expect(servers.map(server => server.clients.size).sort()).toEqual([1, 2]);
+    const serverSockets = servers.flatMap(server => [...server.clients]);
+    const clients = [
+      { socket: viewerClient.socket, label: 'viewer' },
+      { socket: control.socket, label: 'control' },
+      { socket: reloaded.socket, label: 'reloaded control' },
+    ];
+    for (const { socket } of clients) expect(socket.readyState).toBe(WebSocket.OPEN);
+    const closed = clients.map(({ socket, label }) => waitForSocketClose(socket, label));
+    await Promise.all([
+      host.dispose().then(() => {
+        // Server disposal must finish locally; peer close notifications may arrive later.
+        for (const socket of serverSockets) expect(socket.readyState).toBe(WebSocket.CLOSED);
+        for (const server of servers) expect(server.clients.size).toBe(0);
+      }),
+      ...closed,
+    ]);
+    for (const { socket } of clients) expect(socket.readyState).toBe(WebSocket.CLOSED);
     await expect(http(host, '/office-context', 'GET', undefined, { Cookie: cookie })).rejects.toThrow();
     const restarted = await startCanvasOfficeHost(options);
     hosts.push(restarted);
