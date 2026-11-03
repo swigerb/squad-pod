@@ -252,13 +252,27 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     if (blocked) { fs.writeFileSync(preferred, 'not a directory'); }
     fixture.send({ type: 'webviewReady' });
     const roster = () => fixture.messages.filter(m => m.type === 'existingAgents').at(-1);
+    const assertAvailability = (refused: boolean) => {
+      const sourceIndex = fixture.messages.findIndex(m => m.type === 'sourceStatus' && m.status.teamFound === !refused);
+      const rosterIndex = fixture.messages.findLastIndex(m => m.type === 'existingAgents');
+      expect(sourceIndex).toBeGreaterThanOrEqual(0);
+      expect(rosterIndex).toBeGreaterThan(sourceIndex);
+      expect(fixture.messages.filter(m => m.type === 'sourceStatus').at(-1)).toMatchObject({
+        status: {
+          teamFound: !refused,
+          error: refused ? expect.stringContaining('selected-project roster source unavailable') : null,
+        },
+      });
+    };
     expect(roster()).toMatchObject({ agents: blocked ? [] : [{ id: 'ada' }, { id: 'grace' }] });
+    assertAvailability(blocked);
     fixture.messages.length = 0;
 
     if (blocked) { fs.unlinkSync(preferred); }
     else { fs.writeFileSync(preferred, 'not a directory'); }
     vi.advanceTimersByTime(2000);
     expect(roster()).toMatchObject({ agents: blocked ? [{ id: 'ada' }, { id: 'grace' }] : [] });
+    assertAvailability(!blocked);
     fixture.send({ type: 'openSquadInfo' });
     expect(fixture.messages.filter(m => m.type === 'squadInfoLoaded').at(-1)).toMatchObject({
       info: {
@@ -267,6 +281,12 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
         hiddenMembers: blocked ? [{ name: 'Scribe', role: 'Scribe' }] : [],
       },
     });
+    fixture.messages.length = 0;
+    if (blocked) { fs.writeFileSync(preferred, 'not a directory'); }
+    else { fs.unlinkSync(preferred); }
+    vi.advanceTimersByTime(2000);
+    expect(roster()).toMatchObject({ agents: blocked ? [] : [{ id: 'ada' }, { id: 'grace' }] });
+    assertAvailability(blocked);
     expect(fs.readFileSync(legacyTeam, 'utf8')).toBe(content);
     expect(fs.statSync(legacyTeam)).toMatchObject({ mtimeMs: stamp.mtimeMs, size: stamp.size });
   });

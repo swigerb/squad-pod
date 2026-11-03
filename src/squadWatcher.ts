@@ -255,6 +255,8 @@ export class SquadWatcher {
   private scanQueued: ReturnType<typeof setTimeout> | null = null;
   private lastStatus: string | undefined;
   private watchError: string | null = null;
+  /** Retain guarded refusal for native-watch and stopped status updates. */
+  private sourceError: string | null = null;
 
   constructor(
     private readonly workspaceRoot: string,
@@ -284,19 +286,22 @@ export class SquadWatcher {
 
   private publishStatus(): void {
     const squadDir = resolveSquadDir(this.workspaceRoot);
-    let error = this.watchError;
+    let sourceError = this.sourceError;
     let teamFound = false;
-    try {
-      if (!fs.statSync(squadDir).isDirectory()) {
-        error = `Cannot inspect Squad team file: ${squadDir} is not a directory`;
-      } else {
-        teamFound = fs.statSync(path.join(squadDir, 'team.md')).isFile();
-      }
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
-        error = `Cannot inspect Squad team file: ${String(e)}`;
+    if (!sourceError) {
+      try {
+        if (!fs.statSync(squadDir).isDirectory()) {
+          sourceError = 'Cannot inspect Squad team file: source is not a directory.';
+        } else {
+          teamFound = fs.statSync(path.join(squadDir, 'team.md')).isFile();
+        }
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+          sourceError = 'Cannot inspect Squad team file: source metadata unavailable.';
+        }
       }
     }
+    const error = [sourceError, this.watchError].filter(Boolean).join('; ') || null;
     const status: SourceStatus = {
       workspaceRoot: this.workspaceRoot,
       squadDir,
@@ -319,17 +324,18 @@ export class SquadWatcher {
     }
     const squadDir = resolveSquadDir(this.workspaceRoot);
     this.ensureFsWatch(squadDir);
-    this.publishStatus();
 
     const emit = this.baselined;
     this.baselined = true;
 
     let teamDirectory: string | null = null;
+    this.sourceError = null;
     try {
       teamDirectory = selectTeamSourceDirectory(new ProjectFiles(this.workspaceRoot));
     } catch {
-      // Guard refusal is an invalidation state, not permission to use legacy content.
+      this.sourceError = 'Cannot inspect Squad team file: selected-project roster source unavailable.';
     }
+    this.publishStatus();
     const teamStamp = teamDirectory ? statFile(path.join(this.workspaceRoot, teamDirectory, 'team.md')) : null;
     if (!sameStamp(teamStamp, this.teamStamp) || teamDirectory !== this.teamDirectory) {
       const hadTeam = this.teamStamp !== null || emit;
@@ -369,6 +375,7 @@ export class SquadWatcher {
       }
       this.fsWatcher = fs.watch(squadDir, { persistent: false, recursive: true }, () => this.queueScan());
       this.fsWatcher.on('error', (error) => {
+        if (this.disposed) { return; }
         this.fsWatcher?.close();
         this.fsWatcher = null;
         this.watchedDir = null;

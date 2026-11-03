@@ -1,6 +1,8 @@
 /// <reference types="vitest/globals" />
-import * as fs from 'node:fs';
+import fs from 'node:fs';
 import * as path from 'node:path';
+import { EventEmitter } from 'node:events';
+import { syncBuiltinESMExports } from 'node:module';
 import { readTeamFile, readTeamRoster } from './teamParser.js';
 import type { SourceStatus } from './types.js';
 import {
@@ -201,6 +203,8 @@ describe('SquadWatcher', () => {
 
   afterEach(() => {
     watcher?.dispose();
+    vi.restoreAllMocks();
+    syncBuiltinESMExports();
     fs.rmSync(root, { recursive: true, force: true });
   });
 
@@ -246,14 +250,25 @@ describe('SquadWatcher', () => {
     const stamp = fs.statSync(legacyTeam);
     if (blocked) { fs.writeFileSync(preferred, 'not a directory'); }
     const snapshots: Array<{ raw: string | null; ids: string[] }> = [];
+    const statuses: SourceStatus[] = [];
+    const rosterStatuses: Array<SourceStatus | undefined> = [];
     const snapshot = () => ({
       raw: readTeamFile(root), ids: readTeamRoster(root).map(member => member.slug),
     });
     watcher = new SquadWatcher(root, {
-      onRosterChanged: () => snapshots.push(snapshot()),
+      onRosterChanged: () => {
+        snapshots.push(snapshot());
+        rosterStatuses.push(statuses.at(-1));
+      },
       onAgentActivity: e => events.push(e),
+      onStatusChanged: status => statuses.push(status),
     }, { useFsWatch: false });
     watcher.scan();
+    const availability = (refused: boolean) => ({
+      teamFound: !refused,
+      error: refused ? 'Cannot inspect Squad team file: selected-project roster source unavailable.' : null,
+    });
+    expect(statuses.at(-1)).toMatchObject(availability(blocked));
     expect(snapshot()).toEqual(blocked ? { raw: null, ids: [] } : { raw: content, ids: ['Mixed_Name-2'] });
     expect(snapshots).toEqual([]);
 
@@ -261,8 +276,16 @@ describe('SquadWatcher', () => {
     else { fs.writeFileSync(preferred, 'not a directory'); }
     watcher.scan();
     expect(snapshots).toEqual([blocked ? { raw: content, ids: ['Mixed_Name-2'] } : { raw: null, ids: [] }]);
+    expect(statuses.at(-1)).toMatchObject(availability(!blocked));
+    expect(rosterStatuses.at(-1)).toMatchObject(availability(!blocked));
     watcher.scan();
     expect(snapshots).toHaveLength(1);
+    if (blocked) { fs.writeFileSync(preferred, 'not a directory'); }
+    else { fs.unlinkSync(preferred); }
+    watcher.scan();
+    expect(statuses.at(-1)).toMatchObject(availability(blocked));
+    expect(rosterStatuses.at(-1)).toMatchObject(availability(blocked));
+    expect(snapshots.at(-1)).toEqual(blocked ? { raw: null, ids: [] } : { raw: content, ids: ['Mixed_Name-2'] });
     expect(events).toEqual([]);
     expect(fs.readFileSync(legacyTeam, 'utf8')).toBe(content);
     expect(fs.statSync(legacyTeam)).toMatchObject({ mtimeMs: stamp.mtimeMs, size: stamp.size });
@@ -399,5 +422,78 @@ describe('SquadWatcher', () => {
       error: expect.stringContaining('Cannot inspect Squad team file'),
     });
     expect(events).toEqual([]);
+  });
+
+  it('explicitly surfaces unexpected selection failures without exposing their details or reading content', () => {
+    write('team.md', '# Synthetic legacy team', '.ai-team');
+    const stat = fs.statSync;
+    const inspect = vi.spyOn(fs, 'statSync').mockImplementation((...args: Parameters<typeof fs.statSync>) => {
+      if (args[0] === root) { throw new Error('private synthetic details'); }
+      return stat(...args);
+    });
+    const read = vi.spyOn(fs, 'readFileSync');
+    const readBytes = vi.spyOn(fs, 'readSync');
+    syncBuiltinESMExports();
+    const statuses: SourceStatus[] = [];
+    watcher = new SquadWatcher(root, {
+      onRosterChanged: () => {},
+      onAgentActivity: () => {},
+      onStatusChanged: status => statuses.push(status),
+    }, { useFsWatch: false });
+    watcher.scan();
+    watcher.scan();
+    expect(statuses).toHaveLength(1);
+    expect(statuses[0]).toMatchObject({
+      teamFound: false, observer: 'stopped',
+      error: 'Cannot inspect Squad team file: selected-project roster source unavailable.',
+    });
+    expect(inspect).toHaveBeenCalledWith(root, { bigint: true });
+    inspect.mockRestore();
+    syncBuiltinESMExports();
+    watcher.scan();
+    watcher.scan();
+    expect(statuses).toHaveLength(2);
+    expect(statuses.at(-1)).toMatchObject({ teamFound: true, error: null });
+    expect(read).not.toHaveBeenCalled();
+    expect(readBytes).not.toHaveBeenCalled();
+  });
+
+  it('retains native-watch errors alongside refusal, clears recovered errors, and ignores late disposed errors', () => {
+    write('team.md', '# Synthetic legacy team', '.ai-team');
+    const native = Object.assign(new EventEmitter(), { close: vi.fn() });
+    const watch = vi.spyOn(fs, 'watch').mockReturnValue(native as unknown as fs.FSWatcher);
+    syncBuiltinESMExports();
+    const statuses: SourceStatus[] = [];
+    watcher = new SquadWatcher(root, {
+      onRosterChanged: () => {},
+      onAgentActivity: () => {},
+      onStatusChanged: status => statuses.push(status),
+    });
+    watcher.start();
+    native.emit('error', new Error('synthetic native failure'));
+    expect(statuses.at(-1)).toMatchObject({
+      teamFound: true, nativeWatch: false, error: expect.stringContaining('synthetic native failure'),
+    });
+    watch.mockImplementation(() => { throw new Error('synthetic retry failure'); });
+    fs.writeFileSync(path.join(root, '.squad'), 'not a directory');
+    watcher.scan();
+    expect(statuses.at(-1)).toMatchObject({ teamFound: false, nativeWatch: false });
+    expect(statuses.at(-1)?.error).toContain('selected-project roster source unavailable');
+    expect(statuses.at(-1)?.error).toContain('polling fallback');
+    fs.unlinkSync(path.join(root, '.squad'));
+    watcher.scan();
+    expect(statuses.at(-1)).toMatchObject({
+      teamFound: true, nativeWatch: false, error: expect.stringContaining('synthetic retry failure'),
+    });
+    expect(statuses.at(-1)?.error).not.toContain('selected-project roster source unavailable');
+    watch.mockReturnValue(native as unknown as fs.FSWatcher);
+    watcher.scan();
+    expect(statuses.at(-1)).toMatchObject({ teamFound: true, nativeWatch: true, error: null });
+    watcher.dispose();
+    const count = statuses.length;
+    native.emit('error', new Error('synthetic late error'));
+    watcher.scan();
+    expect(statuses).toHaveLength(count);
+    expect(statuses.at(-1)).toMatchObject({ observer: 'stopped', nativeWatch: false, error: null });
   });
 });
