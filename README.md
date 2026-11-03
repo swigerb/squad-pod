@@ -157,8 +157,10 @@ prefill confirmation forms; they never install silently.
 The canvas starts read-only; **Enable editing** is opt-in per instance. It shows
 the joined session's live Squad member activity without replaying history.
 See the [install, privacy and lifecycle guide](docs/canvas-install.md) and
-[feature matrix](docs/canvas-feature-matrix.md). Scout confirms public-marketplace
-installation natively after merge; local checks are not native install proof.
+[feature matrix](docs/canvas-feature-matrix.md). Scout verified the public install
+on **2026-11-03**, on **Windows x64** with app **1.1.34** / runtime **1.0.102**
+([#216](https://github.com/swigerb/squad-pod/issues/216)); this does not verify
+updates, plugin uninstall or rollback. Local checks are not native install proof.
 VSIX versions, defaults and behavior are unchanged.
 
 #### Canvas browser client (source-only)

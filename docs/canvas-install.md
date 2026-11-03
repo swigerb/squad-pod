@@ -23,7 +23,10 @@ Installing a VSIX or updating Copilot CLI does not install or update this plugin
 1. In the GitHub Copilot app, choose **Customize**.
 2. Choose **Add extension**, then **Manage marketplaces**.
 3. Add the GitHub repository **`swigerb/squad-pod`** and confirm the form.
-   The marketplace name is **`squad-pod-plugins`**.
+   The marketplace name is **`squad-pod-plugins`**, with **1 plugin**.
+   If fetching the catalog fails transiently, use the marketplace's **Refresh
+   catalog** action, or **Retry** if offered. Scout encountered a Windows file
+   lock (`os error 32`) on the first fetch; **Refresh catalog** succeeded.
 4. Find **Squad Pod** in Customize and choose **Install**. Review and confirm the
    installation prompts; install only if you trust the publisher and code.
 5. In a supported local project session, ask Copilot to **open the Squad Pod
@@ -38,10 +41,30 @@ These links **prefill confirmation forms**, never install silently. Add the
 marketplace before using the install link. If your browser does not open
 `ghapp://` links, use the manual flow above.
 
-This guide does not claim that these links or the public marketplace install
-have been tested locally. Scout owns native public-marketplace installation
-confirmation after the catalog merges. Local metadata, link and documentation
-checks are not native install evidence.
+### Verified public install
+
+Scout recorded native verification in [issue #216](https://github.com/swigerb/squad-pod/issues/216)
+on **2026-11-03**, using **GitHub Copilot app 1.1.34**, runtime **1.0.102**,
+on **Windows x64**. These are tested versions, not minimum requirements.
+
+- Adding `swigerb/squad-pod` loaded `squad-pod-plugins` with 1 plugin after the
+  fetch recovery described above.
+- Installing from Customize produced files matching **all 103 entries** in the
+  tag's `checksums.json` (source `c1a0df7`, distribution `16d33ae`; full provenance
+  below). **Installed** listed **squad-pod 0.1.0, Marketplace: squad-pod-plugins**.
+- In a new session, Copilot opened **`plugin:squad-pod:squad-pod`**, and
+  **`get_office_state`** returned the roster without error.
+- The marketplace quick link opened **“Add plugin marketplace?”** and the install
+  quick link opened **“Install plugin?”**. Both offered **Allow / Deny**; neither
+  installs silently.
+- **Disable / Enable** worked both ways in **Customize → Installed**. Removing
+  the marketplace through **Actions → Remove marketplace** removed it from the list.
+
+This evidence does not establish support for other platforms/builds or verify
+updates, plugin uninstall or rollback. Local metadata, link and documentation
+checks are not native install evidence; this record does not close the remaining
+[publication](https://github.com/swigerb/squad-pod/issues/183) or
+[Canvas epic](https://github.com/swigerb/squad-pod/issues/172) acceptance gaps.
 
 ## What this preview does
 
@@ -95,6 +118,9 @@ or `.ai-team/` as part of plugin removal.
 
 Manage the plugin in the **GitHub Copilot app**, not VS Code:
 
+The Disable/Enable toggle and marketplace removal below were verified in #216.
+Update, plugin uninstall and rollback guidance remains unverified natively.
+
 - **Update:** close existing Squad Pod canvases after saving/exporting work.
   Refresh the `squad-pod-plugins` catalog in **Manage marketplaces**, then check
   Squad Pod under **Customize → Installed** for the offered plugin update.
@@ -102,12 +128,14 @@ Manage the plugin in the **GitHub Copilot app**, not VS Code:
   catalog, retaining project data. Reopen the canvas in a local session and
   authorize editing again if needed. Refreshing alone does not change a pinned
   distribution; a future release must publish a new catalog ref/SHA/version.
-- **Disable:** in **Customize → Installed**, turn off Squad Pod's toggle.
-  Close its existing canvases; re-enable the toggle and reopen when needed.
+- **Disable / Enable:** in **Customize → Installed**, use Squad Pod's toggle to
+  disable or enable it. Close its existing canvases; enable and reopen when needed.
 - **Uninstall:** close existing canvases, then use Squad Pod's installed-plugin
-  management controls to remove/uninstall it. To remove the catalog too, remove
-  `squad-pod-plugins` under **Manage marketplaces** after uninstalling its plugin.
+  management controls to remove/uninstall it, if offered by your app build.
   Saved project data is retained as described above.
+- **Remove marketplace:** under **Manage marketplaces**, open
+  `squad-pod-plugins`' **Actions → Remove marketplace**. This removes the catalog
+  from the list; it is not evidence that the installed plugin was uninstalled.
 
 App controls may vary by build or managed policy; do not bypass trust or
 organization restrictions. GitHub's [app customization guide](https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app)
