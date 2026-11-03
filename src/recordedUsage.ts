@@ -1,6 +1,6 @@
-import * as fs from 'fs';
 import * as path from 'path';
-import { resolveSquadDir } from './squadPaths.js';
+import { ProjectFiles, projectFileDiagnostic } from './projectFiles.js';
+import { selectTeamSourceDirectory } from './teamSource.js';
 import type { SquadTeamMember } from './types.js';
 
 export const MAX_USAGE_BYTES = 2 * 1024 * 1024;
@@ -186,33 +186,62 @@ export function parseRecordedUsage(content: string, members: readonly SquadTeamM
   return snapshot;
 }
 
+/**
+ * Read the fixed ledger through shared guards for a host-authorized project.
+ * No root/session authorization, runtime membership, or cached totals are inferred.
+ */
 export function readRecordedUsage(workspaceRoot: string | undefined, members: readonly SquadTeamMember[] = []): RecordedUsageSnapshot {
   if (!workspaceRoot) {return unavailableUsage();}
-  const sourcePath = path.join(resolveSquadDir(workspaceRoot), 'log', 'usage.jsonl');
-  let fd: number | undefined;
+  let sourcePath: string | null = null;
+  const unavailable = (state: RecordedUsageSnapshot['state'], diagnostic: string): RecordedUsageSnapshot =>
+    ({ ...unavailableUsage(), state, sourcePath, diagnostic });
+  const changed = () => unavailable('partial', 'Ledger changed while reading; retrying on next poll. No totals read.');
+  const refused = (reason: string) => unavailable('error', `Cannot read usage ledger: ${reason}`);
+  const missing = () => unavailable('missing', 'No local usage ledger. This runtime/backend may not produce one.');
   try {
-    if (!fs.statSync(sourcePath).isFile()) {throw new Error('Usage source is not a regular file.');}
-    fd = fs.openSync(sourcePath, 'r');
-    const stat = fs.fstatSync(fd);
-    if (!stat.isFile()) {throw new Error('Usage source is not a regular file.');}
-    if (stat.size > MAX_USAGE_BYTES) {
-      return { ...unavailableUsage(), state: 'partial', sourcePath, diagnostic: 'Ledger exceeds 2 MiB; no totals read.' };
+    const files = new ProjectFiles(workspaceRoot);
+    let directory: ReturnType<typeof selectTeamSourceDirectory>;
+    try { directory = selectTeamSourceDirectory(files); }
+    catch { return refused('Selected usage directory is unavailable or unsafe.'); }
+    const relative = path.join(directory, 'log', 'usage.jsonl');
+    sourcePath = path.join(files.root, relative);
+    const before = files.inspect(relative);
+    if (before.status !== 'present') {
+      return before.status === 'missing' ? missing() : refused(before.reason);
     }
-    const buffer = Buffer.alloc(Math.min(stat.size + 1, MAX_USAGE_BYTES + 1));
-    const bytes = fs.readSync(fd, buffer, 0, buffer.length, 0);
-    const after = fs.fstatSync(fd);
-    if (bytes !== stat.size || after.size !== stat.size || after.mtimeMs !== stat.mtimeMs || after.ctimeMs !== stat.ctimeMs) {
-      return { ...unavailableUsage(), state: 'partial', sourcePath, diagnostic: 'Ledger changed while reading; retrying on next poll. No totals read.' };
+    if (before.kind !== 'file') {return refused('Usage source is not a regular file.');}
+    if (before.size > BigInt(MAX_USAGE_BYTES)) {
+      return unavailable('partial', 'Ledger exceeds 2 MiB; no totals read.');
     }
-    const content = new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, bytes));
-    return { ...parseRecordedUsage(content, members), sourcePath };
+    try {
+      const content = files.read(relative, MAX_USAGE_BYTES);
+      let selectedAfter: typeof directory;
+      try { selectedAfter = selectTeamSourceDirectory(files); }
+      catch {
+        sourcePath = null;
+        return refused('Selected usage directory is unavailable or unsafe.');
+      }
+      const after = files.inspect(relative);
+      if (after.status === 'unreadable') {return refused(after.reason);}
+      if (content === null || after.fingerprint !== before.fingerprint
+        || selectedAfter !== directory) {return changed();}
+      return { ...parseRecordedUsage(content, members), sourcePath };
+    } catch (error) {
+      const diagnostic = projectFileDiagnostic(error);
+      // ProjectFiles currently exposes fixed diagnostics, not typed refusal codes.
+      // Match only its explicit identity/bound-change failures, never native text.
+      if ([
+        'Source changed while opening.',
+        'Source changed while reading; retry on next poll.',
+        'Source changed while inspecting.',
+        'Selected project root changed.',
+        'Project source changed.',
+        `Source is not a regular file within ${MAX_USAGE_BYTES} bytes.`,
+      ].includes(diagnostic)) {return changed();}
+      return refused(diagnostic);
+    }
   } catch (error) {
-    const missing = (error as NodeJS.ErrnoException).code === 'ENOENT';
-    return {
-      ...unavailableUsage(), state: missing ? 'missing' : 'error', sourcePath,
-      diagnostic: missing ? 'No local usage ledger. This runtime/backend may not produce one.' : `Cannot read usage ledger: ${String(error)}`,
-    };
-  } finally {
-    if (fd !== undefined) {fs.closeSync(fd);}
+    return (error as NodeJS.ErrnoException | null)?.code === 'ENOENT'
+      ? missing() : refused(projectFileDiagnostic(error));
   }
 }

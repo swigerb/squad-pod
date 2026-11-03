@@ -1,7 +1,6 @@
-import * as fs from 'fs';
-import * as os from 'os';
+import fs from 'fs';
 import * as path from 'path';
-import { createRequire } from 'module';
+import { createRequire, syncBuiltinESMExports } from 'module';
 import { buildSync } from 'esbuild';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OutboundMessage, WebviewMessage } from './types.js';
@@ -52,7 +51,7 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
 
   beforeEach(() => {
     vi.useFakeTimers();
-    root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-recorded-provider-')));
+    root = fs.realpathSync(fs.mkdtempSync(path.resolve('.recorded-provider-test-')));
     ledger = path.join(root, '.squad', 'log', 'usage.jsonl');
     fs.mkdirSync(path.dirname(ledger), { recursive: true });
     fs.writeFileSync(path.join(root, '.squad', 'team.md'), team);
@@ -92,6 +91,8 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
   });
   afterEach(() => {
     provider.dispose();
+    vi.restoreAllMocks();
+    syncBuiltinESMExports();
     vi.useRealTimers();
     fs.rmSync(root, { recursive: true, force: true });
   });
@@ -139,6 +140,48 @@ describe('recorded usage through compiled provider (mocked VS Code boundary)', (
     const stopped = snapshots().length;
     vi.advanceTimersByTime(10_000);
     expect(snapshots()).toHaveLength(stopped);
+  });
+
+  it('publishes refusal as unknown, not stale or zero totals, and recovers on refresh', () => {
+    fs.writeFileSync(ledger, JSON.stringify(report) + '\n');
+    receive({ type: 'webviewReady' });
+    expect(snapshots().at(-1)?.snapshot.totals).toEqual({ inputTokens: 123, outputTokens: 45, estimatedCost: 0.02 });
+    const originalRead = fs.readSync;
+    vi.spyOn(fs, 'readSync').mockImplementation((...args: Parameters<typeof fs.readSync>) => {
+      if (typeof args[0] === 'number') {
+        throw Object.assign(new Error(`private ${root}`), { code: 'EACCES' });
+      }
+      return originalRead(...args);
+    });
+    syncBuiltinESMExports();
+    vi.advanceTimersByTime(2000);
+    expect(snapshots().at(-1)?.snapshot).toMatchObject({
+      state: 'error', usageRecords: 0, totals: null, history: [],
+      diagnostic: 'Cannot read usage ledger: Filesystem inspection/read failed (EACCES).',
+    });
+    vi.restoreAllMocks();
+    syncBuiltinESMExports();
+    vi.advanceTimersByTime(2000);
+    expect(snapshots().at(-1)?.snapshot).toMatchObject({
+      state: 'ready', totals: { inputTokens: 123, outputTokens: 45 },
+      history: [expect.objectContaining({ model: 'historical-model' })],
+    });
+    fs.renameSync(path.join(root, '.squad'), path.join(root, '.ai-team'));
+    fs.writeFileSync(path.join(root, '.squad'), 'invalid preferred directory');
+    vi.advanceTimersByTime(2000);
+    expect(snapshots().at(-1)?.snapshot).toMatchObject({
+      state: 'error', sourcePath: null, totals: null, history: [],
+    });
+    fs.unlinkSync(path.join(root, '.squad'));
+    vi.advanceTimersByTime(2000);
+    expect(snapshots().at(-1)?.snapshot).toMatchObject({
+      state: 'ready', sourcePath: path.join(root, '.ai-team', 'log', 'usage.jsonl'), usageRecords: 1,
+    });
+    workspace.workspaceFolders = [];
+    retarget();
+    expect(snapshots().at(-1)?.snapshot).toMatchObject({
+      state: 'unavailable', sourcePath: null, totals: null, history: [],
+    });
   });
 
   it('imports only after explicit selection and consent, manually replaces snapshots and clears on retarget', async () => {

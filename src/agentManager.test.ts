@@ -68,6 +68,15 @@ describe('agentManager', () => {
   });
 
   describe('initializeAgents', () => {
+    it('uses the guarded baseline, including an empty refusal, without re-reading or posting', () => {
+      mockReadTeamRoster.mockReturnValue([makeMember('Stale', 'stale')]);
+      const current = [makeMember('Current', '_Current_2')];
+      expect([...initializeAgents('/workspace', context, webview, current).keys()]).toEqual(['_Current_2']);
+      expect([...initializeAgents('/workspace', context, webview, []).keys()]).toEqual([]);
+      expect(mockReadTeamRoster).not.toHaveBeenCalled();
+      expect(webview.postMessage).not.toHaveBeenCalled();
+    });
+
     it('creates agents from roster without posting (snapshot is sent separately)', () => {
       const members = [
         makeMember('Homer Simpson', 'homer-simpson', 'Lead'),

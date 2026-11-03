@@ -1,5 +1,4 @@
 import fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import { syncBuiltinESMExports } from 'module';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -135,7 +134,7 @@ describe('local usage source and generic activity isolation', () => {
   let root: string;
   let ledger: string;
   beforeEach(() => {
-    root = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-usage-'));
+    root = fs.realpathSync(fs.mkdtempSync(path.resolve('.recorded-usage-test-')));
     ledger = path.join(root, '.ai-team', 'log', 'usage.jsonl');
     fs.mkdirSync(path.dirname(ledger), { recursive: true });
   });
@@ -195,7 +194,7 @@ describe('local usage source and generic activity isolation', () => {
     syncBuiltinESMExports();
     fs.writeFileSync(ledger, Buffer.from([0xff, 0x0a]));
     expect(readRecordedUsage(root)).toMatchObject({
-      state: 'error', totals: null, diagnostic: expect.stringContaining('Cannot read usage ledger'),
+      state: 'error', totals: null, diagnostic: 'Cannot read usage ledger: Source is not valid UTF-8.',
     });
   });
 
@@ -214,5 +213,98 @@ describe('local usage source and generic activity isolation', () => {
     } finally {
       watcher.dispose();
     }
+  });
+
+  it('refuses an invalid preferred directory without reporting the legacy path, then recovers', () => {
+    fs.writeFileSync(ledger, jsonl(usage));
+    const preferred = path.join(root, '.squad');
+    fs.writeFileSync(preferred, 'not a directory');
+    expect(readRecordedUsage(root)).toMatchObject({
+      state: 'error', sourcePath: null, totals: null, history: [],
+    });
+    fs.unlinkSync(preferred);
+    expect(readRecordedUsage(root)).toMatchObject({ state: 'ready', sourcePath: ledger, usageRecords: 1 });
+    fs.mkdirSync(preferred);
+    expect(readRecordedUsage(root)).toMatchObject({
+      state: 'missing', sourcePath: path.join(preferred, 'log', 'usage.jsonl'), totals: null,
+    });
+  });
+
+  it.each(['.squad', 'log'])('refuses a %s directory link/junction without reading its target', component => {
+    fs.writeFileSync(ledger, jsonl(usage));
+    const link = component === '.squad' ? path.join(root, '.squad') : path.dirname(ledger);
+    const target = component === '.squad' ? path.join(root, '.ai-team') : path.join(root, 'target');
+    if (component === 'log') { fs.renameSync(link, target); }
+    fs.symlinkSync(target, link, process.platform === 'win32' ? 'junction' : 'dir');
+    const read = vi.spyOn(fs, 'readSync');
+    syncBuiltinESMExports();
+    try {
+      expect(readRecordedUsage(root)).toMatchObject({
+        state: 'error', sourcePath: component === '.squad' ? null : ledger, totals: null, history: [],
+      });
+      expect(read).not.toHaveBeenCalled();
+    } finally { fs.unlinkSync(link); }
+    if (component === 'log') { fs.renameSync(target, link); }
+    expect(readRecordedUsage(root)).toMatchObject({ state: 'ready', usageRecords: 1 });
+  });
+
+  it('withholds totals when the opened ledger path is replaced with an equal-sized object', () => {
+    fs.writeFileSync(ledger, jsonl(usage));
+    const replacement = path.join(root, 'replacement.jsonl');
+    fs.writeFileSync(replacement, jsonl({ ...usage, inputTokens: 99 }));
+    const originalRead = fs.readSync;
+    vi.spyOn(fs, 'readSync').mockImplementationOnce((fd, buffer, offset, length, position) => {
+      const bytes = originalRead(fd, buffer, offset, length, position);
+      fs.renameSync(ledger, path.join(root, 'displaced.jsonl'));
+      fs.renameSync(replacement, ledger);
+      return bytes;
+    });
+    syncBuiltinESMExports();
+    expect(readRecordedUsage(root)).toMatchObject({
+      state: 'partial', totals: null, history: [],
+      diagnostic: 'Ledger changed while reading; retrying on next poll. No totals read.',
+    });
+    expect(readRecordedUsage(root).totals?.inputTokens).toBe(99);
+  });
+
+  it('sanitizes denied reads and recovers without stale totals', () => {
+    fs.writeFileSync(ledger, jsonl(usage));
+    expect(readRecordedUsage(root).totals?.inputTokens).toBe(10);
+    const originalRead = fs.readSync;
+    vi.spyOn(fs, 'readSync').mockImplementationOnce(() => {
+      throw Object.assign(new Error(`private detail ${root}`), { code: 'EACCES' });
+    }).mockImplementation(originalRead);
+    syncBuiltinESMExports();
+    expect(readRecordedUsage(root)).toMatchObject({
+      state: 'error', totals: null, history: [],
+      diagnostic: 'Cannot read usage ledger: Filesystem inspection/read failed (EACCES).',
+    });
+    expect(readRecordedUsage(root).totals?.inputTokens).toBe(10);
+  });
+
+  it.each([false, true])('rechecks preferred directory selection after a legacy read (invalid: %s)', invalid => {
+    fs.writeFileSync(ledger, jsonl(usage));
+    const originalRead = fs.readSync;
+    vi.spyOn(fs, 'readSync').mockImplementationOnce((fd, buffer, offset, length, position) => {
+      const bytes = originalRead(fd, buffer, offset, length, position);
+      const preferred = path.join(root, '.squad');
+      if (invalid) { fs.writeFileSync(preferred, 'invalid'); }
+      else { fs.mkdirSync(preferred); }
+      return bytes;
+    });
+    syncBuiltinESMExports();
+    expect(readRecordedUsage(root)).toMatchObject({
+      state: invalid ? 'error' : 'partial', sourcePath: invalid ? null : ledger, totals: null, history: [],
+    });
+  });
+
+  it('refuses relative project paths without exposing native errors', () => {
+    expect(readRecordedUsage('relative-project')).toMatchObject({
+      state: 'error', sourcePath: null, totals: null,
+      diagnostic: 'Cannot read usage ledger: Provide an explicit absolute project path.',
+    });
+    expect(readRecordedUsage(path.join(root, 'absent-project'))).toMatchObject({
+      state: 'missing', sourcePath: null, totals: null, history: [],
+    });
   });
 });
