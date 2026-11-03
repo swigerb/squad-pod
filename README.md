@@ -141,6 +141,21 @@ Responsive controls provide touch pan/zoom, page navigation and deliberate clipb
 
 See the [build/run and security instructions](standalone/README.md). The companion is separate from the Marketplace extension and is not published as an npm product.
 
+### Canvas browser client (source-only)
+
+Build the separate Copilot app panel client with `cd webview-ui` then
+`npx vite build --config vite.canvas.config.ts`. Its entry is
+`standalone/dist/canvas-browser/canvas.html`; the Canvas office host (#194) must serve
+that entry at `/`, with `/auth`, `/office-context` and `/office` on the same origin.
+This does not change the standalone CLI's credential-paste entry or host defaults.
+
+Canvas checks the existing HttpOnly cookie first. Only an unauthenticated response
+allows a single `#c=<credential>` exchange; the fragment is removed before network
+requests and is never stored. An expired session must be reopened in the app.
+Canvas supports observed office rendering, settings reads and agent details only:
+editing, file opening, directory management, live logs and recovery storage are
+unavailable. The panel follows the system light/dark preference.
+
 ## Squad Pod and Pixel Agents
 
 Squad Pod brings the Pixel Agents office experience to **Squad and Copilot CLI**. It shares the visual-office foundations while using Squad's own roster, charters and task identities.

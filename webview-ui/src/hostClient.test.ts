@@ -4,6 +4,29 @@ import type { WebviewMessage } from "../../src/types.js";
 import { createDefaultHostClient, createVSCodeClient } from "./hostClient.js";
 
 describe("VS Code host client adapter", () => {
+  it("does not acquire a native host merely by importing an injected-client boundary", async () => {
+    const acquire = vi.fn();
+    vi.stubGlobal('acquireVsCodeApi', acquire);
+    vi.resetModules();
+    try {
+      await import('./hostClient.js');
+      expect(acquire).not.toHaveBeenCalled();
+    } finally { vi.unstubAllGlobals(); }
+  });
+  it("preserves the native default and acquires it only once when requested", async () => {
+    const api = { postMessage: vi.fn(), getState: vi.fn(), setState: vi.fn() };
+    const acquire = vi.fn(() => api);
+    vi.stubGlobal('acquireVsCodeApi', acquire);
+    vi.resetModules();
+    try {
+      const { getDefaultHost } = await import('./hostClient.js');
+      const host = getDefaultHost();
+      expect(host.client?.capabilities.recoveryState).toBe('webview-state');
+      expect(host.error).toBeNull();
+      expect(getDefaultHost()).toBe(host);
+      expect(acquire).toHaveBeenCalledOnce();
+    } finally { vi.unstubAllGlobals(); }
+  });
   it("acquires the API once and preserves typed sends and recovery state behavior", () => {
     let storedState: unknown = { recovery: "existing" };
     let failWrite = false;

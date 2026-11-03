@@ -23,27 +23,34 @@ import { PULSE_ANIMATION_DURATION_SEC } from './constants.js';
 import { LayoutConflict } from './components/LayoutConflict.js';
 import { DirectoryModal } from './components/DirectoryModal.js';
 import { HostClientProvider, useHostClient } from './HostClientContext.js';
-import { defaultHostClient, defaultHostError, type HostClient } from './hostClient.js';
+import { getDefaultHost, type HostClient } from './hostClient.js';
 import type { CameraRequest } from './office/engine/viewport.js';
 
 const unsupportedHostMessage = 'Squad Pod needs its supported VS Code host. Run “Squad Pod: Show Panel” from VS Code; standalone browser transport is not available in this build.';
 
 export default function App({
-  client = defaultHostClient,
-  hostError = defaultHostError,
+  client,
+  hostError,
   readOnly = false,
   standalone = false,
+  canvas = false,
 }: {
   client?: HostClient | null;
   hostError?: string | null;
   readOnly?: boolean;
   standalone?: boolean;
+  canvas?: boolean;
 } = {}) {
+  if (client === undefined) {
+    const host = getDefaultHost();
+    client = host.client;
+    hostError ??= host.error;
+  }
   if (!client) {
     return (
       <div role="alert" style={{ padding: '24px', color: 'var(--vscode-foreground)' }}>
         <h1>Host unavailable</h1>
-        <p>{hostError
+        <p>{canvas ? 'This Squad Pod canvas session expired. Reopen the canvas.' : hostError
           ? `Squad Pod could not connect to its VS Code host: ${hostError}. ${unsupportedHostMessage}`
           : unsupportedHostMessage}</p>
       </div>
@@ -51,16 +58,16 @@ export default function App({
   }
   return (
     <HostClientProvider client={client}>
-      <ConnectedApp readOnly={readOnly} standalone={standalone} />
+      <ConnectedApp readOnly={readOnly || canvas} standalone={standalone || canvas} canvas={canvas} />
     </HostClientProvider>
   );
 }
 
-function ConnectedApp({ readOnly, standalone }: { readOnly: boolean; standalone: boolean }) {
+function ConnectedApp({ readOnly, standalone, canvas }: { readOnly: boolean; standalone: boolean; canvas: boolean }) {
   const client = useHostClient();
   const [recovery] = useState(() => {
     try {
-      return { value: client.getState(), error: null };
+      return { value: client.capabilities.recoveryState === 'unavailable' ? undefined : client.getState(), error: null };
     } catch (error) {
       return { value: undefined, error: String(error) };
     }
@@ -75,10 +82,10 @@ function ConnectedApp({ readOnly, standalone }: { readOnly: boolean; standalone:
       </div>
     );
   }
-  return <ConnectedOffice recoveryState={recovery.value} readOnly={readOnly} standalone={standalone} />;
+  return <ConnectedOffice recoveryState={recovery.value} readOnly={readOnly} standalone={standalone} canvas={canvas} />;
 }
 
-function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryState: unknown; readOnly: boolean; standalone: boolean }) {
+function ConnectedOffice({ recoveryState, readOnly, standalone, canvas }: { recoveryState: unknown; readOnly: boolean; standalone: boolean; canvas: boolean }) {
   const client = useHostClient();
   // The stable getter feeds the same instance to message hooks, editor and renderer.
   const [{ getOfficeState, editorState }] = useState(() => {
@@ -94,7 +101,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
     readOnly,
     standalone,
   );
-  const isDebugMode = settings.debugEnabled;
+  const isDebugMode = settings.debugEnabled && !readOnly;
   const [isTelemetryOpen, setIsTelemetryOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [taskBubblesEnabled, setTaskBubblesEnabled] = useState(true);
@@ -229,6 +236,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
   }, [clearTelemetry]);
 
   const handleOpenDirectories = useCallback(() => {
+    if (!client.capabilities.actions.includes('getDirectories')) return;
     setIsDirectoryModalOpen(true);
     client.send({ type: 'getDirectories' });
   }, [client]);
@@ -281,13 +289,16 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
         }}
       >
         <div style={{ fontSize: '18px', fontWeight: 500 }}>
-          Open a folder to get started
+          {canvas ? 'No selected project is available' : 'Open a folder to get started'}
         </div>
         <div style={{ fontSize: '14px', opacity: 0.7, maxWidth: '400px' }}>
-          Squad Pod needs a workspace to discover your AI team. Open a folder with a Squad configuration to see your agents in action.
+          {canvas ? 'Reopen the canvas for a project with a Squad configuration.'
+            : 'Squad Pod needs a workspace to discover your AI team. Open a folder with a Squad configuration to see your agents in action.'}
         </div>
         <button
           type="button"
+          disabled={!client.capabilities.actions.includes('getDirectories')}
+          title={!client.capabilities.actions.includes('getDirectories') ? 'Directory management is unavailable in this host.' : undefined}
           onClick={handleOpenDirectories}
           style={{
             padding: '8px 12px',
@@ -445,6 +456,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone }: { recoveryStat
       />
 
       <TelemetryDrawer
+        canvas={canvas}
         sourceStatus={sourceStatus}
         onOpenSettings={() => setShowSettings(true)}
         readOnly={readOnly || standalone}
