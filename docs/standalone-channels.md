@@ -11,7 +11,13 @@ typed office messages, API acquisition and recovery-state storage.
 
 `src/core/officeChannel.ts` owns the existing `HostClient` interface. The webview
 re-exports it for compatibility. `connectOffice` subscribes before sending
-`webviewReady`, so synchronous snapshots cannot race subscription. Office
+`webviewReady`, so synchronous snapshots cannot race subscription. It owns
+once-only cleanup and fences late delivery before calling adapter teardown.
+Its optional synchronous initializer includes the hook's initial diagnostics;
+initialization failure retires the connection and releases any returned subscription.
+Initialization and cleanup failures propagate together as an `AggregateError`.
+If subscription itself throws without returning a handle, delivery is retired
+but no adapter teardown authority is available. Office
 commands/events remain `WebviewMessage`/`OutboundMessage`; terminal messages are
 not added to that union. This is a trusted typed seam, **not** a JSON validator or
 an authenticated network boundary. The observer's isolated transport validates
