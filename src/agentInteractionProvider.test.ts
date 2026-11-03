@@ -662,4 +662,24 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
       modelSources: expect.arrayContaining([expect.objectContaining({ state: 'unreadable', values: [] })]),
     });
   });
+
+  it('withholds legacy model declarations when the preferred directory becomes invalid', () => {
+    const root = fixture.workspaceRoot;
+    fs.renameSync(path.join(root, '.squad'), path.join(root, '.ai-team'));
+    fs.writeFileSync(path.join(root, '.ai-team', 'config.json'), '{"defaultModel":"withheld-legacy"}');
+    fs.writeFileSync(path.join(root, '.squad'), 'not a directory');
+    const before = fixture.messages.length;
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada', requestId: 'invalid-preferred-models' });
+    expect(fixture.messages.slice(before)).toEqual([
+      expect.objectContaining({ type: 'agentDetailLoaded', requestId: 'invalid-preferred-models', detail: expect.objectContaining({
+        id: 'ada', workspaceRoot: root, charterStatus: 'unreadable', charterContent: null, charterSummary: null,
+        currentTask: null, currentTaskSource: null,
+        modelSources: expect.arrayContaining([expect.objectContaining({
+          sourcePath: path.join(root, '.squad', 'config.json'), state: 'unreadable', values: [],
+        })]),
+      }) }),
+    ]);
+    expect(details().at(-1)?.detail.modelSources?.every(source => source.values.length === 0)).toBe(true);
+    expect(fixture.calls).toEqual({ documents: [], commands: [], information: [], terminals: [] });
+  });
 });
