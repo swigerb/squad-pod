@@ -1,0 +1,31 @@
+:root {
+  color-scheme: dark light;
+  --vscode-foreground: #e4e6f0;
+  --vscode-descriptionForeground: #b7bbca;
+  --vscode-editor-background: #202432;
+  --vscode-panel-border: #626b81;
+  --vscode-button-background: #3156a0;
+  --vscode-button-foreground: #fff;
+  --vscode-button-secondaryBackground: #454d62;
+  --vscode-button-secondaryForeground: #fff;
+  --vscode-focusBorder: #8ab4ff;
+  --vscode-disabledForeground: #9399a8;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --vscode-foreground: #202432;
+    --vscode-descriptionForeground: #50586b;
+    --vscode-editor-background: #f5f6fa;
+    --vscode-panel-border: #8992a6;
+    --vscode-focusBorder: #2454a0;
+    --vscode-disabledForeground: #687080;
+    --pixel-vignette: radial-gradient(ellipse at center, transparent 65%, #20243233);
+  }
+}
+html, body, #root { background: var(--vscode-editor-background); color: var(--vscode-foreground); }
+.canvas-panel { height: 100%; display: flex; flex-direction: column; min-width: 0; }
+.canvas-scope { flex: none; margin: 0; padding: 8px 12px; font-size: 12px; }
+.canvas-panel main { position: relative; flex: 1; min-height: 0; }
+.canvas-connection { flex: none; margin: 0; padding: 4px 12px; font-size: 12px; overflow-wrap: anywhere; }
+button:disabled { opacity: .5; cursor: not-allowed !important; }
+:focus-visible { outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }

@@ -1,15 +1,16 @@
 import type { CliUsageSnapshot } from '../../../src/cliUsage.js';
 
-export function CliUsage({ snapshot, readOnly, onAction }: {
+export function CliUsage({ snapshot, readOnly, canvas = false, onAction }: {
   snapshot: CliUsageSnapshot | null;
   readOnly: boolean;
+  canvas?: boolean;
   onAction: (type: 'selectCliUsage' | 'refreshCliUsage' | 'clearCliUsage') => void;
 }) {
   const report = snapshot?.report;
   return <section aria-label="Imported CLI usage" style={{ padding: '8px 12px', borderBottom: '1px solid var(--vscode-panel-border)', overflowWrap: 'anywhere' }}>
     <h3 style={{ margin: 0, fontSize: 12 }}>Copilot CLI usage export - {snapshot?.state ?? 'unselected'}</h3>
     <p>Separate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.</p>
-    {readOnly ? <p>CLI usage import is unavailable in standalone/read-only observation. Use the VS Code extension to select an export.</p>
+    {readOnly ? <p>{canvas ? 'CLI usage import is unavailable in Canvas.' : 'CLI usage import is unavailable in standalone/read-only observation. Use the VS Code extension to select an export.'}</p>
       : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <button type="button" className="cli-usage-action" onClick={() => onAction('selectCliUsage')}>Select CLI usage JSON...</button>
         <button type="button" className="cli-usage-action" disabled={!snapshot?.canRefresh} onClick={() => onAction('refreshCliUsage')}>Refresh selected export</button>

@@ -13,6 +13,7 @@ import { getCharacterSprites, setCharacterTemplates } from './office/sprites/def
 import { createVSCodeClient } from './hostClient.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { getColorizedSprite } from './office/colorize.js';
+import { CANVAS_OBSERVER_CAPABILITIES } from '../../src/core/hostCapabilities.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -101,6 +102,72 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(client.events.slice(0, 3)).toEqual([
       'subscribe', 'send:webviewReady', 'send:diagnosticReport',
     ]);
+  });
+
+  it('renders Canvas as an observer with unavailable host controls and host-neutral telemetry', async () => {
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: CANVAS_OBSERVER_CAPABILITIES };
+    vi.spyOn(client, 'setState');
+    const acquireApi = vi.fn(() => { throw new Error('Canvas must not acquire VS Code'); });
+    vi.stubGlobal('acquireVsCodeApi', acquireApi);
+    try {
+      root = createRoot(host);
+      act(() => root.render(<App client={null} canvas />));
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain('Reopen the canvas.');
+      expect(host.textContent).not.toContain('VS Code');
+      act(() => root.render(<App client={client} canvas />));
+      snapshot(imported, 'canvas');
+      for (const label of ['Edit Layout', 'Directories', 'Settings']) {
+        const button = [...host.querySelectorAll('button')].find(item => item.textContent === label);
+        expect(button?.disabled, label).toBe(true);
+        expect(button?.title, label).toBeTruthy();
+        click(label);
+      }
+      click('Telemetry');
+      expect(host.textContent).toContain('CLI usage import is unavailable in Canvas.');
+      expect(host.textContent).toContain('Live logs and session tasks are unavailable in Canvas.');
+      expect(host.textContent).not.toContain('VS Code');
+      expect(host.textContent).not.toContain('--live-activity');
+      click('Squad Info');
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
+      expect(client.setState).not.toHaveBeenCalled();
+      expect(client.getState).not.toHaveBeenCalled();
+      expect(acquireApi).not.toHaveBeenCalled();
+      send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: true, showAreas: true });
+      expect([...host.querySelectorAll('h2')].map(heading => heading.textContent)).not.toContain('Debug View');
+      send({ type: 'sourceStatus', status: {
+        workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad', teamFound: true,
+        observer: 'watching', nativeWatch: false, error: null,
+      } });
+      send({ type: 'existingAgents', agents: [{
+        id: 'canvas-agent', name: 'CanvasBot', role: 'Developer', paletteIndex: 0,
+        seatId: null, status: 'idle', currentTask: null,
+      }] });
+      await nextFrame();
+      const label = host.querySelector<HTMLButtonElement>('[data-agent-label="canvas-agent"]');
+      expect(label).not.toBeNull();
+      act(() => label!.click());
+      const request = vi.mocked(client.send).mock.calls.map(([message]) => message)
+        .filter(message => message.type === 'requestAgentDetail').at(-1);
+      expect(request?.agentId).toBe('canvas-agent');
+      send({ type: 'agentDetailLoaded', requestId: request?.requestId, detail: {
+        id: 'canvas-agent', name: 'CanvasBot', role: 'Developer', workspaceRoot: 'workspace-A',
+        status: 'idle', currentTask: null, charterSummary: null, charterContent: null,
+        charterStatus: 'unavailable', expertise: null, responsibilities: null, boundaries: null,
+        recentActivity: [], lastActiveAt: 0, lastActiveAtStatus: 'unobserved',
+      } });
+      const charter = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === 'View Charter');
+      expect(charter?.disabled).toBe(true);
+      expect(charter?.title).toContain('Opening files is unavailable');
+      act(() => charter?.click());
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual([
+        'webviewReady', 'requestAgentDetail',
+      ]);
+      send({ type: 'noWorkspace' });
+      const manage = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === 'Manage / Launch Directories');
+      expect(manage?.disabled).toBe(true);
+      expect(manage?.title).toContain('unavailable');
+    } finally { vi.unstubAllGlobals(); }
   });
 
   it('honors transfer restrictions in an injected client without standalone/readOnly flags', () => {

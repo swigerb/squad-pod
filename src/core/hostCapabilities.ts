@@ -35,6 +35,12 @@ export const STANDALONE_OBSERVER_CAPABILITIES: HostCapabilities = Object.freeze(
   recoveryState: 'unavailable',
 });
 
+/** Copilot app Canvas: observation only, without cross-panel recovery storage. */
+export const CANVAS_OBSERVER_CAPABILITIES: HostCapabilities = Object.freeze({
+  actions: Object.freeze<HostAction[]>(['getSettings', 'requestAgentDetail']),
+  recoveryState: 'unavailable',
+});
+
 /**
  * Existing opted-in standalone control adapter, including browser-local file I/O.
  * Saves still require independent server authorization, readiness and revision checks.

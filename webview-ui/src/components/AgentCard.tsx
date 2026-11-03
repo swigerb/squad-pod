@@ -270,6 +270,8 @@ export function AgentCard({
 
       {/* View Charter button */}
       <button
+        disabled={!onViewCharter}
+        title={!onViewCharter ? 'Opening files is unavailable in this host.' : undefined}
         onClick={() => onViewCharter?.(detail.id)}
         style={{
           width: '100%',

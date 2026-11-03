@@ -10,6 +10,7 @@ import type { LiveSourceStatus, SourceStatus } from '../../../src/types.js';
 import { SourceStatusView } from './SourceStatusView.js';
 
 interface TelemetryDrawerProps {
+  canvas?: boolean;
   readOnly?: boolean;
   events: TelemetryEvent[];
   recordedUsage: RecordedUsageSnapshot | null;
@@ -47,7 +48,7 @@ function formatTimestamp(ts: number): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function TelemetryDrawer({ readOnly = false, events, recordedUsage, cliUsage = null, onCliUsageAction, observedTasks = null, liveSource, sourceStatus = null, onOpenSettings, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
+export function TelemetryDrawer({ canvas = false, readOnly = false, events, recordedUsage, cliUsage = null, onCliUsageAction, observedTasks = null, liveSource, sourceStatus = null, onOpenSettings, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -164,7 +165,8 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, cliUs
           </div>
         ) : null}
         <RecordedUsage snapshot={recordedUsage} />
-        <CliUsage snapshot={cliUsage} readOnly={readOnly} onAction={type => onCliUsageAction?.(type)} />
+        <CliUsage snapshot={cliUsage} readOnly={readOnly} canvas={canvas} onAction={type => onCliUsageAction?.(type)} />
+        {canvas ? <p role="status" style={{ padding: '6px 12px' }}>Live logs and session tasks are unavailable in Canvas. File observations are activity hints, not authoritative lifecycle events.</p> : <>
         <div style={{ padding: '6px 12px', overflowWrap: 'anywhere' }}>
           {readOnly ? <p role="status">Browser settings cannot grant live-log consent. Live observation requires explicit local CLI --live-activity opt-in; opening this drawer enables nothing.</p>
             : <><button onClick={onOpenSettings} style={smallButtonStyle}>Observation settings and consent</button>
@@ -175,6 +177,7 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, cliUs
           </details>
         </div>
         {isOpen && <ObservedTasks readOnly={readOnly} snapshot={observedTasks} source={liveSource} />}
+        </>}
         {events.length > 0 && (
           events.map((event) => {
             const isExpanded = expandedIds.has(event.id);

@@ -53,6 +53,7 @@ export function createDefaultHostClient(
   }
 }
 
-const defaultHost = createDefaultHostClient();
-export const defaultHostClient = defaultHost.client;
-export const defaultHostError = defaultHost.error;
+let defaultHost: ReturnType<typeof createDefaultHostClient> | undefined;
+export function getDefaultHost() {
+  return defaultHost ??= createDefaultHostClient();
+}
