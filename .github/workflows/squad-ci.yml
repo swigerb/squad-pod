@@ -45,6 +45,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build and verify Canvas plugin
+        run: npm run build:canvas && node scripts/verify-canvas-plugin.mjs && node --test scripts/verify-canvas-plugin.test.mjs
+
       - name: Standalone observer types and boundary tests
         run: npm run check --prefix standalone && npm test --prefix standalone
 
