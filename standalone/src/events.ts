@@ -57,6 +57,10 @@ const runtimeModel = object({
     && Number.isFinite(Date.parse(v)),
 });
 const schemas: Record<string, Check> = {
+  agentStatus: object({
+    type: oneOf('agentStatus'), agentId: short, status: agent.status,
+    currentTask: optional(nullable(text)), currentTaskSource: agent.currentTaskSource,
+  }),
   liveModels: object({ type: oneOf('liveModels'), snapshot: object({
     sessionId: nullable(v => typeof v === 'string' && /^[a-zA-Z0-9-]{1,8}$/.test(v)),
     session: nullable(runtimeModel),

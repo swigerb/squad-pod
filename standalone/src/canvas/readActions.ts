@@ -15,11 +15,13 @@ export function officeState(messages: OutboundMessage[]) {
   return {
     members: members(messages).map(member => ({
       slug: text(member.id, 128), name: text(member.name, 256), role: text(member.role, 256),
-      status: member.status, statusSource: 'local-file-observation',
+      status: member.status, statusSource: source?.liveActivity?.state === 'following'
+        ? 'joined-session-observation' : 'local-file-observation',
     })),
     layout: layout ? { cols: layout.cols, rows: layout.rows, furnitureCount: layout.furniture.length } : null,
     source: source ? { teamFound: source.teamFound, observer: source.observer,
-      liveActivity: 'unavailable', diagnostics: source.error === null ? 'none' : 'unavailable' } : null,
+      liveActivity: source.liveActivity?.state === 'following' ? 'following' : 'unavailable',
+      diagnostics: source.error === null ? 'none' : 'unavailable' } : null,
   };
 }
 

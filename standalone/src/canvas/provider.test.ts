@@ -35,7 +35,7 @@ async function fixture(rpc: JoinedSession['rpc'] = {
   metadata: { snapshot: vi.fn(async () => ({ sessionId: 'joined-session', workingDirectory: root })) },
 }) {
   const lifecycle = new EventEmitter();
-  let event: ((event: { type: string }) => void) | undefined;
+  let event: Parameters<JoinedSession['on']>[0] | undefined;
   const unsubscribe = vi.fn();
   const session: JoinedSession = {
     sessionId: 'joined-session', rpc, on: vi.fn(callback => { event = callback; return unsubscribe; }),
@@ -46,7 +46,8 @@ async function fixture(rpc: JoinedSession['rpc'] = {
   };
   const provider = await startOfficeExtension(sdk, paths, lifecycle as unknown as NodeJS.Process);
   providers.push(provider);
-  return { ...provider, sdk, session, lifecycle, unsubscribe, event: (type: string) => event!({ type }) };
+  return { ...provider, sdk, session, lifecycle, unsubscribe,
+    event: (type: string, data?: unknown) => event!({ type, data }) };
 }
 function action(canvas: CanvasDefinition, name: string, input?: unknown, context = ctx()) {
   return canvas.actions.find(candidate => candidate.name === name)!.handler({
@@ -64,7 +65,7 @@ beforeEach(async () => {
   hosts = [];
   vi.mocked(startCanvasOfficeHost).mockImplementation(async () => {
     const host = { url: `http://127.0.0.1:${10000 + hosts.length}/#c=secret`, snapshot: vi.fn(async () => messages()),
-      dispose: vi.fn(async () => undefined) };
+      dispose: vi.fn(async () => undefined), acceptActivity: vi.fn(), clearActivity: vi.fn() };
     hosts.push(host);
     return host;
   });
@@ -89,7 +90,7 @@ describe('host-injected Canvas provider', () => {
     expect(startCanvasOfficeHost).not.toHaveBeenCalled();
     const opened = await f.canvas.open(ctx());
     expect(opened).toEqual({ title: 'Squad Pod', url: hosts[0].url });
-    expect(startCanvasOfficeHost).toHaveBeenCalledExactlyOnceWith({ ...paths, projectRoot: root });
+    expect(startCanvasOfficeHost).toHaveBeenCalledExactlyOnceWith({ ...paths, projectRoot: root, sessionId: 'joined-session' });
   });
 
   it('accepts a canonical alias but rejects an arbitrary projectRoot before startup', async () => {
@@ -354,15 +355,81 @@ describe('host-injected Canvas provider', () => {
     expect(Object.keys(f.session).sort()).toEqual(['on', 'rpc', 'sessionId']);
   });
 
-  it.each(['disconnect', 'SIGTERM', 'SIGINT', 'session.context_changed'])('cleans all owned resources on %s', async signal => {
+  it.each(['disconnect', 'SIGTERM', 'SIGINT'])('cleans all owned resources on %s', async signal => {
     const f = await fixture();
     await f.canvas.open(ctx());
-    if (signal === 'session.context_changed') f.event(signal);
-    else f.lifecycle.emit(signal);
+    f.lifecycle.emit(signal);
     await f.dispose();
     expect(hosts[0].dispose).toHaveBeenCalledOnce();
     expect(f.unsubscribe).toHaveBeenCalledOnce();
     expect(f.lifecycle.eventNames()).toEqual([]);
+    await expect(f.canvas.open(ctx())).rejects.toMatchObject({ code: 'canvas_unavailable' });
+  });
+
+  it('subscribes once, fans out only to open offices, and baselines each reopen', async () => {
+    const f = await fixture();
+    f.event('assistant.turn_start');
+    await f.canvas.open(ctx());
+    await f.canvas.open(ctx(undefined, 'second'));
+    expect(f.session.on).toHaveBeenCalledOnce();
+    const event = { type: 'tool.execution_start', data: { toolCallId: 'call', toolName: 'view' } };
+    f.event(event.type, event.data);
+    for (const host of hosts) expect(host.acceptActivity).toHaveBeenCalledExactlyOnceWith(event);
+    await f.canvas.open(ctx());
+    expect(hosts[0].clearActivity).toHaveBeenCalledOnce();
+    const closed = hosts[0];
+    await f.canvas.onClose(ctx());
+    f.event('session.idle');
+    expect(closed.acceptActivity).toHaveBeenCalledTimes(1);
+    expect(hosts[1].acceptActivity).toHaveBeenCalledTimes(2);
+  });
+
+  it('revokes context immediately but keeps the subscription for a newly authorized project', async () => {
+    const f = await fixture();
+    await f.canvas.open(ctx());
+    await f.canvas.open(ctx(undefined, 'second'));
+    f.event('session.context_changed');
+    for (const host of hosts) {
+      expect(host.clearActivity).toHaveBeenCalledOnce();
+      expect(host.dispose).toHaveBeenCalledOnce();
+    }
+    await expect(action(f.canvas, 'get_office_state')).rejects.toMatchObject({ code: 'canvas_instance_unavailable' });
+    expect(f.unsubscribe).not.toHaveBeenCalled();
+    vi.mocked(f.session.rpc!.metadata!.snapshot).mockResolvedValue({
+      sessionId: 'joined-session', workingDirectory: other,
+    });
+    await f.canvas.open(ctx());
+    expect(startCanvasOfficeHost).toHaveBeenLastCalledWith({
+      ...paths, projectRoot: other, sessionId: 'joined-session',
+    });
+    expect(f.session.on).toHaveBeenCalledOnce();
+  });
+
+  it('clears immediately on joined session identity replacement and rejects stale authority', async () => {
+    const f = await fixture();
+    await f.canvas.open(ctx());
+    f.session.sessionId = 'replacement';
+    f.event('assistant.turn_start');
+    expect(hosts[0].clearActivity).toHaveBeenCalledOnce();
+    expect(hosts[0].dispose).toHaveBeenCalledOnce();
+    await expect(f.canvas.open(ctx())).rejects.toMatchObject({ code: 'canvas_session_mismatch' });
+  });
+
+  it('revokes replaced identity on validation even before another SDK event arrives', async () => {
+    const f = await fixture();
+    await f.canvas.open(ctx());
+    f.session.sessionId = 'replacement';
+    await expect(action(f.canvas, 'get_office_state')).rejects.toMatchObject({ code: 'canvas_session_mismatch' });
+    expect(hosts[0].clearActivity).toHaveBeenCalledOnce();
+    expect(hosts[0].dispose).toHaveBeenCalledOnce();
+  });
+
+  it('clears root session shutdown immediately and never reuses a terminal session', async () => {
+    const f = await fixture();
+    await f.canvas.open(ctx());
+    f.event('session.shutdown');
+    expect(hosts[0].clearActivity).toHaveBeenCalledOnce();
+    expect(hosts[0].dispose).toHaveBeenCalledOnce();
     await expect(f.canvas.open(ctx())).rejects.toMatchObject({ code: 'canvas_unavailable' });
   });
 

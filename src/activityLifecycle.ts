@@ -464,20 +464,22 @@ export class ActivityLifecycle {
     this.publishModels();
   }
 
-  /** Clear all ephemeral state when the owning adapter loses, changes or disables its source. */
-  clear(): void {
+  /** Clear ephemeral state; same-session idle may retain the observed session model. */
+  clear(preserveSessionModel = false): void {
+    const model = preserveSessionModel ? this.sessionModel : null;
     for (const id of this.runs.keys()) {this.finish(id);}
     this.tasks.clear();
     this.tools.clear();
     this.gauge.clear();
-    this.sessionModel = null;
+    this.sessionModel = model;
     this.memberModels.clear();
     this.modelAgentOwners.clear();
     this.unresolvedMemberModels.clear();
     this.toolOwners.clear();
     this.observedTasks.clear();
     this.post({ type: 'observedTasks', snapshot: { sessionId: null, tasks: [], limited: false } });
-    this.post({ type: 'liveModels', snapshot: { sessionId: null, session: null, members: {} } });
+    this.post({ type: 'liveModels', snapshot: preserveSessionModel ? this.modelSnapshot()
+      : { sessionId: null, session: null, members: {} } });
   }
 
   /** Publish bounded tasks with the source's full session identity and truncation indicator. */

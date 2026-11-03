@@ -20,6 +20,7 @@ const settings = { type: 'settingsLoaded', soundEnabled: false, debugEnabled: fa
 
 export interface ObserverOptions {
   liveActivity?: boolean;
+  fileActivity?: boolean;
   /** Local host configuration only; never supplied by a browser message. */
   copilotHome?: string;
   sessionSelection?: () => LiveSessionSelection;
@@ -103,7 +104,7 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
     const active = new Map<string, number>();
     const identities = new Map(roster.map(member => [member.slug, { id: member.slug, name: member.name }]));
     const seen = new Set<string>();
-    for (const folder of ['sessions', 'log', 'orchestration-log']) {
+    for (const folder of options.fileActivity === false ? [] : ['sessions', 'log', 'orchestration-log']) {
       let names: string[] = [];
       try { names = files.entries(path.join(squad, folder)); }
       catch (error) { errors.push(`${folder}: ${String(error)}`); }
