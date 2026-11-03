@@ -7,11 +7,15 @@
 // Public contract reference, not installed SDK version proof:
 // github/copilot-sdk v1.0.28 nodejs/src/{extension.ts,canvas.ts,session.ts,
 // generated/session-events.ts,generated/rpc.ts}. session.on envelopes use parentId for the previous
-// EVENT, never agent hierarchy. Only six allowlisted types, UUID event IDs and bounded
-// opaque actor/toolCallId correlations are projected as volatile generation aliases.
+// EVENT, never agent hierarchy. Only nine allowlisted types, UUID event IDs and bounded
+// opaque actor/toolCallId/task-parent correlations are projected as volatile generation aliases.
 // Per instance: 32 events, 128 shared FIFO aliases, 256-character IDs; eviction counts
 // disclose partial coverage. Producer timestamps expose validity only (UTC ISO subset);
-// absent actor IDs do not prove a root actor. No event.data except toolCallId is read.
+// absent actor IDs do not prove a root actor. The event.data whitelist is toolCallId
+// on subagent.* and tool.execution_* events, parentId on subagent.started, and cancelled
+// on subagent.completed (boolean only). data.parentId is a task-registry parent, not
+// the previous event, the event.agentId actor identity, or the data.toolCallId spawning-call
+// correlation. No other event.data fields are read.
 // context_changed clears every observation synchronously without reading its data.
 // Only a new matching host open callback reattaches; workspacePath grants no authority.
 // Each open also requires independent read-only session.rpc.metadata.snapshot() identity
