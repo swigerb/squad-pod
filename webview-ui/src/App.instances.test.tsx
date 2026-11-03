@@ -174,6 +174,8 @@ describe('mounted office state ownership (synthetic independent hosts)', () => {
     };
     const beforeA = pan(canvasA), beforeB = pan(canvasB);
     act(() => canvasA.focus());
+    expect(space(canvasB).defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(canvasA);
     expect(space(canvasA).defaultPrevented).toBe(true);
     act(() => canvasB.focus());
     // Returning by pointer must not resurrect A's held Space.
