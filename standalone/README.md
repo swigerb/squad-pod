@@ -35,7 +35,7 @@ Type `quit` in the CLI to stop the server.
 For automated checks, helper requirements, and evidence verification, see the
 [repository testing guide](../docs/testing.md).
 
-## Host-neutral Canvas module (read-only)
+## Host-neutral Canvas module (read-only by default)
 
 `src/canvas/officeHost.ts` exports `startCanvasOfficeHost({ projectRoot,
 bundledAssetsRoot, staticRoot })`, returning `{ url, dispose() }`. Supply an
@@ -44,14 +44,44 @@ bundled office assets, and the built standalone browser bundle. The caller must
 establish project/session authority; path validation does not grant it.
 UNC/WSL roots are refused. Errors contain stable `CANVAS_*` codes only.
 
-Load the returned URL directly: its fragment holds a single-use credential.
-The Canvas bootstrap removes it from browser history, exchanges it at `/auth`,
-and continues with the HttpOnly SameSite=Strict cookie. Never log or persist the
-URL. Reloads use that cookie; a consumed URL cannot authenticate a new viewer.
+Load the returned URL directly: its fragment holds **two independent single-use
+credentials**, `#c=<viewer>&e=<office-control>`. The Canvas bootstrap removes the
+whole fragment from browser history before networking. Only `c` is exchanged at
+`/auth` during initial viewing; `e` stays in memory until the user clicks
+**Enable editing**, which exchanges it at `/control-auth`. Both routes issue
+separate HttpOnly SameSite=Strict cookies; neither viewer nor terminal authority
+grants control. Never log or persist the URL or either credential.
+Reloads use the cookies but **always start read-only**; enabling again may reuse
+that instance's valid control cookie. A consumed URL cannot authorize a new
+viewer/controller without its cookie. Close/context replacement/shutdown revokes
+the instance's authority and sockets; a reopened instance has new credentials.
 Each instance owns its listener and observation resources; await `dispose()`
 on close, including failed host integration. Disposal is idempotent.
-Canvas mode has no terminals, office writes, SDK entry, or live CLI-log scanning.
+Canvas mode has no terminals or live CLI-log scanning.
 It writes nothing to stdout and leaves the CLI paste flow/defaults unchanged.
+
+Enabled editing reuses `officeControl.ts`, `officeStore.ts` and the browser office
+client, not a second persistence implementation. Layouts retain the existing
+VS Code version-2 JSON format at the selected project's `.squad-pod/layout.json`;
+settings and declared-member seats/appearance use `.squad-pod/office-preferences.json`.
+No plugin-cache writes or automatic VS Code workspace-state migration occur.
+Transient subagents cannot acquire persisted seats through this channel.
+Canvas/standalone revisions are SHA-256 hashes of the exact saved bytes;
+the VS Code host's raw-text revision is **not** a Canvas revision. Both use the
+cooperating lock protocol, with atomic staged/fsynced writes, size caps, root
+identity/authority rechecks and previous-byte recovery under `.squad-pod/recovery`.
+Stale saves surface the existing layout conflict UI, retaining local and incoming
+copies for deliberate resolution/export; failures never acknowledge a save.
+Unacknowledged settings/seat changes have explicit retry/export/discard controls.
+
+Editor recovery uses browser storage keyed by this instance's random server
+identity and project identity, separate from project preferences and credentials.
+It survives a UI reload while that host lives; a new host does not automatically
+adopt another instance's drafts. Export unresolved drafts before closing/reopening.
+Unavailable/malformed recovery storage fails explicitly without replacing its
+contents; lost acknowledgements are not automatically retried. None of this adds
+an agent-callable mutation action. Simultaneous native VS Code/Canvas acceptance
+remains part of #182, not a claim established by fixture tests.
 
 ## Build and run
 
@@ -445,7 +475,7 @@ This is not a distributable plugin or native-install qualification.
 Each open requires exact joined-session metadata within one second (at most four
 outstanding calls, including timed-out calls). Only its canonical local project
 root is authorized; optional `projectRoot` input must match. Offices are isolated,
-read-only, and closed on context replacement, close or process shutdown.
+read-only until the UI opt-in above, and closed on context replacement, close or process shutdown.
 `get_office_state` and `get_member_details` expose bounded selected-project
 metadata only. Model declarations are not runtime selection; absent data is null
 or unavailable. The CLI continues to use its separate paste-authenticated bundle.

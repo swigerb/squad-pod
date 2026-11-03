@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CANVAS_OBSERVER_CAPABILITIES } from '../../../src/core/hostCapabilities.js';
+import { CANVAS_CONTROL_CAPABILITIES, CANVAS_OBSERVER_CAPABILITIES } from '../../../src/core/hostCapabilities.js';
 import { createBrowserClient } from '../standalone/browserClient.js';
-import { createCanvasBootstrap, CANVAS_EXPIRED } from './bootstrap.js';
+import { createCanvasBootstrap, CANVAS_EDIT_FAILED, CANVAS_EXPIRED } from './bootstrap.js';
 
 const identity = { serverIdentity: 'a'.repeat(43), projectIdentity: null };
 const response = (status: number, body: unknown = identity) =>
-  ({ ok: status === 200, status, json: async () => body }) as Response;
+  ({ ok: status >= 200 && status < 300, status, json: async () => body }) as Response;
 
 describe('Canvas cookie-first single-use bootstrap', () => {
   beforeEach(() => {
@@ -101,6 +101,113 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     onStatus('Connected - read-only');
     onStatus('Connection failed - authenticate again if the credential was revoked');
     expect(f.status.mock.calls).toEqual([['Connecting'], ['Connected - read-only'], [CANVAS_EXPIRED]]);
+  });
+
+  it('does not exchange control authority until opt-in, then uses a separate single-use credential and instance recovery key', async () => {
+    window.history.replaceState(null, '', '/#c=viewer&e=control%5Fsecret');
+    const viewer = { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: false };
+    const authorized = { ...viewer, controlAuthorized: true };
+    const f = fixture([response(200, viewer), response(200, viewer), response(204), response(200, authorized)]);
+    const client = await f.bootstrap();
+    expect(f.request).toHaveBeenCalledOnce();
+    expect(window.location.hash).toBe('');
+    expect(Storage.prototype.getItem).not.toHaveBeenCalled();
+    const draft = vi.fn();
+    const pending = client.enableEditing!(draft);
+    expect(client.enableEditing!(draft)).toBe(pending);
+    const control = await pending;
+    expect(control.capabilities).toBe(CANVAS_CONTROL_CAPABILITIES);
+    expect(f.request.mock.calls.map(([url]) => url)).toEqual([
+      '/office-context', '/office-context', '/control-auth', '/office-context',
+    ]);
+    expect(f.request.mock.calls[2][1]).toEqual({
+      method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: 'control_secret' }),
+    });
+    expect(f.createClient.mock.calls[1][3]).toEqual({
+      recoveryKey: `squad-office:${identity.serverIdentity}:${viewer.projectIdentity}`, onPreferenceDraft: draft,
+    });
+    expect(control.getState).toHaveBeenCalledOnce();
+    const onStatus = f.createClient.mock.calls[1][0];
+    onStatus('Disconnected before save acknowledgement. Draft retained');
+    onStatus('Disconnected - retrying observation only; authenticate again after rotation');
+    expect(f.status.mock.calls).toEqual([
+      ['Disconnected before save acknowledgement. Draft retained'], [CANVAS_EXPIRED],
+    ]);
+  });
+
+  it('requires an explicit opt-in again on reload even with a control cookie; reuses only that instance’s recovery identity', async () => {
+    window.history.replaceState(null, '', '/');
+    const authorized = { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: true };
+    const f = fixture([response(200, authorized), response(200, authorized)]);
+    const client = await f.bootstrap();
+    expect(client.capabilities).toBe(CANVAS_OBSERVER_CAPABILITIES);
+    expect(f.createClient).toHaveBeenCalledOnce();
+    expect(f.createClient.mock.calls[0][3]).toBeUndefined();
+    await client.enableEditing!(vi.fn());
+    expect(f.request.mock.calls.map(([url]) => url)).toEqual(['/office-context', '/office-context']);
+    expect(f.createClient.mock.calls[1][3]?.recoveryKey).toBe(
+      `squad-office:${identity.serverIdentity}:${authorized.projectIdentity}`);
+  });
+
+  it.each([
+    { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: false },
+    { ...identity, projectIdentity: 'invalid', controlAuthorized: true },
+    { ...identity, serverIdentity: 'z'.repeat(43), projectIdentity: 'b'.repeat(64), controlAuthorized: true },
+  ])('fails closed on absent, revoked or substituted control authority without creating an editor', async context => {
+    window.history.replaceState(null, '', '/');
+    const f = fixture([response(200), response(200, context)]);
+    const client = await f.bootstrap();
+    await expect(client.enableEditing!(vi.fn())).rejects.toThrow(CANVAS_EDIT_FAILED);
+    expect(f.createClient).toHaveBeenCalledOnce();
+    expect(client.capabilities).toBe(CANVAS_OBSERVER_CAPABILITIES);
+  });
+
+  it('retains the viewer and disposes the unused editor when recovery storage cannot be read', async () => {
+    const authorized = { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: true };
+    const f = fixture([response(200, authorized), response(200, authorized)]);
+    const client = await f.bootstrap();
+    const failed = { ...f.createClient.mock.results[0].value, dispose: vi.fn(),
+      getState: vi.fn(() => { throw new Error('private storage bytes'); }) };
+    f.createClient.mockReturnValueOnce(failed);
+    await expect(client.enableEditing!(vi.fn())).rejects.toThrow(CANVAS_EDIT_FAILED);
+    expect(f.createClient).toHaveBeenCalledTimes(2);
+    expect(failed.dispose).toHaveBeenCalledOnce();
+    expect(f.createClient.mock.results[0].value.dispose).not.toHaveBeenCalled();
+    expect(client.capabilities).toBe(CANVAS_OBSERVER_CAPABILITIES);
+  });
+
+  it('does not allow a disposed panel to exchange its retained control credential', async () => {
+    window.history.replaceState(null, '', '/#c=viewer&e=control');
+    const f = fixture([response(200)]);
+    const client = await f.bootstrap();
+    client.dispose();
+    await expect(client.enableEditing!(vi.fn())).rejects.toThrow(CANVAS_EDIT_FAILED);
+    expect(f.request).toHaveBeenCalledOnce();
+  });
+
+  it('rejects a revoked single-use control credential without upgrading or retrying', async () => {
+    window.history.replaceState(null, '', '/#c=viewer&e=revoked');
+    const viewer = { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: false };
+    const f = fixture([response(200, viewer), response(200, viewer), response(403)]);
+    const client = await f.bootstrap();
+    const attempt = client.enableEditing!(vi.fn());
+    await expect(attempt).rejects.toThrow(CANVAS_EDIT_FAILED);
+    expect(client.enableEditing!(vi.fn())).toBe(attempt);
+    expect(f.request.mock.calls.map(([url]) => url)).toEqual(['/office-context', '/office-context', '/control-auth']);
+    expect(f.createClient).toHaveBeenCalledOnce();
+    expect(client.capabilities).toBe(CANVAS_OBSERVER_CAPABILITIES);
+  });
+
+  it('uses different recovery storage for concurrent instances of the same selected project', async () => {
+    const projectIdentity = 'b'.repeat(64);
+    const one = { ...identity, projectIdentity, controlAuthorized: true };
+    const two = { ...one, serverIdentity: 'z'.repeat(43) };
+    const first = fixture([response(200, one), response(200, one)]);
+    const second = fixture([response(200, two), response(200, two)]);
+    await (await first.bootstrap()).enableEditing!(vi.fn());
+    await (await second.bootstrap()).enableEditing!(vi.fn());
+    expect(first.createClient.mock.calls[1][3]?.recoveryKey).not.toBe(second.createClient.mock.calls[1][3]?.recoveryKey);
   });
 
   it('reuses the real /office client and frame codec without credentials or recovery in its transport', async () => {

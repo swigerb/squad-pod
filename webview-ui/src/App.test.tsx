@@ -13,7 +13,7 @@ import { getCharacterSprites, setCharacterTemplates } from './office/sprites/def
 import { createVSCodeClient } from './hostClient.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { getColorizedSprite } from './office/colorize.js';
-import { CANVAS_OBSERVER_CAPABILITIES } from '../../src/core/hostCapabilities.js';
+import { CANVAS_CONTROL_CAPABILITIES, CANVAS_OBSERVER_CAPABILITIES } from '../../src/core/hostCapabilities.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -168,6 +168,42 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       expect(manage?.disabled).toBe(true);
       expect(manage?.title).toContain('unavailable');
     } finally { vi.unstubAllGlobals(); }
+  });
+
+  it('uses the existing Canvas editor conflict UI with SHA revisions and retains both drafts across reload', () => {
+    act(() => root.unmount());
+    client = { ...client, capabilities: CANVAS_CONTROL_CAPABILITIES };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    click('Edit Layout');
+    click('→');
+    const local = structuredClone(persisted!.draft);
+    click('● Save Layout');
+    expect(saves().at(-1)).toMatchObject({
+      layout: local, expectedRevision: 'a'.repeat(64), workspaceRoot: 'workspace-A',
+    });
+    snapshot(external, 'b'.repeat(64));
+    send({ type: 'layoutError', error: 'Save conflict: the saved office changed. Your draft was kept.' });
+    expect(host.textContent).toContain('Layout conflict');
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(external);
+    const saveCount = saves().length;
+    const id = persisted!.pending[0].id;
+    act(() => root.unmount());
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(external, 'b'.repeat(64));
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(external);
+    expect(saves()).toHaveLength(saveCount);
+    click(`Keep local draft #${id}`);
+    click('Edit Layout');
+    click('● Save Layout');
+    expect(saves().at(-1)).toMatchObject({ layout: local, expectedRevision: 'b'.repeat(64) });
+    send({ type: 'layoutSaved', layout: local!, revision: 'c'.repeat(64) });
+    expect(persisted!.baseline).toEqual(local);
+    expect(persisted!.revision).toBe('c'.repeat(64));
   });
 
   it('honors transfer restrictions in an injected client without standalone/readOnly flags', () => {

@@ -58,7 +58,8 @@ export default function App({
   }
   return (
     <HostClientProvider client={client}>
-      <ConnectedApp readOnly={readOnly || canvas} standalone={standalone || canvas} canvas={canvas} />
+      <ConnectedApp readOnly={readOnly || (canvas && !client.capabilities.actions.includes('saveLayout'))}
+        standalone={standalone || canvas} canvas={canvas} />
     </HostClientProvider>
   );
 }

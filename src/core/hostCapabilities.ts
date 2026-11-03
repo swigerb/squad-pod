@@ -53,3 +53,6 @@ export const STANDALONE_CONTROL_CAPABILITIES: HostCapabilities = Object.freeze({
   ]),
   recoveryState: 'browser-storage',
 });
+
+/** Canvas UI opt-in uses the same guarded office operations, never agent actions. */
+export const CANVAS_CONTROL_CAPABILITIES: HostCapabilities = STANDALONE_CONTROL_CAPABILITIES;
