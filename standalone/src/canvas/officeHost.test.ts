@@ -94,11 +94,14 @@ async function connect(host: Pick<CanvasOfficeHost, 'url'>, cookie: string, cont
   await vi.waitFor(() => expect(messages.some(message => message.type === 'recordedUsage')).toBe(true));
   return { socket, messages, results, states };
 }
-async function controlCookie(host: CanvasOfficeHost) {
+async function controlCookie(host: CanvasOfficeHost, viewerCookie?: string) {
   const url = new URL(host.url);
+  viewerCookie ??= (await auth(host)).headers['set-cookie']![0].split(';')[0];
+  const headers = { Origin: url.origin, Cookie: viewerCookie, 'Content-Type': 'application/json' };
+  const challenge = await http(host, '/control-intent', 'POST', undefined, headers);
+  expect(challenge.status).toBe(200);
   const result = await http(host, '/control-auth', 'POST',
-    JSON.stringify({ token: new URLSearchParams(url.hash.slice(1)).get('e') }),
-    { Origin: url.origin, 'Content-Type': 'application/json' });
+    challenge.body, headers);
   expect(result.status).toBe(204);
   return result.headers['set-cookie']![0].split(';')[0];
 }
@@ -220,7 +223,7 @@ describe('isolated default read-only Canvas office host', () => {
     });
     const readCookie = (await auth(host)).headers['set-cookie']![0].split(';')[0];
     const viewer = await connect(host, readCookie);
-    const control = await connect(host, await controlCookie(host), true);
+    const control = await connect(host, await controlCookie(host, readCookie), true);
     for (const client of [viewer, control]) {
       expect(client.messages.find(message => message.type === 'existingAgents')).toMatchObject({ agents: [active] });
       expect(client.messages.find(message => message.type === 'sourceStatus')).toMatchObject({
@@ -311,7 +314,8 @@ describe('isolated default read-only Canvas office host', () => {
     expect(url.hostname).toBe('127.0.0.1');
     expect(url.pathname).toBe('/');
     expect(url.search).toBe('');
-    expect(url.hash).toMatch(/^#c=[A-Za-z0-9_-]{43}&e=[A-Za-z0-9_-]{43}$/);
+    expect(url.hash).toMatch(/^#c=[A-Za-z0-9_-]{43}$/);
+    expect([...new URLSearchParams(url.hash.slice(1)).keys()]).toEqual(['c']);
     const page = await http(host, '/');
     expect(page.body).toBe('<html><head></head><body>office</body></html>');
     expect(page.body).not.toContain('squad-canvas');
@@ -359,19 +363,15 @@ describe('isolated default read-only Canvas office host', () => {
     expect(JSON.parse(await error)).toMatchObject({ kind: 'error', code: 'READ_ONLY' });
   });
 
-  it('keeps viewer/control exchanges independent and single-use; reloads the unchanged VS Code layout format', async () => {
+  it('requires cookie-bound control opt-in; reloads the unchanged VS Code layout format', async () => {
     const upgrades = vi.spyOn(WebSocketServer.prototype, 'handleUpgrade');
     const { host, options } = await launch();
     const url = new URL(host.url);
     const viewer = new URLSearchParams(url.hash.slice(1)).get('c');
     expect((await http(host, '/control-auth', 'POST', JSON.stringify({ token: viewer }),
       { Origin: url.origin, 'Content-Type': 'application/json' })).status).toBe(403);
-    const cookie = await controlCookie(host);
-    const replay = await http(host, '/control-auth', 'POST',
-      JSON.stringify({ token: new URLSearchParams(url.hash.slice(1)).get('e') }),
-      { Origin: url.origin, 'Content-Type': 'application/json' });
-    expect(replay.status).toBe(403);
     const readCookie = (await auth(host)).headers['set-cookie']![0].split(';')[0];
+    const cookie = await controlCookie(host, readCookie);
     expect((await http(host, '/office-context', 'GET', undefined, { Cookie: readCookie })).body)
       .toContain('"controlAuthorized":false');
     expect(await refused(host, { Origin: url.origin, Cookie: readCookie }, '/control')).toBe(403);
@@ -424,6 +424,54 @@ describe('isolated default read-only Canvas office host', () => {
     const restarted = await startCanvasOfficeHost(options);
     hosts.push(restarted);
     expect((await http(restarted, '/office-context', 'GET', undefined, { Cookie: cookie })).status).toBe(403);
+  });
+
+  it('rejects URL-only, cookieless, cross-origin, foreign-instance and replayed editing challenges', async () => {
+    const stdout = vi.spyOn(process.stdout, 'write');
+    const { host } = await launch();
+    const { host: other } = await launch();
+    const url = new URL(host.url);
+    const headers = { Origin: url.origin, 'Content-Type': 'application/json' };
+    const token = new URLSearchParams(url.hash.slice(1)).get('c');
+    expect((await http(host, '/control-intent', 'POST', undefined, headers)).status).toBe(403);
+    expect((await http(host, '/control-auth', 'POST', JSON.stringify({ token }), headers)).status).toBe(403);
+    const viewerCookie = (await auth(host)).headers['set-cookie']![0].split(';')[0];
+    expect((await auth(host)).status).toBe(403);
+    const viewerHeaders = { ...headers, Cookie: viewerCookie };
+    for (const Origin of ['', 'null', 'http://evil.example', url.origin + '/']) {
+      expect((await http(host, '/control-intent', 'POST', undefined, { ...viewerHeaders, Origin })).status).toBe(403);
+    }
+    const challenge = await http(host, '/control-intent', 'POST', undefined, viewerHeaders);
+    expect(challenge.status).toBe(200);
+    expect(challenge.headers['cache-control']).toBe('no-store');
+    const { nonce } = JSON.parse(challenge.body);
+    expect(nonce).toMatch(/^[a-zA-Z0-9_-]{43}$/);
+    expect(host.url).not.toContain(nonce);
+    expect((await http(host, '/office-context', 'GET', undefined, viewerHeaders)).body).not.toContain(nonce);
+    const post = (body: string, extra: Record<string, string> = viewerHeaders) =>
+      http(host, '/control-auth', 'POST', body, extra);
+    expect((await post(JSON.stringify({ token }), viewerHeaders)).status).toBe(403);
+    expect((await post(challenge.body, headers)).status).toBe(403);
+    for (const Origin of ['', 'null', 'http://evil.example', url.origin + '/']) {
+      const denied = await post(challenge.body, { ...viewerHeaders, Origin });
+      expect(denied.status).toBe(403);
+      expect(denied.headers['set-cookie']).toBeUndefined();
+    }
+    expect((await post(challenge.body, { ...viewerHeaders, Host: 'evil.example' })).status).toBe(403);
+    expect((await post(challenge.body, { ...viewerHeaders, Cookie: `${viewerCookie}; ${viewerCookie}` })).status).toBe(403);
+    expect((await post(JSON.stringify({ nonce: 'forged' }))).status).toBe(403);
+    const otherCookie = (await auth(other)).headers['set-cookie']![0].split(';')[0];
+    expect((await http(other, '/control-auth', 'POST', challenge.body,
+      { ...headers, Origin: new URL(other.url).origin, Cookie: otherCookie })).status).toBe(403);
+    const attempts = await Promise.all([post(challenge.body), post(challenge.body)]);
+    expect(attempts.map(result => result.status).sort()).toEqual([204, 403]);
+    const granted = attempts.find(result => result.status === 204)!;
+    expect(granted.body).toBe('');
+    expect(granted.headers['set-cookie']![0]).toContain('; HttpOnly; SameSite=Strict; Path=/');
+    expect((await post(challenge.body)).status).toBe(403);
+    expect((await http(host, '/office-context', 'GET', undefined, viewerHeaders)).body)
+      .toContain('"controlAuthorized":false');
+    expect(stdout).not.toHaveBeenCalled();
   });
 
   it('rejects a stale second Canvas instance without overwriting the first; recovers interrupted atomic writes', async () => {

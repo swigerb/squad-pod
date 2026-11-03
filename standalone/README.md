@@ -44,13 +44,20 @@ bundled office assets, and the built standalone browser bundle. The caller must
 establish project/session authority; path validation does not grant it.
 UNC/WSL roots are refused. Errors contain stable `CANVAS_*` codes only.
 
-Load the returned URL directly: its fragment holds **two independent single-use
-credentials**, `#c=<viewer>&e=<office-control>`. The Canvas bootstrap removes the
-whole fragment from browser history before networking. Only `c` is exchanged at
-`/auth` during initial viewing; `e` stays in memory until the user clicks
-**Enable editing**, which exchanges it at `/control-auth`. Both routes issue
-separate HttpOnly SameSite=Strict cookies; neither viewer nor terminal authority
-grants control. Never log or persist the URL or either credential.
+Load the returned URL directly: its fragment holds **only a single-use viewer
+credential**, `#c=<viewer>`. The Copilot app exposes this URL to the agent, transcript
+and debug logs. This is acceptable only for a consumed single-use viewer credential:
+the panel exchanges it once at `/auth`, which rotates it immediately. Before that
+exchange, anyone holding the URL can race the panel for viewer access. It never
+contains office-control authority. The bootstrap removes the fragment from browser
+history before networking and never persists it.
+Only after the user clicks **Enable editing** does the panel request a per-page
+one-time anti-forgery challenge from `/control-intent` and submit it to `/control-auth`.
+Both requests require the panel's HttpOnly SameSite=Strict viewer cookie and exact
+same-origin Origin; the challenge travels only in response/request bodies, never
+the URL. A missing cookie, foreign origin or consumed challenge is rejected.
+`/control-auth` issues a separate HttpOnly SameSite=Strict control cookie.
+Neither the viewer URL alone nor terminal authority grants control.
 Reloads use the cookies but **always start read-only**; enabling again may reuse
 that instance's valid control cookie. A consumed URL cannot authorize a new
 viewer/controller without its cookie. Close/context replacement/shutdown revokes

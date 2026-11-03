@@ -14,7 +14,7 @@ export interface CanvasOfficeHostOptions {
   sessionId?: string;
 }
 
-/** Instance-owned office. Fragment credentials are separate single-use secrets. */
+/** Instance-owned office. The fragment contains only a single-use viewer secret. */
 export interface CanvasOfficeHost {
   url: string;
   snapshot(): Promise<OutboundMessage[]>;
@@ -90,7 +90,7 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
   const ownedTransport = transport;
   let disposal: Promise<void> | undefined;
   return {
-    url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}&e=${ownedTransport.controlToken}`,
+    url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}`,
     snapshot,
     acceptActivity: event => live?.accept(event),
     clearActivity: () => live?.clear(),
