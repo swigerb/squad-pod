@@ -1,0 +1,549 @@
+{
+  "sourceCommit": "c1a0df7ca66b8c0f50a42b83758f9c8e1572e66e",
+  "sourceDirty": false,
+  "sdk": {
+    "name": "@github/copilot-sdk/extension",
+    "contract": "1.0.28",
+    "providedBy": "host"
+  },
+  "inputs": [
+    "src/activityLifecycle.ts",
+    "src/activityProjection.ts",
+    "src/activitySource.ts",
+    "src/carpetValidation.ts",
+    "src/carpetValidation.ts",
+    "src/charterDetails.ts",
+    "src/constants.ts",
+    "src/copilotSessionActivity.ts",
+    "src/copilotSessionState.ts",
+    "src/core/agentIdentity.ts",
+    "src/core/hostCapabilities.ts",
+    "src/core/layoutState.ts",
+    "src/core/officeChannel.ts",
+    "src/core/ownedTerminalProtocol.ts",
+    "src/core/terminalFrames.ts",
+    "src/core/terminalReplay.ts",
+    "src/declaredModels.ts",
+    "src/declaredRoster.ts",
+    "src/defaultFurniture.ts",
+    "src/defaultOfficeLayout.ts",
+    "src/directories.ts",
+    "src/layoutPersistence.ts",
+    "src/layoutValidation.ts",
+    "src/layoutValidation.ts",
+    "src/manifestAssets.ts",
+    "src/memberCharter.ts",
+    "src/observedTasks.ts",
+    "src/observedTasks.ts",
+    "src/projectFiles.ts",
+    "src/recordedUsage.ts",
+    "src/squadPaths.ts",
+    "src/squadWatcher.ts",
+    "src/teamParser.ts",
+    "src/teamSource.ts",
+    "standalone/node_modules/pngjs/lib/bitmapper.js",
+    "standalone/node_modules/pngjs/lib/bitpacker.js",
+    "standalone/node_modules/pngjs/lib/chunkstream.js",
+    "standalone/node_modules/pngjs/lib/constants.js",
+    "standalone/node_modules/pngjs/lib/crc.js",
+    "standalone/node_modules/pngjs/lib/filter-pack.js",
+    "standalone/node_modules/pngjs/lib/filter-parse-async.js",
+    "standalone/node_modules/pngjs/lib/filter-parse-sync.js",
+    "standalone/node_modules/pngjs/lib/filter-parse.js",
+    "standalone/node_modules/pngjs/lib/format-normaliser.js",
+    "standalone/node_modules/pngjs/lib/interlace.js",
+    "standalone/node_modules/pngjs/lib/packer-async.js",
+    "standalone/node_modules/pngjs/lib/packer-sync.js",
+    "standalone/node_modules/pngjs/lib/packer.js",
+    "standalone/node_modules/pngjs/lib/paeth-predictor.js",
+    "standalone/node_modules/pngjs/lib/parser-async.js",
+    "standalone/node_modules/pngjs/lib/parser-sync.js",
+    "standalone/node_modules/pngjs/lib/parser.js",
+    "standalone/node_modules/pngjs/lib/png-sync.js",
+    "standalone/node_modules/pngjs/lib/png.js",
+    "standalone/node_modules/pngjs/lib/sync-inflate.js",
+    "standalone/node_modules/pngjs/lib/sync-reader.js",
+    "standalone/node_modules/ws/lib/buffer-util.js",
+    "standalone/node_modules/ws/lib/constants.js",
+    "standalone/node_modules/ws/lib/event-target.js",
+    "standalone/node_modules/ws/lib/extension.js",
+    "standalone/node_modules/ws/lib/limiter.js",
+    "standalone/node_modules/ws/lib/permessage-deflate.js",
+    "standalone/node_modules/ws/lib/receiver.js",
+    "standalone/node_modules/ws/lib/sender.js",
+    "standalone/node_modules/ws/lib/stream.js",
+    "standalone/node_modules/ws/lib/subprotocol.js",
+    "standalone/node_modules/ws/lib/validation.js",
+    "standalone/node_modules/ws/lib/websocket-server.js",
+    "standalone/node_modules/ws/lib/websocket.js",
+    "standalone/node_modules/ws/wrapper.mjs",
+    "standalone/src/canvas/activity.ts",
+    "standalone/src/canvas/extension.ts",
+    "standalone/src/canvas/officeHost.ts",
+    "standalone/src/canvas/provider.ts",
+    "standalone/src/canvas/readActions.ts",
+    "standalone/src/events.ts",
+    "standalone/src/events.ts",
+    "standalone/src/observer.ts",
+    "standalone/src/officeControl.ts",
+    "standalone/src/officePreferences.ts",
+    "standalone/src/officePreferences.ts",
+    "standalone/src/officeStore.ts",
+    "standalone/src/projectFiles.ts",
+    "standalone/src/terminalSocket.ts",
+    "standalone/src/transport.ts",
+    "webview-ui/canvas.html",
+    "webview-ui/node_modules/react-dom/cjs/react-dom-client.production.js",
+    "webview-ui/node_modules/react-dom/cjs/react-dom.production.js",
+    "webview-ui/node_modules/react-dom/client.js",
+    "webview-ui/node_modules/react-dom/index.js",
+    "webview-ui/node_modules/react/cjs/react-jsx-runtime.production.js",
+    "webview-ui/node_modules/react/cjs/react.production.js",
+    "webview-ui/node_modules/react/index.js",
+    "webview-ui/node_modules/react/jsx-runtime.js",
+    "webview-ui/node_modules/scheduler/cjs/scheduler.production.js",
+    "webview-ui/node_modules/scheduler/index.js",
+    "webview-ui/src/App.tsx",
+    "webview-ui/src/HostClientContext.tsx",
+    "webview-ui/src/canvas/CanvasPanel.tsx",
+    "webview-ui/src/canvas/bootstrap.ts",
+    "webview-ui/src/canvas/canvas.css",
+    "webview-ui/src/canvas/main.tsx",
+    "webview-ui/src/components/AgentCard.tsx",
+    "webview-ui/src/components/AgentLabels.tsx",
+    "webview-ui/src/components/AssetStatus.tsx",
+    "webview-ui/src/components/BottomToolbar.tsx",
+    "webview-ui/src/components/CliUsage.tsx",
+    "webview-ui/src/components/DebugView.tsx",
+    "webview-ui/src/components/DirectoryModal.tsx",
+    "webview-ui/src/components/EditorToolbar.tsx",
+    "webview-ui/src/components/LayoutConflict.tsx",
+    "webview-ui/src/components/MissingSquad.tsx",
+    "webview-ui/src/components/ObservedTasks.tsx",
+    "webview-ui/src/components/RecordedUsage.tsx",
+    "webview-ui/src/components/RuntimeModelStatus.tsx",
+    "webview-ui/src/components/SettingsModal.tsx",
+    "webview-ui/src/components/SourceStatusView.tsx",
+    "webview-ui/src/components/SquadInfoCard.tsx",
+    "webview-ui/src/components/TaskBubbleToggle.tsx",
+    "webview-ui/src/components/TelemetryDrawer.tsx",
+    "webview-ui/src/components/ZoomControls.tsx",
+    "webview-ui/src/constants.ts",
+    "webview-ui/src/hooks/useEditorActions.ts",
+    "webview-ui/src/hooks/useEditorKeyboard.ts",
+    "webview-ui/src/hooks/useExtensionMessages.ts",
+    "webview-ui/src/hostClient.ts",
+    "webview-ui/src/index.css",
+    "webview-ui/src/legacySprites.ts",
+    "webview-ui/src/mobile/touchDecisions.ts",
+    "webview-ui/src/notificationSound.ts",
+    "webview-ui/src/office/colorize.ts",
+    "webview-ui/src/office/components/OfficeCanvas.tsx",
+    "webview-ui/src/office/editor/areaEditor.ts",
+    "webview-ui/src/office/editor/editorActions.ts",
+    "webview-ui/src/office/editor/editorState.ts",
+    "webview-ui/src/office/editor/layoutDraft.ts",
+    "webview-ui/src/office/editor/undoHistory.ts",
+    "webview-ui/src/office/engine/agentSync.ts",
+    "webview-ui/src/office/engine/characterGeometry.ts",
+    "webview-ui/src/office/engine/characters.ts",
+    "webview-ui/src/office/engine/gameLoop.ts",
+    "webview-ui/src/office/engine/officeState.ts",
+    "webview-ui/src/office/engine/overlayLayout.ts",
+    "webview-ui/src/office/engine/pathfinding.ts",
+    "webview-ui/src/office/engine/petEntity.ts",
+    "webview-ui/src/office/engine/renderer.ts",
+    "webview-ui/src/office/engine/viewport.ts",
+    "webview-ui/src/office/floorTiles.ts",
+    "webview-ui/src/office/layout/furnitureCatalog.ts",
+    "webview-ui/src/office/layout/furnitureSurfaces.ts",
+    "webview-ui/src/office/layout/layoutManager.ts",
+    "webview-ui/src/office/sprites/assetLoader.ts",
+    "webview-ui/src/office/sprites/carpetRenderer.ts",
+    "webview-ui/src/office/sprites/carpetTiles.ts",
+    "webview-ui/src/office/sprites/characterSheetRenderer.ts",
+    "webview-ui/src/office/sprites/defaultCharacters.ts",
+    "webview-ui/src/office/sprites/embeddedCharacters.ts",
+    "webview-ui/src/office/sprites/petBubble.ts",
+    "webview-ui/src/office/sprites/petSpriteData.ts",
+    "webview-ui/src/office/sprites/spriteCache.ts",
+    "webview-ui/src/office/sprites/tilesetRenderer.ts",
+    "webview-ui/src/office/toolUtils.ts",
+    "webview-ui/src/office/types.ts",
+    "webview-ui/src/office/wallTiles.ts",
+    "webview-ui/src/officeInput.ts",
+    "webview-ui/src/standalone/PreferenceDraftControls.tsx",
+    "webview-ui/src/standalone/browserClient.ts",
+    "webview-ui/src/taskBubbles.ts"
+  ],
+  "imports": [
+    {
+      "path": "util",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "stream",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "util",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "util",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "zlib",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "zlib",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "util",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "stream",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "assert",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "zlib",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "util",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "buffer",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "zlib",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "zlib",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "util",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "stream",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "zlib",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "buffer",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "stream",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "stream",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "crypto",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "util",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "events",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "https",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "http",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "net",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "tls",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "crypto",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "stream",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "url",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "stream",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "events",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "http",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "stream",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "crypto",
+      "kind": "require-call",
+      "external": true
+    },
+    {
+      "path": "@github/copilot-sdk/extension",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:url",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:fs",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:fs/promises",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:crypto",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:fs",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "fs",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:fs",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:crypto",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:fs",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "fs",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "fs",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "os",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:crypto",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:fs/promises",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:http",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:crypto",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "path",
+      "kind": "import-statement",
+      "external": true
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "pngjs",
+      "version": "7.0.0",
+      "license": "MIT",
+      "licensePath": "licenses/pngjs-7.0.0.txt"
+    },
+    {
+      "name": "react",
+      "version": "19.3.1",
+      "license": "MIT",
+      "licensePath": "licenses/react-19.3.1.txt"
+    },
+    {
+      "name": "react-dom",
+      "version": "19.3.1",
+      "license": "MIT",
+      "licensePath": "licenses/react-dom-19.3.1.txt"
+    },
+    {
+      "name": "scheduler",
+      "version": "0.28.0",
+      "license": "MIT",
+      "licensePath": "licenses/scheduler-0.28.0.txt"
+    },
+    {
+      "name": "ws",
+      "version": "8.22.0",
+      "license": "MIT",
+      "licensePath": "licenses/ws-8.22.0.txt"
+    }
+  ],
+  "extensionSha256": "cbaf674f6ae6e5a9f8d114721d08eaaba0f77a274457a797ec8c60f9a5ce713b"
+}

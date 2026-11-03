@@ -1,0 +1,26 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "squad-pod",
+  "version": "0.1.0",
+  "description": "Pixel art office where your Squad agents come to life as animated characters",
+  "author": {
+    "name": "Brian Swiger",
+    "url": "https://www.mightybs.com/"
+  },
+  "homepage": "https://www.mightybs.com/",
+  "repository": "https://github.com/swigerb/squad-pod.git",
+  "license": "MIT",
+  "keywords": [
+    "squad",
+    "copilot",
+    "pixel-art",
+    "agents",
+    "office",
+    "canvas"
+  ],
+  "extensions": {
+    "com.github.copilot": {
+      "logo": "assets/preview.png"
+    }
+  }
+}
