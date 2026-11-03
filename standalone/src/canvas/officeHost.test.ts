@@ -1,17 +1,24 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import * as fs from 'node:fs';
 import { request, type IncomingHttpHeaders } from 'node:http';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { WebSocket } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import type { CanvasDefinition, JoinedSession } from '@github/copilot-sdk/extension';
 import * as observers from '../observer.js';
 import { startCanvasOfficeHost, type CanvasOfficeHost } from './officeHost.js';
 import { startOfficeExtension } from './provider.js';
 import type { OutboundMessage } from '../../../src/types.js';
+import { parseLayoutJson } from '../../../src/layoutPersistence.js';
 import { decodeEvent } from '../events.js';
 import { ProjectFiles } from '../projectFiles.js';
+
+vi.mock('node:fs', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return { ...actual, renameSync: vi.fn(actual.renameSync) };
+});
 
 const pty = vi.hoisted(() => ({ imported: vi.fn() }));
 vi.mock('node-pty', () => { pty.imported(); throw new Error('PTY must never load'); });
@@ -63,25 +70,53 @@ function http(host: Pick<CanvasOfficeHost, 'url'>, path: string, method = 'GET',
 }
 function auth(host: Pick<CanvasOfficeHost, 'url'>, headers: Record<string, string> = {}) {
   const url = new URL(host.url);
-  return http(host, '/auth', 'POST', JSON.stringify({ token: url.hash.slice(3) }), {
+  return http(host, '/auth', 'POST', JSON.stringify({ token: new URLSearchParams(url.hash.slice(1)).get('c') }), {
     Origin: url.origin, 'Content-Type': 'application/json', ...headers,
   });
 }
-async function connect(host: Pick<CanvasOfficeHost, 'url'>, cookie: string) {
+async function connect(host: Pick<CanvasOfficeHost, 'url'>, cookie: string, control = false) {
   const url = new URL(host.url);
-  const socket = new WebSocket(`ws://127.0.0.1:${url.port}/office`, {
+  const socket = new WebSocket(`ws://127.0.0.1:${url.port}/${control ? 'control' : 'office'}`, {
     headers: { Origin: url.origin, Cookie: cookie },
   });
   sockets.push(socket);
   const messages: OutboundMessage[] = [];
+  const results: Array<{ requestId: number; messages: OutboundMessage[] }> = [];
+  const states: Array<{ preferencesRevision: string | null }> = [];
   socket.on('message', data => {
-    const frame = JSON.parse(data.toString()) as { message?: OutboundMessage };
+    const frame = JSON.parse(data.toString());
     if (frame.message) messages.push(frame.message);
+    if (frame.kind === 'controlResult') results.push(frame);
+    if (frame.kind === 'controlState') states.push(frame);
   });
   await new Promise<void>((resolve, reject) => { socket.once('open', resolve); socket.once('error', reject); });
   socket.send(JSON.stringify({ version: 1, kind: 'office', message: { type: 'webviewReady' } }));
   await vi.waitFor(() => expect(messages.some(message => message.type === 'recordedUsage')).toBe(true));
-  return { socket, messages };
+  return { socket, messages, results, states };
+}
+async function controlCookie(host: CanvasOfficeHost) {
+  const url = new URL(host.url);
+  const result = await http(host, '/control-auth', 'POST',
+    JSON.stringify({ token: new URLSearchParams(url.hash.slice(1)).get('e') }),
+    { Origin: url.origin, 'Content-Type': 'application/json' });
+  expect(result.status).toBe(204);
+  return result.headers['set-cookie']![0].split(';')[0];
+}
+function waitForSocketClose(socket: WebSocket, label: string) {
+  return new Promise<void>((resolve, reject) => {
+    const onClose = () => { clearTimeout(timeout); resolve(); };
+    const timeout = setTimeout(() => {
+      socket.off('close', onClose);
+      reject(new Error(`${label} did not close within 2000ms after host disposal`));
+    }, 2000);
+    socket.once('close', onClose);
+  });
+}
+async function save(client: Awaited<ReturnType<typeof connect>>, message: unknown, expectedRevision: string | null) {
+  const requestId = client.results.length + 1;
+  client.socket.send(JSON.stringify({ version: 1, kind: 'control', requestId, expectedRevision, message }));
+  await vi.waitFor(() => expect(client.results.some(result => result.requestId === requestId)).toBe(true));
+  return client.results.find(result => result.requestId === requestId)!.messages;
 }
 async function refused(host: CanvasOfficeHost, headers: Record<string, string>, path = '/office') {
   const url = new URL(host.url);
@@ -96,7 +131,7 @@ async function refused(host: CanvasOfficeHost, headers: Record<string, string>, 
   });
 }
 
-describe('isolated read-only Canvas office host', () => {
+describe('isolated default read-only Canvas office host', () => {
   it('does not scan project activity folders or infer live work from historical files', async () => {
     const entries = vi.spyOn(ProjectFiles.prototype, 'entries');
     const options = await fixture();
@@ -169,6 +204,68 @@ describe('isolated read-only Canvas office host', () => {
     expect(stdout).not.toHaveBeenCalled();
   });
 
+  it('preserves joined-session overlays across viewer/control snapshots, reads, saves and live updates', async () => {
+    const options = await fixture();
+    const host = await startCanvasOfficeHost({ ...options, sessionId: 'joined-session' });
+    hosts.push(host);
+    host.acceptActivity!({ type: 'subagent.started', agentId: 'actor',
+      data: { toolCallId: 'dispatch', agentName: 'lisa' } });
+    host.acceptActivity!({ type: 'tool.execution_start', agentId: 'actor',
+      data: { toolCallId: 'read', toolName: 'view' } });
+    const active = { id: 'lisa', status: 'active', currentTaskSource: 'live' };
+    const snapshot = await host.snapshot();
+    expect(snapshot.find(message => message.type === 'existingAgents')).toMatchObject({ agents: [active] });
+    expect(snapshot).toContainEqual({
+      type: 'agentToolStart', agentId: 'lisa', toolId: 'read', tool: 'view', status: 'Reading file',
+    });
+    const readCookie = (await auth(host)).headers['set-cookie']![0].split(';')[0];
+    const viewer = await connect(host, readCookie);
+    const control = await connect(host, await controlCookie(host), true);
+    for (const client of [viewer, control]) {
+      expect(client.messages.find(message => message.type === 'existingAgents')).toMatchObject({ agents: [active] });
+      expect(client.messages.find(message => message.type === 'sourceStatus')).toMatchObject({
+        status: { liveActivity: { state: 'following', sessionId: 'joined-session' } },
+      });
+      expect(client.messages).toContainEqual({
+        type: 'agentToolStart', agentId: 'lisa', toolId: 'read', tool: 'view', status: 'Reading file',
+      });
+      client.socket.send(JSON.stringify({ version: 1, kind: 'office',
+        message: { type: 'requestAgentDetail', agentId: 'lisa', requestId: 'active' } }));
+      await vi.waitFor(() => expect(client.messages).toContainEqual(expect.objectContaining({
+        type: 'agentDetailLoaded', requestId: 'active', detail: expect.objectContaining(active),
+      })));
+      client.messages.length = 0;
+    }
+    host.acceptActivity!({ type: 'tool.execution_start', agentId: 'actor',
+      data: { toolCallId: 'edit', toolName: 'edit' } });
+    await save(control, { type: 'saveAgentSeats', seats: { lisa: 'seat-live' } }, null);
+    for (const client of [viewer, control]) {
+      await vi.waitFor(() => {
+        expect(client.messages).toContainEqual(expect.objectContaining({
+          type: 'agentToolStart', agentId: 'lisa', toolId: 'edit',
+        }));
+        expect(client.messages).toContainEqual(expect.objectContaining({
+          type: 'existingAgents', agents: [expect.objectContaining({ ...active, seatId: 'seat-live' })],
+        }));
+      }, { timeout: 3000 });
+    }
+    host.clearActivity!();
+    for (const client of [viewer, control]) {
+      await vi.waitFor(() => expect(client.messages).toContainEqual(expect.objectContaining({
+        type: 'agentStatus', agentId: 'lisa', status: 'idle', currentTaskSource: null,
+      })));
+      client.socket.send(JSON.stringify({ version: 1, kind: 'office',
+        message: { type: 'requestAgentDetail', agentId: 'lisa', requestId: 'cleared' } }));
+      await vi.waitFor(() => expect(client.messages).toContainEqual(expect.objectContaining({
+        type: 'agentDetailLoaded', requestId: 'cleared',
+        detail: expect.objectContaining({ id: 'lisa', status: 'idle', currentTaskSource: null }),
+      })));
+    }
+    expect((await host.snapshot()).find(message => message.type === 'existingAgents')).toMatchObject({
+      agents: [{ id: 'lisa', status: 'idle', currentTaskSource: null, seatId: 'seat-live' }],
+    });
+  });
+
   it('connects SDK-double open/actions/close to the real host and guarded project services', async () => {
     const options = await fixture();
     await mkdir(join(options.projectRoot, '.squad', 'agents', 'lisa'), { recursive: true });
@@ -214,7 +311,7 @@ describe('isolated read-only Canvas office host', () => {
     expect(url.hostname).toBe('127.0.0.1');
     expect(url.pathname).toBe('/');
     expect(url.search).toBe('');
-    expect(url.hash).toMatch(/^#c=[A-Za-z0-9_-]{43}$/);
+    expect(url.hash).toMatch(/^#c=[A-Za-z0-9_-]{43}&e=[A-Za-z0-9_-]{43}$/);
     const page = await http(host, '/');
     expect(page.body).toBe('<html><head></head><body>office</body></html>');
     expect(page.body).not.toContain('squad-canvas');
@@ -254,12 +351,115 @@ describe('isolated read-only Canvas office host', () => {
     expect(await refused(host, headers, '/terminal')).toBe(403);
     expect(await refused(host, headers, '/control')).toBe(403);
     for (const path of ['/terminal-auth', '/control-auth']) {
-      expect((await http(host, path, 'POST', '{}', headers)).status).toBe(403);
+      expect((await http(host, path, 'POST', '{}', { ...headers, 'Content-Type': 'application/json' })).status).toBe(403);
     }
     const { socket } = await connect(host, headers.Cookie);
     const error = new Promise<string>(resolve => socket.once('message', data => resolve(data.toString())));
     socket.send(JSON.stringify({ version: 1, kind: 'office', message: { type: 'saveLayout' } }));
     expect(JSON.parse(await error)).toMatchObject({ kind: 'error', code: 'READ_ONLY' });
+  });
+
+  it('keeps viewer/control exchanges independent and single-use; reloads the unchanged VS Code layout format', async () => {
+    const upgrades = vi.spyOn(WebSocketServer.prototype, 'handleUpgrade');
+    const { host, options } = await launch();
+    const url = new URL(host.url);
+    const viewer = new URLSearchParams(url.hash.slice(1)).get('c');
+    expect((await http(host, '/control-auth', 'POST', JSON.stringify({ token: viewer }),
+      { Origin: url.origin, 'Content-Type': 'application/json' })).status).toBe(403);
+    const cookie = await controlCookie(host);
+    const replay = await http(host, '/control-auth', 'POST',
+      JSON.stringify({ token: new URLSearchParams(url.hash.slice(1)).get('e') }),
+      { Origin: url.origin, 'Content-Type': 'application/json' });
+    expect(replay.status).toBe(403);
+    const readCookie = (await auth(host)).headers['set-cookie']![0].split(';')[0];
+    expect((await http(host, '/office-context', 'GET', undefined, { Cookie: readCookie })).body)
+      .toContain('"controlAuthorized":false');
+    expect(await refused(host, { Origin: url.origin, Cookie: readCookie }, '/control')).toBe(403);
+    const viewerClient = await connect(host, readCookie);
+    const control = await connect(host, cookie, true);
+    const initial = control.messages.find(message => message.type === 'layoutLoaded')!;
+    if (initial.type !== 'layoutLoaded') throw new Error('Missing layout');
+    const layout = { ...initial.layout, carpetTiles: [{ variant: 0, order: 1 }, null],
+      pets: [{ id: 'pet-1', petType: 0 }], areas: [{ label: 'Canvas', color: '#123456' }],
+      areaTiles: ['Canvas', null], areaMappings: { project: ['Canvas'] } };
+    const saved = await save(control, { type: 'saveLayout', layout,
+      expectedRevision: initial.revision, workspaceRoot: options.projectRoot }, initial.revision!);
+    expect(saved).toEqual([{ type: 'layoutSaved', layout, revision: expect.stringMatching(/^[a-f0-9]{64}$/) }]);
+    const raw = await readFile(join(options.projectRoot, '.squad-pod', 'layout.json'), 'utf8');
+    expect(raw).toBe(JSON.stringify(layout, null, 2));
+    expect(parseLayoutJson(raw)).toEqual(layout);
+    const reloaded = await connect(host, cookie, true);
+    expect(reloaded.messages.find(message => message.type === 'layoutLoaded')).toMatchObject({ layout });
+    expect((await http(host, '/office-context', 'GET', undefined, { Cookie: cookie })).body)
+      .toContain('"controlAuthorized":true');
+    await save(reloaded, { type: 'saveAgentSeats', seats: { lisa: 'seat-1' } }, null);
+    const preferences = JSON.parse(await readFile(join(options.projectRoot, '.squad-pod', 'office-preferences.json'), 'utf8'));
+    expect(preferences.agents).toEqual({ lisa: { seatId: 'seat-1' } });
+    await vi.waitFor(() => expect(reloaded.states.at(-1)?.preferencesRevision).toMatch(/^[a-f0-9]{64}$/));
+    await save(reloaded, { type: 'setShowAreas', enabled: true }, reloaded.states.at(-1)!.preferencesRevision);
+    const snapshot = await host.snapshot();
+    expect(snapshot.find(message => message.type === 'settingsLoaded')).toMatchObject({ showAreas: true });
+    expect(snapshot.find(message => message.type === 'existingAgents')).toMatchObject({ agents: [{ id: 'lisa', seatId: 'seat-1' }] });
+    expect(await refused(host, { Origin: url.origin, Cookie: cookie }, '/terminal')).toBe(403);
+    const servers = [...new Set(upgrades.mock.contexts as WebSocketServer[])];
+    expect(servers.map(server => server.clients.size).sort()).toEqual([1, 2]);
+    const serverSockets = servers.flatMap(server => [...server.clients]);
+    const clients = [
+      { socket: viewerClient.socket, label: 'viewer' },
+      { socket: control.socket, label: 'control' },
+      { socket: reloaded.socket, label: 'reloaded control' },
+    ];
+    for (const { socket } of clients) expect(socket.readyState).toBe(WebSocket.OPEN);
+    const closed = clients.map(({ socket, label }) => waitForSocketClose(socket, label));
+    await Promise.all([
+      host.dispose().then(() => {
+        // Server disposal must finish locally; peer close notifications may arrive later.
+        for (const socket of serverSockets) expect(socket.readyState).toBe(WebSocket.CLOSED);
+        for (const server of servers) expect(server.clients.size).toBe(0);
+      }),
+      ...closed,
+    ]);
+    for (const { socket } of clients) expect(socket.readyState).toBe(WebSocket.CLOSED);
+    await expect(http(host, '/office-context', 'GET', undefined, { Cookie: cookie })).rejects.toThrow();
+    const restarted = await startCanvasOfficeHost(options);
+    hosts.push(restarted);
+    expect((await http(restarted, '/office-context', 'GET', undefined, { Cookie: cookie })).status).toBe(403);
+  });
+
+  it('rejects a stale second Canvas instance without overwriting the first; recovers interrupted atomic writes', async () => {
+    const { host, options } = await launch();
+    const second = await startCanvasOfficeHost(options);
+    hosts.push(second);
+    const first = await connect(host, await controlCookie(host), true);
+    const other = await connect(second, await controlCookie(second), true);
+    const initial = first.messages.find(message => message.type === 'layoutLoaded')!;
+    if (initial.type !== 'layoutLoaded') throw new Error('Missing layout');
+    const winner = { ...initial.layout, pets: [{ id: 'winner', petType: 1 }] };
+    const loser = { ...initial.layout, pets: [{ id: 'loser', petType: 2 }] };
+    const mutation = (layout: unknown, revision = initial.revision) => ({
+      type: 'saveLayout', layout, expectedRevision: revision, workspaceRoot: options.projectRoot,
+    });
+    const written = await save(first, mutation(winner), initial.revision!);
+    const conflict = await save(other, mutation(loser), initial.revision!);
+    expect(conflict).toMatchObject([
+      { type: 'layoutLoaded', layout: winner }, { type: 'layoutError', error: expect.stringContaining('draft was kept') },
+    ]);
+    const file = join(options.projectRoot, '.squad-pod', 'layout.json');
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(winner);
+    const ack = written[0];
+    if (ack.type !== 'layoutSaved') throw new Error('Missing save acknowledgement');
+    vi.mocked(fs.renameSync).mockImplementationOnce(() => { throw new Error('interrupted rename'); });
+    other.socket.send(JSON.stringify({ version: 1, kind: 'control', requestId: 2,
+      expectedRevision: ack.revision, message: mutation(loser, ack.revision) }));
+    await vi.waitFor(() => expect(other.messages.some(message => message.type === 'layoutError'
+      && message.error.includes('Draft retained'))).toBe(true));
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(winner);
+    const recovery = join(options.projectRoot, '.squad-pod', 'recovery');
+    const backups = await Promise.all((await readdir(recovery)).map(name => readFile(join(recovery, name), 'utf8')));
+    expect(backups).toContain(JSON.stringify(winner, null, 2));
+    expect((await readdir(join(options.projectRoot, '.squad-pod'))).some(name => /\.(tmp|lock)$/.test(name))).toBe(false);
+    const retry = await save(first, mutation(loser, ack.revision), ack.revision!);
+    expect(retry[0]).toMatchObject({ type: 'layoutSaved', layout: loser });
   });
 
   it('keeps simultaneous roots, rosters, layouts and shutdown independent', async () => {

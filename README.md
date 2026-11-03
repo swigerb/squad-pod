@@ -149,12 +149,18 @@ Build the separate Copilot app panel client with `cd webview-ui` then
 that entry at `/`, with `/auth`, `/office-context` and `/office` on the same origin.
 This does not change the standalone CLI's credential-paste entry or host defaults.
 
-Canvas checks the existing HttpOnly cookie first. Only an unauthenticated response
-allows a single `#c=<credential>` exchange; the fragment is removed before network
-requests and is never stored. An expired session must be reopened in the app.
-Canvas supports observed office rendering, settings reads and agent details only:
-editing, file opening, directory management, live logs and recovery storage are
-unavailable. The panel follows the system light/dark preference.
+Canvas checks the existing HttpOnly viewer cookie first. Only an unauthenticated
+response allows a single `c` exchange from `#c=<viewer>&e=<office-control>`; the
+whole fragment is removed before network requests and is never stored.
+**Read-only remains the default**, including reloads. **Enable editing** explicitly
+exchanges the separate per-instance `e` credential (or reuses its valid control
+cookie) for revision-checked layout, declared-member seats and settings changes.
+The [authorization and recovery design](standalone/README.md#host-neutral-canvas-module-read-only-by-default)
+reuses the standalone guarded store and conflict UI, without changing VS Code's
+layout format or migrating workspace state. An expired session must be reopened;
+export unresolved drafts before closing the instance. File opening, directory
+management and live logs remain unavailable. No agent-callable write actions are
+registered. The panel follows the system light/dark preference.
 
 ## Squad Pod and Pixel Agents
 

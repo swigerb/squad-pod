@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from '../App.js';
 import { createBrowserClient, type BrowserHostClient } from './browserClient.js';
 import { MobileShell } from './MobileShell.js';
+import { PreferenceDraftControls } from './PreferenceDraftControls.js';
 import type { PreferenceMutation } from '../../../standalone/src/officePreferences.js';
 import './standalone.css';
 
@@ -69,18 +70,7 @@ function Observer() {
       {client && <button onClick={() => { client.dispose(); setClient(null); setStatus('Authentication required'); }}>Authenticate again</button>}
     </header>
     <p className="observer-scope">{control && client ? 'Authenticated selected-project office control. Layout, seats and local settings only.' : 'Read-only local office by default.'} No directory management, external assets or native dialogs. Terminals below require separate authority. Activity is approximate file observation unless the local CLI explicitly opts in with --live-activity; Telemetry shows source and correlation coverage. Usage is recorded ledger data only.</p>
-    {client && control && preferenceDraft && <details open>
-      <summary>Unacknowledged settings/seat draft</summary>
-      <p>Inspect before retrying: this change has not been acknowledged. Other preference changes are rejected until it is resolved. A recovered full seat map may replace current assignments; reconcile or export and discard it first.</p>
-      <pre>{JSON.stringify(preferenceDraft, null, 2)}</pre>
-      <button onClick={() => client.send(preferenceDraft)}>Retry this preference change deliberately</button>
-      <button onClick={() => {
-        const url = URL.createObjectURL(new Blob([JSON.stringify(preferenceDraft, null, 2)], { type: 'application/json' }));
-        const link = document.createElement('a'); link.href = url; link.download = 'squad-pod-preference-draft.json'; link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 0);
-      }}>Export preference draft</button>
-      <button onClick={() => client.discardPreferenceDraft()}>Discard preference draft</button>
-    </details>}
+    {client && control && preferenceDraft && <PreferenceDraftControls client={client} draft={preferenceDraft} />}
     <MobileShell office={office} onKeyboardViewport={onKeyboardViewport} />
   </div>;
 }

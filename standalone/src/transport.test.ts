@@ -133,17 +133,14 @@ async function refused(transport: Running, headers: Record<string, string>, path
 }
 
 describe('loopback transport HTTP boundary', () => {
-  it('refuses combining Canvas bootstrap with terminal or office-control authority', async () => {
+  it('refuses combining Canvas bootstrap with terminal authority', async () => {
     const { bundle } = await fixture();
     const options: TransportOptions = {
       staticRoot: bundle, canvas: true, snapshot: async () => [], subscribe: () => () => undefined,
     };
     await expect(startTransport({
       ...options, terminals: {} as NonNullable<TransportOptions['terminals']>,
-    })).rejects.toThrow('Canvas requires read-only transport');
-    await expect(startTransport({
-      ...options, officeControl: {} as NonNullable<TransportOptions['officeControl']>,
-    })).rejects.toThrow('Canvas requires read-only transport');
+    })).rejects.toThrow('Canvas does not support terminal authority');
   });
 
   it('serves the indexed bundle with bundled-only scripts and renderer-compatible inline styles', async () => {

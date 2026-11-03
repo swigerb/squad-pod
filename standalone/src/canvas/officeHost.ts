@@ -2,6 +2,7 @@ import { lstat, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { createObserver } from '../observer.js';
 import { startTransport } from '../transport.js';
+import { createOfficeControl } from '../officeControl.js';
 import type { OutboundMessage } from '../../../src/types.js';
 import { CanvasActivity } from './activity.js';
 
@@ -13,7 +14,7 @@ export interface CanvasOfficeHostOptions {
   sessionId?: string;
 }
 
-/** Instance-owned read-only office. The fragment URL is a single-use secret. */
+/** Instance-owned office. Fragment credentials are separate single-use secrets. */
 export interface CanvasOfficeHost {
   url: string;
   snapshot(): Promise<OutboundMessage[]>;
@@ -71,6 +72,7 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
     await snapshot();
     transport = await startTransport({
       staticRoot: options.staticRoot, canvas: true,
+      officeControl: createOfficeControl(root),
       snapshot, subscribe: listener => {
         listeners.add(listener);
         const stop = observer!.subscribe(messages => listener(live ? live.snapshot(messages) : messages));
@@ -88,7 +90,7 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
   const ownedTransport = transport;
   let disposal: Promise<void> | undefined;
   return {
-    url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}`,
+    url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}&e=${ownedTransport.controlToken}`,
     snapshot,
     acceptActivity: event => live?.accept(event),
     clearActivity: () => live?.clear(),

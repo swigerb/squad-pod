@@ -19,7 +19,7 @@ export interface TransportOptions {
   onRead?: (message: WebviewMessage) => Promise<OutboundMessage[]>;
   terminals?: OwnedRuns;
   officeControl?: OfficeControl;
-  /** Read-only Canvas bootstrap; consumes the office credential after one exchange. */
+  /** Canvas bootstrap; viewer and optional control credentials are independently single-use. */
   canvas?: boolean;
 }
 
@@ -157,8 +157,8 @@ export async function startTransport(options: TransportOptions): Promise<{
     && (!Number.isInteger(options.port) || options.port < 0 || options.port > 65535)) {
     throw new Error('Invalid port');
   }
-  if (options.canvas && (options.terminals || options.officeControl)) {
-    throw new Error('Canvas requires read-only transport');
+  if (options.canvas && options.terminals) {
+    throw new Error('Canvas does not support terminal authority');
   }
   const files = await indexStatic(options.staticRoot);
   let token = credential();
@@ -233,7 +233,7 @@ export async function startTransport(options: TransportOptions): Promise<{
     if ((request.url === '/auth' || request.url === '/terminal-auth' || request.url === '/control-auth') && request.method === 'POST') {
       const terminal = request.url === '/terminal-auth';
       const control = request.url === '/control-auth';
-      if (options.canvas && (terminal || control)) { reply(response, 403, 'READ_ONLY'); return; }
+      if (options.canvas && terminal) { reply(response, 403, 'READ_ONLY'); return; }
       if (control && !options.officeControl) { reply(response, 403, 'CONTROL_DISABLED'); return; }
       const startedGeneration = generation;
       if (!validOrigin(request)) { reply(response, 403, 'FORBIDDEN'); return; }
@@ -271,7 +271,10 @@ export async function startTransport(options: TransportOptions): Promise<{
         }
         response.setHeader('Set-Cookie', `${control ? controlCookie() : cookieName(terminal)}=${control ? controlSession : terminal ? terminalSession : session}; HttpOnly; SameSite=Strict; Path=/`);
         // Rotate only the bootstrap secret: the newly issued cookie must remain valid.
-        if (options.canvas) { token = credential(); }
+        if (options.canvas) {
+          if (control) controlToken = credential();
+          else token = credential();
+        }
         response.writeHead(204);
         response.end();
       });
@@ -280,7 +283,8 @@ export async function startTransport(options: TransportOptions): Promise<{
     if (request.url === '/office-context' && request.method === 'GET') {
       if (!authenticated(request) && !controlAuthenticated(request)) { reply(response, 403, 'FORBIDDEN'); return; }
       response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-      response.end(JSON.stringify({ serverIdentity, projectIdentity: options.officeControl?.projectIdentity ?? null }));
+      response.end(JSON.stringify({ serverIdentity, projectIdentity: options.officeControl?.projectIdentity ?? null,
+        ...(options.canvas ? { controlAuthorized: controlAuthenticated(request) } : {}) }));
       return;
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
