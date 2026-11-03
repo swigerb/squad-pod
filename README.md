@@ -150,11 +150,12 @@ that entry at `/`, with `/auth`, `/office-context` and `/office` on the same ori
 This does not change the standalone CLI's credential-paste entry or host defaults.
 
 Canvas checks the existing HttpOnly viewer cookie first. Only an unauthenticated
-response allows a single `c` exchange from `#c=<viewer>&e=<office-control>`; the
+response allows a single `c` exchange from `#c=<viewer>`; the
 whole fragment is removed before network requests and is never stored.
 **Read-only remains the default**, including reloads. **Enable editing** explicitly
-exchanges the separate per-instance `e` credential (or reuses its valid control
-cookie) for revision-checked layout, declared-member seats and settings changes.
+requests a cookie-authenticated, same-origin one-time anti-forgery challenge
+(or reuses its valid control cookie) for revision-checked layout, declared-member
+seats and settings changes. Control authority never appears in the URL.
 The [authorization and recovery design](standalone/README.md#host-neutral-canvas-module-read-only-by-default)
 reuses the standalone guarded store and conflict UI, without changing VS Code's
 layout format or migrating workspace state. An expired session must be reopened;

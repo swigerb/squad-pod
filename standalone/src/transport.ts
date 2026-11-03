@@ -19,7 +19,7 @@ export interface TransportOptions {
   onRead?: (message: WebviewMessage) => Promise<OutboundMessage[]>;
   terminals?: OwnedRuns;
   officeControl?: OfficeControl;
-  /** Canvas bootstrap; viewer and optional control credentials are independently single-use. */
+  /** Canvas uses a single-use viewer bootstrap and cookie-bound editing challenges. */
   canvas?: boolean;
 }
 
@@ -167,6 +167,7 @@ export async function startTransport(options: TransportOptions): Promise<{
   let terminalSession = credential();
   let controlToken = credential();
   let controlSession = credential();
+  const controlNonces = new Set<string>();
   const serverIdentity = credential();
   let generation = 0;
   let disposed = false;
@@ -230,11 +231,25 @@ export async function startTransport(options: TransportOptions): Promise<{
   const server = createServer({ maxHeaderSize: MAX_INBOUND }, (request, response) => {
     headers(response);
     if (!validHost(request)) { reply(response, 403, 'FORBIDDEN'); return; }
+    if (options.canvas && request.url === '/control-intent' && request.method === 'POST') {
+      if (!options.officeControl || !validOrigin(request) || !authenticated(request)) {
+        reply(response, 403, 'FORBIDDEN'); return;
+      }
+      // Each panel requests its own challenge; bounded outstanding pages cannot grow state.
+      if (controlNonces.size >= MAX_CONNECTIONS) controlNonces.delete(controlNonces.values().next().value!);
+      const nonce = credential();
+      controlNonces.add(nonce);
+      response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      response.end(JSON.stringify({ nonce }));
+      return;
+    }
     if ((request.url === '/auth' || request.url === '/terminal-auth' || request.url === '/control-auth') && request.method === 'POST') {
       const terminal = request.url === '/terminal-auth';
       const control = request.url === '/control-auth';
+      const panelControl = options.canvas && control;
       if (options.canvas && terminal) { reply(response, 403, 'READ_ONLY'); return; }
       if (control && !options.officeControl) { reply(response, 403, 'CONTROL_DISABLED'); return; }
+      if (panelControl && !authenticated(request)) { reply(response, 403, 'FORBIDDEN'); return; }
       const startedGeneration = generation;
       if (!validOrigin(request)) { reply(response, 403, 'FORBIDDEN'); return; }
       if (singleHeader(request, 'content-type')?.toLowerCase().split(';')[0].trim() !== 'application/json') {
@@ -265,16 +280,18 @@ export async function startTransport(options: TransportOptions): Promise<{
         let body: unknown;
         try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
         catch { reply(response, 400, 'INVALID_MESSAGE'); return; }
-        if (!record(body) || !keys(body, ['token']) || typeof body.token !== 'string'
+        if (panelControl) {
+          if (!authenticated(request) || !record(body) || !keys(body, ['nonce'])
+            || typeof body.nonce !== 'string' || !controlNonces.delete(body.nonce)) {
+            reply(response, 403, 'FORBIDDEN'); return;
+          }
+        } else if (!record(body) || !keys(body, ['token']) || typeof body.token !== 'string'
           || body.token.length > 128 || !equalCredential(body.token, control ? controlToken : terminal ? terminalToken : token)) {
           reply(response, 403, 'FORBIDDEN'); return;
         }
         response.setHeader('Set-Cookie', `${control ? controlCookie() : cookieName(terminal)}=${control ? controlSession : terminal ? terminalSession : session}; HttpOnly; SameSite=Strict; Path=/`);
         // Rotate only the bootstrap secret: the newly issued cookie must remain valid.
-        if (options.canvas) {
-          if (control) controlToken = credential();
-          else token = credential();
-        }
+        if (options.canvas && !control) token = credential();
         response.writeHead(204);
         response.end();
       });
@@ -510,7 +527,7 @@ export async function startTransport(options: TransportOptions): Promise<{
     port,
     get token() { return token; },
     get terminalToken() { return terminalToken; },
-    get controlToken() { return options.officeControl ? controlToken : null; },
+    get controlToken() { return options.officeControl && !options.canvas ? controlToken : null; },
     rotate: () => {
       generation++;
       options.terminals?.revokeObservation();
@@ -520,6 +537,7 @@ export async function startTransport(options: TransportOptions): Promise<{
       terminalSession = credential();
       controlToken = credential();
       controlSession = credential();
+      controlNonces.clear();
       for (const ws of [...wss.clients, ...terminals.clients, ...controls.clients]) { cleanups.get(ws)?.(); ws.terminate(); }
       return token;
     },
@@ -527,6 +545,7 @@ export async function startTransport(options: TransportOptions): Promise<{
       if (disposal) { return disposal; }
       disposed = true;
       generation++;
+      controlNonces.clear();
       for (const ws of [...wss.clients, ...terminals.clients, ...controls.clients]) { cleanups.get(ws)?.(); ws.terminate(); }
       disposal = new Promise<void>((accept, reject) => {
         server.close(error => { if (error) { reject(error); } else { accept(); } });

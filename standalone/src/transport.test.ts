@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
 import type { OutboundMessage, WebviewMessage } from '../../src/types.js';
 import { startTransport, type TransportOptions } from './transport.js';
+import { createOfficeControl } from './officeControl.js';
 
 type Running = Awaited<ReturnType<typeof startTransport>>;
 type Envelope = { version: number; kind: string; code?: string; message?: OutboundMessage };
@@ -90,6 +91,32 @@ async function cookie(transport: Running) {
   expect(response.status).toBe(204);
   return response.headers['set-cookie']![0].split(';')[0];
 }
+
+it('keeps Canvas control secrets private and revokes outstanding page challenges on rotation', async () => {
+  const { root, bundle } = await fixture();
+  const transport = await startTransport({
+    canvas: true, staticRoot: bundle, officeControl: createOfficeControl(root),
+    snapshot: async () => [settings], subscribe: () => () => {},
+  });
+  transports.push(transport);
+  expect(transport.controlToken).toBeNull();
+  const viewer = await cookie(transport);
+  const origin = `http://127.0.0.1:${transport.port}`;
+  const challenge = await http(transport, '/control-intent', {
+    method: 'POST', headers: { Origin: origin, Cookie: viewer },
+  });
+  expect(challenge.status).toBe(200);
+  expect(JSON.parse(challenge.body).nonce).toMatch(/^[a-zA-Z0-9_-]{43}$/);
+  transport.rotate();
+  const nextViewer = await cookie(transport);
+  const revoked = await http(transport, '/control-auth', {
+    method: 'POST', body: challenge.body,
+    headers: { Origin: origin, Cookie: nextViewer, 'Content-Type': 'application/json' },
+  });
+  expect(revoked.status).toBe(403);
+  expect(revoked.headers['set-cookie']).toBeUndefined();
+  expect(transport.controlToken).toBeNull();
+});
 
 async function office(
   transport: Running, session: string, overrides: Record<string, string> = {}, autoPong = true,

@@ -103,11 +103,13 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     expect(f.status.mock.calls).toEqual([['Connecting'], ['Connected - read-only'], [CANVAS_EXPIRED]]);
   });
 
-  it('does not exchange control authority until opt-in, then uses a separate single-use credential and instance recovery key', async () => {
-    window.history.replaceState(null, '', '/#c=viewer&e=control%5Fsecret');
+  it('does not request control until opt-in, then uses a cookie-bound challenge, never a URL credential', async () => {
+    window.history.replaceState(null, '', '/#c=viewer&e=ignored_legacy_secret');
     const viewer = { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: false };
     const authorized = { ...viewer, controlAuthorized: true };
-    const f = fixture([response(200, viewer), response(200, viewer), response(204), response(200, authorized)]);
+    const nonce = 'n'.repeat(43);
+    const f = fixture([response(200, viewer), response(200, viewer), response(200, { nonce }),
+      response(204), response(200, authorized)]);
     const client = await f.bootstrap();
     expect(f.request).toHaveBeenCalledOnce();
     expect(window.location.hash).toBe('');
@@ -118,12 +120,16 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     const control = await pending;
     expect(control.capabilities).toBe(CANVAS_CONTROL_CAPABILITIES);
     expect(f.request.mock.calls.map(([url]) => url)).toEqual([
-      '/office-context', '/office-context', '/control-auth', '/office-context',
+      '/office-context', '/office-context', '/control-intent', '/control-auth', '/office-context',
     ]);
     expect(f.request.mock.calls[2][1]).toEqual({
       method: 'POST', credentials: 'same-origin', cache: 'no-store',
-      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: 'control_secret' }),
     });
+    expect(f.request.mock.calls[3][1]).toEqual({
+      method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nonce }),
+    });
+    expect(JSON.stringify(f.request.mock.calls)).not.toContain('ignored_legacy_secret');
     expect(f.createClient.mock.calls[1][3]).toEqual({
       recoveryKey: `squad-office:${identity.serverIdentity}:${viewer.projectIdentity}`, onPreferenceDraft: draft,
     });
@@ -151,10 +157,9 @@ describe('Canvas cookie-first single-use bootstrap', () => {
   });
 
   it.each([
-    { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: false },
     { ...identity, projectIdentity: 'invalid', controlAuthorized: true },
     { ...identity, serverIdentity: 'z'.repeat(43), projectIdentity: 'b'.repeat(64), controlAuthorized: true },
-  ])('fails closed on absent, revoked or substituted control authority without creating an editor', async context => {
+  ])('fails closed on invalid or substituted control identity without creating an editor', async context => {
     window.history.replaceState(null, '', '/');
     const f = fixture([response(200), response(200, context)]);
     const client = await f.bootstrap();
@@ -177,8 +182,8 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     expect(client.capabilities).toBe(CANVAS_OBSERVER_CAPABILITIES);
   });
 
-  it('does not allow a disposed panel to exchange its retained control credential', async () => {
-    window.history.replaceState(null, '', '/#c=viewer&e=control');
+  it('does not allow a disposed panel to request a control challenge', async () => {
+    window.history.replaceState(null, '', '/#c=viewer');
     const f = fixture([response(200)]);
     const client = await f.bootstrap();
     client.dispose();
@@ -186,17 +191,48 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     expect(f.request).toHaveBeenCalledOnce();
   });
 
-  it('rejects a revoked single-use control credential without upgrading or retrying', async () => {
-    window.history.replaceState(null, '', '/#c=viewer&e=revoked');
+  it('rejects a revoked one-time challenge without upgrading or retrying', async () => {
+    window.history.replaceState(null, '', '/#c=viewer');
     const viewer = { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: false };
-    const f = fixture([response(200, viewer), response(200, viewer), response(403)]);
+    const f = fixture([response(200, viewer), response(200, viewer),
+      response(200, { nonce: 'n'.repeat(43) }), response(403)]);
     const client = await f.bootstrap();
     const attempt = client.enableEditing!(vi.fn());
     await expect(attempt).rejects.toThrow(CANVAS_EDIT_FAILED);
     expect(client.enableEditing!(vi.fn())).toBe(attempt);
-    expect(f.request.mock.calls.map(([url]) => url)).toEqual(['/office-context', '/office-context', '/control-auth']);
+    expect(f.request.mock.calls.map(([url]) => url)).toEqual([
+      '/office-context', '/office-context', '/control-intent', '/control-auth',
+    ]);
     expect(f.createClient).toHaveBeenCalledOnce();
     expect(client.capabilities).toBe(CANVAS_OBSERVER_CAPABILITIES);
+  });
+
+  it.each([response(403), response(200, {}), response(200, { nonce: 'invalid' })])(
+    'does not request control when the cookie-bound challenge is denied or malformed', async challenge => {
+      const viewer = { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: false };
+      const f = fixture([response(200, viewer), response(200, viewer), challenge]);
+      const client = await f.bootstrap();
+      await expect(client.enableEditing!(vi.fn())).rejects.toThrow(CANVAS_EDIT_FAILED);
+      expect(f.request.mock.calls.map(([url]) => url)).toEqual([
+        '/office-context', '/office-context', '/control-intent',
+      ]);
+      expect(f.createClient).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('does not exchange a challenge received after the panel is disposed', async () => {
+    const viewer = { ...identity, projectIdentity: 'b'.repeat(64), controlAuthorized: false };
+    const f = fixture([response(200, viewer), response(200, viewer)]);
+    let deliver!: (response: Response) => void;
+    f.request.mockImplementationOnce(() => new Promise(resolve => { deliver = resolve; }));
+    const client = await f.bootstrap();
+    const attempt = client.enableEditing!(vi.fn());
+    await vi.waitFor(() => expect(f.request).toHaveBeenCalledTimes(3));
+    client.dispose();
+    deliver(response(200, { nonce: 'n'.repeat(43) }));
+    await expect(attempt).rejects.toThrow(CANVAS_EDIT_FAILED);
+    expect(f.request.mock.calls.some(([url]) => url === '/control-auth')).toBe(false);
+    expect(f.createClient).toHaveBeenCalledOnce();
   });
 
   it('uses different recovery storage for concurrent instances of the same selected project', async () => {

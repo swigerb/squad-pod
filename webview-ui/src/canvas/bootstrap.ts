@@ -18,15 +18,12 @@ export function createCanvasBootstrap(
   let pending: Promise<CanvasHostClient> | undefined;
   return () => pending ??= (async () => {
     let fragment = target.location.hash;
-    let controlToken = '';
     let disposed = false;
     try {
       // Scrub before the first asynchronous operation, even with an existing cookie.
       target.history.replaceState(null, '', target.location.pathname + target.location.search);
       const values = new URLSearchParams(fragment.slice(1));
       fragment = '';
-      const controls = values.getAll('e');
-      if (controls.length === 1 && controls[0].length <= 256) controlToken = controls[0];
       let context = await request('/office-context', { credentials: 'same-origin', cache: 'no-store' });
       if (context.status === 401 || context.status === 403) {
         const tokens = values.getAll('c');
@@ -51,7 +48,7 @@ export function createCanvasBootstrap(
       let editing: Promise<BrowserHostClient> | undefined;
       return {
         ...client, capabilities: CANVAS_OBSERVER_CAPABILITIES,
-        dispose() { disposed = true; controlToken = ''; client.dispose(); },
+        dispose() { disposed = true; client.dispose(); },
         enableEditing(onPreferenceDraft) {
           return editing ??= (async () => {
             try {
@@ -59,18 +56,21 @@ export function createCanvasBootstrap(
               let response = await request('/office-context', { credentials: 'same-origin', cache: 'no-store' });
               let context: unknown = response.ok ? await response.json() : null;
               if (!(context && typeof context === 'object' && 'controlAuthorized' in context && context.controlAuthorized === true)) {
-                if (!controlToken) throw new Error();
-                const token = controlToken;
-                controlToken = '';
+                response = await request('/control-intent', {
+                  method: 'POST', credentials: 'same-origin', cache: 'no-store',
+                });
+                const challenge: unknown = response.ok ? await response.json() : null;
+                if (disposed || !challenge || typeof challenge !== 'object'
+                  || !('nonce' in challenge) || typeof challenge.nonce !== 'string'
+                  || !/^[a-zA-Z0-9_-]{43}$/.test(challenge.nonce)) throw new Error();
                 response = await request('/control-auth', {
                   method: 'POST', credentials: 'same-origin', cache: 'no-store',
-                  headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+                  headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nonce: challenge.nonce }),
                 });
                 if (!response.ok) throw new Error();
                 response = await request('/office-context', { credentials: 'same-origin', cache: 'no-store' });
                 context = response.ok ? await response.json() : null;
               }
-              controlToken = '';
               if (disposed || !context || typeof context !== 'object'
                 || !('serverIdentity' in context) || context.serverIdentity !== identity.serverIdentity
                 || !('projectIdentity' in context) || typeof context.projectIdentity !== 'string'
@@ -84,12 +84,10 @@ export function createCanvasBootstrap(
               catch (error) { control.dispose(); throw error; }
               return { ...control, capabilities: CANVAS_CONTROL_CAPABILITIES };
             } catch { throw new Error(CANVAS_EDIT_FAILED); }
-            finally { controlToken = ''; }
           })();
         },
       };
     } catch {
-      controlToken = '';
       throw new Error(CANVAS_EXPIRED);
     } finally {
       fragment = '';
