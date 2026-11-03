@@ -51,6 +51,59 @@ describe('selected-project layout snapshots and compiled provider loading', () =
     }
     return { provider, messages, get, update };
   }
+  function failRootLookupDuringRead() {
+    const realpath = fs.realpathSync;
+    let inspectedFile = false;
+    const fail = vi.fn(() => {
+      throw Object.assign(new Error(`private ${root}`), { code: 'ENOENT' });
+    });
+    vi.spyOn(fs, 'realpathSync').mockImplementation((target, options) => {
+      // The file's final inspection lookup precedes read()'s root lookup.
+      if (target === root && inspectedFile && fail.mock.calls.length === 0) {return fail();}
+      const resolved = realpath(target, options);
+      if (target === file) {inspectedFile = true;}
+      return resolved;
+    });
+    return fail;
+  }
+  it('refuses a null read after present inspections even when root identity recovers unchanged', () => {
+    const raw = JSON.stringify(layout);
+    fs.writeFileSync(file, raw);
+    const files = new ProjectFiles(root);
+    const inspect = vi.spyOn(files, 'inspect');
+    const fail = failRootLookupDuringRead();
+    const result = readLayoutSnapshot(files);
+    expect(fail).toHaveBeenCalledTimes(1);
+    const observations = inspect.mock.results.map(result => result.value);
+    expect(observations).toHaveLength(4);
+    expect(observations.every(observation => observation.status === 'present')).toBe(true);
+    expect(observations.slice(2)).toEqual(observations.slice(0, 2));
+    expect(result).toEqual({ status: 'unreadable', diagnostic: expect.any(String) });
+    expect(result).not.toHaveProperty('revision');
+    expect(JSON.stringify(result)).not.toContain(root);
+    expect(fs.readFileSync(file, 'utf8')).toBe(raw);
+  });
+  it('keeps the compiled provider layout and revision on a read-only transient root ENOENT', () => {
+    const raw = JSON.stringify(layout);
+    fs.writeFileSync(file, raw);
+    const host = consumer({ ...layout, tiles: [2] });
+    host.provider.loadAndSendLayout(root);
+    expect(host.messages).toEqual([{ type: 'layoutLoaded', layout, revision: raw, workspaceRoot: root }]);
+    host.messages.length = 0;
+    host.get.mockClear();
+    const files = new ProjectFiles(root);
+    const before = [files.inspect('.squad-pod'), files.inspect(path.join('.squad-pod', 'layout.json'))];
+    const fail = failRootLookupDuringRead();
+    host.provider.loadAndSendLayout(root);
+    expect(fail).toHaveBeenCalledTimes(1);
+    expect(host.messages).toEqual([{ type: 'layoutError', error: expect.any(String) }]);
+    expect(host.messages[0]).not.toHaveProperty('revision');
+    expect(JSON.stringify(host.messages)).not.toContain(root);
+    expect(host.get).not.toHaveBeenCalled();
+    expect(host.update).not.toHaveBeenCalled();
+    expect([files.inspect('.squad-pod'), files.inspect(path.join('.squad-pod', 'layout.json'))]).toEqual(before);
+    expect(fs.readFileSync(file, 'utf8')).toBe(raw);
+  });
   it('keeps exact BOM/formatting/metadata revision while migrating only the parsed layout', () => {
     const raw = '\uFEFF{\n "cols":1,"rows":1,"tiles":[1],"metadata":{"custom":true}\n}';
     fs.writeFileSync(file, raw);

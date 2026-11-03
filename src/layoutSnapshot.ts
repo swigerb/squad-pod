@@ -16,7 +16,7 @@ export type LayoutSnapshot =
   | { status: 'malformed'; revision: string; diagnostic: string }
   | { status: 'unreadable'; diagnostic: string };
 
-function inspectSource(files: ProjectFiles): string {
+function inspectSource(files: ProjectFiles): { status: 'present' | 'missing'; fingerprint: string } {
   const directory = files.inspect(LAYOUT_FILE_DIR);
   if (directory.status === 'unreadable') {throw new SnapshotInspectionError(directory.reason);}
   if (directory.status === 'present' && directory.kind !== 'directory') {
@@ -24,7 +24,7 @@ function inspectSource(files: ProjectFiles): string {
   }
   const file = files.inspect(relative);
   if (file.status === 'unreadable') {throw new SnapshotInspectionError(file.reason);}
-  return `${directory.fingerprint}||${file.fingerprint}`;
+  return { status: file.status, fingerprint: `${directory.fingerprint}||${file.fingerprint}` };
 }
 
 /**
@@ -37,7 +37,10 @@ export function readLayoutSnapshot(files: ProjectFiles): LayoutSnapshot {
   try {
     const before = inspectSource(files);
     const revision = files.read(relative, MAX_LAYOUT_SOURCE_BYTES, { preserveBOM: true });
-    if (inspectSource(files) !== before) {
+    const after = inspectSource(files);
+    // A transient root ENOENT can yield null even with identical present inspections.
+    if (after.status !== before.status || after.fingerprint !== before.fingerprint
+      || (revision === null && (before.status !== 'missing' || after.status !== 'missing'))) {
       return { status: 'unreadable', diagnostic: 'Saved layout source changed while reading.' };
     }
     if (revision === null) {return { status: 'missing', revision: null };}
