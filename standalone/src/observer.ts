@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
-import { readDeclaredRoster } from '../../src/declaredRoster.js';
+import { parseDeclaredRoster } from '../../src/declaredRoster.js';
+import { TeamSourceState } from '../../src/teamSource.js';
 import { parseRecordedUsage, unavailableUsage, MAX_USAGE_BYTES } from '../../src/recordedUsage.js';
 import { parseLayoutJson } from '../../src/layoutPersistence.js';
 import { createDefaultOfficeLayout } from '../../src/defaultOfficeLayout.js';
@@ -26,6 +27,7 @@ export interface ObserverOptions {
 
 export function createObserver(project: string, bundledAssetsRoot: string, pollMs = 1000, options: ObserverOptions = {}) {
   const files = new ProjectFiles(project);
+  const teamSource = new TeamSourceState(files);
   const office = new OfficeStore(project);
   const assets: OutboundMessage = {
     type: 'manifestAssetsLoaded',
@@ -72,7 +74,7 @@ export function createObserver(project: string, bundledAssetsRoot: string, pollM
         return null;
       }
     }
-    const declared = readDeclaredRoster({ files });
+    const declared = parseDeclaredRoster(teamSource.scan().source);
     remainingBytes -= declared.byteLength;
     const squad = declared.directory;
     const roster = declared.members;

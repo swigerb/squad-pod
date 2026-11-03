@@ -34,7 +34,7 @@ import {
   isLiveAgent,
   setExternalCharacterPalettes,
 } from './agentManager.js';
-import { startSquadWatching, type ActivitySource } from './squadWatcher.js';
+import { SquadWatcher, type ActivitySource, type SquadWatcherCallbacks } from './squadWatcher.js';
 import { pickSquadWorkspace, resolveSquadDir } from './squadPaths.js';
 import {
   loadCharacterSprites,
@@ -56,6 +56,7 @@ import {
   parseTeamName,
   parseProjectContext,
   parseAllMembers,
+  parseTeamRoster,
 } from './teamParser.js';
 import { readSettings, saveSetting } from './settings.js';
 import { assetSourceFingerprint, loadAssetSnapshot, watchAssetSnapshots } from './manifestAssets.js';
@@ -313,11 +314,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     // A reloaded webview only needs a fresh snapshot; keep agent state,
     // timers and watchers alive so in-flight activity is not lost.
     this.loadAndSendCustomAssetUris();
-    let agents = getAgents();
+    let finishStartup: (() => void) | undefined;
     if (this.watchedRoot !== workspaceRoot || !this.disposeSquadWatcher) {
       this.stopWatching();
-      agents = initializeAgents(workspaceRoot, this.context, webview);
-      this.startWatching(workspaceRoot, webview);
+      finishStartup = this.startWatching(workspaceRoot, webview);
     }
 
     // Establish workspace identity before replaying data to a fresh webview.
@@ -326,7 +326,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     // buffers roster until layout arrives, so either order is safe).
     this.loadAndSendAssets();
     this.loadAndSendLayout(workspaceRoot);
-    sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
+    sendExistingAgents(getAgents(), this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
+    finishStartup?.();
     this.sendRecordedUsage(workspaceRoot);
     this.postMessage({ type: 'cliUsage', snapshot: this.cliUsage.snapshot });
     this.liveActivity?.replay();
@@ -433,43 +434,62 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private startWatching(workspaceRoot: string, webview: vscode.Webview): void {
+  /** Baseline silently until the caller publishes layout and the current roster. */
+  private startWatching(workspaceRoot: string, webview: vscode.Webview): () => void {
     this.watchedRoot = workspaceRoot;
-    this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
     this.usageTimer = setInterval(() => this.sendRecordedUsage(workspaceRoot), 2000);
-    this.disposeSquadWatcher = startSquadWatching(workspaceRoot, {
+    let starting = true;
+    let stopped = false;
+    const pendingActivity: Parameters<SquadWatcherCallbacks['onAgentActivity']>[0][] = [];
+    const onAgentActivity: SquadWatcherCallbacks['onAgentActivity'] = (event) => {
+      if (stopped) { return; }
+      if (starting) {
+        pendingActivity.push(event);
+        return;
+      }
+      if (isLiveAgent(event.agentId)) {return;}
+      const agent = getAgents().get(event.agentId)
+        ?? [...getAgents().values()].find(a => event.agentId.startsWith(a.id));
+      const displayName = agent?.name ?? event.agentId;
+      this.emitTelemetry(
+        telemetryCategoryFor(event.source),
+        agent?.id ?? event.agentId,
+        displayName,
+        `[${event.source}] ${displayName} — ${event.task ?? 'activity detected'}`,
+        event.task,
+      );
+      updateAgentStatus(event.agentId, event.status, event.task, webview);
+    };
+    const watcher = new SquadWatcher(workspaceRoot, {
       onStatusChanged: (status) => {
-        if (status.squadDir !== this.sourceStatus.squadDir) {
-          this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
-        }
         this.sourceStatus = { ...status, liveActivity: this.sourceStatus.liveActivity };
         this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
         if (status.error) { this.log(status.error); }
       },
       onRosterChanged: () => {
-        this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
-        this.sendRecordedUsage(workspaceRoot);
+        const source = watcher.getTeamSource();
+        if (source === null) { throw new Error('Roster callback requires a guarded source snapshot.'); }
+        const content = source.status === 'available' ? source.content : '';
+        this.usageRoster = parseAllMembers(content);
+        if (starting) {
+          initializeAgents(workspaceRoot, this.context, webview, parseTeamRoster(content));
+          return;
+        }
         const directoryIds = this.getWorkspaceDirectoryIds(workspaceRoot);
-        const updated = refreshAgents(workspaceRoot, this.context, webview, directoryIds);
+        const updated = refreshAgents(workspaceRoot, this.context, webview, directoryIds, parseTeamRoster(content));
+        this.sendRecordedUsage(workspaceRoot);
         sendExistingAgents(updated, this.context, webview, directoryIds);
         this.liveActivity?.replay();
         this.emitTelemetry('log', null, null, 'Team roster updated');
       },
-      onAgentActivity: (event) => {
-        if (isLiveAgent(event.agentId)) {return;}
-        const agent = getAgents().get(event.agentId)
-          ?? [...getAgents().values()].find(a => event.agentId.startsWith(a.id));
-        const displayName = agent?.name ?? event.agentId;
-        this.emitTelemetry(
-          telemetryCategoryFor(event.source),
-          agent?.id ?? event.agentId,
-          displayName,
-          `[${event.source}] ${displayName} — ${event.task ?? 'activity detected'}`,
-          event.task,
-        );
-        updateAgentStatus(event.agentId, event.status, event.task, webview);
-      },
+      onAgentActivity,
     });
+    this.disposeSquadWatcher = () => {
+      stopped = true;
+      pendingActivity.length = 0;
+      watcher.dispose();
+    };
+    watcher.start();
 
     this.disposeLayoutWatcher = watchLayoutFile(workspaceRoot, (layout, revision) => {
       this.postMessage({ type: 'layoutLoaded', layout, revision, workspaceRoot });
@@ -477,6 +497,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         this.postMessage({ type: 'layoutError', error: `Could not cache external layout: ${String(error)}` });
       });
     }, (error) => this.postMessage({ type: 'layoutError', error, source: 'watcher' }));
+    return () => {
+      starting = false;
+      for (const event of pendingActivity.splice(0)) { onAgentActivity(event); }
+    };
   }
 
   private stopWatching(): void {

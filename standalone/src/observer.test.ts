@@ -20,11 +20,32 @@ function fixture() {
   return root;
 }
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
   for (const root of owned.splice(0)) fs.rmSync(root, { recursive: true, force: true });
 });
 
 describe('read-only selected-project observer', () => {
+  it('reuses guarded team validation on unchanged snapshots and invalidates refused content', async () => {
+    const root = fixture();
+    const observer = createObserver(root, packageRoot);
+    const read = vi.spyOn(ProjectFiles.prototype, 'read');
+    const teamReads = () => read.mock.calls.filter(([relative]) => relative === path.join('.squad', 'team.md'));
+    try {
+      await observer.snapshot();
+      await observer.snapshot();
+      expect(teamReads()).toHaveLength(1);
+      fs.writeFileSync(path.join(root, '.squad', 'team.md'), Buffer.from([0xff]));
+      const refused = await observer.snapshot();
+      expect(refused.find(m => m.type === 'sourceStatus')).toMatchObject({
+        status: { teamFound: false, error: expect.stringContaining('UTF-8') },
+      });
+      expect(refused.find(m => m.type === 'existingAgents')).toMatchObject({ agents: [] });
+      await observer.snapshot();
+      expect(teamReads()).toHaveLength(2);
+    } finally { observer.dispose(); }
+  });
+
   it('matches existing read API membership for accepted, refused and recovered sources', async () => {
     const root = fixture();
     const team = path.join(root, '.squad', 'team.md');

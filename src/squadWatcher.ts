@@ -11,8 +11,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FILE_WATCHER_POLL_INTERVAL_MS } from './constants.js';
 import { resolveSquadDir } from './squadPaths.js';
-import { ProjectFiles } from './projectFiles.js';
-import { selectTeamSourceDirectory } from './teamSource.js';
+import { projectFileDiagnostic } from './projectFiles.js';
+import { TeamSourceState, type TeamSource } from './teamSource.js';
 import type { SourceStatus, SquadSession } from './types.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ export interface AgentActivityEvent {
 
 export interface SquadWatcherCallbacks {
   onStatusChanged?: (status: SourceStatus) => void;
-  /** Called when the team roster file or guarded source selection changes. */
+  /** Called on the initial scan and source changes, after status; use getTeamSource() for the snapshot. */
   onRosterChanged: () => void;
   /** Called when agent activity is detected from any watched source. */
   onAgentActivity: (event: AgentActivityEvent) => void;
@@ -239,15 +239,16 @@ export interface SquadWatcherOptions {
 /**
  * Watches one workspace's Squad state directory.
  *
- * The first scan records a baseline without emitting events, so opening the
- * office does not replay every historical log as live activity. Afterwards,
- * any new or changed file in a watched source emits one activity event.
+ * The first scan publishes roster availability but baselines historical activity
+ * without replaying it as live work. Afterwards, any new or changed file in a
+ * watched activity source emits one activity event.
  */
 export class SquadWatcher {
   private readonly known = new Map<string, FileStamp>();
-  private teamStamp: FileStamp | null = null;
-  private teamDirectory: string | null = null;
+  private readonly teamSource: TeamSourceState;
+  private currentSource: TeamSource | null = null;
   private baselined = false;
+  private activityBaselined = false;
   private disposed = false;
   private fsWatcher: fs.FSWatcher | null = null;
   private watchedDir: string | null = null;
@@ -255,19 +256,27 @@ export class SquadWatcher {
   private scanQueued: ReturnType<typeof setTimeout> | null = null;
   private lastStatus: string | undefined;
   private watchError: string | null = null;
-  /** Retain guarded refusal for native-watch and stopped status updates. */
-  private sourceError: string | null = null;
 
   constructor(
     private readonly workspaceRoot: string,
     private readonly callbacks: SquadWatcherCallbacks,
     private readonly options: SquadWatcherOptions = {},
-  ) {}
+  ) {
+    this.teamSource = new TeamSourceState(workspaceRoot);
+  }
 
   start(): void {
     if (this.pollTimer || this.disposed) { return; }
     this.pollTimer = setInterval(() => this.scan(), this.options.pollIntervalMs ?? FILE_WATCHER_POLL_INTERVAL_MS);
     this.scan();
+  }
+
+  /**
+   * Return this watcher/project's last guarded snapshot, or null before its first
+   * scan. Available before onRosterChanged fires; never revalidates or reads files.
+   */
+  getTeamSource(): Readonly<TeamSource> | null {
+    return this.currentSource;
   }
 
   dispose(): void {
@@ -286,26 +295,14 @@ export class SquadWatcher {
 
   private publishStatus(): void {
     const squadDir = resolveSquadDir(this.workspaceRoot);
-    let sourceError = this.sourceError;
-    let teamFound = false;
-    if (!sourceError) {
-      try {
-        if (!fs.statSync(squadDir).isDirectory()) {
-          sourceError = 'Cannot inspect Squad team file: source is not a directory.';
-        } else {
-          teamFound = fs.statSync(path.join(squadDir, 'team.md')).isFile();
-        }
-      } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
-          sourceError = 'Cannot inspect Squad team file: source metadata unavailable.';
-        }
-      }
-    }
+    const source = this.currentSource;
+    const sourceError = source?.status === 'unreadable'
+      ? `Cannot inspect Squad team file: selected-project roster source unavailable. ${source.reason}` : null;
     const error = [sourceError, this.watchError].filter(Boolean).join('; ') || null;
     const status: SourceStatus = {
       workspaceRoot: this.workspaceRoot,
       squadDir,
-      teamFound,
+      teamFound: source?.status === 'available',
       observer: this.pollTimer && !this.disposed ? 'watching' : 'stopped',
       nativeWatch: this.fsWatcher !== null,
       error,
@@ -322,34 +319,29 @@ export class SquadWatcher {
     if (this.disposed) {
       return;
     }
+    const { source, changed } = this.teamSource.scan();
+    this.currentSource = source;
     const squadDir = resolveSquadDir(this.workspaceRoot);
     this.ensureFsWatch(squadDir);
 
     const emit = this.baselined;
     this.baselined = true;
 
-    let teamDirectory: string | null = null;
-    this.sourceError = null;
-    try {
-      teamDirectory = selectTeamSourceDirectory(new ProjectFiles(this.workspaceRoot));
-    } catch {
-      this.sourceError = 'Cannot inspect Squad team file: selected-project roster source unavailable.';
-    }
     this.publishStatus();
-    const teamStamp = teamDirectory ? statFile(path.join(this.workspaceRoot, teamDirectory, 'team.md')) : null;
-    if (!sameStamp(teamStamp, this.teamStamp) || teamDirectory !== this.teamDirectory) {
-      const hadTeam = this.teamStamp !== null || emit;
-      this.teamStamp = teamStamp;
-      this.teamDirectory = teamDirectory;
-      if (hadTeam) {
-        this.callbacks.onRosterChanged();
-      }
+    if (changed) {
+      this.callbacks.onRosterChanged();
     }
 
-    this.scanFlat(path.join(squadDir, 'sessions'), emit, (file, name) => this.onSessionFile(file, name));
-    this.scanFlat(path.join(squadDir, 'log'), emit, file => this.onLogFile(file));
-    this.scanFlat(path.join(squadDir, 'orchestration-log'), emit, (file, name) => this.onOrchestrationFile(file, name));
-    this.scanFlat(path.join(squadDir, 'decisions', 'inbox'), emit, (file, name) => this.onInboxFile(file, name));
+    if (source.status === 'unreadable') {
+      this.activityBaselined = false;
+      return;
+    }
+    const emitActivity = emit && this.activityBaselined;
+    this.activityBaselined = true;
+    this.scanFlat(path.join(squadDir, 'sessions'), emitActivity, (file, name) => this.onSessionFile(file, name));
+    this.scanFlat(path.join(squadDir, 'log'), emitActivity, file => this.onLogFile(file));
+    this.scanFlat(path.join(squadDir, 'orchestration-log'), emitActivity, (file, name) => this.onOrchestrationFile(file, name));
+    this.scanFlat(path.join(squadDir, 'decisions', 'inbox'), emitActivity, (file, name) => this.onInboxFile(file, name));
 
     const agentsDir = path.join(squadDir, 'agents');
     for (const entry of listEntries(agentsDir)) {
@@ -357,7 +349,7 @@ export class SquadWatcher {
         continue;
       }
       const slug = entry.name;
-      this.scanFlat(path.join(agentsDir, slug), emit, (file, name) => this.onAgentFile(slug, file, name));
+      this.scanFlat(path.join(agentsDir, slug), emitActivity, (file, name) => this.onAgentFile(slug, file, name));
     }
   }
 
@@ -379,12 +371,12 @@ export class SquadWatcher {
         this.fsWatcher?.close();
         this.fsWatcher = null;
         this.watchedDir = null;
-        this.watchError = `Native watch unavailable; polling fallback: ${error.message}`;
+        this.watchError = `Native watch unavailable; polling fallback: ${projectFileDiagnostic(error)}`;
         this.publishStatus();
       });
       this.watchedDir = squadDir;
     } catch (error) {
-      this.watchError = `Native watch unavailable; polling fallback: ${String(error)}`;
+      this.watchError = `Native watch unavailable; polling fallback: ${projectFileDiagnostic(error)}`;
     }
   }
 

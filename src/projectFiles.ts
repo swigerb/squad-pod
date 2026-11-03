@@ -1,6 +1,23 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+/** Metadata observation never establishes content availability. */
+export type ProjectFileInspection = { fingerprint: string } & (
+  | { status: 'present'; kind: 'directory' | 'file' | 'other'; size: bigint }
+  | { status: 'missing' | 'unreadable'; reason: string; retry: boolean }
+);
+
+class ProjectFileError extends Error {}
+
+/** Do not disclose native error messages, paths, or source contents to consumers. */
+export function projectFileDiagnostic(error: unknown): string {
+  if (error instanceof ProjectFileError) { return error.message; }
+  const code = (error as NodeJS.ErrnoException | null)?.code;
+  if (code === 'ERR_ENCODING_INVALID_ENCODED_DATA') { return 'Source is not valid UTF-8.'; }
+  return typeof code === 'string' && /^E[A-Z0-9_]{1,63}$/.test(code)
+    ? `Filesystem inspection/read failed (${code}).` : 'Unexpected filesystem inspection/read failure.';
+}
+
 /**
  * Read-only filesystem boundary for an explicit, host-authorized local project.
  * Canonicalizing a path does not establish host/session authority.
@@ -12,30 +29,72 @@ export class ProjectFiles {
 
   /** Capture the selected root; callers must validate authority before construction. */
   constructor(selectedRoot: string) {
-    if (!path.isAbsolute(selectedRoot)) throw new Error('Provide an explicit absolute project path.');
+    if (!path.isAbsolute(selectedRoot)) throw new ProjectFileError('Provide an explicit absolute project path.');
     this.selectedRoot = selectedRoot;
     this.root = fs.realpathSync(selectedRoot);
     this.rootIdentity = fs.statSync(this.root, { bigint: true });
-    if (!this.rootIdentity.isDirectory()) throw new Error('Project path must be a directory.');
+    if (!this.rootIdentity.isDirectory()) throw new ProjectFileError('Project path must be a directory.');
+  }
+
+  /**
+   * Inspect without following internal links, retaining identities even on refusal.
+   * Fingerprints include root identity and each traversed component's identity,
+   * type, size and timestamps. Native failures are retried, never cached as success.
+   */
+  inspect(relative: string): ProjectFileInspection {
+    const stamps: string[] = [];
+    let rootValidated = false;
+    try {
+      const root = fs.statSync(this.root, { bigint: true });
+      stamps.push(`${root.dev}:${root.ino}:${root.mode}`);
+      if (fs.realpathSync(this.selectedRoot) !== this.root || !sameFile(this.rootIdentity, root)) {
+        throw new ProjectFileError('Selected project root changed.');
+      }
+      rootValidated = true;
+      const target = path.resolve(this.root, relative);
+      const rel = path.relative(this.root, target);
+      if (rel.split(path.sep).includes('..') || path.isAbsolute(rel)) {
+        throw new ProjectFileError('Project path escapes selected root.');
+      }
+      let current = this.root;
+      let stat = root;
+      for (const part of rel.split(path.sep).filter(Boolean)) {
+        current = path.join(current, part);
+        stat = fs.lstatSync(current, { bigint: true });
+        // Windows may finalize creation ctime on the first read-only open.
+        // Keep read-time ctime checks in read(), not in the polling fingerprint.
+        stamps.push(`${stat.dev}:${stat.ino}:${stat.mode}:${stat.size}:${stat.mtimeNs}`);
+        if (stat.isSymbolicLink()) { throw new ProjectFileError('Project symlinks/junctions are not observed.'); }
+      }
+      if (this.resolve(relative) !== target) { throw new ProjectFileError('Project source changed.'); }
+      return { status: 'present', fingerprint: stamps.join('|'), size: stat.size,
+        kind: stat.isDirectory() ? 'directory' : stat.isFile() ? 'file' : 'other' };
+    } catch (error) {
+      const missing = rootValidated && (error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
+      const reason = missing ? 'Source is missing.' : projectFileDiagnostic(error);
+      return { status: missing ? 'missing' : 'unreadable', reason,
+        fingerprint: `${stamps.join('|')}|${missing ? 'missing' : reason}`,
+        retry: !missing && !(error instanceof ProjectFileError) };
+    }
   }
 
   /** Resolve only within the still-identical root, refusing internal links/junctions. */
   resolve(relative: string): string {
     if (fs.realpathSync(this.selectedRoot) !== this.root
       || !sameFile(this.rootIdentity, fs.statSync(this.root, { bigint: true }))) {
-      throw new Error('Selected project root changed.');
+      throw new ProjectFileError('Selected project root changed.');
     }
     const target = path.resolve(this.root, relative);
     const parts = path.relative(this.root, target).split(path.sep);
     if (parts.includes('..') || path.isAbsolute(path.relative(this.root, target))) {
-      throw new Error('Project path escapes selected root.');
+      throw new ProjectFileError('Project path escapes selected root.');
     }
     let current = this.root;
     for (const part of parts) {
       current = path.join(current, part);
-      if (fs.lstatSync(current).isSymbolicLink()) throw new Error('Project symlinks/junctions are not observed.');
+      if (fs.lstatSync(current).isSymbolicLink()) throw new ProjectFileError('Project symlinks/junctions are not observed.');
     }
-    if (fs.realpathSync(target) !== target) throw new Error('Project source changed or escaped selected root.');
+    if (fs.realpathSync(target) !== target) throw new ProjectFileError('Project source changed or escaped selected root.');
     return target;
   }
 
@@ -48,11 +107,11 @@ export class ProjectFiles {
     try {
       const target = this.resolve(relative);
       const before = fs.lstatSync(target, { bigint: true });
-      if (!before.isFile() || before.size > BigInt(limit)) throw new Error(`Source is not a regular file within ${limit} bytes.`);
+      if (!before.isFile() || before.size > BigInt(limit)) throw new ProjectFileError(`Source is not a regular file within ${limit} bytes.`);
       fd = fs.openSync(target, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
       const opened = fs.fstatSync(fd, { bigint: true });
       if (!sameFile(before, opened) || !opened.isFile() || opened.size > BigInt(limit)) {
-        throw new Error('Source changed while opening.');
+        throw new ProjectFileError('Source changed while opening.');
       }
       const buffer = Buffer.alloc(limit + 1);
       const size = fs.readSync(fd, buffer, 0, buffer.length, 0);
@@ -61,7 +120,7 @@ export class ProjectFiles {
         || opened.mtimeNs !== after.mtimeNs || opened.ctimeNs !== after.ctimeNs
         || this.resolve(relative) !== target
         || !sameFile(fs.lstatSync(target, { bigint: true }), opened)) {
-        throw new Error('Source changed while reading; retry on next poll.');
+        throw new ProjectFileError('Source changed while reading; retry on next poll.');
       }
       return new TextDecoder('utf-8', { fatal: true, ignoreBOM: options.preserveBOM }).decode(buffer.subarray(0, size));
     } catch (error) {

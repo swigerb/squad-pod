@@ -1,6 +1,5 @@
-import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { ProjectFiles } from './projectFiles.js';
+import { ProjectFiles, projectFileDiagnostic, type ProjectFileInspection } from './projectFiles.js';
 import { SQUAD_DIR_NAMES } from './squadPaths.js';
 
 /** Fixed team.md byte limit; oversize input is rejected, never truncated. */
@@ -21,15 +20,67 @@ export type TeamSource = {
  * Selection alone does not establish that the roster content is available.
  */
 export function selectTeamSourceDirectory(files: ProjectFiles): TeamSource['directory'] {
-  try {
-    if (!fs.statSync(files.resolve(SQUAD_DIR_NAMES[0])).isDirectory()) {
-      throw new Error('Preferred roster path is not a directory.');
-    }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {return SQUAD_DIR_NAMES[1];}
-    throw error;
+  const probe = inspectTeamSource(files, true);
+  if (probe.source?.status === 'unreadable') { throw new Error(probe.source.reason); }
+  return probe.directory;
+}
+
+interface TeamSourceProbe {
+  directory: TeamSource['directory'];
+  fingerprint: string;
+  source?: TeamSource;
+  retry: boolean;
+}
+
+function inspectTeamSource(files: ProjectFiles, directoryOnly = false): TeamSourceProbe {
+  let directory: TeamSource['directory'] = SQUAD_DIR_NAMES[0];
+  const fingerprints: string[] = [];
+  let retry = false;
+  const inspect = (relative: string): ProjectFileInspection => {
+    const result = files.inspect(relative);
+    fingerprints.push(result.fingerprint);
+    if (result.status !== 'present') { retry ||= result.retry; }
+    return result;
+  };
+  const unavailable = (status: 'missing' | 'unreadable', reason: string): TeamSourceProbe => ({
+    directory, fingerprint: fingerprints.join('||'), retry,
+    source: { status, directory, byteLength: 0,
+      reason: status === 'missing' ? 'No selected-project team.md found.' : reason },
+  });
+  let dir = inspect(directory);
+  if (dir.status === 'missing') {
+    directory = SQUAD_DIR_NAMES[1];
+    dir = inspect(directory);
   }
-  return SQUAD_DIR_NAMES[0];
+  if (dir.status !== 'present') { return unavailable(dir.status, dir.reason); }
+  if (dir.kind !== 'directory') { return unavailable('unreadable', 'Selected roster path is not a directory.'); }
+  if (directoryOnly) { return { directory, fingerprint: fingerprints.join('||'), retry }; }
+  const file = inspect(path.join(directory, 'team.md'));
+  if (file.status !== 'present') { return unavailable(file.status, file.reason); }
+  if (file.kind !== 'file' || file.size > BigInt(MAX_TEAM_SOURCE_BYTES)) {
+    return unavailable('unreadable', `Source is not a regular file within ${MAX_TEAM_SOURCE_BYTES} bytes.`);
+  }
+  return { directory, fingerprint: fingerprints.join('||'), retry };
+}
+
+function readProbedTeamSource(files: ProjectFiles, probe: TeamSourceProbe): { source: TeamSource; retry: boolean } {
+  const { directory } = probe;
+  if (probe.source) { return { source: probe.source, retry: probe.retry }; }
+  const unavailable = (reason: string): TeamSource =>
+    ({ status: 'unreadable', directory, byteLength: 0, reason });
+  try {
+    const content = files.read(path.join(directory, 'team.md'), MAX_TEAM_SOURCE_BYTES, { preserveBOM: true });
+    const after = inspectTeamSource(files);
+    if (content === null || probe.fingerprint !== after.fingerprint || after.source) {
+      return { source: unavailable('Selected roster source changed while reading; retry on next poll.'), retry: true };
+    }
+    return { source: { status: 'available', directory, byteLength: Buffer.byteLength(content), content }, retry: false };
+  } catch (error) {
+    return { source: unavailable(projectFileDiagnostic(error)),
+      // Only a stable, strictly decoded content refusal can be cached after a read.
+      retry: (error as NodeJS.ErrnoException | null)?.code !== 'ERR_ENCODING_INVALID_ENCODED_DATA'
+        || inspectTeamSource(files).fingerprint !== probe.fingerprint };
+  }
 }
 
 /**
@@ -39,16 +90,44 @@ export function selectTeamSourceDirectory(files: ProjectFiles): TeamSource['dire
  * fail closed. No discovery, runtime membership or root/session authority is granted.
  */
 export function readTeamSource(files: ProjectFiles): TeamSource {
-  let directory: TeamSource['directory'] = SQUAD_DIR_NAMES[0];
-  const unavailable = (status: 'missing' | 'unreadable', reason: string): TeamSource =>
-    ({ status, directory, byteLength: 0, reason });
-  try {
-    directory = selectTeamSourceDirectory(files);
-    const content = files.read(path.join(directory, 'team.md'), MAX_TEAM_SOURCE_BYTES, { preserveBOM: true });
-    if (selectTeamSourceDirectory(files) !== directory) {throw new Error('Selected roster directory changed.');}
-    if (content === null) {return unavailable('missing', 'No selected-project team.md found.');}
-    return { status: 'available', directory, byteLength: Buffer.byteLength(content), content };
-  } catch (error) {
-    return unavailable('unreadable', `Cannot read selected-project roster: ${String(error)}`);
+  return readProbedTeamSource(files, inspectTeamSource(files)).source;
+}
+
+/**
+ * Per-watcher, in-memory guarded source state. The authorized root identity is
+ * retained for its lifetime; unchanged metadata reuses only this project's last
+ * bounded validation. Refusals participate in invalidation, not just file stamps.
+ */
+export class TeamSourceState {
+  private files: ProjectFiles | undefined;
+  private previous: { fingerprint: string; source: TeamSource; retry: boolean } | undefined;
+  private readonly selectedRoot: string;
+
+  constructor(project: string | ProjectFiles) {
+    this.selectedRoot = typeof project === 'string' ? project : project.root;
+    this.files = typeof project === 'string' ? undefined : project;
+  }
+
+  scan(): { source: TeamSource; changed: boolean } {
+    let next: NonNullable<TeamSourceState['previous']>;
+    try {
+      this.files ??= new ProjectFiles(this.selectedRoot);
+      const probe = inspectTeamSource(this.files);
+      if (this.previous && !this.previous.retry && this.previous.fingerprint === probe.fingerprint && !probe.retry) {
+        return { source: this.previous.source, changed: false };
+      }
+      next = { fingerprint: probe.fingerprint, ...readProbedTeamSource(this.files, probe) };
+    } catch (error) {
+      next = { fingerprint: 'project-unavailable', retry: true,
+        source: { status: 'unreadable', directory: SQUAD_DIR_NAMES[0], byteLength: 0,
+          reason: projectFileDiagnostic(error) } };
+    }
+    const prior = this.previous;
+    const changed = !prior || prior.fingerprint !== next.fingerprint
+      || prior.source.status !== next.source.status
+      || (prior.source.status !== 'available' && next.source.status !== 'available'
+        && prior.source.reason !== next.source.reason);
+    this.previous = next;
+    return { source: next.source, changed };
   }
 }

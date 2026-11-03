@@ -31,6 +31,18 @@ describe('shared selected-project reads', () => {
     expect(files.entries('.')).toEqual(['invalid', 'source']);
   });
 
+  it('keeps metadata fingerprints stable across a guarded read', () => {
+    const files = new ProjectFiles(root);
+    fs.mkdirSync(path.join(root, '.squad'));
+    fs.writeFileSync(path.join(root, '.squad', 'team.md'), 'declared');
+    const relative = path.join('.squad', 'team.md');
+    const directory = files.inspect('.squad');
+    const before = files.inspect(relative);
+    expect(files.read(relative, 8)).toBe('declared');
+    expect(files.inspect('.squad')).toEqual(directory);
+    expect(files.inspect(relative)).toEqual(before);
+  });
+
   it('refuses traversal and internal junctions even when they point inside the root', () => {
     const files = new ProjectFiles(root);
     expect(() => files.read(path.join('..', 'outside'), 8)).toThrow('escapes');

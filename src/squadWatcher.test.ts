@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { EventEmitter } from 'node:events';
 import { syncBuiltinESMExports } from 'node:module';
 import { readTeamFile, readTeamRoster } from './teamParser.js';
+import { ProjectFiles } from './projectFiles.js';
 import type { SourceStatus } from './types.js';
 import {
   parseSessionFile,
@@ -238,7 +239,151 @@ describe('SquadWatcher', () => {
     write('orchestration-log/2026-01-01T00-00-00Z-homer.md', '**Task:** old');
     start();
     expect(events).toEqual([]);
-    expect(rosterChanges).toBe(0);
+    expect(rosterChanges).toBe(1);
+  });
+
+  it.each([false, true])('refreshes unchanged legacy content across junction refusal, initially refused=%s', refused => {
+    const content = '## Members\n| Name | Role | Charter |\n|---|---|---|\n'
+      + '| Ada | Developer | .ai-team/agents/ada/charter.md |\n';
+    write('team.md', content, '.ai-team');
+    const legacy = path.join(root, '.ai-team');
+    const target = path.join(root, 'legacy-target');
+    const stamp = fs.statSync(path.join(legacy, 'team.md'));
+    const link = () => {
+      fs.renameSync(legacy, target);
+      fs.symlinkSync(target, legacy, 'junction');
+    };
+    const restore = () => {
+      fs.unlinkSync(legacy);
+      fs.renameSync(target, legacy);
+    };
+    if (refused) { link(); }
+    const statuses: SourceStatus[] = [];
+    const snapshots: Array<{ ids: string[]; status: SourceStatus | undefined }> = [];
+    watcher = new SquadWatcher(root, {
+      onStatusChanged: status => statuses.push(status),
+      onRosterChanged: () => snapshots.push({
+        ids: readTeamRoster(root).map(member => member.slug), status: statuses.at(-1),
+      }),
+      onAgentActivity: e => events.push(e),
+    }, { useFsWatch: false });
+    try {
+      watcher.scan();
+      expect(statuses.at(-1)).toMatchObject({ teamFound: !refused, error: refused ? expect.any(String) : null });
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0]).toMatchObject({
+        ids: refused ? [] : ['ada'], status: { teamFound: !refused },
+      });
+      if (refused) { restore(); } else { link(); }
+      watcher.scan();
+      expect(snapshots).toHaveLength(2);
+      expect(snapshots[1]).toMatchObject({
+        ids: refused ? ['ada'] : [],
+        status: { teamFound: refused, error: refused ? null : expect.any(String) },
+      });
+      watcher.scan();
+      expect(snapshots).toHaveLength(2);
+      if (refused) { link(); } else { restore(); }
+      watcher.scan();
+      expect(snapshots).toHaveLength(3);
+      expect(snapshots[2]).toMatchObject({
+        ids: refused ? [] : ['ada'],
+        status: { teamFound: !refused, error: refused ? expect.any(String) : null },
+      });
+      expect(events).toEqual([]);
+      expect(fs.statSync(path.join(legacy, 'team.md'))).toMatchObject({ size: stamp.size, mtimeMs: stamp.mtimeMs });
+      expect(fs.readFileSync(path.join(legacy, 'team.md'), 'utf8')).toBe(content);
+    } finally {
+      // Remove only the junction itself; recursive fixture cleanup must not traverse it.
+      if (fs.lstatSync(legacy).isSymbolicLink()) { restore(); }
+    }
+  });
+
+  it.each(['oversize', 'invalid UTF-8'])('publishes %s refusal before roster refresh and recovers', refusal => {
+    const content = '## Members\n| Name | Role | Charter |\n|---|---|---|\n'
+      + '| Ada | Developer | .squad/agents/ada/charter.md |\n';
+    write('team.md', content);
+    const statuses: SourceStatus[] = [];
+    const snapshots: Array<{ ids: string[]; status: SourceStatus | undefined }> = [];
+    watcher = new SquadWatcher(root, {
+      onStatusChanged: status => statuses.push(status),
+      onRosterChanged: () => snapshots.push({
+        ids: readTeamRoster(root).map(member => member.slug), status: statuses.at(-1),
+      }),
+      onAgentActivity: () => {},
+    }, { useFsWatch: false });
+    watcher.scan();
+    expect(statuses.at(-1)).toMatchObject({ teamFound: true, error: null });
+    expect(snapshots).toEqual([{ ids: ['ada'], status: statuses.at(-1) }]);
+    fs.writeFileSync(path.join(root, '.squad', 'team.md'),
+      refusal === 'oversize' ? content.padEnd(256 * 1024 + 1, ' ') : Buffer.from([0xff]));
+    watcher.scan();
+    expect(snapshots.at(-1)).toMatchObject({
+      ids: [], status: { teamFound: false, error: expect.any(String) },
+    });
+    watcher.scan();
+    expect(snapshots).toHaveLength(2);
+    write('team.md', content);
+    watcher.scan();
+    expect(snapshots.at(-1)).toMatchObject({
+      ids: ['ada'], status: { teamFound: true, error: null },
+    });
+  });
+
+  it('reuses bounded validation and snapshot callbacks without redundant reads or events', () => {
+    write('team.md', '# Synthetic team');
+    const read = vi.spyOn(ProjectFiles.prototype, 'read');
+    const statuses: SourceStatus[] = [];
+    const roster = vi.fn<() => void>(() => {
+      expect(watcher.getTeamSource()?.status === 'available').toBe(statuses.at(-1)?.teamFound);
+    });
+    watcher = new SquadWatcher(root, {
+      onRosterChanged: roster, onStatusChanged: status => statuses.push(status),
+      onAgentActivity: e => events.push(e),
+    }, { useFsWatch: false });
+    expect(watcher.getTeamSource()).toBeNull();
+    watcher.start();
+    const initial = watcher.getTeamSource();
+    watcher.scan();
+    expect(watcher.getTeamSource()).toBe(initial);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(roster).toHaveBeenCalledExactlyOnceWith();
+    expect(statuses).toHaveLength(1);
+    write('team.md', '# Updated synthetic team');
+    watcher.scan();
+    expect(roster).toHaveBeenCalledTimes(2);
+    expect(roster.mock.calls).toEqual([[], []]);
+    expect(watcher.getTeamSource()).toMatchObject({ status: 'available', content: '# Updated synthetic team' });
+    watcher.scan();
+    expect(read).toHaveBeenCalledTimes(2);
+    fs.writeFileSync(path.join(root, '.squad', 'team.md'), Buffer.from([0xff]));
+    watcher.scan();
+    expect(roster).toHaveBeenCalledTimes(3);
+    expect(roster.mock.calls).toEqual([[], [], []]);
+    expect(watcher.getTeamSource()).toMatchObject({ status: 'unreadable', reason: 'Source is not valid UTF-8.' });
+    watcher.scan();
+    expect(read).toHaveBeenCalledTimes(3);
+    expect(statuses).toHaveLength(2);
+    watcher.dispose();
+    watcher.scan();
+    expect(read).toHaveBeenCalledTimes(3);
+    expect(roster).toHaveBeenCalledTimes(3);
+    expect(events).toEqual([]);
+    expect(statuses.at(-1)).toMatchObject({ teamFound: false, observer: 'stopped', error: expect.stringContaining('UTF-8') });
+  });
+
+  it('does not replay historical activity when a refused source recovers', () => {
+    write('team.md', '# Synthetic team');
+    write('agents/ada/history.md', '- Historical work');
+    fs.writeFileSync(path.join(root, '.squad', 'team.md'), Buffer.from([0xff]));
+    start();
+    expect(events).toEqual([]);
+    write('team.md', '# Recovered team');
+    watcher.scan();
+    expect(events).toEqual([]);
+    write('agents/ada/history.md', '- Newly observed work');
+    watcher.scan();
+    expect(events).toEqual([expect.objectContaining({ agentId: 'ada', task: 'Newly observed work' })]);
   });
 
   it.each([true, false])('refreshes unchanged legacy content when the preferred blocker starts present=%s', blocked => {
@@ -266,20 +411,24 @@ describe('SquadWatcher', () => {
     watcher.scan();
     const availability = (refused: boolean) => ({
       teamFound: !refused,
-      error: refused ? 'Cannot inspect Squad team file: selected-project roster source unavailable.' : null,
+      error: refused ? expect.stringContaining('selected-project roster source unavailable') : null,
     });
     expect(statuses.at(-1)).toMatchObject(availability(blocked));
     expect(snapshot()).toEqual(blocked ? { raw: null, ids: [] } : { raw: content, ids: ['Mixed_Name-2'] });
-    expect(snapshots).toEqual([]);
+    expect(snapshots).toEqual([blocked ? { raw: null, ids: [] } : { raw: content, ids: ['Mixed_Name-2'] }]);
+    expect(rosterStatuses.at(-1)).toMatchObject(availability(blocked));
 
     if (blocked) { fs.unlinkSync(preferred); }
     else { fs.writeFileSync(preferred, 'not a directory'); }
     watcher.scan();
-    expect(snapshots).toEqual([blocked ? { raw: content, ids: ['Mixed_Name-2'] } : { raw: null, ids: [] }]);
+    expect(snapshots).toEqual([
+      blocked ? { raw: null, ids: [] } : { raw: content, ids: ['Mixed_Name-2'] },
+      blocked ? { raw: content, ids: ['Mixed_Name-2'] } : { raw: null, ids: [] },
+    ]);
     expect(statuses.at(-1)).toMatchObject(availability(!blocked));
     expect(rosterStatuses.at(-1)).toMatchObject(availability(!blocked));
     watcher.scan();
-    expect(snapshots).toHaveLength(1);
+    expect(snapshots).toHaveLength(2);
     if (blocked) { fs.writeFileSync(preferred, 'not a directory'); }
     else { fs.unlinkSync(preferred); }
     watcher.scan();
@@ -342,9 +491,10 @@ describe('SquadWatcher', () => {
   it('reports roster changes when team.md changes', () => {
     write('team.md', '# Team');
     start();
+    expect(rosterChanges).toBe(1);
     write('team.md', '# Team\n| Homer | Lead |');
     watcher.scan();
-    expect(rosterChanges).toBe(1);
+    expect(rosterChanges).toBe(2);
   });
 
   it('supports the legacy .ai-team directory', () => {
@@ -357,9 +507,10 @@ describe('SquadWatcher', () => {
 
   it('notices a squad directory created after startup', () => {
     start();
+    expect(rosterChanges).toBe(1);
     write('team.md', '# Team');
     watcher.scan();
-    expect(rosterChanges).toBe(1);
+    expect(rosterChanges).toBe(2);
   });
 
   it('reports real polling, team creation/removal, and disposal without emitting invented activity', () => {
@@ -383,7 +534,7 @@ describe('SquadWatcher', () => {
     fs.unlinkSync(path.join(root, '.squad', 'team.md'));
     watcher.scan();
     expect(statuses.at(-1)?.teamFound).toBe(false);
-    expect(rosterChanges).toBe(2);
+    expect(rosterChanges).toBe(3);
     expect(events).toEqual([]);
     watcher.dispose();
     expect(statuses.at(-1)).toMatchObject({ observer: 'stopped', nativeWatch: false });
@@ -445,9 +596,11 @@ describe('SquadWatcher', () => {
     expect(statuses).toHaveLength(1);
     expect(statuses[0]).toMatchObject({
       teamFound: false, observer: 'stopped',
-      error: 'Cannot inspect Squad team file: selected-project roster source unavailable.',
+      error: 'Cannot inspect Squad team file: selected-project roster source unavailable. Unexpected filesystem inspection/read failure.',
     });
     expect(inspect).toHaveBeenCalledWith(root, { bigint: true });
+    expect(read).not.toHaveBeenCalled();
+    expect(readBytes).not.toHaveBeenCalled();
     inspect.mockRestore();
     syncBuiltinESMExports();
     watcher.scan();
@@ -455,7 +608,7 @@ describe('SquadWatcher', () => {
     expect(statuses).toHaveLength(2);
     expect(statuses.at(-1)).toMatchObject({ teamFound: true, error: null });
     expect(read).not.toHaveBeenCalled();
-    expect(readBytes).not.toHaveBeenCalled();
+    expect(readBytes).toHaveBeenCalledTimes(1);
   });
 
   it('retains native-watch errors alongside refusal, clears recovered errors, and ignores late disposed errors', () => {
@@ -472,7 +625,7 @@ describe('SquadWatcher', () => {
     watcher.start();
     native.emit('error', new Error('synthetic native failure'));
     expect(statuses.at(-1)).toMatchObject({
-      teamFound: true, nativeWatch: false, error: expect.stringContaining('synthetic native failure'),
+      teamFound: true, nativeWatch: false, error: expect.stringContaining('Native watch unavailable; polling fallback'),
     });
     watch.mockImplementation(() => { throw new Error('synthetic retry failure'); });
     fs.writeFileSync(path.join(root, '.squad'), 'not a directory');
@@ -483,7 +636,7 @@ describe('SquadWatcher', () => {
     fs.unlinkSync(path.join(root, '.squad'));
     watcher.scan();
     expect(statuses.at(-1)).toMatchObject({
-      teamFound: true, nativeWatch: false, error: expect.stringContaining('synthetic retry failure'),
+      teamFound: true, nativeWatch: false, error: expect.stringContaining('Native watch unavailable; polling fallback'),
     });
     expect(statuses.at(-1)?.error).not.toContain('selected-project roster source unavailable');
     watch.mockReturnValue(native as unknown as fs.FSWatcher);

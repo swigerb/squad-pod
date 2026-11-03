@@ -16,6 +16,7 @@ interface Fixture {
   removeAgent(id: string): void;
   noFocus(): void;
   dispose(): void;
+  subscribe(listener: (message: OutboundMessage) => void): () => void;
 }
 const { createProviderFixture, agents } = require('./scripts/acceptance-interaction.cjs') as {
   createProviderFixture(options: { extensionCode: string }): Fixture; agents: Agent[];
@@ -38,6 +39,7 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
   afterEach(() => {
     try { fixture.noFocus(); } finally {
       fixture.dispose();
+      vi.restoreAllMocks();
       vi.useRealTimers();
     }
   });
@@ -54,6 +56,8 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     expect(sourceIndex).toBeGreaterThanOrEqual(0);
     expect(layoutIndex).toBeGreaterThan(sourceIndex);
     expect(rosterIndex).toBeGreaterThan(layoutIndex);
+    expect(fixture.messages.filter(message => message.type === 'existingAgents')).toHaveLength(1);
+    expect(fixture.messages.filter(message => message.type === 'agentCreated')).toEqual([]);
   });
 
   it.each(agents)('returns exactly $name detail and opens that charter, never a terminal/session', (agent) => {
@@ -240,6 +244,199 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     });
   });
 
+  it.each(['oversize', 'invalid UTF-8'])('withholds startup agents when %s refusal occurs before watcher baseline', refusal => {
+    fixture.dispose();
+    fixture = createProviderFixture({ extensionCode });
+    const team = path.join(fixture.workspaceRoot, '.squad', 'team.md');
+    const original = fs.readFileSync(team, 'utf8');
+    const nativeFs = require('node:fs') as typeof fs;
+    const open = nativeFs.openSync;
+    let replaced = false;
+    const opened = vi.spyOn(nativeFs, 'openSync').mockImplementation(open);
+    const schedule = globalThis.setInterval;
+    vi.spyOn(globalThis, 'setInterval').mockImplementation((callback, delay, ...args) => {
+      // Mutate only this synthetic roster immediately before the real baseline.
+      if (delay === 2000 && !replaced) {
+        replaced = true;
+        fs.writeFileSync(team, refusal === 'oversize' ? original.padEnd(256 * 1024 + 1, ' ') : Buffer.from([0xff]));
+      }
+      return schedule(callback, delay, ...args);
+    });
+    fixture.send({ type: 'webviewReady' });
+    expect(replaced).toBe(true);
+    const refusalIndex = fixture.messages.findIndex(m =>
+      m.type === 'sourceStatus' && !m.status.teamFound && m.status.error !== null);
+    expect(refusalIndex).toBeGreaterThanOrEqual(0);
+    expect(fixture.messages.filter(m => ['agentCreated', 'agentClosed', 'agentStatus'].includes(m.type))).toEqual([]);
+    expect(fixture.messages.filter(m => m.type === 'existingAgents')).toMatchObject([{ agents: [] }]);
+    const source = fixture.messages.filter(m => m.type === 'sourceStatus').at(-1);
+    expect(source).toMatchObject({ status: {
+      teamFound: false, error: expect.stringContaining('selected-project roster source unavailable'),
+    } });
+    const readFlags = nativeFs.constants.O_RDONLY | (nativeFs.constants.O_NOFOLLOW ?? 0);
+    const rosterReads = () => opened.mock.calls.filter(([file, flags]) => file === team && flags === readFlags).length;
+    const readsAtBaseline = rosterReads();
+    expect(readsAtBaseline).toBe(refusal === 'oversize' ? 0 : 1);
+    fixture.messages.length = 0;
+    vi.advanceTimersByTime(2000);
+    expect(rosterReads()).toBe(readsAtBaseline);
+    expect(fixture.messages.filter(m => m.type === 'sourceStatus')).toEqual([]);
+    expect(fixture.messages.filter(m => ['existingAgents', 'agentCreated', 'agentClosed'].includes(m.type))).toEqual([]);
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(details()).toEqual([]);
+    fs.writeFileSync(team, original);
+    vi.advanceTimersByTime(2000);
+    const recoveryIndex = fixture.messages.findIndex(m => m.type === 'sourceStatus' && m.status.teamFound);
+    expect(recoveryIndex).toBeGreaterThanOrEqual(0);
+    expect(fixture.messages.findIndex(m => m.type === 'existingAgents')).toBeGreaterThan(recoveryIndex);
+    expect(fixture.messages.filter(m => m.type === 'existingAgents').at(-1)).toMatchObject({
+      agents: [{ id: 'ada' }, { id: 'grace' }],
+    });
+    expect(rosterReads()).toBe(readsAtBaseline + 1);
+  });
+
+  it.each(['missing', 'refused', 'membership', 'unchanged'])(
+    'publishes only the current startup snapshot across a %s baseline transition', transition => {
+      fixture.dispose();
+      fixture = createProviderFixture({ extensionCode });
+      const team = path.join(fixture.workspaceRoot, '.squad', 'team.md');
+      const original = fs.readFileSync(team, 'utf8');
+      const current = original.replaceAll('/agents/ada/', '/agents/current/');
+      if (transition === 'missing') { fs.unlinkSync(team); }
+      if (transition === 'refused') { fs.writeFileSync(team, Buffer.from([0xff])); }
+      const schedule = globalThis.setInterval;
+      let transitioned = false;
+      const nativeFs = require('node:fs') as typeof fs;
+      const opened = vi.spyOn(nativeFs, 'openSync');
+      vi.spyOn(globalThis, 'setInterval').mockImplementation((callback, delay, ...args) => {
+        if (delay === 2000 && !transitioned) {
+          transitioned = true;
+          fs.writeFileSync(team, transition === 'unchanged' ? original : current);
+        }
+        return schedule(callback, delay, ...args);
+      });
+      fixture.send({ type: 'webviewReady' });
+      expect(transitioned).toBe(true);
+      const layoutIndex = fixture.messages.findIndex(m => m.type === 'layoutLoaded');
+      const rosterIndex = fixture.messages.findIndex(m => m.type === 'existingAgents');
+      expect(layoutIndex).toBeGreaterThanOrEqual(0);
+      expect(rosterIndex).toBeGreaterThan(layoutIndex);
+      const snapshots = fixture.messages.filter(m => m.type === 'existingAgents');
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].agents.map(a => a.id).sort()).toEqual(
+        [transition === 'unchanged' ? 'ada' : 'current', 'grace'].sort(),
+      );
+      expect(fixture.messages.slice(0, rosterIndex).filter(m =>
+        ['agentCreated', 'agentClosed', 'agentStatus', 'agentToolStart', 'agentToolDone', 'agentToolsClear'].includes(m.type),
+      )).toEqual([]);
+      expect(fixture.messages.filter(m => m.type === 'sourceStatus').at(-1)).toMatchObject({
+        status: { teamFound: true, error: null },
+      });
+      const readFlags = nativeFs.constants.O_RDONLY | (nativeFs.constants.O_NOFOLLOW ?? 0);
+      const reads = () => opened.mock.calls.filter(([file, flags]) => file === team && flags === readFlags).length;
+      expect(reads()).toBe(1);
+      fixture.messages.length = 0;
+      vi.advanceTimersByTime(1100);
+      expect(reads()).toBe(1);
+      expect(fixture.messages.filter(m => ['sourceStatus', 'existingAgents', 'agentCreated', 'agentClosed'].includes(m.type))).toEqual([]);
+      fixture.send({ type: 'webviewReady' });
+      expect(reads()).toBe(1);
+    },
+  );
+
+  it('delivers activity observed during asset preparation only after layout and the startup roster', () => {
+    fixture.dispose();
+    fixture = createProviderFixture({ extensionCode });
+    const log = path.join(fixture.workspaceRoot, '.squad', 'log', '2026-10-29-ada.md');
+    let changed = false;
+    const unsubscribe = fixture.subscribe(message => {
+      if (changed || message.type !== 'characterAssetsLoaded'
+        || !fixture.messages.some(m => m.type === 'sourceStatus' && m.status.observer === 'watching')) { return; }
+      changed = true;
+      fs.appendFileSync(log, '\n**Agent:** Ada\nSynthetic startup activity.\n');
+      vi.advanceTimersByTime(1100);
+    });
+    fixture.send({ type: 'webviewReady' });
+    unsubscribe();
+    expect(changed).toBe(true);
+    const layoutIndex = fixture.messages.findIndex(m => m.type === 'layoutLoaded');
+    const rosterIndex = fixture.messages.findIndex(m => m.type === 'existingAgents');
+    const statusIndex = fixture.messages.findIndex(m => m.type === 'agentStatus');
+    expect(rosterIndex).toBeGreaterThan(layoutIndex);
+    expect(statusIndex).toBeGreaterThan(rosterIndex);
+    expect(fixture.messages[statusIndex]).toMatchObject({
+      type: 'agentStatus', agentId: 'ada', status: 'active', currentTaskSource: 'file',
+    });
+    expect(fixture.messages.filter(m => m.type === 'existingAgents')).toHaveLength(1);
+    fixture.messages.length = 0;
+    fixture.send({ type: 'webviewReady' });
+    expect(fixture.messages.filter(m => m.type === 'existingAgents')).toMatchObject([{
+      agents: [{ id: 'ada', status: 'active' }, { id: 'grace', status: 'idle' }],
+    }]);
+  });
+
+  it('stops roster and activity publication after disposal, including queued native notifications', () => {
+    fixture.dispose();
+    const watch = vi.spyOn(require('node:fs') as typeof fs, 'watch');
+    fixture = createProviderFixture({ extensionCode });
+    fixture.send({ type: 'webviewReady' });
+    const team = path.join(fixture.workspaceRoot, '.squad', 'team.md');
+    const registration = watch.mock.calls.find(([file]) => file === path.dirname(team));
+    expect(registration).toBeDefined();
+    const notify = registration?.[2];
+    expect(notify).toBeTypeOf('function');
+    fs.writeFileSync(team, Buffer.from([0xff]));
+    notify!('change', 'team.md');
+    const messages = fixture.messages;
+    fixture.dispose();
+    expect(messages.filter(m => m.type === 'sourceStatus').at(-1)).toMatchObject({
+      status: { observer: 'stopped' },
+    });
+    const count = messages.length;
+    notify!('change', 'team.md');
+    vi.advanceTimersByTime(31_000);
+    expect(messages).toHaveLength(count);
+    fixture = createProviderFixture({ extensionCode });
+  });
+
+  it.each(['refusal', 'recovery', 'membership'])(
+    'retains a %s observed while preparing assets until the startup handoff', transition => {
+      fixture.dispose();
+      fixture = createProviderFixture({ extensionCode });
+      const team = path.join(fixture.workspaceRoot, '.squad', 'team.md');
+      const original = fs.readFileSync(team, 'utf8');
+      if (transition === 'recovery') { fs.writeFileSync(team, Buffer.from([0xff])); }
+      let transitioned = false;
+      const unsubscribe = fixture.subscribe(message => {
+        if (transitioned || message.type !== 'characterAssetsLoaded'
+          || !fixture.messages.some(m => m.type === 'sourceStatus' && m.status.observer === 'watching')) { return; }
+        transitioned = true;
+        fs.writeFileSync(team, transition === 'refusal' ? Buffer.from([0xff])
+          : transition === 'membership' ? original.replaceAll('/agents/ada/', '/agents/current/') : original);
+        vi.advanceTimersByTime(1100);
+      });
+      fixture.send({ type: 'webviewReady' });
+      unsubscribe();
+      expect(transitioned).toBe(true);
+      const layoutIndex = fixture.messages.findIndex(m => m.type === 'layoutLoaded');
+      const rosterIndex = fixture.messages.findIndex(m => m.type === 'existingAgents');
+      expect(rosterIndex).toBeGreaterThan(layoutIndex);
+      const snapshots = fixture.messages.filter(m => m.type === 'existingAgents');
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].agents.map(a => a.id).sort()).toEqual(transition === 'refusal' ? []
+        : [transition === 'membership' ? 'current' : 'ada', 'grace'].sort());
+      expect(fixture.messages.slice(0, rosterIndex).filter(m =>
+        ['agentCreated', 'agentClosed', 'agentStatus', 'agentToolStart', 'agentToolDone', 'agentToolsClear'].includes(m.type),
+      )).toEqual([]);
+      expect(fixture.messages.filter(m => m.type === 'sourceStatus').at(-1)).toMatchObject({
+        status: { teamFound: transition !== 'refusal', error: transition === 'refusal' ? expect.stringContaining('UTF-8') : null },
+      });
+      fixture.messages.length = 0;
+      vi.advanceTimersByTime(1100);
+      expect(fixture.messages.filter(m => ['sourceStatus', 'existingAgents', 'agentCreated', 'agentClosed'].includes(m.type))).toEqual([]);
+    },
+  );
+
   it.each([true, false])('refreshes the office when the preferred blocker starts present=%s without legacy edits', blocked => {
     fixture.dispose();
     fixture = createProviderFixture({ extensionCode });
@@ -289,6 +486,113 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     assertAvailability(blocked);
     expect(fs.readFileSync(legacyTeam, 'utf8')).toBe(content);
     expect(fs.statSync(legacyTeam)).toMatchObject({ mtimeMs: stamp.mtimeMs, size: stamp.size });
+  });
+
+  it.each([false, true])('aligns source status and office membership across a legacy junction, initially refused=%s', refused => {
+    fixture.dispose();
+    fixture = createProviderFixture({ extensionCode });
+    const preferred = path.join(fixture.workspaceRoot, '.squad');
+    const legacy = path.join(fixture.workspaceRoot, '.ai-team');
+    const target = path.join(fixture.workspaceRoot, 'legacy-target');
+    fs.renameSync(preferred, legacy);
+    const file = path.join(legacy, 'team.md');
+    const stamp = fs.statSync(file);
+    const original = fs.readFileSync(file, 'utf8');
+    const link = () => {
+      fs.renameSync(legacy, target);
+      fs.symlinkSync(target, legacy, 'junction');
+    };
+    const restore = () => {
+      fs.unlinkSync(legacy);
+      fs.renameSync(target, legacy);
+    };
+    const assertSnapshot = (blocked: boolean) => {
+      const sourceIndex = fixture.messages.findIndex(m => m.type === 'sourceStatus'
+        && m.status.teamFound === !blocked && (blocked ? Boolean(m.status.error) : m.status.error === null));
+      const rosterIndex = fixture.messages.findLastIndex(m => m.type === 'existingAgents');
+      expect(sourceIndex).toBeGreaterThanOrEqual(0);
+      expect(rosterIndex).toBeGreaterThan(sourceIndex);
+      expect(fixture.messages[sourceIndex]).toMatchObject({
+        status: { teamFound: !blocked, error: blocked ? expect.stringContaining('symlinks/junctions') : null },
+      });
+      expect(fixture.messages[rosterIndex]).toMatchObject({ agents: blocked ? [] : [{ id: 'ada' }, { id: 'grace' }] });
+    };
+    if (refused) { link(); }
+    try {
+      fixture.send({ type: 'webviewReady' });
+      assertSnapshot(refused);
+      fixture.messages.length = 0;
+      if (refused) { restore(); } else { link(); }
+      vi.advanceTimersByTime(1100);
+      assertSnapshot(!refused);
+      fixture.messages.length = 0;
+      vi.advanceTimersByTime(1100);
+      expect(fixture.messages.filter(m => m.type === 'existingAgents' || m.type === 'sourceStatus')).toEqual([]);
+      if (refused) { link(); } else { restore(); }
+      vi.advanceTimersByTime(1100);
+      assertSnapshot(refused);
+      expect(fs.statSync(file)).toMatchObject({ mtimeMs: stamp.mtimeMs, size: stamp.size });
+      expect(fs.readFileSync(file, 'utf8')).toBe(original);
+    } finally {
+      if (fs.lstatSync(legacy).isSymbolicLink()) { restore(); }
+    }
+  });
+
+  it.each(['oversize', 'invalid UTF-8'])('publishes %s refusal before removing characters, then restores rich membership', refused => {
+    const file = path.join(fixture.workspaceRoot, '.squad', 'team.md');
+    const original = fs.readFileSync(file, 'utf8');
+    fixture.messages.length = 0;
+    fs.writeFileSync(file, refused === 'oversize' ? original.padEnd(256 * 1024 + 1, ' ') : Buffer.from([0xff]));
+    vi.advanceTimersByTime(1100);
+    const sourceIndex = fixture.messages.findIndex(m => m.type === 'sourceStatus');
+    const rosterIndex = fixture.messages.findIndex(m => m.type === 'existingAgents');
+    expect(sourceIndex).toBeGreaterThanOrEqual(0);
+    expect(rosterIndex).toBeGreaterThan(sourceIndex);
+    expect(fixture.messages[sourceIndex]).toMatchObject({
+      status: { teamFound: false, error: expect.stringContaining(refused === 'oversize' ? '262144 bytes' : 'UTF-8') },
+    });
+    expect(fixture.messages[rosterIndex]).toMatchObject({ agents: [] });
+    fixture.messages.length = 0;
+    fs.writeFileSync(file, original);
+    vi.advanceTimersByTime(1100);
+    expect(fixture.messages.filter(m => m.type === 'sourceStatus').at(-1)).toMatchObject({
+      status: { teamFound: true, error: null },
+    });
+    expect(fixture.messages.filter(m => m.type === 'existingAgents').at(-1)).toMatchObject({
+      agents: [{ id: 'ada', name: 'Ada', role: 'Developer' }, { id: 'grace', name: 'Grace', role: 'Reviewer' }],
+    });
+    fixture.send({ type: 'requestAgentDetail', agentId: 'ada' });
+    expect(details().at(-1)?.detail).toMatchObject({ expertise: 'Ada expertise', responsibilities: '- Ada responsibilities' });
+  });
+
+  it('uses the watcher refusal rather than adopting a new roster from a replaced project root', () => {
+    fixture.dispose();
+    // Native directory handles prohibit root renames on Windows; exercise polling.
+    const watch = vi.spyOn(require('node:fs'), 'watch').mockImplementation(() => {
+      throw Object.assign(new Error('Synthetic native watch unavailable'), { code: 'ENOSYS' });
+    });
+    fixture = createProviderFixture({ extensionCode });
+    fixture.send({ type: 'webviewReady' });
+    const root = fixture.workspaceRoot;
+    const original = `${root}-original`;
+    fs.renameSync(root, original);
+    try {
+      fs.cpSync(original, root, { recursive: true });
+      fixture.messages.length = 0;
+      vi.advanceTimersByTime(1100);
+      const sourceIndex = fixture.messages.findIndex(m => m.type === 'sourceStatus');
+      const rosterIndex = fixture.messages.findIndex(m => m.type === 'existingAgents');
+      expect(sourceIndex).toBeGreaterThanOrEqual(0);
+      expect(rosterIndex).toBeGreaterThan(sourceIndex);
+      expect(fixture.messages[sourceIndex]).toMatchObject({
+        status: { teamFound: false, error: expect.stringContaining('Selected project root changed') },
+      });
+      expect(fixture.messages[rosterIndex]).toMatchObject({ agents: [] });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.renameSync(original, root);
+      watch.mockRestore();
+    }
   });
 
   it('returns conflicting declarations separately with exact-name keys and refreshes without runtime inference', () => {

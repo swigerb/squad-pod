@@ -1,6 +1,6 @@
 import type { ProjectFiles } from './projectFiles.js';
 import { SQUAD_DIR_NAMES } from './squadPaths.js';
-import { readTeamSource } from './teamSource.js';
+import { readTeamSource, type TeamSource } from './teamSource.js';
 import { parseAllMembers, parseTeamRoster } from './teamParser.js';
 import type { SquadTeamMember } from './types.js';
 
@@ -28,7 +28,11 @@ export type DeclaredRoster = {
  * Availability is not authority to launch, write, or adopt runtime agents.
  */
 export function readDeclaredRoster({ files }: DeclaredRosterContext): DeclaredRoster {
-  const source = readTeamSource(files);
+  return parseDeclaredRoster(readTeamSource(files));
+}
+
+/** Parse one already-guarded snapshot without independently re-reading its source. */
+export function parseDeclaredRoster(source: TeamSource): DeclaredRoster {
   const { directory, byteLength } = source;
   if (source.status !== 'available') {
     return { ...source, members: [], allMembers: [] };
