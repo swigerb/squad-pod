@@ -19,6 +19,8 @@ export interface TransportOptions {
   onRead?: (message: WebviewMessage) => Promise<OutboundMessage[]>;
   terminals?: OwnedRuns;
   officeControl?: OfficeControl;
+  /** Read-only Canvas bootstrap; consumes the office credential after one exchange. */
+  canvas?: boolean;
 }
 
 const MAX_CONNECTIONS = 8;
@@ -155,7 +157,18 @@ export async function startTransport(options: TransportOptions): Promise<{
     && (!Number.isInteger(options.port) || options.port < 0 || options.port > 65535)) {
     throw new Error('Invalid port');
   }
+  if (options.canvas && (options.terminals || options.officeControl)) {
+    throw new Error('Canvas requires read-only transport');
+  }
   const files = await indexStatic(options.staticRoot);
+  if (options.canvas) {
+    const index = files.get('/index.html')!;
+    const html = index.bytes.toString('utf8');
+    if (!/<head(?:\s[^>]*)?>/i.test(html)) { throw new Error('Canvas bundle requires an HTML head'); }
+    files.set('/index.html', { ...index, bytes: Buffer.from(html.replace(
+      /<head(?:\s[^>]*)?>/i, '$&<meta name="squad-canvas" content="read-only">',
+    )) });
+  }
   let token = credential();
   let session = credential();
   let terminalToken = credential();
@@ -228,6 +241,7 @@ export async function startTransport(options: TransportOptions): Promise<{
     if ((request.url === '/auth' || request.url === '/terminal-auth' || request.url === '/control-auth') && request.method === 'POST') {
       const terminal = request.url === '/terminal-auth';
       const control = request.url === '/control-auth';
+      if (options.canvas && (terminal || control)) { reply(response, 403, 'READ_ONLY'); return; }
       if (control && !options.officeControl) { reply(response, 403, 'CONTROL_DISABLED'); return; }
       const startedGeneration = generation;
       if (!validOrigin(request)) { reply(response, 403, 'FORBIDDEN'); return; }
@@ -264,6 +278,8 @@ export async function startTransport(options: TransportOptions): Promise<{
           reply(response, 403, 'FORBIDDEN'); return;
         }
         response.setHeader('Set-Cookie', `${control ? controlCookie() : cookieName(terminal)}=${control ? controlSession : terminal ? terminalSession : session}; HttpOnly; SameSite=Strict; Path=/`);
+        // Rotate only the bootstrap secret: the newly issued cookie must remain valid.
+        if (options.canvas) { token = credential(); }
         response.writeHead(204);
         response.end();
       });

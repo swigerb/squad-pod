@@ -35,6 +35,24 @@ Type `quit` in the CLI to stop the server.
 For automated checks, helper requirements, and evidence verification, see the
 [repository testing guide](../docs/testing.md).
 
+## Host-neutral Canvas module (read-only)
+
+`src/canvas/officeHost.ts` exports `startCanvasOfficeHost({ projectRoot,
+bundledAssetsRoot, staticRoot })`, returning `{ url, dispose() }`. Supply an
+explicit existing absolute local project containing `.squad/` or `.ai-team/`,
+bundled office assets, and the built standalone browser bundle. The caller must
+establish project/session authority; path validation does not grant it.
+UNC/WSL roots are refused. Errors contain stable `CANVAS_*` codes only.
+
+Load the returned URL directly: its fragment holds a single-use credential.
+The Canvas bootstrap removes it from browser history, exchanges it at `/auth`,
+and continues with the HttpOnly SameSite=Strict cookie. Never log or persist the
+URL. Reloads use that cookie; a consumed URL cannot authenticate a new viewer.
+Each instance owns its listener and observation resources; await `dispose()`
+on close, including failed host integration. Disposal is idempotent.
+Canvas mode has no terminals, office writes, SDK entry, or live CLI-log scanning.
+It writes nothing to stdout and leaves the CLI paste flow/defaults unchanged.
+
 ## Build and run
 
 Requires Node 22.13+ and the repository's configured package feed. From the repository:
