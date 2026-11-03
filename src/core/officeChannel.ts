@@ -12,17 +12,36 @@ export interface HostClient {
   setState<T>(state: T): T;
 }
 
-/** Subscribe before requesting the initial office snapshot, including synchronous hosts. */
+/**
+ * Own one subscription, subscribing before ready and optional synchronous initialization.
+ * Failed initialization retires delivery and cleans up; disposal is once-only, even if it throws.
+ */
 export function connectOffice(
   client: HostClient,
   listener: (message: OutboundMessage) => void,
+  initialize?: () => void,
 ): () => void {
-  const unsubscribe = client.subscribe(listener);
+  let active = true;
+  let unsubscribe: (() => void) | undefined;
+  const dispose = () => {
+    if (!active) return;
+    // Retire before invoking adapter code, which may synchronously deliver or throw.
+    active = false;
+    unsubscribe?.();
+  };
   try {
+    unsubscribe = client.subscribe(message => {
+      if (active) listener(message);
+    });
     client.send({ type: 'webviewReady' });
+    initialize?.();
   } catch (error) {
-    unsubscribe();
+    try {
+      dispose();
+    } catch (cleanupError) {
+      throw new AggregateError([error, cleanupError], 'Office initialization and cleanup failed');
+    }
     throw error;
   }
-  return unsubscribe;
+  return dispose;
 }

@@ -697,10 +697,9 @@ export function useExtensionMessages(
       }
     };
 
-    const unsubscribe = connectOffice(client, handleMessage);
-    if (!readOnly) client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
-
-    return unsubscribe;
+    return connectOffice(client, handleMessage, () => {
+      if (!readOnly) client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly, standalone, sound]);
 
