@@ -63,6 +63,37 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   function saves() {
     return vi.mocked(client.send).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout');
   }
+  function mediaEnvironment(width: number, coarse: boolean) {
+    touchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    const queries: Array<{ media: string; matches: boolean; listeners: Set<() => void> }> = [];
+    const matches = (query: string) => query.split(',').some(condition =>
+      condition.trim() === '(pointer: coarse)' ? coarse
+        : condition.trim() === '(max-width: 700px)' && width <= 700);
+    const matchMedia = vi.fn((media: string) => {
+      const query = { media, matches: matches(media), listeners: new Set<() => void>() };
+      queries.push(query);
+      return Object.assign(query, {
+        addEventListener: (_type: string, listener: () => void) => query.listeners.add(listener),
+        removeEventListener: (_type: string, listener: () => void) => query.listeners.delete(listener),
+      });
+    });
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: matchMedia });
+    return {
+      matchMedia,
+      change(nextWidth: number, nextCoarse: boolean) {
+        width = nextWidth;
+        coarse = nextCoarse;
+        act(() => {
+          for (const query of queries) {
+            const next = matches(query.media);
+            if (next === query.matches) continue;
+            query.matches = next;
+            query.listeners.forEach(listener => listener());
+          }
+        });
+      },
+    };
+  }
   function remount() {
     act(() => root.unmount());
     root = createRoot(host);
@@ -475,6 +506,103 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     click('Telemetry');
     expect(host.textContent).toContain('Live source status is unavailable. No task state is available.');
     expect(host.textContent).not.toContain('Enable it in Settings');
+  });
+
+  const hostMediaCases = (['canvas', 'standalone', 'vscode'] as const).flatMap(shell =>
+    [600, 700, 701, 750].flatMap(width => [false, true].map(coarse => ({
+      shell, width, coarse,
+      touch: shell === 'canvas' ? coarse : shell === 'standalone' && (width <= 700 || coarse),
+    }))));
+
+  it.each(hostMediaCases)('selects touch behavior for $shell at $width CSS px, coarse=$coarse', ({ shell, width, coarse, touch }) => {
+    const media = mediaEnvironment(width, coarse);
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: shell === 'canvas'
+      ? CANVAS_CONTROL_CAPABILITIES : client.capabilities };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas={shell === 'canvas'} standalone={shell === 'standalone'} />));
+    snapshot(imported, 'a'.repeat(64));
+    const edit = [...host.querySelectorAll('button')].find(button => button.textContent === 'Edit Layout');
+    expect(Boolean(edit)).toBe(!touch);
+    expect(host.querySelector('.office-panel')?.hasAttribute('data-following-agent')).toBe(touch);
+    if (edit) {
+      expect(edit.disabled).toBe(false);
+      act(() => edit.click());
+      expect(host.querySelector('[aria-label="Layout editor"]')).not.toBeNull();
+      expect(host.querySelector('.office-panel')?.getAttribute('data-edit-mode')).toBe('true');
+    }
+    if (shell === 'vscode') expect(media.matchMedia).not.toHaveBeenCalled();
+  });
+
+  it('keeps an active Canvas editor through fine-pointer panel resizing, but exits on a coarse pointer', () => {
+    const media = mediaEnvironment(750, false);
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: CANVAS_CONTROL_CAPABILITIES };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    click('Edit Layout');
+    click('→');
+    media.change(600, false);
+    expect(host.querySelector('[aria-label="Layout editor"]')).not.toBeNull();
+    expect(host.querySelector('.office-panel')?.getAttribute('data-edit-mode')).toBe('true');
+    expect([...host.querySelectorAll('button')].some(button => button.textContent === '● Save Layout')).toBe(true);
+    media.change(600, true);
+    expect(host.querySelector('[aria-label="Layout editor"]')).toBeNull();
+    expect(host.querySelector('.office-panel')?.getAttribute('data-edit-mode')).toBe('false');
+    media.change(600, false);
+    click('Edit Layout');
+    expect(host.querySelector('[aria-label="Layout editor"]')).not.toBeNull();
+    click('● Save Layout');
+    expect(saves().at(-1)?.layout.cols).toBe(imported.cols + 1);
+  });
+
+  it('requires Canvas editing authority at 600px and preserves scrollable editor actions after enabling', () => {
+    mediaEnvironment(600, false);
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: CANVAS_OBSERVER_CAPABILITIES };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    const button = (label: string) => [...host.querySelectorAll('button')]
+      .find(item => item.textContent?.trim() === label)!;
+    expect(button('Edit Layout')?.disabled).toBe(true);
+    click('Edit Layout');
+    expect(host.querySelector('[aria-label="Layout editor"]')).toBeNull();
+    expect(saves()).toHaveLength(0);
+
+    client = { ...client, capabilities: CANVAS_CONTROL_CAPABILITIES };
+    act(() => root.render(<App client={client} canvas readOnly />));
+    expect(button('Edit Layout')?.disabled).toBe(true);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    expect(button('Edit Layout')?.disabled).toBe(false);
+    click('Edit Layout');
+    const editor = host.querySelector<HTMLElement>('[aria-label="Layout editor"]')!;
+    expect(editor.style.overflowY).toBe('auto');
+    expect(editor.style.maxWidth).toBe('100%');
+    expect(editor.style.bottom).toBe('48px');
+    expect(button('Save Layout').parentElement?.style.flexWrap).toBe('wrap');
+    expect(button('Undo').disabled).toBe(true);
+    click('→');
+    expect(button('Undo').disabled).toBe(false);
+    click('Undo');
+    expect(button('Save Layout')).toBeDefined();
+    click('Redo');
+    click('Reset');
+    expect(button('Save Layout')).toBeDefined();
+    click('→');
+    click('● Save Layout');
+    expect(saves()).toEqual([expect.objectContaining({
+      expectedRevision: 'a'.repeat(64), workspaceRoot: 'workspace-A',
+      layout: expect.objectContaining({ cols: imported.cols + 1 }),
+    })]);
+    const bottom = host.querySelector<HTMLElement>('.bottom-toolbar')!;
+    expect(bottom.style.overflowX).toBe('auto');
+    expect(bottom.style.justifyContent).toBe('safe center');
+    expect(bottom.contains(button('Exit Layout Editor'))).toBe(true);
+    click('Exit Layout Editor');
+    expect(host.querySelector('[aria-label="Layout editor"]')).toBeNull();
   });
 
   it('preserves the desktop layout editor on a hybrid fine-pointer touchscreen', async () => {

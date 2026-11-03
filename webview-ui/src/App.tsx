@@ -122,13 +122,14 @@ function ConnectedOffice({ recoveryState, readOnly, standalone, canvas }: { reco
 
   useEffect(() => {
     if (!standalone) { setTouchMobile(false); return; }
+    // A narrow desktop Canvas panel is not a mobile browser.
     const query = typeof window.matchMedia === 'function'
-      ? window.matchMedia('(max-width: 700px), (pointer: coarse)') : null;
+      ? window.matchMedia(canvas ? '(pointer: coarse)' : '(max-width: 700px), (pointer: coarse)') : null;
     const update = () => setTouchMobile(query?.matches ?? false);
     update();
     query?.addEventListener('change', update);
     return () => query?.removeEventListener('change', update);
-  }, [standalone]);
+  }, [standalone, canvas]);
 
   useEffect(() => {
     if (touchMobile && editor.isEditMode) editor.handleToggleEditMode();
