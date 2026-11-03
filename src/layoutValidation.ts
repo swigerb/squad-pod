@@ -1,6 +1,19 @@
 import type { LayoutData } from './types.js';
 import { isValidCarpetLayer } from './carpetValidation.js';
 
+/** Parse and migrate in memory only, retaining user colors and unknown metadata. */
+export function parseLayoutJson(content: string): LayoutData | null {
+  try {
+    const data: unknown = JSON.parse(content.replace(/^\uFEFF/, ''));
+    if (!isValidLayout(data)) {return null;}
+    if (!data.furniture) {data.furniture = [];}
+    if (!data.version || data.version < 2) {data.version = 2;}
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export const MAX_LAYOUT_PETS = 32;
 export const MAX_LAYOUT_AREAS = 100;
 export const MAX_AREA_MAPPINGS = 500;

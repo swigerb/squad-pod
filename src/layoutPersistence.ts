@@ -13,7 +13,8 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import type { LayoutData } from './types.js';
 import { isValidLayout } from './layoutValidation.js';
-export { isValidLayout } from './layoutValidation.js';
+import { parseLayoutJson } from './layoutValidation.js';
+export { isValidLayout, parseLayoutJson } from './layoutValidation.js';
 import {
   LAYOUT_FILE_DIR,
   LAYOUT_FILE_NAME,
@@ -33,20 +34,6 @@ function layoutFilePath(workspaceRoot: string): string {
 function ensureDir(dir: string): void {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-// ─── Validation ─────────────────────────────────────────────────────
-
-/** Parse layout JSON text; returns null when it is not a valid layout. */
-export function parseLayoutJson(content: string): LayoutData | null {
-  try {
-    const data: unknown = JSON.parse(content.replace(/^\uFEFF/, ''));
-    if (!isValidLayout(data)) {return null;}
-    if (!data.furniture) {data.furniture = [];}
-    return migrateLayout(data);
-  } catch {
-    return null;
   }
 }
 
@@ -141,24 +128,6 @@ export function deletePersistedLayout(workspaceRoot: string): void {
   } catch {
     // Silently ignore
   }
-}
-
-// ─── Migration ──────────────────────────────────────────────────────
-
-const _CURRENT_LAYOUT_VERSION = 2;
-
-/**
- * Migrate older layout formats to the current version.
- * v1 → v2: Retain user colors and metadata; never reset saved content.
- */
-function migrateLayout(data: LayoutData): LayoutData {
-  if (!data.version) {
-    data.version = 1;
-  }
-  if (data.version < 2) {
-    data.version = 2;
-  }
-  return data;
 }
 
 // ─── File Watcher ───────────────────────────────────────────────────
