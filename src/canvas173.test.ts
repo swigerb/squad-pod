@@ -592,6 +592,138 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
     expect(action(ctx()).events).toHaveLength(32);
   });
 
+  it('normalizes only public child lifecycle with distinct event, actor, spawning-call and task domains', async () => {
+    const f = fixture();
+    await f.probe.canvas.open(openCtx());
+    const shared = '00000000-0000-4000-8000-000000000001';
+    const id = '00000000-0000-4000-8000-000000000002';
+    f.emit({ type: 'tool.execution_start', id: shared, agentId: shared, data: { toolCallId: shared } });
+    for (const type of ['subagent.started', 'subagent.completed', 'subagent.failed']) {
+      f.emit({ type, id, parentId: shared, agentId: shared, timestamp: '2026-11-03T14:15:00Z',
+        data: { toolCallId: shared, parentId: shared, cancelled: false } });
+    }
+    const snapshot = f.probe.canvas.actions[0].handler(ctx());
+    const [tool, started, completed, failed] = snapshot.events;
+    expect(snapshot.observation).toMatchObject({ accepted: 4, ignored: 0, retainedAliases: 5 });
+    for (const [index, type] of ['subagent.started', 'subagent.completed', 'subagent.failed'].entries()) {
+      const child = snapshot.events[index + 1];
+      expect(child).toMatchObject({
+        type, previousEvent: tool.event, actor: tool.actor, toolCall: tool.toolCall,
+        receiptTime: { status: 'valid' }, producerTime: { status: 'valid' },
+      });
+      expect(child.event).not.toEqual(tool.event);
+      expect(child).not.toHaveProperty('success');
+      expect(child).not.toHaveProperty('model');
+    }
+    expect(new Set([tool.event.alias, tool.actor.alias, tool.toolCall.alias, started.taskParent.alias]).size).toBe(4);
+    expect(started.taskParent).toMatchObject({ status: 'available', alias: expect.stringContaining('-task-') });
+    expect(started).not.toHaveProperty('cancelled');
+    expect(completed.cancelled).toEqual({ status: 'available', value: false });
+    expect(completed.taskParent).toEqual({ status: 'unavailable', reason: 'not-applicable' });
+    expect(failed.taskParent).toEqual({ status: 'unavailable', reason: 'not-applicable' });
+    expect(failed).not.toHaveProperty('cancelled');
+    expect(JSON.stringify(snapshot)).not.toContain(shared);
+    expect(JSON.stringify(snapshot)).not.toContain(id);
+    expect(snapshot.model).toEqual({ status: 'unavailable' });
+    f.emit({ type: 'subagent.started', data: { parentId: shared } });
+    const uncorrelated = f.probe.canvas.actions[0].handler(ctx()).events.at(-1);
+    expect(uncorrelated.taskParent).toEqual(started.taskParent);
+    expect(uncorrelated.actor).toEqual({ status: 'unavailable', reason: 'missing' });
+    expect(uncorrelated.previousEvent).toEqual({ status: 'unavailable', reason: 'missing' });
+    expect(uncorrelated.toolCall).toEqual({ status: 'unavailable', reason: 'missing' });
+  });
+
+  it.each([true, false])('keeps cancelled completion %s explicit without claiming fulfilment', (cancelled) => {
+    const result = sanitizeEvent({ type: 'subagent.completed', data: { cancelled } });
+    expect(result.cancelled).toEqual({ status: 'available', value: cancelled });
+    expect(result.type).toBe('subagent.completed');
+    expect(result).not.toHaveProperty('success');
+    expect(result).not.toHaveProperty('outcome');
+  });
+
+  it.each(['subagent.started', 'subagent.completed', 'subagent.failed'])(
+    'leaves missing and invalid %s identities unavailable without inferring hierarchy', (type) => {
+      const missing = sanitizeEvent({ type });
+      for (const field of ['event', 'previousEvent', 'actor', 'toolCall']) {
+        expect(missing[field]).toEqual({ status: 'unavailable', reason: 'missing' });
+      }
+      if (type === 'subagent.started') {
+        expect(missing.taskParent).toEqual({ status: 'unavailable', reason: 'missing' });
+      }
+      if (type === 'subagent.completed') {
+        expect(missing.cancelled).toEqual({ status: 'unavailable', reason: 'missing' });
+      }
+      for (const invalid of [null, 42, true, {}, [], '', 'x'.repeat(257)]) {
+        const result = sanitizeEvent({ type, id: invalid, parentId: invalid, agentId: invalid,
+          data: { toolCallId: invalid, parentId: invalid, cancelled: invalid } });
+        for (const field of ['event', 'actor', 'toolCall']) {
+          expect(result[field]).toEqual({ status: 'unavailable', reason: 'invalid-or-oversized' });
+        }
+        expect(result.previousEvent).toEqual(invalid === null ? { status: 'none' }
+          : { status: 'unavailable', reason: 'invalid-or-oversized' });
+        if (type === 'subagent.started') {
+          expect(result.taskParent).toEqual({ status: 'unavailable', reason: 'invalid-or-oversized' });
+        }
+        if (type === 'subagent.completed') {
+          expect(result.cancelled).toEqual(typeof invalid === 'boolean'
+            ? { status: 'available', value: invalid } : { status: 'unavailable', reason: 'invalid' });
+        }
+        expect(result).not.toHaveProperty('root');
+        expect(result).not.toHaveProperty('model');
+      }
+      for (const data of [null, 42, false, 'wrong-type']) {
+        expect(sanitizeEvent({ type, data }).toolCall).toEqual({ status: 'unavailable', reason: 'missing' });
+      }
+    },
+  );
+
+  it('never traverses sensitive lifecycle payloads or custom-agent selection data', async () => {
+    const f = fixture();
+    await f.probe.canvas.open(openCtx());
+    const forbidden = vi.fn(() => { throw new Error('sensitive getter read'); });
+    const sensitive = Object.fromEntries([
+      'name', 'agentName', 'description', 'agentDescription', 'prompt', 'error', 'arguments', 'result',
+      'results', 'history', 'taskHistory', 'model',
+    ].map((key) => [key, { get: forbidden }]));
+    for (const type of ['subagent.started', 'subagent.completed', 'subagent.failed']) {
+      const data = Object.defineProperties({ toolCallId: 'private-spawning-call' }, sensitive);
+      if (type !== 'subagent.started') Object.defineProperty(data, 'parentId', { get: forbidden });
+      if (type !== 'subagent.completed') Object.defineProperty(data, 'cancelled', { get: forbidden });
+      f.emit(Object.defineProperties({ type, data }, sensitive));
+    }
+    for (const type of ['subagent.selected', 'subagent.deselected', 'subagent.start',
+      'subagent.complete', 'custom_agent.selected', 'custom_agent.deselected']) {
+      const event = { type, get data() { return forbidden(); }, get agentId() { return forbidden(); } };
+      expect(sanitizeEvent(event)).toBeUndefined();
+      f.emit(event);
+    }
+    const snapshot = f.probe.canvas.actions[0].handler(ctx());
+    expect(snapshot.events.map((event: { type: string }) => event.type))
+      .toEqual(['subagent.started', 'subagent.completed', 'subagent.failed']);
+    expect(snapshot.observation).toMatchObject({ accepted: 3, ignored: 6 });
+    expect(forbidden).not.toHaveBeenCalled();
+    expect(JSON.stringify(snapshot)).not.toContain('private-spawning-call');
+  });
+
+  it('subjects lifecycle aliases and events to the existing shared FIFO limits', async () => {
+    const f = fixture();
+    await f.probe.canvas.open(openCtx());
+    const emit = (index: number) => f.emit({ type: 'subagent.started',
+      agentId: `actor-${index}`, data: { toolCallId: `tool-${index}`, parentId: `task-${index}` } });
+    emit(0);
+    const first = f.probe.canvas.actions[0].handler(ctx()).events[0];
+    for (let index = 1; index < 44; index++) emit(index);
+    emit(0);
+    const snapshot = f.probe.canvas.actions[0].handler(ctx());
+    expect(snapshot.observation).toMatchObject({
+      accepted: 45, retained: 32, eventEvictions: 13, retainedAliases: 128, aliasEvictions: 7,
+      limits: { events: 32, aliases: 128, idCharacters: 256 },
+    });
+    for (const field of ['actor', 'toolCall', 'taskParent']) {
+      expect(snapshot.events.at(-1)[field].alias).not.toBe(first[field].alias);
+    }
+  });
+
   it('reuses listeners, isolates instances, caps servers and closes/reopens with fresh capability', async () => {
     const f = fixture();
     const a = await f.probe.canvas.open(openCtx());

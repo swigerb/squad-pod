@@ -8,7 +8,7 @@ const CANVAS_ID = "squad-pod-canvas-173";
 const INSTANCE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EVENT_TYPES = new Set(["session.start", "session.resume", "session.idle", "assistant.turn_start",
-    "tool.execution_start", "tool.execution_complete"]);
+    "tool.execution_start", "tool.execution_complete", "subagent.started", "subagent.completed", "subagent.failed"]);
 const EVENT_LIMIT = 32;
 const ALIAS_LIMIT = 128;
 const ID_LIMIT = 256;
@@ -178,16 +178,28 @@ function producerTime(value) {
         ? { status: "valid" } : unavailable("invalid-or-unsupported-format");
 }
 
-/** Project public v1.0.28 envelopes and toolCallId only; raw values never leave volatile state. */
+/** Project bounded public v1.0.28 identity/correlation fields; completion is not fulfilment evidence. */
 export function sanitizeEvent(event, state = observation()) {
     if (!event || !EVENT_TYPES.has(event.type)) return undefined;
+    const subagent = event.type.startsWith("subagent.");
+    const data = subagent || event.type.startsWith("tool.execution_") ? event.data : undefined;
+    const cancelled = event.type === "subagent.completed" ? data?.cancelled : undefined;
     return {
         type: event.type,
         event: alias(state, "event", event.id, true),
         previousEvent: event.parentId === null ? { status: "none" } : alias(state, "event", event.parentId, true),
         actor: alias(state, "actor", event.agentId),
-        toolCall: event.type.startsWith("tool.execution_")
-            ? alias(state, "tool", event.data?.toolCallId) : unavailable("not-applicable"),
+        toolCall: subagent || event.type.startsWith("tool.execution_")
+            ? alias(state, "tool", data?.toolCallId) : unavailable("not-applicable"),
+        ...(subagent ? {
+            // Task registry identity is neither an actor nor the envelope's chronological predecessor.
+            taskParent: event.type === "subagent.started"
+                ? alias(state, "task", data?.parentId) : unavailable("not-applicable"),
+        } : {}),
+        ...(event.type === "subagent.completed" ? {
+            cancelled: typeof cancelled === "boolean" ? { status: "available", value: cancelled }
+                : unavailable(cancelled === undefined ? "missing" : "invalid"),
+        } : {}),
         receiptTime: { status: "valid", unixMs: Date.now() },
         producerTime: producerTime(event.timestamp),
     };
