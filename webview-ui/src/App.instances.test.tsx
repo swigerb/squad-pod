@@ -7,7 +7,8 @@ import { OfficeState } from './office/engine/officeState.js';
 import * as gameLoop from './office/engine/gameLoop.js';
 import * as renderer from './office/engine/renderer.js';
 import type { LayoutRecovery } from './office/editor/layoutDraft.js';
-import type { OfficeLayout } from './office/types.js';
+import type { OfficeLayout, SpriteData } from './office/types.js';
+import { CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR } from './constants.js';
 import type { OutboundMessage } from '../../src/types.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -77,6 +78,52 @@ describe('mounted office state ownership (synthetic independent hosts)', () => {
       office.host.remove();
     }
     vi.restoreAllMocks();
+  });
+
+  it('routes manifest carpets and real toolbar previews/availability to their own same-realm office', () => {
+    const rebuild = vi.spyOn(OfficeState.prototype, 'rebuildFromLayout');
+    const a = view(), b = view();
+    views.push(a, b);
+    a.mount(); initialize(a, 20, 'alpha');
+    b.mount(); initialize(b, 20, 'beta');
+    const stateA = instance(rebuild.mock.contexts[0]);
+    const stateB = instance(rebuild.mock.contexts[1]);
+    const sheet = (reverse: boolean): SpriteData[] => Array.from({ length: 16 },
+      () => [reverse ? ['#eeeeee', '#111111'] : ['#111111', '#eeeeee']]);
+    const load = (target: typeof a, carpets: SpriteData[][]) => target.emit({
+      type: 'manifestAssetsLoaded',
+      snapshot: { carpets, floors: [], walls: [], furniture: [], pets: [], directories: [], diagnostics: [] },
+    });
+    load(a, [sheet(false)]);
+    load(b, [sheet(true), sheet(true)]);
+    expect(stateA.carpetAssets.revision).toBe(1);
+    expect(stateB.carpetAssets.revision).toBe(1);
+    const previewA = vi.spyOn(stateA.carpetAssets, 'getCarpetPreview');
+    const previewB = vi.spyOn(stateB.carpetAssets, 'getCarpetPreview');
+    a.click('Edit Layout'); b.click('Edit Layout');
+    a.click('▦Carpet'); b.click('▦Carpet');
+    const style = (target: typeof a, n: number) => target.host.querySelector<HTMLButtonElement>(`[title="Carpet ${n}"]`)!;
+    expect(style(a, 1).disabled).toBe(false);
+    expect(style(a, 2).disabled).toBe(true);
+    expect(style(b, 2).disabled).toBe(false);
+    const resultA = previewA.mock.results.find((_, i) => previewA.mock.calls[i][0] === 0)!.value;
+    const resultB = previewB.mock.results.find((_, i) => previewB.mock.calls[i][0] === 0)!.value;
+    expect(resultA.flat().filter(Boolean).slice(0, 2)).toEqual(['#941919', '#dba35a']);
+    expect(resultB.flat().filter(Boolean).slice(0, 2)).toEqual(['#dba35a', '#941919']);
+    const stableB = stateB.carpetAssets.getCarpetSprite(0, 4);
+    load(a, []);
+    expect(style(a, 1).disabled).toBe(true);
+    expect(a.host.textContent).toContain('Carpet style unavailable');
+    expect(style(b, 1).disabled).toBe(false);
+    expect(b.host.textContent).not.toContain('Carpet style unavailable');
+    expect(stateB.carpetAssets.revision).toBe(1);
+    expect(stateB.carpetAssets.getCarpetSprite(0, 4)).toBe(stableB);
+    for (let i = 0; i < previewB.mock.calls.length; i++) {
+      if (previewB.mock.calls[i][0] === 0) expect(previewB.mock.results[i].value).toEqual(resultB);
+    }
+    load(a, [sheet(false)]);
+    expect(style(a, 1).disabled).toBe(false);
+    expect(stateB.carpetAssets.getCarpetPreview(0, CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR)).toEqual(resultB);
   });
 
   it('separates real canvas rosters, editor tools, layout history, recovery and outbound messages', async () => {
@@ -162,7 +209,7 @@ describe('mounted office state ownership (synthetic independent hosts)', () => {
     const canvasB = b.host.querySelector('canvas')!;
     const pan = (canvas: HTMLCanvasElement) => {
       frames.get(canvas)!();
-      return draw.mock.lastCall!.slice(7, 9);
+      return draw.mock.lastCall!.slice(8, 10);
     };
     const space = (canvas: HTMLCanvasElement, type = 'keydown') => {
       const event = new KeyboardEvent(type, { key: ' ', code: 'Space', bubbles: true, cancelable: true });

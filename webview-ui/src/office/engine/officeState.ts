@@ -16,8 +16,10 @@ import { FURNITURE_ANIM_INTERVAL_SEC, PET_HIT_HALF_WIDTH, PET_HIT_HEIGHT } from 
 import { getAnimationFrames, getOnStateType } from '../layout/furnitureCatalog.js';
 import { appearanceFromIndex, type AgentSnapshot } from './agentSync.js';
 import { transientSubagents, type ObservedTaskSnapshot } from '../../../../src/observedTasks.js';
+import { createCarpetAssets } from '../sprites/carpetTiles.js';
 
 export class OfficeState {
+  readonly carpetAssets = createCarpetAssets();
   layout: OfficeLayout;
   tileMap: number[][];
   seats: Seat[];

@@ -79,6 +79,7 @@ describe('furniture color controls and eyedrop', () => {
             onGestureEnd={actions.handleGestureEnd}
           />
           <EditorToolbar
+            carpetAssets={office.carpetAssets}
             editorState={editorState}
             isEditMode={actions.isEditMode}
             onToolChange={actions.handleToolChange}

@@ -6,7 +6,8 @@ import * as spriteCache from '../sprites/spriteCache.js';
 import * as tilesetRenderer from '../sprites/tilesetRenderer.js';
 import { setFloorSprites } from '../floorTiles.js';
 import { setWallSprites } from '../wallTiles.js';
-import { setCarpetSprites } from '../sprites/carpetTiles.js';
+import { createCarpetAssets } from '../sprites/carpetTiles.js';
+import { OfficeState } from './officeState.js';
 import { setPetTemplates, getPetSprites, resetPetTemplates } from '../sprites/petSpriteData.js';
 import { createPet, togglePetHeart } from './petEntity.js';
 import { PET_HEART_BUBBLE } from '../sprites/petBubble.js';
@@ -86,7 +87,6 @@ describe('tile colors are optional rendering overrides', () => {
   afterEach(() => {
     setFloorSprites([]);
     setWallSprites([]);
-    setCarpetSprites([]);
     resetPetTemplates();
     vi.restoreAllMocks();
   });
@@ -98,7 +98,7 @@ describe('tile colors are optional rendering overrides', () => {
     ['complete', complete],
   ] as const)('draws every non-void tile with %s colors without mutating its inputs', (name, colors) => {
     const before = JSON.stringify([map, colors && [...colors]]);
-    renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0, null, undefined, colors);
+    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0, null, undefined, colors);
     expect(pixels).toEqual([
       { x: 0, y: 0, color: name === 'complete' ? '#0000ff' : '#53392d' },
       { x: 16, y: 0, color: name === 'complete' || name === 'partial' ? '#01ff01' : '#caac83' },
@@ -109,7 +109,7 @@ describe('tile colors are optional rendering overrides', () => {
   it('uses the PNG tileset path even without any tile colors', () => {
     vi.mocked(assetLoader.areTilesetAssetsReady).mockReturnValue(true);
     const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(true);
-    renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0);
+    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0);
     expect(draw.mock.calls.map((call) => call.slice(1))).toEqual([
       [TileType.WALL, 0, 0, 1], [TileType.FLOOR_1, 16, 0, 1],
     ]);
@@ -125,7 +125,7 @@ describe('tile colors are optional rendering overrides', () => {
     const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(true);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-    renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0);
+    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0);
 
     expect(draw).not.toHaveBeenCalled();
     expect(pixels).toHaveLength(2);
@@ -137,7 +137,7 @@ describe('tile colors are optional rendering overrides', () => {
     const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(false);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-    renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0);
+    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0);
 
     expect(draw).toHaveBeenCalledTimes(2);
     expect(warn).toHaveBeenCalledOnce();
@@ -156,7 +156,7 @@ describe('tile colors are optional rendering overrides', () => {
       Array.from({ length: 16 }, () => Array(16).fill('#808080'))));
     const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(true);
 
-    renderFrame(ctx, 48, 16, [[TileType.WALL, TileType.FLOOR_1, TileType.FLOOR_9]], [], [], 1, 0, 0);
+    renderFrame(ctx, createCarpetAssets(), 48, 16, [[TileType.WALL, TileType.FLOOR_1, TileType.FLOOR_9]], [], [], 1, 0, 0);
 
     expect(draw).not.toHaveBeenCalled();
     expect(pixels).toHaveLength(3);
@@ -170,7 +170,7 @@ describe('tile colors are optional rendering overrides', () => {
     const neutral = { h: 0, s: 0, b: 0, c: 0, colorize: false };
     const overrides = new Map(types.map((_, col) => [`${col},0`, neutral]));
 
-    renderFrame(ctx, 160, 16, [types], [], [], 1, 0, 0, null, undefined, overrides);
+    renderFrame(ctx, createCarpetAssets(), 160, 16, [types], [], [], 1, 0, 0, null, undefined, overrides);
 
     expect(pixels).toEqual([
       { x: 0, y: 0, color: '#111111' }, { x: 16, y: 0, color: '#222222' },
@@ -183,20 +183,21 @@ describe('tile colors are optional rendering overrides', () => {
 
   it('uses the wall sprite fallback without any tile colors', () => {
     setWallSprites(Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => Array(16).fill('#808080'))));
-    renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0);
+    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0);
     expect(pixels).toHaveLength(2);
     expect(spriteCache.getCachedSprite).toHaveBeenCalledTimes(2);
   });
 
   it('draws carpet above a colorless floor without changing layout or carpet data', () => {
-    setCarpetSprites([Array.from({ length: 16 }, () =>
+    const assets = createCarpetAssets();
+    assets.setCarpetSprites([Array.from({ length: 16 }, () =>
       Array.from({ length: 16 }, () => Array(16).fill('#111111')))]);
     const carpetTiles: Array<CarpetTile | null> = [null, { variant: 0 }, null];
     const layout = { cols: 3, rows: 1, tiles: map.flat(), furniture: [], carpetTiles };
     const before = JSON.stringify(layout);
     const draw = vi.fn();
     ctx.drawImage = draw;
-    renderFrame(ctx, 48, 16, map, [], [], 1, 0, 0, null, undefined, undefined,
+    renderFrame(ctx, assets, 48, 16, map, [], [], 1, 0, 0, null, undefined, undefined,
       3, 1, null, null, null, [], false, carpetTiles);
     // First the floor, then the four junctions around its carpet cell.
     expect(draw.mock.calls.map((call) => call.slice(1))).toEqual([
@@ -209,6 +210,31 @@ describe('tile colors are optional rendering overrides', () => {
     expect(layout).not.toHaveProperty('tileColors');
   });
 
+  it('renders each same-realm office sheet through renderFrame on a rebound context at equal revisions', () => {
+    const layout = {
+      version: 2 as const, cols: 3, rows: 1, tiles: map.flat(), furniture: [],
+      carpetTiles: [null, { variant: 0 }, null],
+    };
+    const a = new OfficeState(layout), b = new OfficeState(layout);
+    const sheet = (hex: string) => [Array.from({ length: 16 },
+      () => Array.from({ length: 16 }, () => Array<string>(16).fill(hex)))];
+    a.carpetAssets.setCarpetSprites(sheet('#111111'));
+    b.carpetAssets.setCarpetSprites(sheet('#11111180'));
+    expect(a.carpetAssets.revision).toBe(b.carpetAssets.revision);
+    const draw = (office: OfficeState) => {
+      pixels.length = 0;
+      renderFrame(ctx, office.carpetAssets, 48, 16, map, [], [], 1, 0, 0,
+        null, undefined, undefined, 3, 1, null, null, null, [], false, layout.carpetTiles);
+      return pixels.filter(p => p.x === 8 || p.x === 24).map(p => p.color);
+    };
+    expect(draw(a)).toEqual(Array(4).fill('#dba35a'));
+    expect(draw(b)).toEqual(Array(4).fill('#dba35a80'));
+    a.carpetAssets.setCarpetSprites([]);
+    expect(draw(a)).toEqual([]);
+    expect(draw(b)).toEqual(Array(4).fill('#dba35a80'));
+    expect(b.carpetAssets.revision).toBe(1);
+  });
+
   it('renders animated pet sprites and heart bubbles over a layout without tile colors', () => {
     const sheet = Array.from({ length: 96 }, (_, y) =>
       Array.from({ length: 96 }, (_, x) => `#${(y * 96 + x).toString(16).padStart(6, '0')}`));
@@ -218,7 +244,7 @@ describe('tile colors are optional rendering overrides', () => {
     togglePetHeart(pet);
     const draw = vi.fn();
     ctx.drawImage = draw;
-    renderFrame(ctx, 48, 48, [], [], [], 1, 0, 0, null, undefined, undefined,
+    renderFrame(ctx, createCarpetAssets(), 48, 48, [], [], [], 1, 0, 0, null, undefined, undefined,
       0, 0, null, null, null, [], false, undefined, [pet]);
     expect(draw).toHaveBeenCalledTimes(2);
     expect(sprites.get(draw.mock.calls[0][0])).toBe(frames.idleDown[0]);
@@ -235,7 +261,7 @@ describe('asset diagnostic banner follows Debug View', () => {
       setTransform: vi.fn(), fillRect: vi.fn(), fillText: vi.fn(),
     };
     renderFrame(ctx as unknown as CanvasRenderingContext2D,
-      800, 600, [], [], [], 1, 0, 0, null, undefined, undefined,
+      createCarpetAssets(), 800, 600, [], [], [], 1, 0, 0, null, undefined, undefined,
       0, 0, null, null, null, [], debug);
     if (debug) {
       expect(ctx.fillText).toHaveBeenCalledWith(expect.stringMatching(/^chars:.*tileset:/), expect.any(Number), expect.any(Number));

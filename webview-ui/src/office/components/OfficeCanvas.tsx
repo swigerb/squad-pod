@@ -260,6 +260,7 @@ export function OfficeCanvas({
         const chars = [...officeState.characters.values(), ...[...officeState.subagents.values()].map(entry => entry.character)];
         renderFrame(
           ctx,
+          officeState.carpetAssets,
           cw,
           ch,
           officeState.tileMap,

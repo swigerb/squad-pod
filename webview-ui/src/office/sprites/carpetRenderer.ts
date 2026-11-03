@@ -1,10 +1,11 @@
 import type { CarpetTile, FloorColor, SpriteData } from '../types.js';
 import { TILE_SIZE, TileType } from '../types.js';
 import { CARPET_DEFAULT_COLOR, CARPET_DEFAULT_ACCENT_COLOR } from '../../constants.js';
-import { carpetJunctionCase, getCarpetPaletteKey, getCarpetSprite, getCarpetSpriteRevision } from './carpetTiles.js';
+import { carpetJunctionCase, getCarpetPaletteKey, type CarpetAssets } from './carpetTiles.js';
 import { getCachedSprite } from './spriteCache.js';
 
 interface CarpetLayer {
+  assets: CarpetAssets;
   tiles: Array<CarpetTile | null>;
   tileMap: number[][];
   cols: number;
@@ -17,11 +18,12 @@ interface CarpetLayer {
 // Every editor edit/applied snapshot rebuilds tileMap. Neither input is mutated
 // between rebuilds. One layer per context replaces the previous layout's cache;
 // the weak key releases it when an unmounted canvas/context is collected.
+// Asset identity also fences contexts rebound between equal-revision offices.
 const layers = new WeakMap<CanvasRenderingContext2D, CarpetLayer>();
 const MAX_COMPOSITE_PIXELS = 1040 * 1040; // 64x64 plus junction edges: 4.13 MiB RGBA.
 
-function deriveLayer(tiles: Array<CarpetTile | null>, tileMap: number[][], cols: number, rows: number): CarpetLayer {
-  const layer: CarpetLayer = { tiles, tileMap, cols, rows, revision: getCarpetSpriteRevision(), junctions: [] };
+function deriveLayer(assets: CarpetAssets, tiles: Array<CarpetTile | null>, tileMap: number[][], cols: number, rows: number): CarpetLayer {
+  const layer: CarpetLayer = { assets, tiles, tileMap, cols, rows, revision: assets.revision, junctions: [] };
   if (!tiles.some(Boolean)) return layer;
   // Keep imported overlays off walls/void without changing the saved data.
   const visible = tiles.map((tile, i) => {
@@ -44,7 +46,7 @@ function deriveLayer(tiles: Array<CarpetTile | null>, tileMap: number[][], cols:
       }
       for (const { variant, color, accent } of [...groups.values()].sort((a, b) => a.order - b.order)) {
         const mask = carpetJunctionCase(jx, jy, variant, visible, cols, rows, getCarpetPaletteKey(color, accent));
-        const sprite = getCarpetSprite(variant, mask, color, accent);
+        const sprite = assets.getCarpetSprite(variant, mask, color, accent);
         if (sprite) (layer.junctions[jy * (cols + 1) + jx] ??= []).push(sprite);
       }
     }
@@ -82,7 +84,7 @@ function deriveLayer(tiles: Array<CarpetTile | null>, tileMap: number[][], cols:
 }
 
 export function renderCarpetLayer(
-  ctx: CanvasRenderingContext2D, tiles: Array<CarpetTile | null> | undefined,
+  ctx: CanvasRenderingContext2D, assets: CarpetAssets, tiles: Array<CarpetTile | null> | undefined,
   tileMap: number[][], cols: number, rows: number, offsetX: number, offsetY: number, zoom: number,
 ): void {
   if (!tiles?.length) {
@@ -93,9 +95,9 @@ export function renderCarpetLayer(
   }
   let layer = layers.get(ctx);
   if (!layer || layer.tiles !== tiles || layer.tileMap !== tileMap || layer.cols !== cols || layer.rows !== rows
-    || layer.revision !== getCarpetSpriteRevision()) {
+    || layer.assets !== assets || layer.revision !== assets.revision) {
     if (layer?.canvas) layer.canvas.width = layer.canvas.height = 0;
-    layer = deriveLayer(tiles, tileMap, cols, rows);
+    layer = deriveLayer(assets, tiles, tileMap, cols, rows);
     layers.set(ctx, layer);
   }
   if (!layer.junctions.length) return;

@@ -4,7 +4,7 @@ import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, EditTool as EditToolType } from '../office/types.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
 import { FLOOR_PATTERNS, getFloorSprite } from '../office/floorTiles.js';
-import { getCarpetPreview, hasCarpetVariant } from '../office/sprites/carpetTiles.js';
+import type { CarpetAssets } from '../office/sprites/carpetTiles.js';
 import type { SpriteData } from '../office/types.js';
 import {
   getItemsByType,
@@ -19,6 +19,7 @@ import { DEFAULT_FLOOR_COLOR } from '../constants.js';
 
 // ─── Props ─────────────────────────────────────────────────────
 export interface EditorToolbarProps {
+  carpetAssets: CarpetAssets;
   editorState: EditorState;
   isEditMode: boolean;
   onToolChange: (tool: EditToolType) => void;
@@ -546,6 +547,7 @@ function ColorSliders({
 
 // ─── Main Component ────────────────────────────────────────────
 export function EditorToolbar({
+  carpetAssets,
   editorState,
   isEditMode,
   onToolChange,
@@ -649,17 +651,17 @@ export function EditorToolbar({
           <div style={styles.toolGrid}>
             {[0, 1, 2].map((variant) => (
               <button key={variant} title={`Carpet ${variant + 1}`}
-                disabled={!hasCarpetVariant(variant)}
+                disabled={!carpetAssets.hasCarpetVariant(variant)}
                 aria-pressed={editorState.carpetVariant === variant}
                 style={styles.furnitureBtn(editorState.carpetVariant === variant)}
                 onClick={() => onCarpetVariantChange(variant)}>
-                <SpritePreview sprite={getCarpetPreview(variant, editorState.carpetColor, editorState.carpetAccentColor)} size={52} />
+                <SpritePreview sprite={carpetAssets.getCarpetPreview(variant, editorState.carpetColor, editorState.carpetAccentColor)} size={52} />
                 <span style={{ fontSize: '10px' }}>Style {variant + 1}</span>
               </button>
             ))}
           </div>
           <p style={{ fontSize: '10px', color: TEXT_DIM }}>Drag to paint over floors. Right-drag erases only carpet. Eyedrop copies style and both colors.</p>
-          {!hasCarpetVariant(editorState.carpetVariant) && <p role="alert">Carpet style unavailable. Check asset diagnostics.</p>}
+          {!carpetAssets.hasCarpetVariant(editorState.carpetVariant) && <p role="alert">Carpet style unavailable. Check asset diagnostics.</p>}
           <ColorSliders label="Carpet Main" color={editorState.carpetColor} onChange={(color) => onCarpetColorChange(color)} flat />
           <ColorSliders label="Carpet Accent" color={editorState.carpetAccentColor} onChange={(color) => onCarpetColorChange(color, true)} flat />
         </div>

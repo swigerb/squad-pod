@@ -40,6 +40,7 @@ import type { CarpetTile } from '../types.js';
 import { getCharacterAnimation, getCharacterWorldPosition, isReadingTool } from './characters.js';
 import { getCharacterScreenBounds } from './characterGeometry.js';
 import { renderCarpetLayer } from '../sprites/carpetRenderer.js';
+import type { CarpetAssets } from '../sprites/carpetTiles.js';
 import { wallColorToHex, getColorizedWallSprite, hasWallSprites } from '../wallTiles.js';
 import { areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
 import { drawTilesetFurniture, drawTilesetTile, drawMetadataItemScaled } from '../sprites/tilesetRenderer.js';
@@ -638,6 +639,7 @@ export function renderBubbles(
 
 export function renderFrame(
   ctx: CanvasRenderingContext2D,
+  carpetAssets: CarpetAssets,
   canvasWidth: number,
   canvasHeight: number,
   tileMap: number[][],
@@ -679,7 +681,7 @@ export function renderFrame(
   const offsetY = panY;
 
   renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors ?? EMPTY_TILE_COLORS, cols);
-  renderCarpetLayer(ctx, carpetTiles, tileMap, cols, rows, offsetX, offsetY, zoom);
+  renderCarpetLayer(ctx, carpetAssets, carpetTiles, tileMap, cols, rows, offsetX, offsetY, zoom);
   if (showAreas) renderAreaOverlay(ctx, areaTiles, areas, cols, rows, offsetX, offsetY, zoom, activeAreaLabel);
 
   if (seats) {
