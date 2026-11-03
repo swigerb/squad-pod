@@ -161,14 +161,6 @@ export async function startTransport(options: TransportOptions): Promise<{
     throw new Error('Canvas requires read-only transport');
   }
   const files = await indexStatic(options.staticRoot);
-  if (options.canvas) {
-    const index = files.get('/index.html')!;
-    const html = index.bytes.toString('utf8');
-    if (!/<head(?:\s[^>]*)?>/i.test(html)) { throw new Error('Canvas bundle requires an HTML head'); }
-    files.set('/index.html', { ...index, bytes: Buffer.from(html.replace(
-      /<head(?:\s[^>]*)?>/i, '$&<meta name="squad-canvas" content="read-only">',
-    )) });
-  }
   let token = credential();
   let session = credential();
   let terminalToken = credential();
