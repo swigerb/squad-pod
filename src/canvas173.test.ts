@@ -29,7 +29,8 @@ const ctx = (instanceId = 'synthetic-panel') => ({
 const openCtx = (instanceId = 'synthetic-panel') => ({
   ...ctx(instanceId), input: { syntheticProjectRoot: selectedRoot },
 });
-function fixture() {
+const metadataRpc = () => ({ metadata: { snapshot: vi.fn(async () => ({ sessionId, workingDirectory: selectedRoot })) } });
+function fixture(rpc: unknown = metadataRpc()) {
   let handler: ((event: unknown) => void) | undefined;
   const callbacks: Array<(event: unknown) => void> = [];
   let subscriptions = 0;
@@ -37,6 +38,7 @@ function fixture() {
   const probe = createProbe((options: unknown) => options, ProbeError);
   active.push(probe);
   probe.bind({
+    rpc,
     sessionId, workspacePath: 'synthetic-artifact-workspace-not-project',
     on(callback: (event: unknown) => void) {
       handler = callback; callbacks.push(callback); subscriptions++;
@@ -62,6 +64,7 @@ function get(url: string, options: { method?: string; headers?: Record<string, s
   });
 }
 afterEach(async () => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   syncBuiltinESMExports();
   await Promise.all(active.splice(0).map((probe) => probe.dispose()));
@@ -69,6 +72,135 @@ afterEach(async () => {
 afterAll(() => { rmSync(fixtureRoot, { recursive: true, force: true }); });
 
 describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
+  it('requires independent snapshot identity and canonical root, ignoring selectedModel and workspacePath', async () => {
+    const snapshot = vi.fn(async () => ({
+      sessionId, workingDirectory: `${selectedRoot}${sep}.`,
+      get selectedModel() { throw new Error('model discovery is not authorized'); },
+    }));
+    const f = fixture({ metadata: { snapshot } });
+    await f.probe.canvas.open(openCtx());
+    const result = f.probe.canvas.actions[0].handler(ctx());
+    expect(result.exactJoinedSession).toBe(true);
+    expect(result.selectedProjectRoot.status).toBe('matched');
+    expect(result.runtime.sdkVersion).toEqual({ status: 'unavailable' });
+    expect(result.model).toEqual({ status: 'unavailable' });
+    expect(snapshot).toHaveBeenCalledExactlyOnceWith();
+    expect(JSON.stringify(result)).not.toContain(selectedRoot);
+    await expect(f.probe.canvas.open({ ...openCtx(), sessionId: 'private-other-id' }))
+      .rejects.toMatchObject({ code: 'probe_session_mismatch' });
+    expect(snapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['missing', {}, 'probe_metadata_missing'],
+    ['malformed', { metadata: { snapshot: () => null } }, 'probe_metadata_mismatch'],
+    ['identity', { metadata: { snapshot: () => ({ sessionId: 'private-other-id', workingDirectory: selectedRoot }) } }, 'probe_metadata_mismatch'],
+    ['root', { metadata: { snapshot: () => ({ sessionId, workingDirectory: otherRoot }) } }, 'probe_metadata_mismatch'],
+    ['relative', { metadata: { snapshot: () => ({ sessionId, workingDirectory: '.' }) } }, 'probe_metadata_mismatch'],
+    ['fallback', { metadata: { snapshot: () => ({ sessionId, workspacePath: selectedRoot, cwd: selectedRoot }) } }, 'probe_metadata_mismatch'],
+    ['rejection', { metadata: { snapshot: () => Promise.reject(new Error(`private ${selectedRoot} ${sessionId}`)) } }, 'probe_metadata_rejected'],
+    ['throw', { metadata: { snapshot: () => { throw new Error(`private ${selectedRoot}`); } } }, 'probe_metadata_rejected'],
+  ])('denies %s independent metadata with sanitized diagnostics and no retained observation', async (_name, rpc, code) => {
+    const f = fixture(rpc);
+    await expect(f.probe.canvas.open(openCtx())).rejects.toMatchObject({
+      code, message: 'Independent session metadata authority unavailable',
+    });
+    expect(f.subscriptions()).toBe(0);
+    expect(() => f.probe.canvas.actions[0].handler(ctx())).toThrow('Open the instance first');
+  });
+
+  it('revokes existing observations when replacement metadata disagrees', async () => {
+    const rpc = metadataRpc();
+    const f = fixture(rpc);
+    await f.probe.canvas.open(openCtx());
+    await f.probe.canvas.open(openCtx('second'));
+    rpc.metadata.snapshot.mockResolvedValue({ sessionId, workingDirectory: otherRoot });
+    await expect(f.probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_metadata_mismatch' });
+    expect(f.subscriptions()).toBe(0);
+    expect(() => f.probe.canvas.actions[0].handler(ctx('second'))).toThrow('new matching open callback');
+  });
+
+  it('does not inspect or return event metadata while replacement authority is pending', async () => {
+    let resolve!: (value: unknown) => void;
+    const snapshot = vi.fn().mockResolvedValueOnce({ sessionId, workingDirectory: selectedRoot })
+      .mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    const f = fixture({ metadata: { snapshot } });
+    await f.probe.canvas.open(openCtx());
+    const opening = f.probe.canvas.open(openCtx());
+    await Promise.resolve();
+    expect(() => f.probe.canvas.actions[0].handler(ctx())).toThrow('metadata authority pending');
+    f.emit({ type: 'tool.execution_start', get data() { throw new Error('not yet authorized'); } });
+    resolve({ sessionId, workingDirectory: selectedRoot });
+    await opening;
+    expect(f.probe.canvas.actions[0].handler(ctx()).events).toEqual([]);
+    f.emit({ type: 'session.idle' });
+    expect(f.probe.canvas.actions[0].handler(ctx()).events).toHaveLength(1);
+  });
+
+  it('bounds deadlines and outstanding RPCs, retaining timed-out slots until actual settlement', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const resolves: Array<(value: unknown) => void> = [];
+    const snapshot = vi.fn(() => new Promise((resolve) => resolves.push(resolve)));
+    const f = fixture({ metadata: { snapshot } });
+    for (let index = 0; index < 4; index++) {
+      const rejected = expect(f.probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_metadata_deadline' });
+      await vi.advanceTimersByTimeAsync(1000);
+      await rejected;
+      expect(f.subscriptions()).toBe(0);
+    }
+    await expect(f.probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_metadata_limit' });
+    expect(snapshot).toHaveBeenCalledTimes(4);
+    resolves.forEach((resolve) => resolve({ sessionId, workingDirectory: selectedRoot }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(() => f.probe.canvas.actions[0].handler(ctx())).toThrow('Open the instance first');
+    expect(vi.getTimerCount()).toBe(0);
+    snapshot.mockImplementation(() => Promise.resolve({ sessionId, workingDirectory: selectedRoot }));
+    await f.probe.canvas.open(openCtx());
+    expect(snapshot).toHaveBeenCalledTimes(5);
+    expect(f.probe.canvas.actions[0].handler(ctx()).exactJoinedSession).toBe(true);
+  });
+
+  it.each(['close', 'replacement', 'revocation', 'dispose'] as const)(
+    'never lets delayed metadata authorize after %s or erase a newer generation', async (operation) => {
+      let resolve!: (value: unknown) => void;
+      const snapshot = vi.fn().mockImplementationOnce(() => new Promise((done) => { resolve = done; }))
+        .mockResolvedValue({ sessionId, workingDirectory: selectedRoot });
+      const f = fixture({ metadata: { snapshot } });
+      const rejected = expect(f.probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_closed' });
+      await Promise.resolve();
+      if (operation === 'close') await f.probe.canvas.onClose(ctx());
+      if (operation === 'dispose') await f.probe.dispose();
+      if (operation === 'revocation') f.callbacks[0]({ type: 'session.context_changed' });
+      if (operation === 'close' || operation === 'replacement') await f.probe.canvas.open(openCtx());
+      const before = operation === 'close' || operation === 'replacement'
+        ? f.probe.canvas.actions[0].handler(ctx()).observation.generation : undefined;
+      resolve({ sessionId, workingDirectory: selectedRoot });
+      await rejected;
+      if (before) {
+        expect(f.probe.canvas.actions[0].handler(ctx()).observation.generation).toBe(before);
+        expect(f.subscriptions()).toBe(1);
+      } else {
+        expect(f.subscriptions()).toBe(0);
+        expect(() => f.probe.canvas.actions[0].handler(ctx())).toThrow();
+      }
+    },
+  );
+
+  it('does not revoke a replacement when stale metadata rejects', async () => {
+    let reject!: (error: Error) => void;
+    const snapshot = vi.fn().mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }))
+      .mockResolvedValue({ sessionId, workingDirectory: selectedRoot });
+    const f = fixture({ metadata: { snapshot } });
+    const rejected = expect(f.probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_closed' });
+    await Promise.resolve();
+    await f.probe.canvas.open(openCtx());
+    const before = f.probe.canvas.actions[0].handler(ctx()).observation.generation;
+    reject(new Error(`private ${selectedRoot} ${sessionId}`));
+    await rejected;
+    expect(f.probe.canvas.actions[0].handler(ctx()).observation.generation).toBe(before);
+    expect(f.subscriptions()).toBe(1);
+  });
+
   async function artifactFixture(projectLocal = false) {
     const root = mkdtempSync(join(fixtureRoot, 'artifacts-'));
     const directory = join(root, projectLocal ? '.github' : 'com.github.copilot', 'extensions', 'canvas-173');
@@ -82,7 +214,7 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
       moduleUrl: pathToFileURL(join(root, 'never-read-caller-path.mjs')).href,
     });
     active.push(probe);
-    probe.bind({ sessionId, on: () => () => {} });
+    probe.bind({ sessionId, rpc: metadataRpc(), on: () => () => {} });
     await probe.canvas.open(openCtx());
     return {
       root, directory, probe,
@@ -570,7 +702,7 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
     const probe = createProbe((options: unknown) => options, ProbeError);
     active.push(probe);
     const unsubscribe = vi.fn();
-    probe.bind({ sessionId, on(callback: (event: unknown) => void) {
+    probe.bind({ sessionId, rpc: metadataRpc(), on(callback: (event: unknown) => void) {
       callback({ type: 'session.context_changed' });
       return unsubscribe;
     } });
@@ -586,7 +718,7 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
     const callbacks: Array<(event: unknown) => void> = [];
     const cleanups: number[] = [];
     const observed: string[] = [];
-    probe.bind({ sessionId, on(callback: (event: unknown) => void) {
+    probe.bind({ sessionId, rpc: metadataRpc(), on(callback: (event: unknown) => void) {
       const index = callbacks.length;
       callbacks.push(callback);
       return () => {
@@ -633,7 +765,7 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
       active.push(probe);
       const callbacks: Array<(event: unknown) => void> = [];
       const cleanups: number[] = [];
-      probe.bind({ sessionId, on(callback: (event: unknown) => void) {
+      probe.bind({ sessionId, rpc: metadataRpc(), on(callback: (event: unknown) => void) {
         const index = callbacks.length;
         callbacks.push(callback);
         return () => {
@@ -685,7 +817,7 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
       callback({ type: 'session.context_changed' });
       return unsubscribe;
     });
-    probe.bind({ sessionId, on });
+    probe.bind({ sessionId, rpc: metadataRpc(), on });
     await expect(probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
     stale!({ get type() { throw new Error('stale callback must remain inert'); } });
     await expect(probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
@@ -704,7 +836,7 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
       callback = handler;
       return unsubscribe;
     });
-    probe.bind({ sessionId, on });
+    probe.bind({ sessionId, rpc: metadataRpc(), on });
     const opening = probe.canvas.open(openCtx());
     const rejected = expect(opening).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
     expect(() => callback!({ type: 'session.context_changed' })).toThrowError(
@@ -868,7 +1000,8 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
   });
 
   it('accepts canonical aliases but rejects stale host context and root replacement until owned close', async () => {
-    const f = fixture();
+    const rpc = metadataRpc();
+    const f = fixture(rpc);
     const alias = join(fixtureRoot, 'alias');
     symlinkSync(selectedRoot, alias, process.platform === 'win32' ? 'junction' : 'dir');
     const aliasCtx = { ...openCtx(), input: { syntheticProjectRoot: alias } };
@@ -892,6 +1025,7 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
     await f.probe.canvas.onClose({ ...ctx(), session: undefined });
     await expect(get(opened.url)).rejects.toThrow();
     await expect(f.probe.canvas.open({ ...replacement, extensionId: 'hijack' })).rejects.toThrow('another provider');
+    rpc.metadata.snapshot.mockResolvedValue({ sessionId, workingDirectory: otherRoot });
     const reopened = await f.probe.canvas.open(replacement);
     expect(reopened.url).not.toBe(opened.url);
     expect(action({ ...ctx(), session: { workingDirectory: otherRoot } }).selectedProjectRoot.status).toBe('matched');
@@ -900,10 +1034,12 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
   });
 
   it('detects replacement at the same canonical path and closes safely after directory disappearance', async () => {
-    const f = fixture();
     const root = join(fixtureRoot, 'replaceable');
     const moved = join(fixtureRoot, 'displaced');
     mkdirSync(root);
+    const rpc = metadataRpc();
+    rpc.metadata.snapshot.mockResolvedValue({ sessionId, workingDirectory: root });
+    const f = fixture(rpc);
     const context = { ...openCtx(), input: { syntheticProjectRoot: root }, session: { workingDirectory: root } };
     const { url } = await f.probe.canvas.open(context);
     renameSync(root, moved);

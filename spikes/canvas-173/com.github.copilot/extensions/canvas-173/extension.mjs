@@ -14,6 +14,10 @@
 // absent actor IDs do not prove a root actor. No event.data except toolCallId is read.
 // context_changed clears every observation synchronously without reading its data.
 // Only a new matching host open callback reattaches; workspacePath grants no authority.
+// Each open also requires independent read-only session.rpc.metadata.snapshot() identity
+// and absolute canonical workingDirectory equality to the explicit approved root.
+// Four outstanding RPCs maximum, 1s deadline, no retries; timed-out calls retain their
+// slots until settlement. Missing/mismatched/rejected/late metadata cannot authorize.
 // Close/dispose clears state and owns unsubscribe; old queued callbacks cannot revive it.
 // Unsubscribe failure permanently fails this provider lifetime closed; no automatic retry.
 // A replacement open callback retains the bounded listener but starts a fresh generation,

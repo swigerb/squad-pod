@@ -12,6 +12,8 @@ const EVENT_TYPES = new Set(["session.start", "session.resume", "session.idle", 
 const EVENT_LIMIT = 32;
 const ALIAS_LIMIT = 128;
 const ID_LIMIT = 256;
+const METADATA_LIMIT = 4;
+const METADATA_DEADLINE_MS = 1000;
 const EMPTY_INPUT = { type: "object", properties: {}, additionalProperties: false };
 const OPEN_INPUT = {
     type: "object", properties: { syntheticProjectRoot: { type: "string", minLength: 1, maxLength: 4096 } },
@@ -197,6 +199,7 @@ export function createProbe(createCanvas, CanvasError) {
     let providerId;
     let disposed = false;
     let cleanupFailed = false;
+    let metadataInFlight = 0;
     const instances = new Map();
     const fail = (code, message) => { throw new CanvasError(code, message); };
     const requireCleanup = () => {
@@ -265,6 +268,7 @@ export function createProbe(createCanvas, CanvasError) {
             const unsubscribe = session.on((event) => {
                 if (disposed || cleanupFailed || entry.observation !== state) return;
                 if (event?.type === "session.context_changed") { revokeAll(); requireCleanup(); return; }
+                if (!state.authorized) return;
                 const metadata = sanitizeEvent(event, state);
                 if (!metadata) { state.ignored++; return; }
                 state.accepted++;
@@ -286,6 +290,49 @@ export function createProbe(createCanvas, CanvasError) {
             fail("probe_observation_revoked", "Observation revoked; a new matching open callback is required");
         }
         return entry.observation;
+    };
+    const authorize = async (ctx, entry, state) => {
+        let timer;
+        let result;
+        try {
+            const metadata = session.rpc?.metadata;
+            if (typeof metadata?.snapshot !== "function") result = { code: "probe_metadata_missing" };
+            else if (metadataInFlight >= METADATA_LIMIT) result = { code: "probe_metadata_limit" };
+            else {
+                metadataInFlight++;
+                // A timed-out RPC still occupies its slot until it settles; no cancellation or retry is assumed.
+                const request = Promise.resolve().then(() => metadata.snapshot()).then(
+                    (value) => ({ value }), () => ({ code: "probe_metadata_rejected" }),
+                ).finally(() => { metadataInFlight--; });
+                result = await Promise.race([request, new Promise((resolve) => {
+                    timer = setTimeout(() => resolve({ code: "probe_metadata_deadline" }), METADATA_DEADLINE_MS);
+                })]);
+            }
+        } catch { result = { code: "probe_metadata_rejected" }; }
+        finally { clearTimeout(timer); }
+        requireCleanup();
+        if (disposed || instances.get(ctx.instanceId) !== entry || entry.observation !== state) {
+            fail("probe_closed", "Instance closed while opening");
+        }
+        let code = result.code;
+        if (!code) {
+            try {
+                const value = result.value;
+                if (!value || typeof value !== "object" || Array.isArray(value) ||
+                    typeof value.sessionId !== "string" || value.sessionId !== session.sessionId ||
+                    value.sessionId !== ctx.sessionId ||
+                    !sameDirectory(directoryIdentity(value.workingDirectory), entry.root)) {
+                    code = "probe_metadata_mismatch";
+                }
+            } catch { code = "probe_metadata_mismatch"; }
+        }
+        if (code) {
+            revokeAll();
+            requireCleanup();
+            fail(code, "Independent session metadata authority unavailable");
+        }
+        bindRoot(ctx, entry.selectedPath, entry.root);
+        state.authorized = true;
     };
     const closeEntry = (entry) => entry.closing ??= (async () => {
         let hosted;
@@ -330,6 +377,7 @@ export function createProbe(createCanvas, CanvasError) {
             try {
                 subscribe(entry);
                 openingObservation = requireObservation(entry);
+                await authorize(ctx, entry, openingObservation);
                 const hosted = await entry.ready;
                 requireCleanup();
                 if (disposed || instances.get(ctx.instanceId) !== entry || entry.observation !== openingObservation) {
@@ -363,6 +411,7 @@ export function createProbe(createCanvas, CanvasError) {
                 if (!entry.hosted) fail("probe_instance_not_ready", "Instance is not ready");
                 bindRoot(ctx, entry.selectedPath, entry.root);
                 const state = requireObservation(entry);
+                if (!state.authorized) fail("probe_observation_revoked", "Independent session metadata authority pending");
                 return {
                     exactJoinedSession: true,
                     selectedProjectRoot: { status: "matched", scope: "explicit-synthetic-root-equality-only" },
