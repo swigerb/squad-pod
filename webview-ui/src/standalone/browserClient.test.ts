@@ -145,6 +145,67 @@ describe('production browser HostClient adapter', () => {
     return { client, sockets, storage, storageApi, preferenceDraft, received, unsubscribe, frame, ready };
   }
 
+  it('downloads the validated visible draft locally without sending a server mutation', () => {
+    vi.useFakeTimers();
+    const f = controlled();
+    const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const createObjectURL = vi.fn((_blob: Blob) => 'blob:office-export');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', Object.assign(class extends URL {}, { createObjectURL, revokeObjectURL }));
+    try {
+      const protection = new LayoutDraft();
+      protection.receive(layout, 'external', 'a'.repeat(64), 'project-1');
+      f.client.setState(protection.state);
+      f.client.send({ type: 'exportLayout' });
+      expect(createObjectURL).toHaveBeenCalledOnce();
+      expect(createObjectURL.mock.calls[0][0]).toBeInstanceOf(Blob);
+      const anchor = download.mock.instances[0] as HTMLAnchorElement;
+      expect(anchor.download).toBe('squad-pod-layout.json');
+      expect(anchor.href).toBe('blob:office-export');
+      expect(f.sockets[0].send).not.toHaveBeenCalled();
+      vi.runOnlyPendingTimers();
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:office-export');
+      const invalid = { ...layout, sourcePath: '../private' };
+      f.client.send({ type: 'exportLayoutSnapshot', layout: invalid });
+      expect(createObjectURL).toHaveBeenCalledOnce();
+      expect(f.received).toHaveBeenLastCalledWith(expect.objectContaining({
+        type: 'layoutError', error: 'No valid layout draft to export.',
+      }));
+    } finally { download.mockRestore(); vi.unstubAllGlobals(); f.unsubscribe(); f.client.dispose(); }
+  });
+
+  it('imports only explicit browser files within existing schema and size limits without saving', async () => {
+    const f = controlled();
+    let input: HTMLInputElement | undefined;
+    const select = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (this: HTMLInputElement) { input = this; });
+    const before = f.client.getState();
+    async function choose(value: unknown, size = 100) {
+      f.client.send({ type: 'importLayout' });
+      expect(input?.type).toBe('file');
+      expect(input?.accept).toBe('.json,application/json');
+      Object.defineProperty(input, 'files', { value: [{ size, text: () => Promise.resolve(JSON.stringify(value)) }] });
+      input!.dispatchEvent(new Event('change'));
+      await Promise.resolve();
+      await Promise.resolve();
+    }
+    try {
+      await choose(layout);
+      expect(f.received).toHaveBeenLastCalledWith({
+        type: 'layoutLoaded', layout, revision: null, workspaceRoot: '', source: 'import',
+      });
+      await choose({ ...layout, sourcePath: '../private' });
+      expect(f.received).toHaveBeenLastCalledWith(expect.objectContaining({
+        type: 'layoutError', error: 'Invalid or unreadable import; existing draft retained.',
+      }));
+      await choose(layout, 2 * 1024 * 1024 + 1);
+      expect(f.received).toHaveBeenLastCalledWith(expect.objectContaining({
+        type: 'layoutError', error: 'Import exceeds 2 MiB; draft retained.',
+      }));
+      expect(f.sockets[0].send).not.toHaveBeenCalled();
+      expect(f.client.getState()).toEqual(before);
+    } finally { select.mockRestore(); f.unsubscribe(); f.client.dispose(); }
+  });
+
   it('retains failed preference changes for explicit export/retry and surfaces recovery quota failure', () => {
     const f = controlled();
     try {

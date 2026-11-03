@@ -128,6 +128,8 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       expect(host.textContent).toContain('Live logs and session tasks are unavailable in Canvas.');
       expect(host.textContent).not.toContain('VS Code');
       expect(host.textContent).not.toContain('--live-activity');
+      expect(host.textContent).not.toContain('then explicitly select');
+      expect(host.textContent).not.toContain('copilot --agent');
       click('Squad Info');
       expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
       expect(client.setState).not.toHaveBeenCalled();
@@ -138,12 +140,17 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       send({ type: 'sourceStatus', status: {
         workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad', teamFound: true,
         observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'off', sessionId: null },
       } });
       send({ type: 'existingAgents', agents: [{
         id: 'canvas-agent', name: 'CanvasBot', role: 'Developer', paletteIndex: 0,
         seatId: null, status: 'idle', currentTask: null,
       }] });
       await nextFrame();
+      const toggle = [...host.querySelectorAll('button')].find(button => button.textContent === 'Show office labels');
+      expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).not.toBe(toggle);
+      click('Show office labels');
       const label = host.querySelector<HTMLButtonElement>('[data-agent-label="canvas-agent"]');
       expect(label).not.toBeNull();
       act(() => label!.click());
@@ -159,6 +166,8 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       const charter = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === 'View Charter');
       expect(charter?.disabled).toBe(true);
       expect(charter?.title).toContain('Opening files is unavailable');
+      expect(host.textContent).toContain('Runtime model observation is unavailable in Canvas');
+      expect(host.textContent).not.toContain('--live-activity');
       act(() => charter?.click());
       expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual([
         'webviewReady', 'requestAgentDetail',
@@ -168,6 +177,81 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       expect(manage?.disabled).toBe(true);
       expect(manage?.title).toContain('unavailable');
     } finally { vi.unstubAllGlobals(); }
+  });
+
+  it('exposes working Canvas office settings and transfers while explaining unsupported subcontrols', () => {
+    act(() => root.unmount());
+    client = { ...client, capabilities: CANVAS_CONTROL_CAPABILITIES };
+    vi.mocked(client.send).mockClear();
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    send({ type: 'sourceStatus', status: {
+      workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad', teamFound: true,
+      observer: 'watching', nativeWatch: false, error: null,
+    } });
+    click('Settings');
+    expect(host.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(host.textContent).not.toMatch(/VS Code|--live-activity|newest matching-project|normal terminal/);
+    expect(host.textContent).toContain('Live logs and session tasks are unavailable in Canvas');
+    expect(host.textContent).toContain('Directory navigation, CLI launch, terminals and opening local files are unavailable');
+    expect(host.textContent).toContain('Export downloads validated JSON');
+    for (const label of ['Export Layout', 'Import Layout']) {
+      const button = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === label);
+      expect(button?.disabled, label).toBe(false);
+      click(label);
+    }
+    for (const label of ['Sound Notifications', 'Show Named Areas', 'Debug View']) {
+      const control = [...host.querySelectorAll('label')].find(item => item.textContent === label);
+      const input = host.querySelector<HTMLInputElement>(`#${control!.htmlFor}`);
+      expect(input?.disabled, label).toBe(false);
+      act(() => input!.click());
+    }
+    const live = [...host.querySelectorAll<HTMLInputElement>('input')].find(input => input.disabled);
+    expect(live?.title).toContain('private CLI logs');
+    const assets = [...host.querySelectorAll('button')].find(item => item.textContent === 'Add Asset Directory');
+    expect(assets?.disabled).toBe(true);
+    expect(assets?.title).toContain('Local folder access');
+    act(() => assets?.click());
+    const actions = vi.mocked(client.send).mock.calls.map(([message]) => message.type);
+    expect(actions).toEqual(expect.arrayContaining([
+      'exportLayout', 'importLayout', 'setSoundEnabled', 'setShowAreas', 'setDebugEnabled',
+    ]));
+    expect(actions).not.toEqual(expect.arrayContaining(['setLiveActivity', 'addAssetDirectory', 'launchDirectory']));
+    for (const action of actions) {
+      if (action !== 'webviewReady') expect(client.capabilities.actions).toContain(action);
+    }
+    const close = host.querySelector<HTMLButtonElement>('[role="dialog"] button');
+    act(() => close!.click());
+    click('Edit Layout');
+    for (const label of ['Undo', 'Redo']) {
+      const button = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === label);
+      expect(button?.disabled, label).toBe(true);
+      expect(button?.title, label).toContain('layout change');
+    }
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Area"]')!.click());
+    const areaName = host.querySelector<HTMLInputElement>('[aria-label="New Area name"]');
+    expect(areaName).not.toBeNull();
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(areaName, 'Canvas area');
+      areaName!.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    click('Add');
+    const directory = host.querySelector<HTMLSelectElement>('[data-testid="area-directory"]');
+    expect(directory?.disabled).toBe(true);
+    expect(directory?.title).toContain('Directory mapping is unavailable in Canvas');
+    expect(host.textContent).toContain('Named Areas can still be painted, renamed and colored');
+  });
+
+  it.each([false, true])('keeps labels expanded by default outside Canvas (standalone=%s)', async standalone => {
+    act(() => root.render(<App client={client} standalone={standalone} />));
+    send({ type: 'existingAgents', agents: [{
+      id: 'default-agent', name: 'Default', role: 'Developer', paletteIndex: 0,
+      seatId: null, status: 'idle', currentTask: null,
+    }] });
+    await nextFrame();
+    expect([...host.querySelectorAll('button')].some(button => button.textContent === 'Hide office labels')).toBe(true);
+    expect([...host.querySelectorAll('button')].some(button => button.textContent === 'Show office labels')).toBe(false);
   });
 
   it('uses the existing Canvas editor conflict UI with SHA revisions and retains both drafts across reload', () => {

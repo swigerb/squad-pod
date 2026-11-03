@@ -43,6 +43,7 @@ export interface EditorToolbarProps {
   areas: AreaDefinition[];
   areaMappings?: Record<string, string[]>;
   directories: DirectoryEntry[];
+  directoryMappingAvailable?: boolean;
   selectedAreaLabel: string | null;
   transformError: string | null;
   onAreaAdd: (label: string, color: string) => boolean;
@@ -572,6 +573,7 @@ export function EditorToolbar({
   areas,
   areaMappings,
   directories,
+  directoryMappingAvailable = true,
   selectedAreaLabel,
   transformError,
   onAreaAdd,
@@ -750,6 +752,8 @@ export function EditorToolbar({
               </label>
               <select
                 id={areaDirectoryId}
+                disabled={!directoryMappingAvailable}
+                title={!directoryMappingAvailable ? 'Directory mapping is unavailable in Canvas; only the selected project is observed.' : undefined}
                 data-testid="area-directory"
                 value={selectedDirectoryId}
                 onChange={(event) => setSelectedDirectoryId(event.target.value)}
@@ -767,13 +771,17 @@ export function EditorToolbar({
                   type="checkbox"
                   aria-label={`Map ${selectedArea.label} to selected directory`}
                   data-testid="area-mapping"
-                  disabled={!selectedDirectoryId || !directoryOptions.some((directory) => directory.id === selectedDirectoryId)}
+                  disabled={!directoryMappingAvailable || !selectedDirectoryId || !directoryOptions.some((directory) => directory.id === selectedDirectoryId)}
+                  title={!directoryMappingAvailable ? 'Directory mapping is unavailable in Canvas.' : undefined}
                   checked={selectedDirectoryId ? (areaMappings?.[selectedDirectoryId] ?? []).includes(selectedArea.label) : false}
                   onChange={(event) => onAreaMappingChange(selectedDirectoryId, selectedArea.label, event.target.checked)}
                 />
                 Prefer this Area for observed agents
               </label>
-              {directoryOptions.length === 0 && (
+              {!directoryMappingAvailable && <p role="status" style={{ fontSize: '10px', color: TEXT_DIM }}>
+                Directory mapping is unavailable in Canvas. Named Areas can still be painted, renamed and colored; existing mappings are preserved.
+              </p>}
+              {directoryMappingAvailable && directoryOptions.length === 0 && (
                 <p style={{ margin: '6px 0 0', fontSize: '10px', color: TEXT_DIM }}>No workspace or saved directories are available. Recent launch entries are not mapping identities.</p>
               )}
             </div>
@@ -1003,15 +1011,17 @@ export function EditorToolbar({
           </button>
           <button
             style={styles.actionBtn(!canUndo)}
+            disabled={!canUndo}
             onClick={canUndo ? onUndo : undefined}
-            title="Undo (Ctrl+Z)"
+            title={canUndo ? 'Undo (Ctrl+Z)' : 'No layout change to undo'}
           >
             Undo
           </button>
           <button
             style={styles.actionBtn(!canRedo)}
+            disabled={!canRedo}
             onClick={canRedo ? onRedo : undefined}
-            title="Redo (Ctrl+Y)"
+            title={canRedo ? 'Redo (Ctrl+Y)' : 'No undone layout change to redo'}
           >
             Redo
           </button>

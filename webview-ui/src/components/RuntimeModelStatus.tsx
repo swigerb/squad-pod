@@ -10,7 +10,9 @@ export function memberRuntimeModel(
 export function liveModelUnavailableReason(
   status: LiveSourceStatus | undefined,
   readOnly = false,
+  canvas = false,
 ): string {
+  if (canvas) {return 'Runtime model observation is unavailable in Canvas; office editing does not grant live-log access.';}
   if (!status) {return 'Live source status is unavailable; no runtime model observation is available.';}
   switch (status?.state ?? 'off') {
     case 'off': return readOnly

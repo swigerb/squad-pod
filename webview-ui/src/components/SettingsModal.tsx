@@ -5,6 +5,7 @@ import { SourceStatusView } from './SourceStatusView.js';
 import { AssetDirectories, type AssetStatusData } from './AssetStatus.js';
 
 interface SettingsModalProps {
+  canvas?: boolean;
   standalone?: boolean;
   assetStatus?: AssetStatusData;
   onClose: () => void;
@@ -16,7 +17,7 @@ interface SettingsModalProps {
   sourceStatus: SourceStatus | null;
 }
 
-export function SettingsModal({ standalone = false, assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
+export function SettingsModal({ canvas = false, standalone = false, assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
   const client = useHostClient();
   const id = useId();
   const canExport = client.capabilities.actions.includes('exportLayout');
@@ -124,9 +125,15 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
             {sourceStatus?.liveActivity?.sessionId ? ` (${sourceStatus.liveActivity.sessionId})` : ''}.
             {' '}Reads local Copilot CLI session metadata for this workspace after confirmation.
           </p></>}
-          <SourceStatusView status={sourceStatus} readOnly={standalone} />
-          {!standalone && <AssetDirectories status={assetStatus} />}
-          {standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and browser-granted private/live log consent are unavailable. Live observation requires local CLI --live-activity opt-in.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
+          {canvas && <div>
+            <label><input type="checkbox" disabled checked={false} readOnly
+              title="Canvas cannot grant access to private CLI logs." /> Live Activity (unavailable)</label>
+            <p role="status">Live logs and session tasks are unavailable in Canvas. Enabling office editing does not grant log access.</p>
+          </div>}
+          <SourceStatusView status={sourceStatus} readOnly={standalone} canvas={canvas} />
+          {(!standalone || canvas) && <AssetDirectories status={assetStatus} />}
+          {canvas ? <p role="status">Only this selected project is available. Directory navigation, CLI launch, terminals and opening local files are unavailable: Canvas has no native filesystem or terminal authority.</p>
+            : standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and browser-granted private/live log consent are unavailable. Live observation requires local CLI --live-activity opt-in.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
             Automatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code&apos;s normal terminal and Copilot permission prompts.
             Live tools and context use an undocumented, best-effort Copilot CLI session format.
           </p>}
@@ -136,6 +143,7 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 disabled={!canExport}
+                title={!canExport ? 'Layout export is unavailable in this host.' : undefined}
                 onClick={handleExport}
                 style={{
                   flex: 1,
@@ -153,6 +161,7 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
               </button>
               <button
                 disabled={!canImport}
+                title={!canImport ? 'Layout import is unavailable in this host.' : undefined}
                 onClick={handleImport}
                 style={{
                   flex: 1,
