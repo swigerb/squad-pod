@@ -16,6 +16,23 @@ export type TeamSource = {
 );
 
 /**
+ * Select the guarded roster directory using metadata only, without reading team.md.
+ * Only an absent .squad permits legacy fallback; invalid or unsafe paths throw.
+ * Selection alone does not establish that the roster content is available.
+ */
+export function selectTeamSourceDirectory(files: ProjectFiles): TeamSource['directory'] {
+  try {
+    if (!fs.statSync(files.resolve(SQUAD_DIR_NAMES[0])).isDirectory()) {
+      throw new Error('Preferred roster path is not a directory.');
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {return SQUAD_DIR_NAMES[1];}
+    throw error;
+  }
+  return SQUAD_DIR_NAMES[0];
+}
+
+/**
  * Read only the host-selected project's fixed team.md through ProjectFiles.
  * Only an absent .squad directory permits .ai-team fallback. Invalid directories,
  * internal links, changed identities, non-files, invalid UTF-8 and >256-KiB files
@@ -25,21 +42,10 @@ export function readTeamSource(files: ProjectFiles): TeamSource {
   let directory: TeamSource['directory'] = SQUAD_DIR_NAMES[0];
   const unavailable = (status: 'missing' | 'unreadable', reason: string): TeamSource =>
     ({ status, directory, byteLength: 0, reason });
-  function selectDirectory(): TeamSource['directory'] {
-    try {
-      if (!fs.statSync(files.resolve(SQUAD_DIR_NAMES[0])).isDirectory()) {
-        throw new Error('Preferred roster path is not a directory.');
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {return SQUAD_DIR_NAMES[1];}
-      throw error;
-    }
-    return SQUAD_DIR_NAMES[0];
-  }
   try {
-    directory = selectDirectory();
+    directory = selectTeamSourceDirectory(files);
     const content = files.read(path.join(directory, 'team.md'), MAX_TEAM_SOURCE_BYTES, { preserveBOM: true });
-    if (selectDirectory() !== directory) {throw new Error('Selected roster directory changed.');}
+    if (selectTeamSourceDirectory(files) !== directory) {throw new Error('Selected roster directory changed.');}
     if (content === null) {return unavailable('missing', 'No selected-project team.md found.');}
     return { status: 'available', directory, byteLength: Buffer.byteLength(content), content };
   } catch (error) {

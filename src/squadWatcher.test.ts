@@ -237,6 +237,37 @@ describe('SquadWatcher', () => {
     expect(rosterChanges).toBe(0);
   });
 
+  it.each([true, false])('refreshes unchanged legacy content when the preferred blocker starts present=%s', blocked => {
+    const content = '## Members\n| Name | Role | Charter |\n|---|---|---|\n'
+      + '| Ada | Developer | .ai-team/agents/Mixed_Name-2/charter.md |\n';
+    write('team.md', content, '.ai-team');
+    const preferred = path.join(root, '.squad');
+    const legacyTeam = path.join(root, '.ai-team', 'team.md');
+    const stamp = fs.statSync(legacyTeam);
+    if (blocked) { fs.writeFileSync(preferred, 'not a directory'); }
+    const snapshots: Array<{ raw: string | null; ids: string[] }> = [];
+    const snapshot = () => ({
+      raw: readTeamFile(root), ids: readTeamRoster(root).map(member => member.slug),
+    });
+    watcher = new SquadWatcher(root, {
+      onRosterChanged: () => snapshots.push(snapshot()),
+      onAgentActivity: e => events.push(e),
+    }, { useFsWatch: false });
+    watcher.scan();
+    expect(snapshot()).toEqual(blocked ? { raw: null, ids: [] } : { raw: content, ids: ['Mixed_Name-2'] });
+    expect(snapshots).toEqual([]);
+
+    if (blocked) { fs.unlinkSync(preferred); }
+    else { fs.writeFileSync(preferred, 'not a directory'); }
+    watcher.scan();
+    expect(snapshots).toEqual([blocked ? { raw: content, ids: ['Mixed_Name-2'] } : { raw: null, ids: [] }]);
+    watcher.scan();
+    expect(snapshots).toHaveLength(1);
+    expect(events).toEqual([]);
+    expect(fs.readFileSync(legacyTeam, 'utf8')).toBe(content);
+    expect(fs.statSync(legacyTeam)).toMatchObject({ mtimeMs: stamp.mtimeMs, size: stamp.size });
+  });
+
   it('emits activity for agent file edits, inbox decisions and orchestration logs', () => {
     write('team.md', '# Team');
     start();

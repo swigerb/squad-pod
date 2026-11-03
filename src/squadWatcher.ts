@@ -11,6 +11,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FILE_WATCHER_POLL_INTERVAL_MS } from './constants.js';
 import { resolveSquadDir } from './squadPaths.js';
+import { ProjectFiles } from './projectFiles.js';
+import { selectTeamSourceDirectory } from './teamSource.js';
 import type { SourceStatus, SquadSession } from './types.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -28,7 +30,7 @@ export interface AgentActivityEvent {
 
 export interface SquadWatcherCallbacks {
   onStatusChanged?: (status: SourceStatus) => void;
-  /** Called when the team roster file changes (re-read and refresh agents). */
+  /** Called when the team roster file or guarded source selection changes. */
   onRosterChanged: () => void;
   /** Called when agent activity is detected from any watched source. */
   onAgentActivity: (event: AgentActivityEvent) => void;
@@ -244,6 +246,7 @@ export interface SquadWatcherOptions {
 export class SquadWatcher {
   private readonly known = new Map<string, FileStamp>();
   private teamStamp: FileStamp | null = null;
+  private teamDirectory: string | null = null;
   private baselined = false;
   private disposed = false;
   private fsWatcher: fs.FSWatcher | null = null;
@@ -321,10 +324,17 @@ export class SquadWatcher {
     const emit = this.baselined;
     this.baselined = true;
 
-    const teamStamp = statFile(path.join(squadDir, 'team.md'));
-    if (!sameStamp(teamStamp, this.teamStamp)) {
+    let teamDirectory: string | null = null;
+    try {
+      teamDirectory = selectTeamSourceDirectory(new ProjectFiles(this.workspaceRoot));
+    } catch {
+      // Guard refusal is an invalidation state, not permission to use legacy content.
+    }
+    const teamStamp = teamDirectory ? statFile(path.join(this.workspaceRoot, teamDirectory, 'team.md')) : null;
+    if (!sameStamp(teamStamp, this.teamStamp) || teamDirectory !== this.teamDirectory) {
       const hadTeam = this.teamStamp !== null || emit;
       this.teamStamp = teamStamp;
+      this.teamDirectory = teamDirectory;
       if (hadTeam) {
         this.callbacks.onRosterChanged();
       }

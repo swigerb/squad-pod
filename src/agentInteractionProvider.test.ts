@@ -240,6 +240,37 @@ describe('agent interaction through compiled extension/provider (mocked VS Code 
     });
   });
 
+  it.each([true, false])('refreshes the office when the preferred blocker starts present=%s without legacy edits', blocked => {
+    fixture.dispose();
+    fixture = createProviderFixture({ extensionCode });
+    const preferred = path.join(fixture.workspaceRoot, '.squad');
+    const legacy = path.join(fixture.workspaceRoot, '.ai-team');
+    fs.renameSync(preferred, legacy);
+    const legacyTeam = path.join(legacy, 'team.md');
+    const content = fs.readFileSync(legacyTeam, 'utf8');
+    const stamp = fs.statSync(legacyTeam);
+    if (blocked) { fs.writeFileSync(preferred, 'not a directory'); }
+    fixture.send({ type: 'webviewReady' });
+    const roster = () => fixture.messages.filter(m => m.type === 'existingAgents').at(-1);
+    expect(roster()).toMatchObject({ agents: blocked ? [] : [{ id: 'ada' }, { id: 'grace' }] });
+    fixture.messages.length = 0;
+
+    if (blocked) { fs.unlinkSync(preferred); }
+    else { fs.writeFileSync(preferred, 'not a directory'); }
+    vi.advanceTimersByTime(2000);
+    expect(roster()).toMatchObject({ agents: blocked ? [{ id: 'ada' }, { id: 'grace' }] : [] });
+    fixture.send({ type: 'openSquadInfo' });
+    expect(fixture.messages.filter(m => m.type === 'squadInfoLoaded').at(-1)).toMatchObject({
+      info: {
+        workspaceRoot: fixture.workspaceRoot,
+        members: blocked ? [{ id: 'ada', name: 'Ada' }, { id: 'grace', name: 'Grace' }] : [],
+        hiddenMembers: blocked ? [{ name: 'Scribe', role: 'Scribe' }] : [],
+      },
+    });
+    expect(fs.readFileSync(legacyTeam, 'utf8')).toBe(content);
+    expect(fs.statSync(legacyTeam)).toMatchObject({ mtimeMs: stamp.mtimeMs, size: stamp.size });
+  });
+
   it('returns conflicting declarations separately with exact-name keys and refreshes without runtime inference', () => {
     const squad = path.join(fixture.workspaceRoot, '.squad');
     const charter = path.join(squad, 'agents', 'ada', 'charter.md');
