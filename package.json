@@ -90,6 +90,7 @@
     "compile": "npm run check-types && node esbuild.js",
     "build": "npm run check-types && npm run build:webview && node esbuild.js --production",
     "build:webview": "npm run build --prefix webview-ui",
+    "build:canvas": "npm run build:canvas --prefix standalone",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",

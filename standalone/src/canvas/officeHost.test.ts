@@ -6,12 +6,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket, WebSocketServer } from 'ws';
-import type { CanvasDefinition } from '@github/copilot-sdk/extension';
+import type { CanvasDefinition, JoinedSession } from '@github/copilot-sdk/extension';
 import * as observers from '../observer.js';
 import { startCanvasOfficeHost, type CanvasOfficeHost } from './officeHost.js';
 import { startOfficeExtension } from './provider.js';
 import type { OutboundMessage } from '../../../src/types.js';
 import { parseLayoutJson } from '../../../src/layoutPersistence.js';
+import { decodeEvent } from '../events.js';
+import { ProjectFiles } from '../projectFiles.js';
 
 vi.mock('node:fs', async importOriginal => {
   const actual = await importOriginal<typeof import('node:fs')>();
@@ -66,13 +68,13 @@ function http(host: Pick<CanvasOfficeHost, 'url'>, path: string, method = 'GET',
     req.end(body);
   });
 }
-function auth(host: CanvasOfficeHost, headers: Record<string, string> = {}) {
+function auth(host: Pick<CanvasOfficeHost, 'url'>, headers: Record<string, string> = {}) {
   const url = new URL(host.url);
   return http(host, '/auth', 'POST', JSON.stringify({ token: new URLSearchParams(url.hash.slice(1)).get('c') }), {
     Origin: url.origin, 'Content-Type': 'application/json', ...headers,
   });
 }
-async function connect(host: CanvasOfficeHost, cookie: string, control = false) {
+async function connect(host: Pick<CanvasOfficeHost, 'url'>, cookie: string, control = false) {
   const url = new URL(host.url);
   const socket = new WebSocket(`ws://127.0.0.1:${url.port}/${control ? 'control' : 'office'}`, {
     headers: { Origin: url.origin, Cookie: cookie },
@@ -130,6 +132,140 @@ async function refused(host: CanvasOfficeHost, headers: Record<string, string>, 
 }
 
 describe('isolated default read-only Canvas office host', () => {
+  it('does not scan project activity folders or infer live work from historical files', async () => {
+    const entries = vi.spyOn(ProjectFiles.prototype, 'entries');
+    const options = await fixture();
+    await mkdir(join(options.projectRoot, '.squad', 'sessions'));
+    await writeFile(join(options.projectRoot, '.squad', 'sessions', 'lisa.json'), '{"agent":"lisa"}');
+    const host = await startCanvasOfficeHost({ ...options, sessionId: 'joined-session' });
+    hosts.push(host);
+    const snapshot = await host.snapshot();
+    expect(snapshot.find(message => message.type === 'existingAgents')).toMatchObject({
+      agents: [{ id: 'lisa', status: 'idle', currentTaskSource: null }],
+    });
+    expect(entries.mock.calls).not.toContainEqual([join('.squad', 'sessions')]);
+    expect(entries.mock.calls).not.toContainEqual([join('.squad', 'log')]);
+    expect(entries.mock.calls).not.toContainEqual([join('.squad', 'orchestration-log')]);
+  });
+
+  it('carries exact-session SDK fixtures through authenticated sockets with per-open isolation', async () => {
+    const options = await fixture();
+    let receive!: Parameters<JoinedSession['on']>[0];
+    const stdout = vi.spyOn(process.stdout, 'write');
+    const session: JoinedSession = {
+      sessionId: 'joined-session',
+      on: vi.fn(handler => { receive = handler; return vi.fn(); }),
+      rpc: { metadata: { snapshot: vi.fn(async () => ({
+        sessionId: 'joined-session', workingDirectory: options.projectRoot,
+      })) } },
+    };
+    const provider = await startOfficeExtension({
+      CanvasError: class extends Error {},
+      createCanvas: definition => definition,
+      joinSession: async () => session,
+    }, options);
+    const ctx = { sessionId: 'joined-session', extensionId: 'provider', canvasId: 'squad-pod', instanceId: 'first' };
+    const emit = (type: string, data: object, agentId?: string) =>
+      receive({ type, data, agentId, timestamp: '2026-11-03T20:30:00Z' });
+    try {
+      emit('subagent.started', { toolCallId: 'before-open', agentName: 'lisa' }, 'old-actor');
+      const first = await provider.canvas.open(ctx);
+      const firstCookie = (await auth(first)).headers['set-cookie']![0].split(';')[0];
+      const one = await connect(first, firstCookie);
+      expect(one.messages.find(message => message.type === 'observedTasks')).toMatchObject({ snapshot: { tasks: [] } });
+      emit('subagent.started', { toolCallId: 'dispatch', agentName: 'lisa', model: 'runtime' }, 'actor');
+      emit('tool.execution_start', { toolCallId: 'read', toolName: 'view' }, 'actor');
+      await vi.waitFor(() => expect(one.messages).toContainEqual({
+        type: 'agentToolStart', agentId: 'lisa', toolId: 'read', tool: 'view', status: 'Reading file',
+      }));
+      expect(one.messages).toContainEqual(expect.objectContaining({ type: 'agentStatus', status: 'active' }));
+      const second = await provider.canvas.open({ ...ctx, instanceId: 'second' });
+      const secondCookie = (await auth(second)).headers['set-cookie']![0].split(';')[0];
+      const two = await connect(second, secondCookie);
+      expect(two.messages.find(message => message.type === 'observedTasks')).toMatchObject({ snapshot: { tasks: [] } });
+      expect(two.messages.filter(message => message.type === 'agentToolStart')).toEqual([]);
+      emit('tool.execution_complete', { toolCallId: 'read', model: 'runtime' }, 'actor');
+      emit('subagent.completed', { toolCallId: 'dispatch' }, 'actor');
+      await vi.waitFor(() => expect(one.messages).toContainEqual({
+        type: 'agentToolDone', agentId: 'lisa', toolId: 'read', tool: 'view',
+      }));
+      await vi.waitFor(() => expect(one.messages).toContainEqual(expect.objectContaining({
+        type: 'agentStatus', status: 'idle',
+      })));
+      for (const message of [...one.messages, ...two.messages])
+        expect(decodeEvent(JSON.stringify({ version: 1, kind: 'office', message }))).toEqual(message);
+      receive({ type: 'session.context_changed' });
+      await expect(http(first, '/')).rejects.toThrow();
+      await expect(http(second, '/')).rejects.toThrow();
+      const reopened = await provider.canvas.open(ctx);
+      expect(reopened.url).not.toBe(first.url);
+      expect(session.on).toHaveBeenCalledOnce();
+    } finally { await provider.dispose(); }
+    expect(stdout).not.toHaveBeenCalled();
+  });
+
+  it('preserves joined-session overlays across viewer/control snapshots, reads, saves and live updates', async () => {
+    const options = await fixture();
+    const host = await startCanvasOfficeHost({ ...options, sessionId: 'joined-session' });
+    hosts.push(host);
+    host.acceptActivity!({ type: 'subagent.started', agentId: 'actor',
+      data: { toolCallId: 'dispatch', agentName: 'lisa' } });
+    host.acceptActivity!({ type: 'tool.execution_start', agentId: 'actor',
+      data: { toolCallId: 'read', toolName: 'view' } });
+    const active = { id: 'lisa', status: 'active', currentTaskSource: 'live' };
+    const snapshot = await host.snapshot();
+    expect(snapshot.find(message => message.type === 'existingAgents')).toMatchObject({ agents: [active] });
+    expect(snapshot).toContainEqual({
+      type: 'agentToolStart', agentId: 'lisa', toolId: 'read', tool: 'view', status: 'Reading file',
+    });
+    const readCookie = (await auth(host)).headers['set-cookie']![0].split(';')[0];
+    const viewer = await connect(host, readCookie);
+    const control = await connect(host, await controlCookie(host), true);
+    for (const client of [viewer, control]) {
+      expect(client.messages.find(message => message.type === 'existingAgents')).toMatchObject({ agents: [active] });
+      expect(client.messages.find(message => message.type === 'sourceStatus')).toMatchObject({
+        status: { liveActivity: { state: 'following', sessionId: 'joined-session' } },
+      });
+      expect(client.messages).toContainEqual({
+        type: 'agentToolStart', agentId: 'lisa', toolId: 'read', tool: 'view', status: 'Reading file',
+      });
+      client.socket.send(JSON.stringify({ version: 1, kind: 'office',
+        message: { type: 'requestAgentDetail', agentId: 'lisa', requestId: 'active' } }));
+      await vi.waitFor(() => expect(client.messages).toContainEqual(expect.objectContaining({
+        type: 'agentDetailLoaded', requestId: 'active', detail: expect.objectContaining(active),
+      })));
+      client.messages.length = 0;
+    }
+    host.acceptActivity!({ type: 'tool.execution_start', agentId: 'actor',
+      data: { toolCallId: 'edit', toolName: 'edit' } });
+    await save(control, { type: 'saveAgentSeats', seats: { lisa: 'seat-live' } }, null);
+    for (const client of [viewer, control]) {
+      await vi.waitFor(() => {
+        expect(client.messages).toContainEqual(expect.objectContaining({
+          type: 'agentToolStart', agentId: 'lisa', toolId: 'edit',
+        }));
+        expect(client.messages).toContainEqual(expect.objectContaining({
+          type: 'existingAgents', agents: [expect.objectContaining({ ...active, seatId: 'seat-live' })],
+        }));
+      }, { timeout: 3000 });
+    }
+    host.clearActivity!();
+    for (const client of [viewer, control]) {
+      await vi.waitFor(() => expect(client.messages).toContainEqual(expect.objectContaining({
+        type: 'agentStatus', agentId: 'lisa', status: 'idle', currentTaskSource: null,
+      })));
+      client.socket.send(JSON.stringify({ version: 1, kind: 'office',
+        message: { type: 'requestAgentDetail', agentId: 'lisa', requestId: 'cleared' } }));
+      await vi.waitFor(() => expect(client.messages).toContainEqual(expect.objectContaining({
+        type: 'agentDetailLoaded', requestId: 'cleared',
+        detail: expect.objectContaining({ id: 'lisa', status: 'idle', currentTaskSource: null }),
+      })));
+    }
+    expect((await host.snapshot()).find(message => message.type === 'existingAgents')).toMatchObject({
+      agents: [{ id: 'lisa', status: 'idle', currentTaskSource: null, seatId: 'seat-live' }],
+    });
+  });
+
   it('connects SDK-double open/actions/close to the real host and guarded project services', async () => {
     const options = await fixture();
     await mkdir(join(options.projectRoot, '.squad', 'agents', 'lisa'), { recursive: true });
@@ -152,7 +288,7 @@ describe('isolated default read-only Canvas office host', () => {
       const state = await provider.canvas.actions[0].handler({ ...ctx, actionName: 'get_office_state' });
       expect(state).toMatchObject({
         members: [{ slug: 'lisa', status: 'idle' }], layout: { cols: 2, rows: 1, furnitureCount: 0 },
-        source: { teamFound: true, observer: 'watching', liveActivity: 'unavailable' },
+        source: { teamFound: true, observer: 'watching', liveActivity: 'following' },
       });
       const detail = await provider.canvas.actions[1].handler({
         ...ctx, actionName: 'get_member_details', input: { slug: 'lisa' },

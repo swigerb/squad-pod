@@ -7,7 +7,7 @@ declare module '@github/copilot-sdk/extension' {
   export interface JoinedSession {
     sessionId: string;
     rpc?: { metadata?: { snapshot(): Promise<unknown> } };
-    on(handler: (event: { type: string }) => void): () => void;
+    on(handler: (event: { type: string; id?: string; agentId?: string; timestamp?: string; data?: unknown }) => void): () => void;
   }
   export interface CanvasDefinition {
     id: string; displayName: string; description: string; inputSchema: object;

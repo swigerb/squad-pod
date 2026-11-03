@@ -4,6 +4,7 @@ out/
 *.vsix
 /standalone/LICENSE
 /standalone/THIRD_PARTY_NOTICES.md
+/plugins/squad-pod/
 
 # Squad: ignore generated logs
 .squad/orchestration-log/

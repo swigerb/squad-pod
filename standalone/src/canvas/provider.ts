@@ -30,6 +30,7 @@ const same = (a: Identity, b: Identity) => a.key === b.key && a.dev === b.dev &&
 export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHostOptions, 'projectRoot'>,
   lifecycle: Pick<NodeJS.Process, 'once' | 'removeListener'> = process) {
   let session: SDK.JoinedSession | undefined;
+  let boundSessionId: string | undefined;
   let providerId: string | undefined;
   let disposed = false;
   let cleanupFailed = false;
@@ -38,8 +39,15 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
   let unsubscribe: (() => void) | undefined;
   const entries = new Map<string, Entry>();
   function fail(code: string): never { throw new sdk.CanvasError(code, 'Squad Pod Canvas authority or resource unavailable'); }
+  function revoke() {
+    const owned = [...entries.values()];
+    entries.clear();
+    for (const entry of owned) entry.host?.clearActivity?.();
+    for (const entry of owned) void closeEntry(entry).catch(() => { cleanupFailed = true; });
+  }
   function validate(ctx: Context) {
     if (disposed || cleanupFailed || !session) fail('canvas_unavailable');
+    if (session.sessionId !== boundSessionId) { revoke(); fail('canvas_session_mismatch'); }
     if (!ctx || typeof ctx !== 'object') fail('canvas_context_invalid');
     if (ctx.sessionId !== session.sessionId) fail('canvas_session_mismatch');
     if (ctx.canvasId !== 'squad-pod' || typeof ctx.instanceId !== 'string' || !id.test(ctx.instanceId)
@@ -86,6 +94,7 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
     try { await host.dispose(); } catch { cleanupFailed = true; fail('canvas_disposal_failed'); }
   };
   const closeEntry = async (entry: Entry) => {
+    if (entry.host) return release(entry.host);
     let host: CanvasOfficeHost | undefined;
     try { host = await entry.ready; } catch { return; }
     if (host) await release(host);
@@ -93,6 +102,7 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
   async function close(ctx: Context) {
     const entry = validate(ctx);
     entries.delete(ctx.instanceId);
+    entry?.host?.clearActivity?.();
     if (entry) {
       try { await closeEntry(entry); } catch { fail('canvas_disposal_failed'); }
     }
@@ -112,6 +122,7 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
       }
       const generation = ++entry.generation;
       entry.pending = true;
+      entry.host?.clearActivity?.();
       try {
         const root = await authority(ctx);
         active(ctx, entry, generation);
@@ -122,7 +133,7 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
           // Startup belongs to the instance; only the latest open owns authority.
           entry.ready = Promise.resolve().then(async () => {
             active(ctx, owned);
-            const host = await startCanvasOfficeHost({ ...paths, projectRoot: root.path });
+            const host = await startCanvasOfficeHost({ ...paths, projectRoot: root.path, sessionId: session!.sessionId });
             try { active(ctx, owned); } catch (error) { await release(host); throw error; }
             owned.host = host;
             return host;
@@ -174,6 +185,7 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
     disposed = true;
     const owned = [...entries.values()];
     entries.clear();
+    for (const entry of owned) entry.host?.clearActivity?.();
     const subscription = unsubscribe;
     unsubscribe = undefined;
     for (const signal of ['disconnect', 'SIGTERM', 'SIGINT']) lifecycle.removeListener(signal, stop);
@@ -188,7 +200,18 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
   try {
     session = await sdk.joinSession({ canvases: [canvas] });
     if (!session || typeof session.sessionId !== 'string' || !id.test(session.sessionId)) fail('canvas_binding_invalid');
-    unsubscribe = session.on(event => { if (event.type === 'session.context_changed') stop(); });
+    boundSessionId = session.sessionId;
+    const joined = session;
+    unsubscribe = joined.on(event => {
+      if (disposed) return;
+      if (session !== joined || joined.sessionId !== boundSessionId
+        || event.type === 'session.context_changed' || (event.type === 'session.shutdown' && !event.agentId)) {
+        revoke();
+        if (event.type === 'session.shutdown' && !event.agentId) stop();
+        return;
+      }
+      for (const entry of entries.values()) if (!entry.pending) entry.host?.acceptActivity?.(event);
+    });
     if (typeof unsubscribe !== 'function') fail('canvas_binding_invalid');
     if (disposed) { unsubscribe(); fail('canvas_binding_invalid'); }
     for (const signal of ['disconnect', 'SIGTERM', 'SIGINT']) lifecycle.once(signal, stop);

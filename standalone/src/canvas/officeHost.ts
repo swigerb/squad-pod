@@ -4,18 +4,22 @@ import { createObserver } from '../observer.js';
 import { startTransport } from '../transport.js';
 import { createOfficeControl } from '../officeControl.js';
 import type { OutboundMessage } from '../../../src/types.js';
+import { CanvasActivity } from './activity.js';
 
 /** Explicit local inputs supplied by a host adapter, not by a browser request. */
 export interface CanvasOfficeHostOptions {
   projectRoot: string;
   bundledAssetsRoot: string;
   staticRoot: string;
+  sessionId?: string;
 }
 
 /** Instance-owned office. Fragment credentials are separate single-use secrets. */
 export interface CanvasOfficeHost {
   url: string;
   snapshot(): Promise<OutboundMessage[]>;
+  acceptActivity?(event: unknown): void;
+  clearActivity?(): void;
   dispose(): Promise<void>;
 }
 
@@ -56,13 +60,27 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
   const root = await validateRoot(options.projectRoot);
   let observer: ReturnType<typeof createObserver> | undefined;
   let transport: Awaited<ReturnType<typeof startTransport>> | undefined;
+  const listeners = new Set<(messages: OutboundMessage[]) => void>();
+  const live = options.sessionId ? new CanvasActivity(options.sessionId,
+    message => { for (const listener of listeners) listener([message]); }) : undefined;
+  const snapshot = async () => {
+    const messages = await observer!.snapshot();
+    return live ? [...live.snapshot(messages), ...live.current()] : messages;
+  };
   try {
-    observer = createObserver(root, options.bundledAssetsRoot, 1000, { liveActivity: false });
-    await observer.snapshot();
+    observer = createObserver(root, options.bundledAssetsRoot, 1000, { liveActivity: false, fileActivity: false });
+    await snapshot();
     transport = await startTransport({
       staticRoot: options.staticRoot, canvas: true,
-      snapshot: observer.snapshot, subscribe: observer.subscribe, onRead: observer.onRead,
       officeControl: createOfficeControl(root),
+      snapshot, subscribe: listener => {
+        listeners.add(listener);
+        const stop = observer!.subscribe(messages => listener(live ? live.snapshot(messages) : messages));
+        return () => { listeners.delete(listener); stop(); };
+      }, onRead: async message => {
+        const messages = await observer!.onRead(message);
+        return live ? live.snapshot(messages) : messages;
+      },
     });
   } catch {
     try { await transport?.dispose(); } finally { observer?.dispose(); }
@@ -73,9 +91,13 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
   let disposal: Promise<void> | undefined;
   return {
     url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}&e=${ownedTransport.controlToken}`,
-    snapshot: ownedObserver.snapshot,
+    snapshot,
+    acceptActivity: event => live?.accept(event),
+    clearActivity: () => live?.clear(),
     dispose() {
       if (!disposal) {
+        live?.clear();
+        listeners.clear();
         ownedObserver.dispose();
         disposal = ownedTransport.dispose().catch(() => { throw new Error('CANVAS_DISPOSE_FAILED'); });
       }

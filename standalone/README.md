@@ -476,6 +476,19 @@ Each open requires exact joined-session metadata within one second (at most four
 outstanding calls, including timed-out calls). Only its canonical local project
 root is authorized; optional `projectRoot` input must match. Offices are isolated,
 read-only until the UI opt-in above, and closed on context replacement, close or process shutdown.
+The provider subscribes once to the joined SDK session and fans only sanitized
+typed events into each open office. Each open starts empty, with no replay,
+home-directory discovery or session-log reads. Context changes revoke existing
+offices immediately but keep the provider available: the next open must obtain
+fresh exact-session project authority. Unknown subagents stay transient tasks;
+only exact roster IDs can drive member activity. Live model/context observations
+remain separate from declared preferences and recorded usage; absent fields are
+unavailable, not zero. Event IDs and aliases are bounded in memory (128 entries,
+160-character IDs), live tools are capped at 128 and observed tasks at 64; raw
+events are never queued or retained. Native-host evidence remains tracked in #182.
+Viewer and opted-in control channels share the same live overlay on snapshots,
+incremental updates and member-detail reads; editing does not grant session or
+terminal authority.
 `get_office_state` and `get_member_details` expose bounded selected-project
 metadata only. Model declarations are not runtime selection; absent data is null
 or unavailable. The CLI continues to use its separate paste-authenticated bundle.
