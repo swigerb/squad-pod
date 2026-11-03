@@ -388,8 +388,9 @@ async function browserAcceptance(out) {
       await page.getByText('2x', { exact: true }).waitFor();
       assert.equal(fixture.reads.length, 0, 'default-off production provider must not touch the injected home');
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
-      await page.locator('#squad-pod-live-activity').click();
-      await poll(page, () => document.querySelector('#squad-pod-live-activity').checked);
+      await page.getByRole('dialog', { name: 'Settings', exact: true }).getByLabel('Live Activity (opt-in)', { exact: true }).click();
+      await poll(page, () => [...document.querySelectorAll('[role="dialog"][aria-label="Settings"] label')]
+        .find(label => label.textContent === 'Live Activity (opt-in)')?.control?.checked === true);
       await page.getByRole('button', { name: '×', exact: true }).click();
       const modelTimestamp = '2026-10-30T12:34:56.000Z';
       fixture.append(event('session.start', { selectedModel: 'fixture-root-model' }, { timestamp: modelTimestamp })
@@ -515,8 +516,9 @@ async function browserAcceptance(out) {
         + tool('again', 'view', { path: 'fixture.ts' }).replaceAll('member-run', 'member-again') + done('again', 800));
       await page.getByRole('progressbar').waitFor();
       await page.getByRole('button', { name: 'Settings', exact: true }).click();
-      await page.locator('#squad-pod-live-activity').click();
-      await poll(page, () => !document.querySelector('#squad-pod-live-activity').checked);
+      await page.getByRole('dialog', { name: 'Settings', exact: true }).getByLabel('Live Activity (opt-in)', { exact: true }).click();
+      await poll(page, () => [...document.querySelectorAll('[role="dialog"][aria-label="Settings"] label')]
+        .find(label => label.textContent === 'Live Activity (opt-in)')?.control?.checked === false);
       await page.getByRole('button', { name: '×', exact: true }).click();
       await page.getByRole('progressbar').waitFor({ state: 'detached' });
       await page.locator('[data-agent-label="ada"] [aria-label="Idle"]').waitFor();

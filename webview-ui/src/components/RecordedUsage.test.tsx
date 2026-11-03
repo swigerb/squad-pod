@@ -158,7 +158,12 @@ describe('recorded usage in the real App host-message path (mocked boundary)', (
     expect(host.textContent).toContain('Live CLI observer: off');
     const before = vi.mocked(client.send).mock.calls.length;
     act(() => [...host.querySelectorAll('button')].find(b => b.textContent === 'Observation settings and consent')!.click());
-    expect(host.querySelector('#squad-pod-live-activity')).not.toBeNull();
+    const label = [...host.querySelectorAll<HTMLLabelElement>('[role="dialog"][aria-label="Settings"] label')]
+      .find(item => item.textContent === 'Live Activity (opt-in)')!;
+    expect(label).toBeDefined();
+    expect(label.control).toBeInstanceOf(HTMLInputElement);
+    expect(host.contains(label.control)).toBe(true);
+    expect((label.control as HTMLInputElement).checked).toBe(false);
     expect(vi.mocked(client.send).mock.calls).toHaveLength(before);
   });
 

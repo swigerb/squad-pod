@@ -117,7 +117,10 @@ describe('live tools and context through the App boundary', () => {
     const button = [...host.querySelectorAll('button')].find(item => item.textContent === 'Settings')!;
     act(() => button.click());
     await frame();
-    const checkbox = host.querySelector<HTMLInputElement>('#squad-pod-live-activity')!;
+    const label = [...host.querySelectorAll<HTMLLabelElement>('[role="dialog"][aria-label="Settings"] label')]
+      .find(item => item.textContent === 'Live Activity (opt-in)')!;
+    const checkbox = label.control as HTMLInputElement;
+    expect(host.contains(checkbox)).toBe(true);
     expect(checkbox.checked).toBe(false);
     act(() => checkbox.click());
     expect(client.send).toHaveBeenCalledWith({ type: 'setLiveActivity', enabled: true });
@@ -132,8 +135,8 @@ describe('live tools and context through the App boundary', () => {
     expect(client.send).toHaveBeenCalledWith({ type: 'setLiveActivity', enabled: false });
   });
 
-  it('renders CLI-opted-in live tools/context/tasks in a read-only standalone office without offering browser consent', async () => {
-    act(() => root.render(<App client={client} readOnly standalone />));
+  it.each([true, false])('renders CLI-opted-in live tools/context/tasks in standalone without offering browser consent (readOnly=%s)', async readOnly => {
+    act(() => root.render(<App client={client} readOnly={readOnly} standalone />));
     source('following');
     send({ type: 'existingAgents', agents: [{
       id: 'ada', name: 'Ada', role: 'Developer', status: 'active', currentTask: 'Fixture live task',
@@ -151,7 +154,14 @@ describe('live tools and context through the App boundary', () => {
     expect(host.textContent).toContain('Live CLI observer: following (session)');
     expect(host.textContent).toContain('not an owned-terminal correlation');
     expect(host.textContent).toContain('Browser settings cannot grant live-log consent');
-    expect(host.querySelector('#squad-pod-live-activity')).toBeNull();
+    const settingsButton = [...host.querySelectorAll('button')].find(item => item.textContent === 'Settings')!;
+    expect(settingsButton.disabled).toBe(readOnly);
+    if (!readOnly) {
+      act(() => settingsButton.click());
+      expect(host.querySelector('[role="dialog"][aria-label="Settings"]')).not.toBeNull();
+    }
+    expect([...host.querySelectorAll('label')]
+      .find(item => item.textContent === 'Live Activity (opt-in)')).toBeUndefined();
     expect(client.send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'setLiveActivity' }));
     send({ type: 'existingAgents', agents: [{
       id: 'ada', name: 'Ada', role: 'Developer', status: 'idle', currentTask: null,
