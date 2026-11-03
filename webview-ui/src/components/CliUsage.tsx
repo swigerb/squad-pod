@@ -18,8 +18,9 @@ export function CliUsage({ snapshot, readOnly, canvas = false, onAction }: {
       </div>}
     {snapshot?.diagnostic && <p role="alert">{snapshot.diagnostic}</p>}
     {!report ? <p>No imported CLI quantities available. Missing or rejected data is not zero consumption.
+      {canvas ? ' Canvas does not import usage exports or launch the CLI.' : <>
       {' '}Launch with <code>copilot --agent squad --usage-output-file &lt;file.json&gt;</code> to request an export;
-      {' '}then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.</p> : <>
+      {' '}then explicitly select that workspace-local file. No automatic discovery or paid run is performed by Pod.</>}</p> : <>
       <p>Producer-reported session quantities: {report.userRequests.toLocaleString()} user-initiated API requests;
         {' '}{String(report.premiumRequests)} premium-request cost (multiplier applied);
         {' '}{String(report.apiDurationMs)} ms API time;

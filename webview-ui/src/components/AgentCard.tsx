@@ -30,6 +30,7 @@ interface AgentCardProps {
   onViewCharter?: (agentId: string) => void;
   runtimeModel?: RuntimeModelObservation | null;
   liveActivity?: LiveSourceStatus;
+  canvas?: boolean;
   readOnly?: boolean;
 }
 
@@ -65,7 +66,7 @@ function formatAge(timestamp: number, now: number): string {
 }
 
 export function AgentCard({
-  detail, position, onClose, onViewCharter, runtimeModel, liveActivity, readOnly = false,
+  detail, position, onClose, onViewCharter, runtimeModel, liveActivity, readOnly = false, canvas = false,
 }: AgentCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({ width: window.innerWidth, height: window.innerHeight, cardHeight: 0 });
@@ -239,7 +240,7 @@ export function AgentCard({
         <RuntimeModelStatus
           label="Member runtime model"
           observation={runtimeModel}
-          unavailableReason={liveModelUnavailableReason(liveActivity, readOnly)}
+          unavailableReason={liveModelUnavailableReason(liveActivity, readOnly, canvas)}
         />
       </div>
 

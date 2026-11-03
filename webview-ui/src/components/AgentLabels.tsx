@@ -7,6 +7,7 @@ import { AnnotationLayout } from '../office/engine/overlayLayout.js';
 export { placeOverlay } from '../office/engine/overlayLayout.js';
 
 interface AgentLabelsProps {
+  initiallyCollapsed?: boolean;
   officeState: OfficeState;
   zoom: number;
   panRef: React.RefObject<{ x: number; y: number }>;
@@ -43,9 +44,10 @@ const LABEL_HEAD_GAP = 8;
 const MAX_LABEL_DISPLACEMENT = 12;
 const LABEL_SAFE_INSET = 56;
 
-export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, taskBubbles = {}, onAgentClick, onLocateAgent }: AgentLabelsProps) {
+export function AgentLabels({ initiallyCollapsed = false, officeState, zoom, panRef, agentTools = {}, taskBubbles = {}, onAgentClick, onLocateAgent }: AgentLabelsProps) {
   const [frame, setFrame] = useState<{ positions: LabelPosition[]; docked: boolean }>({ positions: [], docked: false });
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(initiallyCollapsed);
+  const previousCollapsed = useRef(initiallyCollapsed);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const layoutRef = useRef(new AnnotationLayout());
@@ -180,7 +182,8 @@ export function AgentLabels({ officeState, zoom, panRef, agentTools = {}, taskBu
   }, [frame]);
 
   useLayoutEffect(() => {
-    if (collapsed) toggleRef.current?.focus();
+    if (collapsed && !previousCollapsed.current) toggleRef.current?.focus();
+    previousCollapsed.current = collapsed;
   }, [collapsed]);
 
   return (

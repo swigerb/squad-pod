@@ -141,7 +141,23 @@ Responsive controls provide touch pan/zoom, page navigation and deliberate clipb
 
 See the [build/run and security instructions](standalone/README.md). The companion is separate from the Marketplace extension and is not published as an npm product.
 
-### Canvas browser client (source-only)
+### Canvas plugin (experimental, local candidate)
+
+The Copilot app Canvas plugin is an initial Windows candidate using an
+experimental host API, not a replacement for the CLI or VS Code extension.
+It observes only the explicitly selected project/session, starts read-only on
+every load, and requires separate per-instance **Enable editing** authorization
+for project layout, member seats/appearance and settings. Canvas labels initially
+collapse for narrow panels; other host defaults and versions are unchanged.
+
+The [Canvas control and release matrix](docs/canvas-feature-matrix.md) inventories
+supported controls, disabled host-bound actions and **OPEN** release decisions.
+Native screenshots/acceptance and embedded file transfers remain unverified;
+local browser tests are not native evidence. See [Canvas development](docs/canvas-development.md)
+for packaging context. Bundled art retains [third-party notices](THIRD_PARTY_NOTICES.md)
+and creator-specific permissions; plugin availability does not relicense assets.
+
+#### Canvas browser client (source-only)
 
 Build the separate Copilot app panel client with `cd webview-ui` then
 `npx vite build --config vite.canvas.config.ts`. Its entry is

@@ -391,6 +391,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone, canvas }: { reco
           ...(directoryCatalog?.workspaceDirectories ?? []),
           ...(directoryCatalog?.savedDirectories ?? []),
         ]}
+        directoryMappingAvailable={!canvas}
         selectedAreaLabel={editorState.selectedAreaLabel}
         transformError={editorState.transformError}
         onAreaAdd={editor.handleAreaAdd}
@@ -427,11 +428,11 @@ function ConnectedOffice({ recoveryState, readOnly, standalone, canvas }: { reco
         }}
       />
 
-      <AgentLabels officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef}
+      <AgentLabels initiallyCollapsed={canvas} officeState={getOfficeState()} zoom={editor.zoom} panRef={editor.panRef}
         taskBubbles={taskBubbles}
         agentTools={agentTools} onAgentClick={handleDeskClick} onLocateAgent={requestCamera} />
 
-      <MissingSquad status={sourceStatus} />
+      <MissingSquad status={sourceStatus} canvas={canvas} />
       {readOnly && sourceStatus?.teamFound && sourceStatus.error && (
         <p role="alert" style={{ position: 'absolute', top: 0, right: 12, maxWidth: '70%', maxHeight: '30%', overflow: 'auto', zIndex: 45, padding: 12, background: 'var(--vscode-editor-background)', whiteSpace: 'pre-wrap' }}>
           {sourceStatus.error}
@@ -471,7 +472,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone, canvas }: { reco
         onToggle={handleToggleTelemetry}
         onClear={handleClearTelemetry}
       />
-      {showSettings && !readOnly && <SettingsModal standalone={standalone} onClose={() => setShowSettings(false)} isDebugMode={isDebugMode}
+      {showSettings && !readOnly && <SettingsModal canvas={canvas} standalone={standalone} onClose={() => setShowSettings(false)} isDebugMode={isDebugMode}
         onToggleDebugMode={() => updateSetting('debugEnabled', !isDebugMode)}
         settings={settings} sourceStatus={sourceStatus} assetStatus={assetStatus}
         onSoundChange={(enabled) => updateSetting('soundEnabled', enabled)}
@@ -488,6 +489,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone, canvas }: { reco
       )}
 
       <AgentCard
+        canvas={canvas}
         detail={agentDetail && getOfficeState().characters.has(agentDetail.id) ? {
           ...agentDetail,
           status: agentStatuses[agentDetail.id] === 'active' ? 'active'
@@ -504,6 +506,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone, canvas }: { reco
       />
 
       <SquadInfoCard
+        canvas={canvas}
         info={visibleSquadInfo}
         liveModels={liveModels}
         liveActivity={sourceStatus?.liveActivity}

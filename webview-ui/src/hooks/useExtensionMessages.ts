@@ -699,7 +699,9 @@ export function useExtensionMessages(
     };
 
     return connectOffice(client, handleMessage, () => {
-      if (!readOnly) client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
+      if (!readOnly && client.capabilities.actions.includes('diagnosticReport')) {
+        client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly, standalone, sound]);

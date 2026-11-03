@@ -1,6 +1,6 @@
 import type { SourceStatus } from '../../../src/types.js';
 
-export function SourceStatusView({ status, readOnly = false }: { status: SourceStatus | null; readOnly?: boolean }) {
+export function SourceStatusView({ status, readOnly = false, canvas = false }: { status: SourceStatus | null; readOnly?: boolean; canvas?: boolean }) {
   return (
     <section aria-label="Squad source status" style={{ fontSize: '12px', overflowWrap: 'anywhere' }}>
       <strong>Squad source</strong>
@@ -13,9 +13,9 @@ export function SourceStatusView({ status, readOnly = false }: { status: SourceS
           {status.error && <div role="alert">{status.error}</div>}
         </>
       ) : <div>Awaiting host source status...</div>}
-      <div>Live CLI observer: {status?.liveActivity?.state ?? 'Unavailable (no live source status)'}
+      <div>Live CLI observer: {canvas ? 'Unavailable in Canvas' : status?.liveActivity?.state ?? 'Unavailable (no live source status)'}
         {status?.liveActivity?.sessionId ? ` (${status.liveActivity.sessionId})` : ''}</div>
-      {readOnly && <p>Live observation requires server startup opt-in (--live-activity).
+      {readOnly && !canvas && <p>Live observation requires server startup opt-in (--live-activity).
         {' '}{status?.liveActivity?.selection && `Selection: ${status.liveActivity.selection}. `}
         {status?.liveActivity?.reason
           ?? 'Selects the newest matching-project Squad session; not an owned-terminal correlation.'}</p>}

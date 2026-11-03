@@ -32,6 +32,7 @@ interface SquadInfoCardProps {
   onClose: () => void;
   liveModels?: LiveModelSnapshot | null;
   liveActivity?: LiveSourceStatus;
+  canvas?: boolean;
   readOnly?: boolean;
 }
 
@@ -54,7 +55,7 @@ function roleEmoji(role: string): string {
 
 export function SquadInfoCard({
   info, agentDetails = {}, availableAgentIds = [], onRequestAgentDetail, onOpenCharter, onClose,
-  liveModels, liveActivity, readOnly = false,
+  liveModels, liveActivity, readOnly = false, canvas = false,
 }: SquadInfoCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
@@ -203,7 +204,7 @@ export function SquadInfoCard({
           <RuntimeModelStatus
             label="Current-session model"
             observation={liveModels?.session}
-            unavailableReason={liveModelUnavailableReason(liveActivity, readOnly)}
+            unavailableReason={liveModelUnavailableReason(liveActivity, readOnly, canvas)}
           />
         </div>
 
@@ -296,7 +297,7 @@ export function SquadInfoCard({
                           <RuntimeModelStatus
                             label="Member runtime model"
                             observation={memberRuntimeModel(liveModels, m.id)}
-                            unavailableReason={liveModelUnavailableReason(liveActivity, readOnly)}
+                            unavailableReason={liveModelUnavailableReason(liveActivity, readOnly, canvas)}
                           />
                           <div>Historical model reports remain historical. Runtime selection, emitted assistant models, and declared metadata are separate sources.</div>
                           <strong>Declared model metadata (not effective runtime selection):</strong>
@@ -340,7 +341,7 @@ export function SquadInfoCard({
                           </button>
                         ) : (
                           <div style={{ marginTop: '8px' }}>
-                            <button type="button" disabled title="Opening files is unavailable in the read-only observer.">Open charter</button>
+                            <button type="button" disabled title="Opening files is unavailable in this host.">Open charter</button>
                             <div role="note">Opening a charter in the editor is unavailable in the read-only observer.</div>
                           </div>
                         )}
