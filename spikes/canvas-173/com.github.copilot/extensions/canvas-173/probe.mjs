@@ -196,11 +196,24 @@ export function createProbe(createCanvas, CanvasError) {
     let session;
     let providerId;
     let disposed = false;
+    let cleanupFailed = false;
     const instances = new Map();
     const fail = (code, message) => { throw new CanvasError(code, message); };
-    const release = (unsubscribe) => {
-        try { unsubscribe?.(); } catch { /* Authority stays revoked if upstream cleanup fails. */ }
+    const requireCleanup = () => {
+        if (cleanupFailed) fail("probe_cleanup_failed", "Observation cleanup failed; provider lifetime is closed");
     };
+    const releaseAll = (subscriptions) => {
+        for (const unsubscribe of subscriptions) {
+            try { unsubscribe?.(); }
+            catch {
+                cleanupFailed = true;
+                // Latch failure before draining other owners; never retry the failed unsubscribe.
+                subscriptions.push(...[...instances.values()].map(revoke));
+            }
+        }
+        return !cleanupFailed;
+    };
+    const release = (unsubscribe) => releaseAll([unsubscribe]);
     const revoke = (entry) => {
         const state = entry.observation;
         entry.observation = undefined;
@@ -215,9 +228,10 @@ export function createProbe(createCanvas, CanvasError) {
     const revokeAll = () => {
         // Clear all authority before calling upstream code, which may be reentrant.
         const subscriptions = [...instances.values()].map(revoke);
-        subscriptions.forEach(release);
+        return releaseAll(subscriptions);
     };
-    const validate = (ctx) => {
+    const validate = (ctx, closing = false) => {
+        if (!closing) requireCleanup();
         if (disposed) fail("probe_disposed", "Provider is closed");
         if (!session) fail("probe_not_ready", "Joined session is not ready");
         if (ctx?.sessionId !== session.sessionId) fail("probe_session_mismatch", "Exact joined session required");
@@ -237,19 +251,20 @@ export function createProbe(createCanvas, CanvasError) {
         try {
             selected = directoryIdentity(selectedPath);
             active = directoryIdentity(ctx.session?.workingDirectory);
-        } catch { revokeAll(); fail("probe_root_unavailable", "Explicit local directories and active session context are required"); }
-        if (!sameDirectory(selected, active)) { revokeAll(); fail("probe_root_mismatch", "Exact active directory match required"); }
-        if (bound && !sameDirectory(selected, bound)) { revokeAll(); fail("probe_root_changed", "Instance root binding has changed; close before replacement"); }
+        } catch { revokeAll(); requireCleanup(); fail("probe_root_unavailable", "Explicit local directories and active session context are required"); }
+        if (!sameDirectory(selected, active)) { revokeAll(); requireCleanup(); fail("probe_root_mismatch", "Exact active directory match required"); }
+        if (bound && !sameDirectory(selected, bound)) { revokeAll(); requireCleanup(); fail("probe_root_changed", "Instance root binding has changed; close before replacement"); }
         return selected;
     };
     const subscribe = (entry) => {
+        requireCleanup();
         if (entry.observation) return;
         const state = observation();
         entry.observation = state;
         try {
             const unsubscribe = session.on((event) => {
-                if (disposed || entry.observation !== state) return;
-                if (event?.type === "session.context_changed") { revokeAll(); return; }
+                if (disposed || cleanupFailed || entry.observation !== state) return;
+                if (event?.type === "session.context_changed") { revokeAll(); requireCleanup(); return; }
                 const metadata = sanitizeEvent(event, state);
                 if (!metadata) { state.ignored++; return; }
                 state.accepted++;
@@ -258,9 +273,11 @@ export function createProbe(createCanvas, CanvasError) {
             });
             if (typeof unsubscribe !== "function") throw new Error("invalid subscription");
             if (entry.observation === state) state.unsubscribe = unsubscribe;
-            else unsubscribe(); // A synchronous context event can revoke during registration.
+            else release(unsubscribe); // A synchronous context event can revoke during registration.
+            requireCleanup();
         } catch {
             release(revoke(entry));
+            requireCleanup();
             fail("probe_subscription_failed", "Session event subscription failed");
         }
     };
@@ -277,11 +294,12 @@ export function createProbe(createCanvas, CanvasError) {
         await new Promise((resolve, reject) => hosted.server.close((error) => error ? reject(error) : resolve()));
     })();
     const close = async (ctx) => {
-        const entry = validate(ctx);
-        if (!entry) return;
+        const entry = validate(ctx, true);
+        if (!entry) { requireCleanup(); return; }
         release(revoke(entry));
         instances.delete(ctx.instanceId);
         await closeEntry(entry);
+        requireCleanup();
     };
     const canvas = createCanvas({
         id: CANVAS_ID,
@@ -300,6 +318,7 @@ export function createProbe(createCanvas, CanvasError) {
             const root = bindRoot(ctx, selectedPath, entry?.root);
             // Replacement revokes even before listener readiness; pending opens own generations too.
             if (entry) release(revoke(entry));
+            requireCleanup();
             if (!entry) {
                 if (instances.size >= 4) fail("probe_instance_limit", "At most four instances are supported");
                 providerId ??= ctx.extensionId;
@@ -312,6 +331,7 @@ export function createProbe(createCanvas, CanvasError) {
                 subscribe(entry);
                 openingObservation = requireObservation(entry);
                 const hosted = await entry.ready;
+                requireCleanup();
                 if (disposed || instances.get(ctx.instanceId) !== entry || entry.observation !== openingObservation) {
                     fail("probe_closed", "Instance closed while opening");
                 }
@@ -322,6 +342,7 @@ export function createProbe(createCanvas, CanvasError) {
                 release(revoke(entry));
                 if (instances.get(ctx.instanceId) === entry) instances.delete(ctx.instanceId);
                 await closeEntry(entry);
+                requireCleanup();
                 if (error instanceof CanvasError) throw error;
                 fail("probe_open_failed", "Loopback server could not start");
             }
@@ -378,13 +399,17 @@ export function createProbe(createCanvas, CanvasError) {
             session = joinedSession;
         },
         async dispose() {
-            if (disposed) return;
+            if (disposed) { requireCleanup(); return; }
             disposed = true;
             revokeAll();
             const entries = [...instances.values()];
             instances.clear();
-            await Promise.all(entries.map(closeEntry));
+            const results = await Promise.allSettled(entries.map(closeEntry));
             session = undefined;
+            requireCleanup();
+            if (results.some((result) => result.status === "rejected")) {
+                fail("probe_disposal_failed", "Provider cleanup failed");
+            }
         },
     };
 }

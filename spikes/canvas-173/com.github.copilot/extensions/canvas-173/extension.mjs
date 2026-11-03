@@ -15,6 +15,7 @@
 // context_changed clears every observation synchronously without reading its data.
 // Only a new matching host open callback reattaches; workspacePath grants no authority.
 // Close/dispose clears state and owns unsubscribe; old queued callbacks cannot revive it.
+// Unsubscribe failure permanently fails this provider lifetime closed; no automatic retry.
 // A replacement open callback retains the bounded listener but starts a fresh generation,
 // including when the preceding open is still awaiting initial listener readiness.
 import { createCanvas, joinSession, CanvasError } from "@github/copilot-sdk/extension";
@@ -25,7 +26,11 @@ const session = await joinSession({ canvases: [probe.canvas] });
 probe.bind(session);
 
 // Best-effort provider-local cleanup, not a promise of callbacks on abrupt process loss.
-const stop = () => { void probe.dispose(); };
+const stop = () => {
+    void probe.dispose().catch(() => {
+        console.error("probe_disposal_failed: Provider cleanup failed");
+    });
+};
 process.once("disconnect", stop);
 process.once("SIGTERM", stop);
 process.once("SIGINT", stop);

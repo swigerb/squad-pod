@@ -600,12 +600,122 @@ describe('staged Canvas 173 probe (synthetic SDK boundary)', () => {
     } });
     await probe.canvas.open(openCtx());
     await probe.canvas.open(openCtx('second'));
-    callbacks[0]({ type: 'session.context_changed' });
+    expect(() => callbacks[0]({ type: 'session.context_changed' })).toThrowError(
+      expect.objectContaining({
+        code: 'probe_cleanup_failed', message: 'Observation cleanup failed; provider lifetime is closed',
+      }),
+    );
     expect(cleanups).toEqual([0, 1]);
-    expect(observed).toEqual(Array(4).fill('probe_observation_revoked'));
-    callbacks.forEach((callback) => callback({ type: 'session.idle' }));
-    await probe.dispose();
+    expect(observed).toEqual([
+      'probe_observation_revoked', 'probe_observation_revoked', 'probe_cleanup_failed', 'probe_cleanup_failed',
+    ]);
+    callbacks.forEach((callback) => callback({
+      get type() { throw new Error('stale callback must not inspect event data'); },
+    }));
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await expect(probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+      await expect(probe.canvas.open(openCtx('new-panel'))).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+    }
+    expect(callbacks).toHaveLength(2);
+    expect(() => probe.canvas.actions[0].handler(ctx())).toThrowError(
+      expect.objectContaining({ code: 'probe_cleanup_failed' }),
+    );
+    await expect(probe.dispose()).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+    await expect(probe.dispose()).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+    active.splice(active.indexOf(probe), 1);
     expect(cleanups).toEqual([0, 1]);
+  });
+
+  it.each(['replacement', 'root-mismatch', 'close', 'dispose'] as const)(
+    'fails closed on %s cleanup failure while still draining every owned observation',
+    async (operation) => {
+      const probe = createProbe((options: unknown) => options, ProbeError);
+      active.push(probe);
+      const callbacks: Array<(event: unknown) => void> = [];
+      const cleanups: number[] = [];
+      probe.bind({ sessionId, on(callback: (event: unknown) => void) {
+        const index = callbacks.length;
+        callbacks.push(callback);
+        return () => {
+          cleanups.push(index);
+          if (index === 0) throw new Error('private upstream ID /private/event-data');
+          callbacks.forEach((old) => old({
+            get type() { throw new Error('revoked before remaining cleanup'); },
+          }));
+        };
+      } });
+      const first = await probe.canvas.open(openCtx());
+      const second = await probe.canvas.open(openCtx('second'));
+      callbacks.forEach((callback) => callback({ type: 'session.idle', agentId: 'private-actor' }));
+      const failure = {
+        code: 'probe_cleanup_failed', message: 'Observation cleanup failed; provider lifetime is closed',
+      };
+      const result = operation === 'replacement' ? probe.canvas.open(openCtx())
+        : operation === 'root-mismatch' ? probe.canvas.open({ ...openCtx(), session: { workingDirectory: otherRoot } })
+        : operation === 'close' ? probe.canvas.onClose(ctx()) : probe.dispose();
+      await expect(result).rejects.toMatchObject(failure);
+      expect(cleanups).toEqual([0, 1]);
+      callbacks.forEach((callback) => callback({
+        get type() { throw new Error('stale callback must remain inert'); },
+      }));
+      for (const id of ['synthetic-panel', 'second', 'new-panel']) {
+        await expect(probe.canvas.open(openCtx(id))).rejects.toMatchObject(failure);
+        expect(() => probe.canvas.actions[0].handler(ctx(id))).toThrowError(expect.objectContaining(failure));
+      }
+      if (operation !== 'dispose') {
+        await expect(probe.canvas.onClose(ctx('second'))).rejects.toMatchObject(failure);
+        await expect(get(second.url)).rejects.toThrow();
+      }
+      await expect(probe.dispose()).rejects.toMatchObject(failure);
+      active.splice(active.indexOf(probe), 1);
+      expect(cleanups).toEqual([0, 1]);
+      expect(callbacks).toHaveLength(2);
+      await expect(get(first.url)).rejects.toThrow();
+      await expect(get(second.url)).rejects.toThrow();
+    },
+  );
+
+  it('latches a throwing late unsubscribe after synchronous context revocation during registration', async () => {
+    const probe = createProbe((options: unknown) => options, ProbeError);
+    active.push(probe);
+    let stale: ((event: unknown) => void) | undefined;
+    const unsubscribe = vi.fn(() => { throw new Error('private late cleanup'); });
+    const on = vi.fn((callback: (event: unknown) => void) => {
+      stale = callback;
+      callback({ type: 'session.context_changed' });
+      return unsubscribe;
+    });
+    probe.bind({ sessionId, on });
+    await expect(probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+    stale!({ get type() { throw new Error('stale callback must remain inert'); } });
+    await expect(probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+    expect(on).toHaveBeenCalledTimes(1);
+    await expect(probe.dispose()).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+    active.splice(active.indexOf(probe), 1);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a pending open with the cleanup diagnostic instead of returning a healthy generation', async () => {
+    const probe = createProbe((options: unknown) => options, ProbeError);
+    active.push(probe);
+    let callback: ((event: unknown) => void) | undefined;
+    const unsubscribe = vi.fn(() => { throw new Error('private pending cleanup'); });
+    const on = vi.fn((handler: (event: unknown) => void) => {
+      callback = handler;
+      return unsubscribe;
+    });
+    probe.bind({ sessionId, on });
+    const opening = probe.canvas.open(openCtx());
+    const rejected = expect(opening).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+    expect(() => callback!({ type: 'session.context_changed' })).toThrowError(
+      expect.objectContaining({ code: 'probe_cleanup_failed' }),
+    );
+    await rejected;
+    await expect(probe.canvas.open(openCtx())).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+    expect(on).toHaveBeenCalledTimes(1);
+    await expect(probe.dispose()).rejects.toMatchObject({ code: 'probe_cleanup_failed' });
+    active.splice(active.indexOf(probe), 1);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
   it('does not let an invalidated pending open return stale results or erase its newer generation', async () => {
