@@ -4,6 +4,24 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+## Canvas plugin 0.1.0 — Windows preview — 2026-11-03
+
+This is the separate GitHub Copilot app plugin, not a VSIX release or version
+bump. The VS Code extension remains `1.0.0`, with unchanged defaults and behavior.
+
+- Publish the `squad-pod-plugins` catalog entry for `squad-pod` 0.1.0, pinned to
+  immutable `canvas-v0.1.0` at `16d33ae623f82b7c10a5d46f892bcc98b97b39d6`,
+  built from master `c1a0df7ca66b8c0f50a42b83758f9c8e1572e66e`.
+- Add the [native install and lifecycle guide](docs/canvas-install.md), confirmation
+  quick links, local-data/privacy boundaries and feature limitations (#214).
+- Document joined-session Squad member sub-agents, tools and task bubbles with
+  exact-session attribution and no historical replay (#209/#210).
+- Document the narrow desktop Canvas editor fix; panel width alone no longer
+  selects mobile-view controls (#212/#213).
+- Owner-approved preview for Windows local sessions, qualified on app 1.1.34;
+  not generally available. Scout verifies public-marketplace installation after
+  merge; local validation does not establish native installation.
+
 ## [1.0.0] - 2026-11-02
 
 ### Stable Squad-native release

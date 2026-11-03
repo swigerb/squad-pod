@@ -141,21 +141,25 @@ Responsive controls provide touch pan/zoom, page navigation and deliberate clipb
 
 See the [build/run and security instructions](standalone/README.md). The companion is separate from the Marketplace extension and is not published as an npm product.
 
-### Canvas plugin (experimental, local candidate)
+### GitHub Copilot app Canvas plugin — Windows preview
 
-The Copilot app Canvas plugin is an initial Windows candidate using an
-experimental host API, not a replacement for the CLI or VS Code extension.
-It observes only the explicitly selected project/session, starts read-only on
-every load, and requires separate per-instance **Enable editing** authorization
-for project layout, member seats/appearance and settings. Canvas labels initially
-collapse for narrow panels; other host defaults and versions are unchanged.
+**Canvas plugin 0.1.0** is an owner-approved Windows local-session preview, not
+generally available or the VS Code Marketplace/VSIX extension. App **1.1.34** was
+tested; this is not a minimum-version promise. macOS, Linux, WSL and remote
+sessions are unsupported. No source checkout or build is needed.
 
-The [Canvas control and release matrix](docs/canvas-feature-matrix.md) inventories
-supported controls, disabled host-bound actions and **OPEN** release decisions.
-Native screenshots/acceptance and embedded file transfers remain unverified;
-local browser tests are not native evidence. See [Canvas development](docs/canvas-development.md)
-for packaging context. Bundled art retains [third-party notices](THIRD_PARTY_NOTICES.md)
-and creator-specific permissions; plugin availability does not relicense assets.
+In the app: **Customize → Add extension → Manage marketplaces** → add
+**`swigerb/squad-pod`** → **Install Squad Pod**. In a local project session,
+ask Copilot to open the Squad Pod canvas or use **Open canvas**.
+The [install guide's quick links](docs/canvas-install.md#install-and-open)
+prefill confirmation forms; they never install silently.
+
+The canvas starts read-only; **Enable editing** is opt-in per instance. It shows
+the joined session's live Squad member activity without replaying history.
+See the [install, privacy and lifecycle guide](docs/canvas-install.md) and
+[feature matrix](docs/canvas-feature-matrix.md). Scout confirms public-marketplace
+installation natively after merge; local checks are not native install proof.
+VSIX versions, defaults and behavior are unchanged.
 
 #### Canvas browser client (source-only)
 
@@ -176,7 +180,8 @@ The [authorization and recovery design](standalone/README.md#host-neutral-canvas
 reuses the standalone guarded store and conflict UI, without changing VS Code's
 layout format or migrating workspace state. An expired session must be reopened;
 export unresolved drafts before closing the instance. File opening, directory
-management and live logs remain unavailable. No agent-callable write actions are
+management and CLI-log scanning remain unavailable; joined-session live activity
+is supported. No agent-callable write actions are
 registered. The panel follows the system light/dark preference.
 
 ## Squad Pod and Pixel Agents
