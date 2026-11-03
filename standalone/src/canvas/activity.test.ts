@@ -23,6 +23,149 @@ function fixture() {
 }
 
 describe('joined SDK activity projection fixtures', () => {
+  function dispatch(f: ReturnType<typeof fixture>, name = 'homer-simpson') {
+    f.send('tool.execution_start', { toolCallId: 'dispatch', toolName: 'task', turnId: 'root-turn',
+      model: 'not-an-observation', arguments: {
+        name, agent_type: 'general-purpose', mode: 'sync', description: 'Implement Canvas attribution',
+        prompt: 'PRIVATE_TASK_PROMPT',
+      } });
+    f.send('subagent.started', { toolCallId: 'dispatch', agentName: 'general-purpose',
+      agentDisplayName: 'general-purpose', agentDescription: 'PRIVATE_AGENT_DESCRIPTION',
+      agentType: 'general-purpose', executionMode: 'sync', model: 'started-model' }, 'actor');
+  }
+
+  it('correlates a native-shaped named task to a generic SDK agent and live member activity', () => {
+    const f = fixture();
+    dispatch(f);
+    expect(f.tasks().tasks).toEqual([expect.objectContaining({
+      toolCallId: 'dispatch', name: 'homer-simpson', agentType: 'general-purpose',
+      mode: 'sync', description: 'Implement Canvas attribution', instanceId: 'actor',
+      agentId: 'homer-simpson', state: 'running',
+    })]);
+    expect(f.agents()[1]).toMatchObject({ status: 'active',
+      currentTask: 'Implement Canvas attribution', currentTaskSource: 'live' });
+    f.send('subagent.configured', { toolCallId: 'dispatch', model: 'configured-model' }, 'actor');
+    expect(f.models().members['homer-simpson']).toMatchObject({
+      model: 'configured-model', source: 'subagent.configured.model', kind: 'subagent-model',
+    });
+    expect(f.models().session).toBeNull();
+    f.send('assistant.turn_start', { turnId: 'member-turn' }, 'actor');
+    f.send('tool.execution_start', { toolCallId: 'read', toolName: 'view', parentToolCallId: 'dispatch',
+      arguments: { path: 'C:\\private-workspace\\activity.ts', prompt: 'PRIVATE_TOOL_PROMPT' } }, 'actor');
+    expect(f.messages).toContainEqual({ type: 'agentToolStart', agentId: 'homer-simpson',
+      toolId: 'read', tool: 'view', status: 'Reading activity.ts' });
+    f.send('tool.execution_complete', { toolCallId: 'read', parentToolCallId: 'dispatch',
+      result: 'PRIVATE_TOOL_RESULT', toolTelemetry: { metrics: {
+        context_current_tokens: 10, context_token_limit: 100,
+      } } }, 'actor');
+    expect(f.messages).toContainEqual({ type: 'agentToolDone', agentId: 'homer-simpson',
+      toolId: 'read', tool: 'view' });
+    expect(f.live.current()).toContainEqual({ type: 'agentContextUsage', agentId: 'homer-simpson',
+      contextTokens: 10, maxContextTokens: 100 });
+    f.send('tool.execution_complete', { toolCallId: 'dispatch' });
+    expect(f.agents()[1].status).toBe('active');
+    f.send('subagent.completed', { toolCallId: 'dispatch', agentName: 'general-purpose' }, 'actor');
+    expect(f.tasks().tasks[0]).toMatchObject({ state: 'completed', agentId: 'homer-simpson' });
+    expect(f.agents()[1]).toMatchObject({ status: 'idle', currentTask: null, currentTaskSource: null });
+    expect(f.models().members).toEqual({});
+    expect(f.live.current().filter(message =>
+      ['agentToolStart', 'agentContextUsage'].includes(message.type))).toEqual([]);
+    expect(f.messages.filter(message => message.type === 'telemetryEvent'
+      && message.event.agentId === 'homer-simpson').length).toBeGreaterThan(0);
+    f.send('session.idle');
+    expect(f.tasks().tasks).toEqual([]);
+    expect(JSON.stringify([...f.messages, ...f.live.current()])).not.toMatch(
+      /PRIVATE_|private-workspace|not-an-observation|"arguments"|"prompt"|"result"/);
+    for (const message of [...f.messages, ...f.live.current()])
+      expect(decodeEvent(JSON.stringify({ version: 1, kind: 'office', message }))).toEqual(message);
+  });
+
+  it.each(['subagent.completed', 'subagent.failed', 'subagent.aborted', 'cancelled', 'session.idle', 'clear'])(
+    'clears correlated member tools, turns, models and gauges on %s', terminal => {
+      const f = fixture();
+      dispatch(f);
+      f.send('assistant.turn_start', { turnId: 'turn' }, 'actor');
+      f.send('session.usage_info', { currentTokens: 1, tokenLimit: 100 }, 'actor');
+      f.send('tool.execution_start', { toolCallId: 'pending', toolName: 'edit',
+        arguments: { path: 'C:\\private\\activity.ts' } }, 'actor');
+      expect(f.agents()[1].status).toBe('active');
+      expect(f.live.current()).toContainEqual({ type: 'agentToolStart', agentId: 'homer-simpson',
+        toolId: 'pending', tool: 'edit', status: 'Editing activity.ts' });
+      if (terminal === 'clear') f.live.clear();
+      else if (terminal === 'session.idle') f.send(terminal);
+      else f.send(terminal === 'cancelled' ? 'subagent.completed' : terminal,
+        { toolCallId: 'dispatch', agentName: 'general-purpose', cancelled: terminal === 'cancelled' });
+      expect(f.agents().every(agent => agent.status === 'idle' && agent.currentTask === null)).toBe(true);
+      expect(f.models().members).toEqual({});
+      expect(f.live.current().filter(message =>
+        ['agentToolStart', 'agentContextUsage'].includes(message.type))).toEqual([]);
+      expect(f.messages).toContainEqual({ type: 'agentToolsClear', agentId: 'homer-simpson' });
+      expect(f.messages).toContainEqual({ type: 'agentContextUsage', agentId: 'homer-simpson',
+        contextTokens: null, maxContextTokens: null });
+    });
+
+  it.each(['unknown', 'Homer Simpson', 'homer-simpson-extra', 'homer-simpson'.padEnd(161, 'x')])(
+    'keeps non-exact spawning identity %s transient without promoting generic SDK metadata', name => {
+      const f = fixture();
+      dispatch(f, name);
+      f.send('tool.execution_start', { toolCallId: 'read', toolName: 'view',
+        parentToolCallId: 'dispatch', arguments: { path: 'file.ts' } }, 'actor');
+      expect(f.tasks().tasks[0]).toMatchObject({ agentId: null, state: 'running' });
+      expect(f.agents().map(agent => agent.id)).toEqual(['lisa-simpson', 'homer-simpson']);
+      expect(f.agents().every(agent => agent.status === 'idle')).toBe(true);
+      expect(f.messages.filter(message => message.type === 'agentToolStart')).toEqual([]);
+      expect(f.models().members).toEqual({});
+      expect(f.live.current().filter(message => message.type === 'agentContextUsage')).toEqual([]);
+    });
+
+  it('bounds spawn metadata and uses only basename and executable labels from tool arguments', () => {
+    const f = fixture();
+    f.send('tool.execution_start', { toolCallId: 'dispatch', toolName: 'task', arguments: {
+      name: 'homer-simpson', agent_type: 'general-purpose', mode: 'x'.repeat(1000),
+      description: 'y'.repeat(1000), prompt: 'PRIVATE',
+    } });
+    f.send('subagent.started', { toolCallId: 'dispatch', agentName: 'general-purpose' }, 'actor');
+    expect(f.tasks().tasks[0]).toMatchObject({ name: 'homer-simpson', agentId: 'homer-simpson',
+      fieldsTruncated: true, mode: 'x'.repeat(160) });
+    expect(f.tasks().tasks[0].description.length).toBeLessThan(1000);
+    for (const [toolName, args, label] of [
+      ['create', { path: 'C:\\PRIVATE\\new.ts', file_text: 'PRIVATE' }, 'Writing new.ts'],
+      ['bash', { command: 'node PRIVATE --token=PRIVATE' }, 'Running: node'],
+      ['powershell', { command: 'Get-Content C:\\PRIVATE' }, 'Running: Get-Content'],
+    ] as const) {
+      f.send('tool.execution_start', { toolCallId: toolName, toolName, arguments: args }, 'actor');
+      expect(f.messages).toContainEqual({ type: 'agentToolStart', agentId: 'homer-simpson',
+        toolId: toolName, tool: toolName, status: label });
+    }
+    expect(JSON.stringify([...f.messages, ...f.live.current()])).not.toContain('PRIVATE');
+  });
+
+  it('clears correlated activity on a roster context change and does not retain dispatch aliases', () => {
+    const f = fixture();
+    dispatch(f);
+    f.send('tool.execution_start', { toolCallId: 'read', toolName: 'view' }, 'actor');
+    f.live.snapshot([{ ...roster, agents: roster.agents.filter(agent => agent.id !== 'homer-simpson') }]);
+    expect(f.live.current().filter(message => message.type === 'agentToolStart')).toEqual([]);
+    expect(f.tasks().tasks).toEqual([]);
+    expect(f.models().members).toEqual({});
+    expect(f.agents().every(agent => agent.status === 'idle')).toBe(true);
+    f.send('subagent.started', { toolCallId: 'dispatch', agentName: 'general-purpose' }, 'actor');
+    expect(f.tasks().tasks[0]).toMatchObject({ state: 'running', agentId: null });
+    expect(f.agents().every(agent => agent.status === 'idle')).toBe(true);
+  });
+
+  it('does not retain an unstarted named dispatch alias across root idle', () => {
+    const f = fixture();
+    f.send('tool.execution_start', { toolCallId: 'dispatch', toolName: 'task', arguments: {
+      name: 'homer-simpson', agent_type: 'general-purpose', description: 'Pending dispatch',
+    } });
+    f.send('session.idle');
+    f.send('subagent.started', { toolCallId: 'dispatch', agentName: 'general-purpose' }, 'actor');
+    f.send('assistant.turn_start', { turnId: 'late-turn' }, 'actor');
+    expect(f.agents().every(agent => agent.status === 'idle')).toBe(true);
+    expect(f.tasks().tasks.every(task => task.agentId === null)).toBe(true);
+  });
+
   it.each([true, false])('reconciles exact selected identity before/after start (before=%s)', before => {
     const f = fixture();
     if (before) f.send('subagent.selected', { agentName: 'lisa-simpson' }, 'actor');
@@ -331,19 +474,21 @@ describe('joined SDK activity projection fixtures', () => {
     expect(JSON.stringify(f.live.current())).not.toContain('x'.repeat(161));
   });
 
-  it('never accesses prompts, arguments, results, errors, descriptions, or unknown event payloads', () => {
+  it('reads only allowlisted tool-start arguments, never prompts, results or other private payloads', () => {
     const f = fixture();
     const trap = () => { throw new Error('private payload accessed'); };
     const data = Object.defineProperties({ toolCallId: 'call', toolName: 'task', agentName: 'lisa-simpson' }, {
       arguments: { get: trap }, result: { get: trap }, error: { get: trap },
       prompt: { get: trap }, agentDescription: { get: trap },
     });
-    f.send('tool.execution_start', data);
+    const args = Object.defineProperties({ name: 'lisa-simpson', agent_type: 'general-purpose',
+      mode: 'sync', description: 'Safe bounded description' }, { prompt: { get: trap }, unknown: { get: trap } });
+    f.send('tool.execution_start', { toolCallId: 'call', toolName: 'task', arguments: args });
     f.send('subagent.started', data, 'actor');
     f.send('tool.execution_complete', data);
     f.send('subagent.failed', data, 'actor');
     f.live.accept(Object.defineProperty({ type: 'user.message' }, 'data', { get: trap }));
-    expect(f.tasks().tasks[0].description).toBe('');
+    expect(f.tasks().tasks[0].description).toBe('Safe bounded description');
     expect(JSON.stringify(f.messages)).not.toMatch(/prompt|arguments|result|private payload/);
   });
 

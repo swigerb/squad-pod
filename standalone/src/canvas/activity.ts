@@ -6,8 +6,8 @@ import type { ExistingAgentsMessage, OutboundMessage } from '../../../src/types.
 const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const supported = new Set(['tool.execution_start', 'tool.execution_complete', 'subagent.selected',
-  'subagent.started', 'subagent.completed', 'subagent.failed', 'assistant.turn_start',
-  'assistant.turn_end', 'session.idle', 'session.model_change', 'session.usage_info']);
+  'subagent.started', 'subagent.configured', 'subagent.completed', 'subagent.failed', 'subagent.aborted',
+  'assistant.turn_start', 'assistant.turn_end', 'session.idle', 'session.model_change', 'session.usage_info']);
 const MAX_ALIASES = 128;
 
 /** Per-office, non-replaying projection of whitelisted joined SDK events. */
@@ -18,6 +18,7 @@ export class CanvasActivity {
   private turns = new Map<string, string>();
   private endedTurns = new Set<string>();
   private instances = new Map<string, string>();
+  private dispatchMembers = new Map<string, string>();
   private gauges = new Map<string, { contextTokens: number; maxContextTokens: number }>();
   private starts = new Set<string>(); // Bounded start/completion tombstones, not just active calls.
   private tools = new Map<string, string>();
@@ -64,6 +65,7 @@ export class CanvasActivity {
     this.endedTurns.clear();
     this.selected.clear();
     this.instances.clear();
+    this.dispatchMembers.clear();
     this.gauges.clear();
     this.lifecycle.clear(preserveSessionModel);
     for (const owner of owners) {
@@ -117,7 +119,7 @@ export class CanvasActivity {
     return messages;
   }
 
-  /** Read only versioned SDK metadata fields; never access arguments, results or prompts. */
+  /** Project bounded tool metadata; never retain raw arguments, results or prompts. */
   accept(value: unknown): void {
     const raw = record(value);
     if (typeof raw.type !== 'string' || !supported.has(raw.type)) return;
@@ -134,7 +136,7 @@ export class CanvasActivity {
     }
     const agentId = taskIdentity(raw.agentId);
     if (raw.agentId !== undefined && !agentId) { this.limited = true; return; }
-    const scope = agentId || (['subagent.completed', 'subagent.failed'].includes(raw.type)
+    const scope = agentId || (['subagent.completed', 'subagent.failed', 'subagent.aborted'].includes(raw.type)
       ? [...this.instances].find(([, call]) => call === taskIdentity(data.toolCallId))?.[0] : '') || '';
     if (raw.type === 'subagent.selected') {
       const owner = exactLiveAgent(taskIdentity(data.agentName), this.roster);
@@ -200,12 +202,13 @@ export class CanvasActivity {
       }
       return;
     }
-    // Construct a fresh envelope so the shared CLI projector cannot inspect private payloads.
+    // Only tool starts expose arguments to the shared allowlist projector, never the lifecycle.
     const metrics = raw.type === 'tool.execution_complete' ? record(record(data.toolTelemetry).metrics) : {};
     const event = projectActivityEvent({ type: raw.type, id: eventId, agentId: agentId || undefined,
       timestamp: raw.timestamp, ephemeral: raw.ephemeral, data: {
         toolCallId: data.toolCallId, parentToolCallId: data.parentToolCallId,
         toolName: data.toolName, agentName: data.agentName, cancelled: data.cancelled,
+        arguments: raw.type === 'tool.execution_start' ? data.arguments : undefined,
         model: data.model, newModel: data.newModel,
         toolTelemetry: { metrics: {
           context_current_tokens: metrics.context_current_tokens, context_token_limit: metrics.context_token_limit,
@@ -217,6 +220,11 @@ export class CanvasActivity {
       if (this.starts.has(event.toolCallId) || this.tools.has(event.toolCallId)) return;
       if (this.tools.size >= MAX_ALIASES) { this.limited = true; return; }
       this.tools.set(event.toolCallId, scope);
+      if (event.task?.agent_type === 'general-purpose' && !event.identityOmitted) {
+        const member = exactLiveAgent(event.task.name, this.roster);
+        if (member && this.dispatchMembers.size < MAX_ALIASES) this.dispatchMembers.set(event.toolCallId, member);
+        else if (member) this.limited = true;
+      }
     }
     if (event.toolCallId && event.type.startsWith('tool.')) {
       if (event.type === 'tool.execution_complete') this.starts.delete(event.toolCallId);
@@ -258,13 +266,14 @@ export class CanvasActivity {
       if (event.type === 'subagent.started' && this.dispatched.has(event.toolCallId)) return;
       this.dispatched.add(event.toolCallId);
       if (this.dispatched.size > MAX_ALIASES) this.dispatched.delete(this.dispatched.values().next().value!);
-      // SDK lifecycle metadata establishes a task without reading task-tool arguments.
+      // Fallback for joins that observe a lifecycle start without its spawning tool start.
       this.lifecycle.accept({ ...event, type: 'tool.execution_start', toolName: 'task',
         task: { name: taskIdentity(data.agentName), agent_type: taskIdentity(data.agentType),
           mode: taskIdentity(data.executionMode), description: '' } });
     }
     if (event.type === 'subagent.started' && event.toolCallId) {
-      const owner = this.selected.get(scope) ?? exactLiveAgent(taskIdentity(data.agentName), this.roster);
+      const owner = this.selected.get(scope) ?? this.dispatchMembers.get(event.toolCallId)
+        ?? exactLiveAgent(taskIdentity(data.agentName), this.roster);
       if (event.instanceId && (this.instances.size < MAX_ALIASES || this.instances.has(event.instanceId))) {
         this.instances.set(event.instanceId, event.toolCallId);
         if (owner) {
@@ -276,6 +285,7 @@ export class CanvasActivity {
     this.lifecycle.accept(event);
     if (terminal) {
       const owner = this.selected.get(scope);
+      this.dispatchMembers.delete(event.toolCallId);
       this.instances.delete(scope);
       this.selected.delete(scope);
       for (const [call, actor] of this.tools) if (actor === scope) this.tools.delete(call);
