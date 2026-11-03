@@ -13,6 +13,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ProjectFiles, projectFileDiagnostic } from './projectFiles.js';
+import { readLayoutSnapshot, type LayoutSnapshot } from './layoutSnapshot.js';
 import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, SourceStatus, PodSettings, DirectoryCatalog } from './types.js';
 import { parseCharterModel, readModelConfig } from './declaredModels.js';
 import { readMemberCharter } from './memberCharter.js';
@@ -46,8 +48,6 @@ import {
   watchLayoutFile,
   exportLayoutToFile,
   importLayoutFromFile,
-  readLayoutRevision,
-  parseLayoutJson,
   saveLayoutIfUnchanged,
   isValidLayout,
 } from './layoutPersistence.js';
@@ -847,15 +847,19 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   // ─── Layout ───────────────────────────────────────────────────
 
   private loadAndSendLayout(workspaceRoot: string): void {
-    // Try workspace-persisted layout first
-    let revision: string | null;
+    let snapshot: LayoutSnapshot;
     try {
-      revision = readLayoutRevision(workspaceRoot);
+      snapshot = readLayoutSnapshot(new ProjectFiles(workspaceRoot));
     } catch (error) {
-      this.postMessage({ type: 'layoutError', error: `Cannot read saved layout; no layout was replaced. ${String(error)}` });
+      this.postMessage({ type: 'layoutError', error: `Cannot read saved layout; no layout was replaced. ${projectFileDiagnostic(error)}` });
       return;
     }
-    let layout = revision === null ? null : parseLayoutJson(revision);
+    if (snapshot.status === 'unreadable') {
+      this.postMessage({ type: 'layoutError', error: `Cannot read saved layout; no layout was replaced. ${snapshot.diagnostic}` });
+      return;
+    }
+    const revision = snapshot.revision;
+    let layout = snapshot.status === 'valid' ? snapshot.layout : null;
 
     // Fall back to VS Code workspace state
     if (!layout) {
@@ -881,8 +885,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     // Always send layoutLoaded message
     this.postMessage({ type: 'layoutLoaded', layout, revision, workspaceRoot });
-    if (revision !== null && !parseLayoutJson(revision)) {
-      this.postMessage({ type: 'layoutError', error: 'Saved layout is malformed. The file was not overwritten; recover it before saving.' });
+    if (snapshot.status === 'malformed') {
+      this.postMessage({ type: 'layoutError', error: snapshot.diagnostic });
     }
   }
 
