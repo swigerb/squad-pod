@@ -23,14 +23,13 @@ import { pruneCompletedTools, setContextUsage } from '../office/toolUtils.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
-// e.g. setFloorSprites on the chunk's copy has NO effect on the renderer's
+// e.g. setCharacterTemplates on the chunk's copy has NO effect on the renderer's
 // copy imported statically in renderer.ts.  Static imports guarantee a single
 // module instance shared across the entire bundle.
 import { isRendererCharacters, isRendererTiles } from '../legacySprites.js';
 import { setCharacterTemplates } from '../office/sprites/defaultCharacters.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
-import { setFloorSprites } from '../office/floorTiles.js';
-import { setWallSprites } from '../office/wallTiles.js';
+import { clearColorizeCache } from '../office/colorize.js';
 import { setPetTemplates } from '../office/sprites/petSpriteData.js';
 import {
   setAssetBaseUrl,
@@ -271,8 +270,10 @@ export function useExtensionMessages(
         case 'manifestAssetsLoaded': {
           const snapshot = message.snapshot as AssetSnapshot;
           buildDynamicCatalog(snapshot.furniture);
-          setFloorSprites(snapshot.floors);
-          setWallSprites(snapshot.walls);
+          // Furniture still uses the shared recolor cache, unlike owned surfaces.
+          clearColorizeCache();
+          getOfficeState().floorAssets.setFloorSprites(snapshot.floors);
+          getOfficeState().wallAssets.setWallSprites(snapshot.walls);
           getOfficeState().carpetAssets.setCarpetSprites(snapshot.carpets);
           setPetTemplates(snapshot.pets ?? []);
           getOfficeState().refreshAssets();
@@ -524,8 +525,9 @@ export function useExtensionMessages(
         case 'wallTilesLoaded': {
           const tiles: unknown = message.tiles ?? message.sprites;
           if (isRendererTiles(tiles)) {
-            if (message.type === 'floorTilesLoaded') setFloorSprites(tiles);
-            else setWallSprites(tiles);
+            if (message.type === 'floorTilesLoaded') getOfficeState().floorAssets.setFloorSprites(tiles);
+            else getOfficeState().wallAssets.setWallSprites(tiles);
+            clearColorizeCache();
             clearLegacyDiagnostic(message.type);
           } else rejectLegacySprites(message.type);
           break;

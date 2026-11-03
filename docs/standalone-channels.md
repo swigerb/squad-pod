@@ -137,16 +137,33 @@ two offices in the **same JavaScript realm**, distinct sheets, reload/recovery,
 picker sprite data, paint validation, bounded cache eviction and shared-context
 rendering. Canvas contexts remain synthetic; this is not native pixel qualification.
 
+Floor and wall sheets now also belong to each `OfficeState`, via `createFloorAssets`
+and `createWallAssets`. Both copy incoming rows, own their fallback arrays and
+local revisions, and each has a 1024-entry FIFO recolor cache. Replacing/clearing
+one sheet increments only its revision and clears only its cache. The existing
+pure tile transform is shared, not duplicated; furniture retains its separate
+global recolor cache and manifest/editor invalidation. Manifest and validated
+legacy delivery, `OfficeCanvas`/`renderFrame`/`renderTileGrid`, wall instances and
+floor picker previews use explicit owners, without global surface fallbacks.
+The canvas sprite cache is weakly keyed by the owned sprite identity, not a local
+revision or color string; equal revisions cannot alias peer floor/wall layers.
+Floor ID/source mapping (including VOID 8 and floor 10/sheet 7), wall masks,
+bottom anchors, alpha and missing-asset/default behavior are unchanged.
+Normal-runner synthetic tests cover two same-realm offices, actual render calls
+and toolbar preview sprite data, both tile color modes, caller/default aliasing,
+reload/clear isolation and bounded eviction. They do not qualify native pixels
+or claim separate webviews share modules.
+
 **Still outside this increment:** mutable module-level asset registries/loaders
-(floor/wall/pet/character templates, furniture catalog, tileset metadata,
+(pet/character templates, furniture catalog, tileset metadata,
 loading generations/diagnostics) and their rendering/colorization caches remain shared.
-Distinct non-carpet asset streams are not qualified as isolated. Other document-level card dismissal/
+Distinct furniture/tileset/character/pet asset streams are not qualified as isolated. Other document-level card dismissal/
 focus-trap listeners and non-editor DOM identities are not migrated by this boundary.
 Host-side agent/session stores, adapter/transport lifetime,
 default VS Code client acquisition and standalone server/terminal session ownership
 are unchanged. No new session identity or write authority is inferred from this seam.
 
-This is a bounded state-allocation, editor/canvas-input, notification-audio and carpet-assets slice of #174, not Canvas support
+This is a bounded state-allocation, editor/canvas-input, notification-audio and carpet/floor/wall-assets slice of #174, not Canvas support
 or full multi-instance acceptance.
 Canvas entry/theme/error UX, explicit validated current-root/exact-session authority,
 remaining shared-state/input isolation, two-project/session tests, and integrated

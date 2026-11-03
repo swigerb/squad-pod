@@ -1,109 +1,77 @@
 import type { FloorColor, SpriteData, FurnitureInstance } from './types.js';
 import { TileType, TILE_SIZE } from './types.js';
-import { getColorizedTileSprite, clearColorizeCache } from './colorize.js';
+import { createTileRecolorCache } from './colorize.js';
 
-let wallSprites: SpriteData[] = [];
+/** Creates wall sheets, marching-square instances and recolors for one office. */
+export function createWallAssets() {
+  let wallSprites: SpriteData[] = [];
+  let revision = 0;
+  const cache = createTileRecolorCache();
 
-export function setWallSprites(sprites: SpriteData[]): void {
-  wallSprites = sprites;
-  clearColorizeCache();
-}
-
-export function hasWallSprites(): boolean {
-  return wallSprites.length === 16;
-}
-
-export function getWallSprite(
-  tiles: number[],
-  cols: number,
-  rows: number,
-  col: number,
-  row: number
-): { sprite: SpriteData; offsetY: number } {
-  if (!hasWallSprites()) {
-    return { sprite: [[]], offsetY: 0 };
+  function setWallSprites(sprites: SpriteData[]): void {
+    wallSprites = sprites.map(sprite => sprite.map(row => [...row]));
+    revision++;
+    cache.clear();
   }
 
-  const idx = row * cols + col;
-  if (tiles[idx] !== TileType.WALL) {
-    return { sprite: [[]], offsetY: 0 };
+  function hasWallSprites(): boolean {
+    return wallSprites.length === 16;
   }
 
-  const n = row > 0 && tiles[(row - 1) * cols + col] === TileType.WALL;
-  const e = col < cols - 1 && tiles[row * cols + (col + 1)] === TileType.WALL;
-  const s = row < rows - 1 && tiles[(row + 1) * cols + col] === TileType.WALL;
-  const w = col > 0 && tiles[row * cols + (col - 1)] === TileType.WALL;
-
-  const bitmask = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
-
-  const sprite = wallSprites[bitmask];
-  const offsetY = TILE_SIZE - sprite.length;
-
-  return { sprite, offsetY };
-}
-
-export function getColorizedWallSprite(
-  tiles: number[],
-  cols: number,
-  rows: number,
-  col: number,
-  row: number,
-  color: FloorColor
-): { sprite: SpriteData; offsetY: number } {
-  const { sprite, offsetY } = getWallSprite(tiles, cols, rows, col, row);
-  if (sprite.length === 0 || sprite[0].length === 0) {
-    return { sprite, offsetY };
+  function getWallSprite(
+    tiles: number[], cols: number, rows: number, col: number, row: number,
+  ): { sprite: SpriteData; offsetY: number } {
+    if (!hasWallSprites() || tiles[row * cols + col] !== TileType.WALL) {
+      return { sprite: [[]], offsetY: 0 };
+    }
+    const sprite = wallSprites[wallMask(tiles, cols, rows, col, row)];
+    return { sprite, offsetY: TILE_SIZE - sprite.length };
   }
 
-  const n = row > 0 && tiles[(row - 1) * cols + col] === TileType.WALL;
-  const e = col < cols - 1 && tiles[row * cols + (col + 1)] === TileType.WALL;
-  const s = row < rows - 1 && tiles[(row + 1) * cols + col] === TileType.WALL;
-  const w = col > 0 && tiles[row * cols + (col - 1)] === TileType.WALL;
-  const bitmask = (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
+  function getColorizedWallSprite(
+    tiles: number[], cols: number, rows: number, col: number, row: number, color: FloorColor,
+  ): { sprite: SpriteData; offsetY: number } {
+    const { sprite, offsetY } = getWallSprite(tiles, cols, rows, col, row);
+    if (sprite.length === 0 || sprite[0].length === 0) return { sprite, offsetY };
+    return {
+      sprite: cache.get(`wall_${wallMask(tiles, cols, rows, col, row)}`, sprite, color),
+      offsetY,
+    };
+  }
 
-  const cacheKey = `wall_${bitmask}_${color.h}_${color.s}_${color.b}_${color.c}_${color.colorize}`;
-  const colorizedSprite = getColorizedTileSprite(cacheKey, sprite, color);
-
-  return { sprite: colorizedSprite, offsetY: TILE_SIZE - sprite.length };
-}
-
-export function getWallInstances(
-  tiles: number[],
-  cols: number,
-  rows: number,
-  color: FloorColor
-): FurnitureInstance[] {
-  const instances: FurnitureInstance[] = [];
-
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const idx = row * cols + col;
-      if (tiles[idx] === TileType.WALL) {
-        const { sprite, offsetY } = getColorizedWallSprite(
-          tiles,
-          cols,
-          rows,
-          col,
-          row,
-          color
-        );
-        if (sprite.length > 0 && sprite[0].length > 0) {
-          instances.push({
-            uid: `wall-${col}-${row}`,
-            type: 'wall',
-            col,
-            row: offsetY < 0 ? row - 1 : row,
-            width: 1,
-            height: offsetY < 0 ? 2 : 1,
-            sprite,
-            rotation: 0,
-          });
+  function getWallInstances(tiles: number[], cols: number, rows: number, color: FloorColor): FurnitureInstance[] {
+    const instances: FurnitureInstance[] = [];
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        if (tiles[row * cols + col] === TileType.WALL) {
+          const { sprite, offsetY } = getColorizedWallSprite(tiles, cols, rows, col, row, color);
+          if (sprite.length > 0 && sprite[0].length > 0) {
+            instances.push({
+              uid: `wall-${col}-${row}`, type: 'wall', col,
+              row: offsetY < 0 ? row - 1 : row,
+              width: 1, height: offsetY < 0 ? 2 : 1, sprite, rotation: 0,
+            });
+          }
         }
       }
     }
+    return instances;
   }
 
-  return instances;
+  return {
+    get revision() { return revision; },
+    setWallSprites, hasWallSprites, getWallSprite, getColorizedWallSprite, getWallInstances,
+  };
+}
+
+export type WallAssets = ReturnType<typeof createWallAssets>;
+
+function wallMask(tiles: number[], cols: number, rows: number, col: number, row: number): number {
+  const n = row > 0 && tiles[(row - 1) * cols + col] === TileType.WALL;
+  const e = col < cols - 1 && tiles[row * cols + col + 1] === TileType.WALL;
+  const s = row < rows - 1 && tiles[(row + 1) * cols + col] === TileType.WALL;
+  const w = col > 0 && tiles[row * cols + col - 1] === TileType.WALL;
+  return (n ? 1 : 0) | (e ? 2 : 0) | (s ? 4 : 0) | (w ? 8 : 0);
 }
 
 export function wallColorToHex(color: FloorColor): string {

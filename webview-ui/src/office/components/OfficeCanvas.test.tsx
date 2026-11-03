@@ -17,8 +17,6 @@ import * as renderer from '../engine/renderer.js';
 import { ZoomControls } from '../../components/ZoomControls.js';
 import { TILE_SIZE } from '../../constants.js';
 import type { FloorColor, OfficeLayout } from '../types.js';
-import { setFloorSprites } from '../floorTiles.js';
-import { setWallSprites } from '../wallTiles.js';
 import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -115,8 +113,6 @@ it.each([
     callbacks.render(ctx as unknown as CanvasRenderingContext2D);
     return () => {};
   });
-  setFloorSprites([]);
-  setWallSprites([]);
   const layout: OfficeLayout = {
     version: 2, cols: 3, rows: 1, tiles: [TileType.WALL, TileType.FLOOR_1, TileType.VOID], furniture: [],
     ...(tileColors === undefined ? {} : { tileColors }),

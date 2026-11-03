@@ -6,9 +6,9 @@ import { buildDynamicCatalog, getAssetProblem, getCatalogEntry } from './furnitu
 import { applyFurniturePlace, planFurnitureMove, planFurnitureRotate } from '../editor/editorActions.js';
 import { getFurnitureFootprint, layoutToFurnitureInstances, layoutToSeats, createDefaultLayout } from './layoutManager.js';
 import { OfficeState } from '../engine/officeState.js';
-import { getColorizedFloorSprite, setFloorSprites } from '../floorTiles.js';
-import { getColorizedWallSprite, setWallSprites } from '../wallTiles.js';
-import { getColorizedSprite, getColorizedTileSprite } from '../colorize.js';
+import { createFloorAssets } from '../floorTiles.js';
+import { createWallAssets } from '../wallTiles.js';
+import { getColorizedSprite, colorizeTileSprite } from '../colorize.js';
 import { Direction, TileType, type OfficeLayout } from '../types.js';
 
 const desk: ManifestFurniture = {
@@ -19,6 +19,8 @@ const desk: ManifestFurniture = {
 const empty = (): OfficeLayout => ({ version: 2, cols: 12, rows: 11, tiles: Array(132).fill(1), furniture: [] });
 
 describe('manifest catalog and non-destructive reload', () => {
+  const { getColorizedFloorSprite, setFloorSprites } = createFloorAssets();
+  const { getColorizedWallSprite, setWallSprites } = createWallAssets();
   afterEach(() => { buildDynamicCatalog([]); setFloorSprites([]); setWallSprites([]); });
 
   it('keeps the old 2x1 desk and unknown IDs unchanged while new desks have validated 3x2 geometry', () => {
@@ -145,11 +147,11 @@ describe('manifest catalog and non-destructive reload', () => {
 
     expect(getColorizedFloorSprite(0, color)).toEqual([['#800000']]);
     expect(getColorizedFloorSprite(0, color)).toEqual(
-      getColorizedTileSprite('upstream-floor-colorize', floorSprite, color),
+      colorizeTileSprite(floorSprite, color),
     );
     expect(getColorizedWallSprite([TileType.WALL], 1, 1, 0, 0, color).sprite).toEqual([['#800000']]);
     expect(getColorizedWallSprite([TileType.WALL], 1, 1, 0, 0, color).sprite).toEqual(
-      getColorizedTileSprite('upstream-wall-colorize', wallSprite, color),
+      colorizeTileSprite(wallSprite, color),
     );
     expect(color).toEqual({ h: 0, s: 100, b: -50, c: -50, colorize: true });
   });
@@ -186,5 +188,24 @@ describe('manifest catalog and non-destructive reload', () => {
       sprite: getColorizedSprite(`upstream-wall-mask-${mask}`, sprites[mask], { ...color, colorize: true }),
       offsetY: -16,
     });
+  });
+
+  it.each(Array.from({ length: 16 }, (_, mask) => mask))('preserves wall mask %i, alpha and instance bottom anchoring', mask => {
+      const owner = new OfficeState();
+      const sprites = Array.from({ length: 16 }, (_, index) =>
+        Array.from({ length: 32 }, () => [ `#${index.toString(16).padStart(2, '0').repeat(3)}80`, '' ]));
+      owner.wallAssets.setWallSprites(sprites);
+      const tiles = Array<number>(9).fill(TileType.FLOOR_1);
+      tiles[4] = TileType.WALL;
+      for (const [bit, index] of [[1, 1], [2, 5], [4, 7], [8, 3]]) {
+        if (mask & bit) tiles[index] = TileType.WALL;
+      }
+      const color = { h: 0, s: 0, b: 0, c: 0, colorize: false };
+      const expected = colorizeTileSprite(sprites[mask], color);
+      expect(owner.wallAssets.getColorizedWallSprite(tiles, 3, 3, 1, 1, color)).toEqual({
+        sprite: expected, offsetY: -16,
+      });
+      expect(owner.wallAssets.getWallInstances(tiles, 3, 3, color).find(item => item.uid === 'wall-1-1'))
+        .toMatchObject({ col: 1, row: 0, width: 1, height: 2, sprite: expected, rotation: 0 });
   });
 });

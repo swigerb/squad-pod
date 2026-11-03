@@ -1,7 +1,6 @@
 import type { FloorColor, SpriteData } from './types.js';
 
 const colorizeCache = new Map<string, SpriteData>();
-const pixelAgentsTileCache = new Map<string, SpriteData>();
 
 export function getColorizedSprite(
   cacheKey: string,
@@ -22,18 +21,14 @@ export function getColorizedSprite(
 
 export function clearColorizeCache(): void {
   colorizeCache.clear();
-  pixelAgentsTileCache.clear();
 }
 
-export function getColorizedTileSprite(
-  cacheKey: string,
+/** Applies the existing tile colorize/adjust transform without reading or retaining asset state. */
+export function colorizeTileSprite(
   sprite: SpriteData,
   color: FloorColor,
 ): SpriteData {
-  if (!color.colorize) return getColorizedSprite(cacheKey, sprite, color);
-
-  const key = `pixel-agents-tile_${cacheKey}`;
-  if (pixelAgentsTileCache.has(key)) return pixelAgentsTileCache.get(key)!;
+  if (!color.colorize) return adjustSprite(sprite, color);
 
   const brightness = color.b / 200;
   const contrast = (100 + color.c) / 100;
@@ -52,8 +47,26 @@ export function getColorizedTileSprite(
       return hslToHex(color.h, saturation, lightness) + (hex.length === 9 ? hex.slice(7, 9) : '');
     }),
   );
-  pixelAgentsTileCache.set(key, result);
   return result;
+}
+
+export const TILE_RECOLOR_CACHE_LIMIT = 1024;
+
+/** Creates an owner-local, FIFO-bounded tile cache; clear it when replacing sheets. */
+export function createTileRecolorCache() {
+  const cache = new Map<string, SpriteData>();
+  return {
+    clear: () => cache.clear(),
+    get(cacheKey: string, sprite: SpriteData, color: FloorColor): SpriteData {
+      const key = `${cacheKey}_${color.h}_${color.s}_${color.b}_${color.c}_${!!color.colorize}`;
+      const cached = cache.get(key);
+      if (cached) return cached;
+      const result = colorizeTileSprite(sprite, color);
+      if (cache.size >= TILE_RECOLOR_CACHE_LIMIT) cache.delete(cache.keys().next().value!);
+      cache.set(key, result);
+      return result;
+    },
+  };
 }
 
 function colorizeSprite(sprite: SpriteData, color: FloorColor): SpriteData {

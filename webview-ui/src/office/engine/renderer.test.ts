@@ -4,9 +4,6 @@ import { TileType, type CarpetTile, type FloorColor, type SpriteData } from '../
 import * as assetLoader from '../sprites/assetLoader.js';
 import * as spriteCache from '../sprites/spriteCache.js';
 import * as tilesetRenderer from '../sprites/tilesetRenderer.js';
-import { setFloorSprites } from '../floorTiles.js';
-import { setWallSprites } from '../wallTiles.js';
-import { createCarpetAssets } from '../sprites/carpetTiles.js';
 import { OfficeState } from './officeState.js';
 import { setPetTemplates, getPetSprites, resetPetTemplates } from '../sprites/petSpriteData.js';
 import { createPet, togglePetHeart } from './petEntity.js';
@@ -20,8 +17,12 @@ describe('tile colors are optional rendering overrides', () => {
   let pixels: Array<{ x: number; y: number; color: string }>;
   let sprites: WeakMap<HTMLCanvasElement, SpriteData>;
   let ctx: CanvasRenderingContext2D;
+  let office: OfficeState;
+  const setFloorSprites = (sprites: SpriteData[]) => office.floorAssets.setFloorSprites(sprites);
+  const setWallSprites = (sprites: SpriteData[]) => office.wallAssets.setWallSprites(sprites);
 
   beforeEach(() => {
+    office = new OfficeState();
     pixels = [];
     sprites = new WeakMap();
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
@@ -98,7 +99,7 @@ describe('tile colors are optional rendering overrides', () => {
     ['complete', complete],
   ] as const)('draws every non-void tile with %s colors without mutating its inputs', (name, colors) => {
     const before = JSON.stringify([map, colors && [...colors]]);
-    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0, null, undefined, colors);
+    renderFrame(ctx, office, 48, 16, map, [], [], 1, 0, 0, null, undefined, colors);
     expect(pixels).toEqual([
       { x: 0, y: 0, color: name === 'complete' ? '#0000ff' : '#53392d' },
       { x: 16, y: 0, color: name === 'complete' || name === 'partial' ? '#01ff01' : '#caac83' },
@@ -109,7 +110,7 @@ describe('tile colors are optional rendering overrides', () => {
   it('uses the PNG tileset path even without any tile colors', () => {
     vi.mocked(assetLoader.areTilesetAssetsReady).mockReturnValue(true);
     const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(true);
-    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0);
+    renderFrame(ctx, office, 48, 16, map, [], [], 1, 0, 0);
     expect(draw.mock.calls.map((call) => call.slice(1))).toEqual([
       [TileType.WALL, 0, 0, 1], [TileType.FLOOR_1, 16, 0, 1],
     ]);
@@ -125,7 +126,7 @@ describe('tile colors are optional rendering overrides', () => {
     const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(true);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0);
+    renderFrame(ctx, office, 48, 16, map, [], [], 1, 0, 0);
 
     expect(draw).not.toHaveBeenCalled();
     expect(pixels).toHaveLength(2);
@@ -137,7 +138,7 @@ describe('tile colors are optional rendering overrides', () => {
     const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(false);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0);
+    renderFrame(ctx, office, 48, 16, map, [], [], 1, 0, 0);
 
     expect(draw).toHaveBeenCalledTimes(2);
     expect(warn).toHaveBeenCalledOnce();
@@ -156,7 +157,7 @@ describe('tile colors are optional rendering overrides', () => {
       Array.from({ length: 16 }, () => Array(16).fill('#808080'))));
     const draw = vi.spyOn(tilesetRenderer, 'drawTilesetTile').mockReturnValue(true);
 
-    renderFrame(ctx, createCarpetAssets(), 48, 16, [[TileType.WALL, TileType.FLOOR_1, TileType.FLOOR_9]], [], [], 1, 0, 0);
+    renderFrame(ctx, office, 48, 16, [[TileType.WALL, TileType.FLOOR_1, TileType.FLOOR_9]], [], [], 1, 0, 0);
 
     expect(draw).not.toHaveBeenCalled();
     expect(pixels).toHaveLength(3);
@@ -170,7 +171,7 @@ describe('tile colors are optional rendering overrides', () => {
     const neutral = { h: 0, s: 0, b: 0, c: 0, colorize: false };
     const overrides = new Map(types.map((_, col) => [`${col},0`, neutral]));
 
-    renderFrame(ctx, createCarpetAssets(), 160, 16, [types], [], [], 1, 0, 0, null, undefined, overrides);
+    renderFrame(ctx, office, 160, 16, [types], [], [], 1, 0, 0, null, undefined, overrides);
 
     expect(pixels).toEqual([
       { x: 0, y: 0, color: '#111111' }, { x: 16, y: 0, color: '#222222' },
@@ -183,13 +184,13 @@ describe('tile colors are optional rendering overrides', () => {
 
   it('uses the wall sprite fallback without any tile colors', () => {
     setWallSprites(Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => Array(16).fill('#808080'))));
-    renderFrame(ctx, createCarpetAssets(), 48, 16, map, [], [], 1, 0, 0);
+    renderFrame(ctx, office, 48, 16, map, [], [], 1, 0, 0);
     expect(pixels).toHaveLength(2);
     expect(spriteCache.getCachedSprite).toHaveBeenCalledTimes(2);
   });
 
   it('draws carpet above a colorless floor without changing layout or carpet data', () => {
-    const assets = createCarpetAssets();
+    const assets = office.carpetAssets;
     assets.setCarpetSprites([Array.from({ length: 16 }, () =>
       Array.from({ length: 16 }, () => Array(16).fill('#111111')))]);
     const carpetTiles: Array<CarpetTile | null> = [null, { variant: 0 }, null];
@@ -197,7 +198,7 @@ describe('tile colors are optional rendering overrides', () => {
     const before = JSON.stringify(layout);
     const draw = vi.fn();
     ctx.drawImage = draw;
-    renderFrame(ctx, assets, 48, 16, map, [], [], 1, 0, 0, null, undefined, undefined,
+    renderFrame(ctx, office, 48, 16, map, [], [], 1, 0, 0, null, undefined, undefined,
       3, 1, null, null, null, [], false, carpetTiles);
     // First the floor, then the four junctions around its carpet cell.
     expect(draw.mock.calls.map((call) => call.slice(1))).toEqual([
@@ -223,7 +224,7 @@ describe('tile colors are optional rendering overrides', () => {
     expect(a.carpetAssets.revision).toBe(b.carpetAssets.revision);
     const draw = (office: OfficeState) => {
       pixels.length = 0;
-      renderFrame(ctx, office.carpetAssets, 48, 16, map, [], [], 1, 0, 0,
+      renderFrame(ctx, office, 48, 16, map, [], [], 1, 0, 0,
         null, undefined, undefined, 3, 1, null, null, null, [], false, layout.carpetTiles);
       return pixels.filter(p => p.x === 8 || p.x === 24).map(p => p.color);
     };
@@ -235,6 +236,42 @@ describe('tile colors are optional rendering overrides', () => {
     expect(b.carpetAssets.revision).toBe(1);
   });
 
+  it.each([false, true])('renders owned floors and walls on the same context at equal revisions (%s)', colorize => {
+    const a = new OfficeState(), b = new OfficeState();
+    const color = { h: 20, s: 30, b: -10, c: 0, colorize };
+    const colors = new Map([['0,0', color], ['1,0', color]]);
+    for (const [owner, hex] of [[a, '#20406080'], [b, '#a0c0e040']] as const) {
+      owner.floorAssets.setFloorSprites([Array.from({ length: 16 }, () => Array(16).fill(hex))]);
+      owner.wallAssets.setWallSprites(Array.from({ length: 16 }, () =>
+        Array.from({ length: 32 }, () => Array(16).fill(hex))));
+    }
+    ctx.drawImage = vi.fn((canvas: CanvasImageSource, x: number, y: number) => {
+      pixels.push({ x, y, color: sprites.get(canvas as HTMLCanvasElement)![0][0] });
+    });
+    const floorB = b.floorAssets.getColorizedFloorSprite(0, color);
+    const wallB = b.wallAssets.getColorizedWallSprite(map.flat(), 3, 1, 0, 0, color).sprite;
+    const draw = (owner: OfficeState) => {
+      pixels.length = 0;
+      renderFrame(ctx, owner, 48, 16, map, [], [], 1, 0, 0, null, undefined, colors);
+      return [...pixels];
+    };
+    expect(a.floorAssets.revision).toBe(b.floorAssets.revision);
+    expect(a.wallAssets.revision).toBe(b.wallAssets.revision);
+    const renderedA = draw(a), renderedB = draw(b);
+    expect(renderedA).not.toEqual(renderedB);
+    expect(renderedB).toEqual([
+      { x: 0, y: -16, color: wallB[0][0] }, { x: 16, y: 0, color: floorB[0][0] },
+    ]);
+    a.floorAssets.setFloorSprites([]);
+    a.wallAssets.setWallSprites([]);
+    expect(draw(a)).not.toEqual(renderedA);
+    expect(draw(b)).toEqual(renderedB);
+    expect(b.floorAssets.revision).toBe(1);
+    expect(b.wallAssets.revision).toBe(1);
+    expect(b.floorAssets.getColorizedFloorSprite(0, color)).toBe(floorB);
+    expect(b.wallAssets.getColorizedWallSprite(map.flat(), 3, 1, 0, 0, color).sprite).toBe(wallB);
+  });
+
   it('renders animated pet sprites and heart bubbles over a layout without tile colors', () => {
     const sheet = Array.from({ length: 96 }, (_, y) =>
       Array.from({ length: 96 }, (_, x) => `#${(y * 96 + x).toString(16).padStart(6, '0')}`));
@@ -244,7 +281,7 @@ describe('tile colors are optional rendering overrides', () => {
     togglePetHeart(pet);
     const draw = vi.fn();
     ctx.drawImage = draw;
-    renderFrame(ctx, createCarpetAssets(), 48, 48, [], [], [], 1, 0, 0, null, undefined, undefined,
+    renderFrame(ctx, office, 48, 48, [], [], [], 1, 0, 0, null, undefined, undefined,
       0, 0, null, null, null, [], false, undefined, [pet]);
     expect(draw).toHaveBeenCalledTimes(2);
     expect(sprites.get(draw.mock.calls[0][0])).toBe(frames.idleDown[0]);
@@ -261,7 +298,7 @@ describe('asset diagnostic banner follows Debug View', () => {
       setTransform: vi.fn(), fillRect: vi.fn(), fillText: vi.fn(),
     };
     renderFrame(ctx as unknown as CanvasRenderingContext2D,
-      createCarpetAssets(), 800, 600, [], [], [], 1, 0, 0, null, undefined, undefined,
+      new OfficeState(), 800, 600, [], [], [], 1, 0, 0, null, undefined, undefined,
       0, 0, null, null, null, [], debug);
     if (debug) {
       expect(ctx.fillText).toHaveBeenCalledWith(expect.stringMatching(/^chars:.*tileset:/), expect.any(Number), expect.any(Number));

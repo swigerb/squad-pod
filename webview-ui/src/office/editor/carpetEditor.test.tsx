@@ -51,7 +51,7 @@ describe('carpets through real canvas/editor transactions', () => {
           onEditorTileAction={actions.handleEditorTileAction} onEditorEraseAction={actions.handleEditorEraseAction}
           onEditorEyedropper={actions.handleEyedropper}
           onGestureStart={actions.handleGestureStart} onGestureEnd={actions.handleGestureEnd} />
-        <EditorToolbar carpetAssets={office.carpetAssets} editorState={state} {...actions} onToolChange={actions.handleToolChange}
+        <EditorToolbar floorAssets={office.floorAssets} carpetAssets={office.carpetAssets} editorState={state} {...actions} onToolChange={actions.handleToolChange}
           onTileTypeChange={actions.handleTileTypeChange} onFloorColorChange={actions.handleFloorColorChange}
           onWallColorChange={actions.handleWallColorChange} onFurnitureTypeChange={actions.handleFurnitureTypeChange}
           selectedFurnitureColor={office.layout.furniture.find((item) => item.uid === state.selectedFurnitureUid)?.color ?? null}
