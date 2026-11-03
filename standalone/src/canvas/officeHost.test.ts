@@ -5,8 +5,10 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
+import type { CanvasDefinition } from '@github/copilot-sdk/extension';
 import * as observers from '../observer.js';
 import { startCanvasOfficeHost, type CanvasOfficeHost } from './officeHost.js';
+import { startOfficeExtension } from './provider.js';
 import type { OutboundMessage } from '../../../src/types.js';
 
 const pty = vi.hoisted(() => ({ imported: vi.fn() }));
@@ -41,7 +43,7 @@ async function launch(id?: string, marker?: string, cols?: number) {
   hosts.push(host);
   return { host, options };
 }
-function http(host: CanvasOfficeHost, path: string, method = 'GET', body?: string,
+function http(host: Pick<CanvasOfficeHost, 'url'>, path: string, method = 'GET', body?: string,
   headers: Record<string, string> = {}): Promise<{ status: number; headers: IncomingHttpHeaders; body: string }> {
   const url = new URL(host.url);
   return new Promise((resolve, reject) => {
@@ -93,6 +95,45 @@ async function refused(host: CanvasOfficeHost, headers: Record<string, string>, 
 }
 
 describe('isolated read-only Canvas office host', () => {
+  it('connects SDK-double open/actions/close to the real host and guarded project services', async () => {
+    const options = await fixture();
+    await mkdir(join(options.projectRoot, '.squad', 'agents', 'lisa'), { recursive: true });
+    await writeFile(join(options.projectRoot, '.squad', 'agents', 'lisa', 'charter.md'),
+      '# Lisa\n\nBuilds guarded integrations.\n\n## Identity\n- **Expertise:** TypeScript\n\n## Model\n- **Preferred:** auto\n');
+    const unsubscribe = vi.fn();
+    const sdk = {
+      CanvasError: class extends Error { constructor(readonly code: string, message: string) { super(message); } },
+      createCanvas: vi.fn((definition: CanvasDefinition) => definition),
+      joinSession: vi.fn(async () => ({
+        sessionId: 'exact-session', on: () => unsubscribe,
+        rpc: { metadata: { snapshot: async () => ({ sessionId: 'exact-session', workingDirectory: options.projectRoot }) } },
+      })),
+    };
+    const provider = await startOfficeExtension(sdk, options);
+    const ctx = { sessionId: 'exact-session', extensionId: 'test-provider', canvasId: 'squad-pod', instanceId: 'office' };
+    try {
+      const opened = await provider.canvas.open(ctx);
+      expect((await http(opened, '/')).body).toBe('<html><head></head><body>office</body></html>');
+      const state = await provider.canvas.actions[0].handler({ ...ctx, actionName: 'get_office_state' });
+      expect(state).toMatchObject({
+        members: [{ slug: 'lisa', status: 'idle' }], layout: { cols: 2, rows: 1, furnitureCount: 0 },
+        source: { teamFound: true, observer: 'watching', liveActivity: 'unavailable' },
+      });
+      const detail = await provider.canvas.actions[1].handler({
+        ...ctx, actionName: 'get_member_details', input: { slug: 'lisa' },
+      });
+      expect(detail).toMatchObject({ status: 'available', charterSummary: 'Builds guarded integrations.',
+        expertise: 'TypeScript', model: { provenance: 'declared-only', runtime: null,
+          sources: expect.arrayContaining([
+            { source: 'charter.md', state: 'ready', diagnostic: expect.any(String),
+              values: [{ key: 'Preferred', value: 'auto' }] },
+          ]) } });
+      await provider.canvas.onClose(ctx);
+      await expect(http(opened, '/')).rejects.toThrow();
+    } finally { await provider.dispose(); }
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
   it('serves a protected, usable bootstrap and consumes its fragment credential exactly once', async () => {
     const { host } = await launch();
     const url = new URL(host.url);
@@ -101,7 +142,8 @@ describe('isolated read-only Canvas office host', () => {
     expect(url.search).toBe('');
     expect(url.hash).toMatch(/^#c=[A-Za-z0-9_-]{43}$/);
     const page = await http(host, '/');
-    expect(page.body).toContain('<meta name="squad-canvas" content="read-only">');
+    expect(page.body).toBe('<html><head></head><body>office</body></html>');
+    expect(page.body).not.toContain('squad-canvas');
     expect(page.body).not.toContain(url.hash.slice(3));
     expect(page.headers['cache-control']).toBe('no-store');
     expect(page.headers['referrer-policy']).toBe('no-referrer');

@@ -2,6 +2,7 @@ import { lstat, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { createObserver } from '../observer.js';
 import { startTransport } from '../transport.js';
+import type { OutboundMessage } from '../../../src/types.js';
 
 /** Explicit local inputs supplied by a host adapter, not by a browser request. */
 export interface CanvasOfficeHostOptions {
@@ -13,6 +14,7 @@ export interface CanvasOfficeHostOptions {
 /** Instance-owned read-only office. The fragment URL is a single-use secret. */
 export interface CanvasOfficeHost {
   url: string;
+  snapshot(): Promise<OutboundMessage[]>;
   dispose(): Promise<void>;
 }
 
@@ -69,6 +71,7 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
   let disposal: Promise<void> | undefined;
   return {
     url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}`,
+    snapshot: ownedObserver.snapshot,
     dispose() {
       if (!disposal) {
         ownedObserver.dispose();

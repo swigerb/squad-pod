@@ -6,11 +6,6 @@ import { MobileShell } from './MobileShell.js';
 import type { PreferenceMutation } from '../../../standalone/src/officePreferences.js';
 import './standalone.css';
 
-const canvas = document.querySelector('meta[name="squad-canvas"]')?.getAttribute('content') === 'read-only';
-// Clear the secret before rendering or fetching any resources from component effects.
-let canvasCredential = canvas ? new URLSearchParams(window.location.hash.slice(1)).get('c') : null;
-if (canvas && window.location.hash) window.history.replaceState(null, '', window.location.pathname);
-
 function Observer() {
   const [client, setClient] = useState<BrowserHostClient | null>(null);
   const [status, setStatus] = useState('Authentication required');
@@ -23,12 +18,6 @@ function Observer() {
     setKeyboardClamp(viewport.clampHeight);
   }, []);
   useEffect(() => () => client?.dispose(), [client]);
-  useEffect(() => {
-    if (!canvas) return;
-    const token = canvasCredential;
-    canvasCredential = null;
-    void connect(token, false);
-  }, []);
 
   async function authenticate(event: FormEvent) {
     event.preventDefault();
@@ -37,17 +26,14 @@ function Observer() {
     await connect(token, control);
   }
 
-  async function connect(token: string | null, control: boolean) {
+  async function connect(token: string, control: boolean) {
     setPending(true);
     try {
-      if (token !== null) {
-        const response = await fetch(control ? '/control-auth' : '/auth', {
-          method: 'POST', credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
-        });
-        if (!response.ok) throw new Error(canvas ? 'Canvas authentication expired. Reopen this office from the host.'
-          : 'Authentication failed. Use the current credential from the observer console.');
-      }
+      const response = await fetch(control ? '/control-auth' : '/auth', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+      });
+      if (!response.ok) throw new Error('Authentication failed. Use the current credential from the observer console.');
       const contextResponse = await fetch('/office-context', { credentials: 'same-origin' });
       if (!contextResponse.ok) throw new Error('Cannot establish selected-project server identity.');
       const context: unknown = await contextResponse.json();
@@ -66,7 +52,6 @@ function Observer() {
 
   const office = client
     ? <main><App key={control ? 'control' : 'observer'} client={client} readOnly={!control} standalone /></main>
-    : canvas ? <p>{pending ? 'Connecting read-only office...' : 'Reopen this office from the host if authentication has expired.'}</p>
     : <form onSubmit={event => void authenticate(event)}>
       <h1>Authenticate this viewer</h1>
       <label htmlFor="credential">Runtime credential from the observer console</label>
@@ -81,9 +66,9 @@ function Observer() {
     <header>
       <strong>Squad Pod observer</strong>
       <span role="status">{status}</span>
-      {client && !canvas && <button onClick={() => { client.dispose(); setClient(null); setStatus('Authentication required'); }}>Authenticate again</button>}
+      {client && <button onClick={() => { client.dispose(); setClient(null); setStatus('Authentication required'); }}>Authenticate again</button>}
     </header>
-    <p className="observer-scope">{canvas ? 'Read-only selected-project Canvas office. No terminals, office writes or live CLI-log observation. Usage is recorded ledger data only.' : <>{control && client ? 'Authenticated selected-project office control. Layout, seats and local settings only.' : 'Read-only local office by default.'} No directory management, external assets or native dialogs. Terminals below require separate authority. Activity is approximate file observation unless the local CLI explicitly opts in with --live-activity; Telemetry shows source and correlation coverage. Usage is recorded ledger data only.</>}</p>
+    <p className="observer-scope">{control && client ? 'Authenticated selected-project office control. Layout, seats and local settings only.' : 'Read-only local office by default.'} No directory management, external assets or native dialogs. Terminals below require separate authority. Activity is approximate file observation unless the local CLI explicitly opts in with --live-activity; Telemetry shows source and correlation coverage. Usage is recorded ledger data only.</p>
     {client && control && preferenceDraft && <details open>
       <summary>Unacknowledged settings/seat draft</summary>
       <p>Inspect before retrying: this change has not been acknowledged. Other preference changes are rejected until it is resolved. A recovered full seat map may replace current assignments; reconcile or export and discard it first.</p>
@@ -96,7 +81,7 @@ function Observer() {
       }}>Export preference draft</button>
       <button onClick={() => client.discardPreferenceDraft()}>Discard preference draft</button>
     </details>}
-    {canvas ? office : <MobileShell office={office} onKeyboardViewport={onKeyboardViewport} />}
+    <MobileShell office={office} onKeyboardViewport={onKeyboardViewport} />
   </div>;
 }
 

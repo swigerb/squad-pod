@@ -435,3 +435,17 @@ not establish real Squad/Copilot session or native VS Code acceptance. The separ
 [native acceptance plan](../docs/native-acceptance.md) defines those approval-gated
 tests and their evidence boundaries. Browser touch emulation is not physical-device
 acceptance.
+
+## Canvas entry (local production adapter)
+
+`npm run build:canvas` builds the dedicated `webview-ui/canvas.html` UI and
+`dist/extension.mjs`. The Copilot app must inject `@github/copilot-sdk/extension`;
+the build leaves that import external and never installs the SDK at runtime.
+This is not a distributable plugin or native-install qualification.
+Each open requires exact joined-session metadata within one second (at most four
+outstanding calls, including timed-out calls). Only its canonical local project
+root is authorized; optional `projectRoot` input must match. Offices are isolated,
+read-only, and closed on context replacement, close or process shutdown.
+`get_office_state` and `get_member_details` expose bounded selected-project
+metadata only. Model declarations are not runtime selection; absent data is null
+or unavailable. The CLI continues to use its separate paste-authenticated bundle.
