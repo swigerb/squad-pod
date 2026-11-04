@@ -14,6 +14,9 @@ import { createVSCodeClient } from './hostClient.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { getColorizedSprite } from './office/colorize.js';
 import { CANVAS_CONTROL_CAPABILITIES, CANVAS_OBSERVER_CAPABILITIES } from '../../src/core/hostCapabilities.js';
+import { CanvasPanel } from './canvas/CanvasPanel.js';
+import { createCanvasBootstrap } from './canvas/bootstrap.js';
+import { CanvasBootstrapError, canvasDiagnostic } from './canvas/diagnostics.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -99,6 +102,28 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     root = createRoot(host);
     act(() => root.render(<App client={client} />));
   }
+  it('keeps the startup diagnosis visible when the real Canvas office subscription cannot construct a WebSocket', async () => {
+    const privateData = 'secret Cookie=private http://private/path C:\\private prompt';
+    const socket = vi.spyOn(globalThis, 'WebSocket').mockImplementation(function () { throw new Error(privateData); });
+    const request = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ serverIdentity: 'a'.repeat(43) }),
+    } as Response);
+    const status = vi.fn();
+    const bootstrap = createCanvasBootstrap(status, window, request);
+    const send = vi.spyOn(await bootstrap(), 'send');
+    const caught = vi.fn();
+    act(() => root.unmount());
+    root = createRoot(host, { onCaughtError: caught });
+    await act(async () => root.render(<CanvasPanel bootstrap={bootstrap} />));
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(canvasDiagnostic('OFFICE_START_FAILED'));
+    expect(caught.mock.calls[0][0]).toEqual(new CanvasBootstrapError('OFFICE_START_FAILED'));
+    expect(status).toHaveBeenLastCalledWith(canvasDiagnostic('OFFICE_START_FAILED'));
+    expect(status.mock.calls.flat()).not.toContain(canvasDiagnostic('WS_DISCONNECTED'));
+    expect(JSON.stringify(status.mock.calls) + host.textContent).not.toContain(privateData);
+    expect(send).not.toHaveBeenCalled();
+    expect(socket).toHaveBeenCalledOnce();
+    expect(request).toHaveBeenCalledOnce();
+  });
   beforeEach(() => {
     resetPetTemplates();
     persisted = undefined;
@@ -144,7 +169,8 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     try {
       root = createRoot(host);
       act(() => root.render(<App client={null} canvas />));
-      expect(host.querySelector('[role="alert"]')?.textContent).toContain('Reopen the canvas.');
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain('[OFFICE_START_FAILED] Office client startup failed. Reopen the canvas.');
+      expect(host.textContent).not.toContain('expired');
       expect(host.textContent).not.toContain('VS Code');
       act(() => root.render(<App client={client} canvas />));
       snapshot(imported, 'canvas');
