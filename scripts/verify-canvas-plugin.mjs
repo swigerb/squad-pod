@@ -3,6 +3,7 @@ import { builtinModules, createRequire } from 'node:module';
 import { lstatSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readCanvasVersion } from './canvas-version.mjs';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
 const extensionPath = 'com.github.copilot/extensions/squad-pod';
@@ -16,7 +17,8 @@ const safe = path => typeof path === 'string' && /^[A-Za-z0-9_@./-]+$/.test(path
 const builtin = name => builtinModules.includes(name.replace(/^node:/, ''));
 
 /** Audit a generated local artifact without executing its extension or installing it. */
-export async function verifyCanvasPlugin(directory = join(repo, 'plugins/squad-pod')) {
+export async function verifyCanvasPlugin(directory = join(repo, 'plugins/squad-pod'), versionSource) {
+  const version = readCanvasVersion(versionSource);
   const root = resolve(directory);
   const files = new Map();
   let total = 0;
@@ -51,7 +53,7 @@ export async function verifyCanvasPlugin(directory = join(repo, 'plugins/squad-p
   assert(manifest && fields.every(key => Object.hasOwn(manifest, key))
     && Object.keys(manifest).every(key => fields.includes(key)), 'manifest fields');
   assert(manifest.$schema === schema && manifest.name === 'squad-pod'
-    && manifest.version === '0.1.0' && manifest.version !== JSON.parse(readFileSync(join(repo, 'package.json'))).version,
+    && manifest.version === version,
   'manifest identity/version/schema');
   for (const field of ['description', 'license', 'homepage', 'repository']) {
     assert(typeof manifest[field] === 'string' && manifest[field].trim(), `manifest ${field}`);
