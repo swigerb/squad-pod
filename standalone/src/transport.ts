@@ -9,6 +9,7 @@ import type { OwnedRuns } from './ownedRuns.js';
 import { terminalSocket } from './terminalSocket.js';
 import { decodeControl, MAX_CONTROL_FRAME, type OfficeControl } from './officeControl.js';
 import { defaultPreferences } from './officePreferences.js';
+import type { ReadinessEvent } from './canvas/readiness.js';
 
 export interface TransportOptions {
   port?: number;
@@ -21,6 +22,8 @@ export interface TransportOptions {
   officeControl?: OfficeControl;
   /** Canvas uses a single-use viewer bootstrap and cookie-bound editing challenges. */
   canvas?: boolean;
+  /** Canvas-instance facts only; never request data or diagnostics on other hosts. */
+  canvasReadiness?: (event: ReadinessEvent) => void;
 }
 
 const MAX_CONNECTIONS = 8;
@@ -161,6 +164,7 @@ export async function startTransport(options: TransportOptions): Promise<{
     throw new Error('Canvas does not support terminal authority');
   }
   const files = await indexStatic(options.staticRoot);
+  const observe = (event: ReadinessEvent) => { if (options.canvas) options.canvasReadiness?.(event); };
   let token = credential();
   let session = credential();
   let terminalToken = credential();
@@ -230,6 +234,19 @@ export async function startTransport(options: TransportOptions): Promise<{
   };
   const server = createServer({ maxHeaderSize: MAX_INBOUND }, (request, response) => {
     headers(response);
+    if (options.canvas) {
+      const resource = files.get(staticPath(request.url ?? '') ?? '');
+      if (request.method === 'GET' || request.method === 'HEAD') {
+        if (resource?.mime.startsWith('text/html')) observe('documentRequests');
+        if (resource?.mime.startsWith('text/javascript')) observe('scriptRequests');
+      }
+      // Count completed bootstrap/context outcomes without retaining request/response data.
+      const outcome = request.url === '/auth' ? 'viewerBootstrap'
+        : request.url === '/office-context' ? 'officeContext' : undefined;
+      if (outcome) response.once('finish', () => observe(
+        `${outcome}${response.statusCode === (outcome === 'viewerBootstrap' ? 204 : 200) ? 'Successes' : 'Refusals'}`,
+      ));
+    }
     if (!validHost(request)) { reply(response, 403, 'FORBIDDEN'); return; }
     if (options.canvas && request.url === '/control-intent' && request.method === 'POST') {
       if (!options.officeControl || !validOrigin(request) || !authenticated(request)) {
@@ -343,6 +360,10 @@ export async function startTransport(options: TransportOptions): Promise<{
     ws.once('close', () => cleanups.delete(ws));
   });
   const handleOffice = (ws: WebSocket, control: boolean) => {
+    if (!control) {
+      observe('officeSocketAdmissions');
+      ws.once('close', () => observe('officeSocketClosures'));
+    }
     const admittedGeneration = generation;
     let lastMutationId = 0;
     let active = true;
@@ -424,7 +445,10 @@ export async function startTransport(options: TransportOptions): Promise<{
     // One bounded, timed read at a time; no promise chain can accumulate under a command flood.
     const read = async (message: WebviewMessage) => {
       busy = true;
-      if (message.type === 'webviewReady') { ready = true; initializing = true; }
+      if (message.type === 'webviewReady') {
+        ready = true; initializing = true;
+        if (!control) observe('webviewReady');
+      }
       readTimer = setTimeout(() => { error('TIMEOUT'); stop(); }, READ_TIMEOUT);
       readTimer.unref();
       try {

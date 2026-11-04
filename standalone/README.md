@@ -499,3 +499,9 @@ terminal authority.
 `get_office_state` and `get_member_details` expose bounded selected-project
 metadata only. Model declarations are not runtime selection; absent data is null
 or unavailable. The CLI continues to use its separate paste-authenticated bundle.
+Only the authorized `get_office_state` action includes per-instance readiness counters
+(saturating at 65535, erased on close): indexed document/script GET/HEAD requests,
+completed office-context/viewer-bootstrap successes/refusals, authenticated viewer
+office websocket admissions/closures, and accepted `webviewReady` messages.
+These are requests observed, **not proof of a visible renderer or a host defect**.
+No request content is retained; no diagnostic endpoint, files or telemetry are added.

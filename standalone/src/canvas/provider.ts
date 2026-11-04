@@ -154,7 +154,7 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
     },
     onClose: close,
     actions: ['get_office_state', 'get_member_details'].map(name => ({
-      name, description: name === 'get_office_state' ? 'Bounded office members, layout and source status.'
+      name, description: name === 'get_office_state' ? 'Bounded office members, layout, source status and requests-observed readiness.'
         : 'Exact-member charter summary, expertise and declared model provenance.',
       inputSchema: name === 'get_office_state' ? empty : { ...empty,
         properties: { slug: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,128}$' } }, required: ['slug'] },
@@ -171,7 +171,7 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
           const messages = await host.snapshot();
           active(ctx, entry, generation);
           if (entry.pending) fail('canvas_instance_unavailable');
-          return name === 'get_office_state' ? officeState(messages)
+          return name === 'get_office_state' ? officeState(messages, host.readiness?.())
             : memberDetails(root.path, input.slug as string, messages);
         } catch (error) {
           if (error instanceof sdk.CanvasError) throw error;

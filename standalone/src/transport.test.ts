@@ -160,6 +160,18 @@ async function refused(transport: Running, headers: Record<string, string>, path
 }
 
 describe('loopback transport HTTP boundary', () => {
+  it('never observes Canvas diagnostics for a non-Canvas transport', async () => {
+    const canvasReadiness = vi.fn();
+    const { transport } = await launch({ canvasReadiness });
+    await http(transport, '/');
+    await http(transport, '/assets/app.js');
+    await http(transport, '/office-context');
+    const client = await office(transport, await cookie(transport));
+    client.send({ type: 'webviewReady' }); await client.next();
+    await transport.dispose(); await client.closed;
+    expect(canvasReadiness).not.toHaveBeenCalled();
+  });
+
   it('refuses combining Canvas bootstrap with terminal authority', async () => {
     const { bundle } = await fixture();
     const options: TransportOptions = {

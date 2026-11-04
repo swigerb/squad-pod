@@ -8,6 +8,7 @@ import type { OutboundMessage } from '../../../src/types.js';
 import { startCanvasOfficeHost, type CanvasOfficeHost } from './officeHost.js';
 import { startOfficeExtension } from './provider.js';
 import { officeState } from './readActions.js';
+import { CanvasReadiness } from './readiness.js';
 
 vi.mock('./officeHost.js', () => ({ startCanvasOfficeHost: vi.fn() }));
 class CanvasError extends Error {
@@ -79,6 +80,25 @@ afterEach(async () => {
 });
 
 describe('host-injected Canvas provider', () => {
+  it('reads readiness only after state-action authority and input validation, never for member details', async () => {
+    const f = await fixture();
+    await f.canvas.open(ctx());
+    const snapshot = new CanvasReadiness().snapshot();
+    const readiness = vi.fn(() => snapshot);
+    hosts[0].readiness = readiness;
+    for (const context of [{ ...ctx(), sessionId: 'foreign' }, { ...ctx(), extensionId: 'foreign' },
+      ctx(undefined, 'absent')]) await expect(action(f.canvas, 'get_office_state', {}, context)).rejects.toThrow();
+    await expect(action(f.canvas, 'get_office_state', { extra: 'SECRET' })).rejects.toThrow();
+    await action(f.canvas, 'get_member_details', { slug: 'lisa' });
+    expect(readiness).not.toHaveBeenCalled();
+    expect(await action(f.canvas, 'get_office_state')).toEqual(officeState(messages(), snapshot));
+    expect(readiness).toHaveBeenCalledOnce();
+    readiness.mockClear();
+    await f.canvas.onClose(ctx());
+    await expect(action(f.canvas, 'get_office_state')).rejects.toThrow();
+    expect(readiness).not.toHaveBeenCalled();
+  });
+
   it('joins once, declares exactly two read-only actions, and starts only the authoritative root', async () => {
     const f = await fixture();
     expect(f.sdk.joinSession).toHaveBeenCalledExactlyOnceWith({ canvases: [f.canvas] });
