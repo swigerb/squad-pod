@@ -127,8 +127,8 @@ export function SettingsModal({ canvas = false, standalone = false, assetStatus,
           </p></>}
           {canvas && <div>
             <label><input type="checkbox" disabled checked={false} readOnly
-              title="Canvas cannot grant access to private CLI logs." /> Live Activity (unavailable)</label>
-            <p role="status">Live logs and session tasks are unavailable in Canvas. Enabling office editing does not grant log access.</p>
+              title="Canvas cannot grant access to private CLI logs." /> Private CLI-log scanning (unavailable)</label>
+            <p role="status">Canvas can display bounded task and model observations from the exact joined SDK session, not private CLI logs. Enabling office editing does not grant log access.</p>
           </div>}
           <SourceStatusView status={sourceStatus} readOnly={standalone} canvas={canvas} />
           {(!standalone || canvas) && <AssetDirectories status={assetStatus} />}

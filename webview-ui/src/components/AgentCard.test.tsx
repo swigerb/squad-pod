@@ -128,6 +128,38 @@ describe('AgentCard activity time', () => {
     expect(host.textContent).toContain('tool.execution_complete.model');
   });
 
+  it('shows an observed Canvas model instead of the missing-observation fallback', () => {
+    const renderCanvas = (observed: boolean) => act(() => root.render(<AgentCard
+      detail={detail} position={{ x: 10, y: 10 }} onClose={() => {}} canvas readOnly
+      liveActivity={{ state: 'following', sessionId: 'joined-session' }}
+      runtimeModel={observed ? {
+        model: 'sdk-observed-model', kind: 'subagent-model',
+        source: 'subagent.started.model', timestamp: '2026-11-04T14:00:00Z',
+      } : null}
+    />));
+    renderCanvas(false);
+    expect(host.textContent).toContain('No supported runtime model observation has been emitted');
+    renderCanvas(true);
+    expect(host.textContent).toContain('Member runtime model: sdk-observed-model');
+    expect(host.textContent).toContain('joined-session SDK; subagent.started.model');
+    expect(host.textContent).toContain('2026-11-04T14:00:00Z');
+    expect(host.textContent).not.toContain('No supported runtime model observation');
+    renderCanvas(false);
+    expect(host.textContent).not.toContain('sdk-observed-model');
+    expect(host.textContent).not.toContain('--live-activity');
+  });
+
+  it.each([
+    [undefined, 'Joined-session SDK source status is unavailable'],
+    [{ state: 'off', sessionId: null }, 'Joined-session SDK observation is off'],
+    [{ state: 'searching', sessionId: null }, 'Waiting for the exact joined SDK session'],
+    [{ state: 'error', sessionId: null }, 'Joined-session SDK source error'],
+    [{ state: 'following', sessionId: 'joined' }, 'No supported runtime model observation has been emitted'],
+  ] as const)('explains missing Canvas model state %s without CLI-log guidance', (status, reason) => {
+    expect(liveModelUnavailableReason(status, true, true)).toContain(reason);
+    expect(liveModelUnavailableReason(status, true, true)).not.toMatch(/--live-activity|enable it|log access/);
+  });
+
   it.each([
     [undefined, false, 'Live source status is unavailable; no runtime model observation is available.'],
     [undefined, true, 'Live source status is unavailable; no runtime model observation is available.'],
