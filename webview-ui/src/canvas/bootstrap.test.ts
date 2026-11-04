@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CANVAS_CONTROL_CAPABILITIES, CANVAS_OBSERVER_CAPABILITIES } from '../../../src/core/hostCapabilities.js';
+import { connectOffice } from '../../../src/core/officeChannel.js';
 import { createBrowserClient } from '../standalone/browserClient.js';
-import { createCanvasBootstrap, CANVAS_EDIT_FAILED, CANVAS_EXPIRED } from './bootstrap.js';
+import { createCanvasBootstrap, CANVAS_EDIT_FAILED } from './bootstrap.js';
+import { CanvasBootstrapError, canvasDiagnostic } from './diagnostics.js';
 
 const identity = { serverIdentity: 'a'.repeat(43), projectIdentity: null };
 const response = (status: number, body: unknown = identity) =>
@@ -64,7 +66,10 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     'rejects missing/ambiguous/oversized fragments %s without auth or client creation', async hash => {
       window.history.replaceState(null, '', '/' + hash);
       const f = fixture([response(403)]);
-      await expect(f.bootstrap()).rejects.toThrow(CANVAS_EXPIRED);
+      const code = hash === '' || hash === '#wrong=secret' ? 'VIEWER_BOOTSTRAP_MISSING' : 'VIEWER_BOOTSTRAP_INVALID';
+      await expect(f.bootstrap()).rejects.toMatchObject({
+        code, message: canvasDiagnostic(code),
+      });
       expect(window.location.hash).toBe('');
       expect(f.request).toHaveBeenCalledTimes(1);
       expect(f.createClient).not.toHaveBeenCalled();
@@ -72,35 +77,73 @@ describe('Canvas cookie-first single-use bootstrap', () => {
   );
 
   it.each([
-    [response(500)],
-    [response(403), response(403)],
-    [response(403), response(200), response(403)],
-    [response(200, { serverIdentity: 'invalid' })],
-  ])('fails closed without retries or leaking response details', async (...responses) => {
-    const f = fixture(responses);
+    { responses: [response(500)], code: 'OFFICE_CONTEXT_UNAVAILABLE' },
+    { responses: [response(403), response(403)], code: 'AUTH_REJECTED' },
+    { responses: [response(403), response(503)], code: 'AUTH_UNAVAILABLE' },
+    { responses: [response(403), response(200), response(403)], code: 'AUTH_REJECTED' },
+    { responses: [response(403), response(200), response(503)], code: 'OFFICE_CONTEXT_UNAVAILABLE' },
+    { responses: [response(200, { serverIdentity: 'secret_credential' })], code: 'OFFICE_CONTEXT_INVALID' },
+  ] as const)('fails closed with $code without retries or leaking response details', async ({ responses, code }) => {
+    const f = fixture([...responses]);
+    for (const value of responses) {
+      if (!value.ok) value.json = vi.fn().mockRejectedValue(new Error(privateData));
+    }
     const attempt = f.bootstrap();
-    await expect(attempt).rejects.toThrow(CANVAS_EXPIRED);
+    await expect(attempt).rejects.toMatchObject({ code, message: canvasDiagnostic(code) });
     expect(f.bootstrap()).toBe(attempt);
     expect(window.location.hash).toBe('');
     expect(f.createClient).not.toHaveBeenCalled();
+    expect(f.request).toHaveBeenCalledTimes(responses.length);
+    for (const value of responses) if (!value.ok) expect(value.json).not.toHaveBeenCalled();
   });
 
-  it('clears credentials on a network failure and reports a neutral error', async () => {
-    const f = fixture([]);
-    f.request.mockRejectedValue(new Error('secret_credential'));
-    await expect(f.bootstrap()).rejects.toThrow(CANVAS_EXPIRED);
+  const privateData = 'secret_credential Cookie=private_cookie http://private.test/private-path C:\\private prompt contents';
+  it.each([[], [response(403)], [response(403), response(200)]])(
+    'clears credentials on network failure at each request stage without retrying', async (...responses) => {
+    const f = fixture(responses);
+    f.request.mockRejectedValue(new Error(privateData));
+    const attempt = f.bootstrap();
+    await expect(attempt).rejects.toMatchObject({ code: 'NETWORK_FAILED', message: canvasDiagnostic('NETWORK_FAILED') });
+    expect(String(await attempt.catch(error => error))).not.toContain(privateData);
     expect(window.location.hash).toBe('');
-    expect(f.request).toHaveBeenCalledTimes(1);
+    expect(f.bootstrap()).toBe(attempt);
+    expect(f.request).toHaveBeenCalledTimes(responses.length + 1);
   });
 
-  it('maps transport failures to Canvas recovery wording rather than console authentication', async () => {
+  it.each(['json', 'client'] as const)('sanitizes %s startup exceptions', async stage => {
+    const context = response(200);
+    const f = fixture([context]);
+    if (stage === 'json') context.json = vi.fn().mockRejectedValue(new Error(privateData));
+    else f.createClient.mockImplementation(() => { throw new Error(privateData); });
+    const code = stage === 'json' ? 'OFFICE_CONTEXT_INVALID' : 'OFFICE_START_FAILED';
+    await expect(f.bootstrap()).rejects.toEqual(new CanvasBootstrapError(code));
+  });
+
+  it('allowlists transport status without inferring expiry or forwarding arbitrary strings', async () => {
     const f = fixture([response(200)]);
     await f.bootstrap();
     const onStatus = f.createClient.mock.calls[0][0];
     onStatus('Connecting');
     onStatus('Connected - read-only');
     onStatus('Connection failed - authenticate again if the credential was revoked');
-    expect(f.status.mock.calls).toEqual([['Connecting'], ['Connected - read-only'], [CANVAS_EXPIRED]]);
+    onStatus('Disconnected - retrying observation only; authenticate again after rotation');
+    onStatus(`Connected ${privateData}`);
+    onStatus(`Protocol error: ${privateData}`);
+    expect(f.status.mock.calls.flat()).toEqual([
+      'OFFICE_STARTING', 'WS_CONNECTING', 'WS_CONNECTED', 'WS_FAILED', 'WS_DISCONNECTED', 'OFFICE_STATUS', 'OFFICE_PROTOCOL_FAILED',
+    ].map(code => canvasDiagnostic(code as Parameters<typeof canvasDiagnostic>[0])));
+    expect(JSON.stringify(f.status.mock.calls)).not.toContain(privateData);
+  });
+
+  it('reports office subscription startup failure safely and disposes without retrying', async () => {
+    const f = fixture([response(200)]);
+    const client = await f.bootstrap();
+    f.createClient.mock.results[0].value.subscribe.mockImplementation(() => { throw new Error(privateData); });
+    expect(() => connectOffice(client, vi.fn())).toThrow(new CanvasBootstrapError('OFFICE_START_FAILED'));
+    expect(f.status).toHaveBeenLastCalledWith(canvasDiagnostic('OFFICE_START_FAILED'));
+    expect(f.createClient.mock.results[0].value.send).not.toHaveBeenCalled();
+    expect(f.createClient.mock.results[0].value.dispose).toHaveBeenCalledOnce();
+    expect(f.createClient).toHaveBeenCalledOnce();
   });
 
   it('does not request control until opt-in, then uses a cookie-bound challenge, never a URL credential', async () => {
@@ -138,7 +181,7 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     onStatus('Disconnected before save acknowledgement. Draft retained');
     onStatus('Disconnected - retrying observation only; authenticate again after rotation');
     expect(f.status.mock.calls).toEqual([
-      ['Disconnected before save acknowledgement. Draft retained'], [CANVAS_EXPIRED],
+      [canvasDiagnostic('OFFICE_STARTING')], [canvasDiagnostic('OFFICE_STATUS')], [canvasDiagnostic('WS_DISCONNECTED')],
     ]);
   });
 
@@ -251,7 +294,8 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     const socket = { readyState: WebSocket.OPEN, send, close: vi.fn(), onopen: null } as unknown as WebSocket;
     const createSocket = vi.fn(() => socket);
     const request = vi.fn<typeof fetch>().mockResolvedValue(response(200));
-    const bootstrap = createCanvasBootstrap(vi.fn(), window, request,
+    const status = vi.fn();
+    const bootstrap = createCanvasBootstrap(status, window, request,
       (status, _, origin) => createBrowserClient(status, createSocket, origin));
     const client = await bootstrap();
     const listener = vi.fn();
@@ -264,6 +308,12 @@ describe('Canvas cookie-first single-use bootstrap', () => {
         version: 1, kind: 'office', message: { type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: true },
       }) }));
       expect(listener).toHaveBeenCalledWith({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: true });
+      socket.onopen?.(new Event('open'));
+      expect(status).toHaveBeenLastCalledWith(canvasDiagnostic('WS_CONNECTED'));
+      socket.onmessage?.(new MessageEvent('message', { data: JSON.stringify({
+        version: 1, kind: 'office', message: { type: 'existingAgents', agents: [] },
+      }) }));
+      expect(status).toHaveBeenLastCalledWith(canvasDiagnostic('OFFICE_READY'));
       expect(client.getState()).toBeUndefined();
       expect(() => client.setState({ token: 'must-not-persist' })).toThrow();
     } finally { unsubscribe(); client.dispose(); }

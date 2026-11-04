@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import App from '../App.js';
 import type { BrowserHostClient } from '../standalone/browserClient.js';
-import { CANVAS_EDIT_FAILED, CANVAS_EXPIRED, createCanvasBootstrap, type CanvasHostClient } from './bootstrap.js';
+import { CANVAS_EDIT_FAILED, createCanvasBootstrap, type CanvasHostClient } from './bootstrap.js';
+import { canvasBootstrapFailure } from './diagnostics.js';
 import type { PreferenceMutation } from '../../../standalone/src/officePreferences.js';
 import { PreferenceDraftControls } from '../standalone/PreferenceDraftControls.js';
 
 export function CanvasPanel({ bootstrap }: { bootstrap?: () => Promise<CanvasHostClient> }) {
   const [client, setClient] = useState<CanvasHostClient | null>(null);
-  const [expired, setExpired] = useState(false);
+  const [startupError, setStartupError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [enabling, setEnabling] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -20,7 +21,7 @@ export function CanvasPanel({ bootstrap }: { bootstrap?: () => Promise<CanvasHos
     void connect().then(value => {
       if (active.current) setClient(value);
       else value.dispose();
-    }, () => { if (active.current) setExpired(true); });
+    }, error => { if (active.current) setStartupError(canvasBootstrapFailure(error)); });
     return () => { active.current = false; };
   }, [connect]);
   useEffect(() => () => client?.dispose(), [client]);
@@ -46,7 +47,7 @@ export function CanvasPanel({ bootstrap }: { bootstrap?: () => Promise<CanvasHos
     </button>}
     {editError && <p role="alert">{editError}</p>}
     {client && editing && preferenceDraft && <PreferenceDraftControls client={client} draft={preferenceDraft} />}
-    <main>{expired ? <p role="alert">{CANVAS_EXPIRED}</p> : client
+    <main>{startupError ? <p role="alert">{startupError}</p> : client
       ? <App key={editing ? 'control' : 'observer'} client={client} canvas readOnly={!editing} />
       : <p role="status">Connecting to Squad Pod…</p>}</main>
     {client && <p className="canvas-connection" role="status">{status}</p>}

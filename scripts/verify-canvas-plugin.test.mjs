@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { verifyCanvasPlugin } from './verify-canvas-plugin.mjs';
+import { readCanvasVersion } from './canvas-version.mjs';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
 const source = join(repo, 'plugins/squad-pod');
@@ -35,7 +36,7 @@ function emit(root, code) {
 test('real artifact has checksums, pinned bundled licenses and source identity', async () => {
   const root = fixture();
   const receipt = await verifyCanvasPlugin(root);
-  assert.deepEqual(receipt.plugin, { name: 'squad-pod', version: '0.1.0' });
+  assert.deepEqual(receipt.plugin, { name: 'squad-pod', version: readCanvasVersion() });
   assert.match(receipt.sourceCommit, /^[a-f0-9]{40}$/);
   assert.equal(receipt.sdk.providedBy, 'host');
   assert.deepEqual(receipt.dependencies.map(item => item.name), ['pngjs', 'react', 'react-dom', 'scheduler', 'ws']);
@@ -49,6 +50,143 @@ test('real artifact has checksums, pinned bundled licenses and source identity',
   assert.ok(!receipt.files.some(item => item.path === 'checksums.json'));
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'checksums.json'))), receipt);
   assert.deepEqual(await verifyCanvasPlugin(root), receipt, 'receipt is deterministic');
+});
+
+function versionFixture(version) {
+  const path = join(scratch, `version-${index++}.json`);
+  writeFileSync(path, JSON.stringify({ version }));
+  return path;
+}
+
+function isolatedBuildFixture(version) {
+  const root = join(scratch, `isolated-build-${index++}`);
+  const put = (name, contents) => {
+    const path = join(root, name);
+    mkdirSync(join(path, '..'), { recursive: true });
+    writeFileSync(path, contents);
+  };
+  for (const name of ['standalone/build.canvas.mjs', 'scripts/canvas-version.mjs',
+    'scripts/verify-canvas-plugin.mjs', 'package.json', 'standalone/package.json',
+    'LICENSE', 'THIRD_PARTY_NOTICES.md', 'assets/squad-pod-icon.png']) {
+    put(name, readFileSync(join(repo, name)));
+  }
+  put('standalone/canvas-plugin.json', JSON.stringify({ version }));
+  put('webview-ui/public/assets/pixel-agents-source.json', '{}');
+  for (const name of ['ws', 'react']) {
+    put(`standalone/node_modules/${name}/package.json`,
+      JSON.stringify({ name, version: '1.2.3', license: 'MIT', main: 'index.js' }));
+    put(`standalone/node_modules/${name}/index.js`, '');
+    put(`standalone/node_modules/${name}/LICENSE`, 'Fixture dependency license. '.repeat(8));
+  }
+  put('standalone/node_modules/pngjs/package.json', '{"main":"index.js"}');
+  put('standalone/node_modules/pngjs/index.js', '');
+  // Stub only the bundlers; execute the real manifest writer and complete verifier.
+  put('standalone/node_modules/esbuild/package.json', '{"main":"index.cjs"}');
+  put('standalone/node_modules/esbuild/index.cjs', `
+    const { mkdirSync, writeFileSync } = require('node:fs');
+    const { dirname, resolve } = require('node:path');
+    exports.build = async options => {
+      const imports = [{ path: '@github/copilot-sdk/extension', external: true }];
+      if (options.outfile) {
+        const path = resolve(options.absWorkingDir, options.outfile);
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, 'import "@github/copilot-sdk/extension";\\n'
+          + 'new URL("./canvas-browser", import.meta.url);\\n'
+          + 'new URL("./assets", import.meta.url);\\n');
+      }
+      return { metafile: {
+        inputs: { 'node_modules/ws/index.js': {}, 'node_modules/react/index.js': {} },
+        outputs: { 'extension.mjs': { imports: options.entryPoints && !options.outfile ? [] : imports } },
+      } };
+    };
+  `);
+  put('webview-ui/node_modules/vite/bin/vite.js', `
+    const { mkdirSync, writeFileSync } = require('node:fs');
+    const { resolve } = require('node:path');
+    const output = resolve('../standalone/dist/canvas-browser');
+    mkdirSync(output, { recursive: true });
+    writeFileSync(resolve(output, 'canvas.html'), '<!doctype html><title>Fixture</title>');
+    writeFileSync(resolve(output, 'build-inputs.json'), '[]');
+  `);
+  const result = spawnSync(process.execPath, [join(root, 'standalone/build.canvas.mjs')], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' },
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0, result.stderr);
+  return root;
+}
+
+test('Canvas version source preserves independent current package identities', () => {
+  const pkg = path => JSON.parse(readFileSync(join(repo, path), 'utf8'));
+  assert.equal(readCanvasVersion(), '0.1.0');
+  assert.equal(pkg('package.json').name, 'squad-pod');
+  assert.equal(pkg('package.json').version, '1.0.0');
+  assert.equal(pkg('standalone/package.json').name, 'squad-pod-observer');
+  assert.equal(pkg('standalone/package.json').version, '0.1.0');
+});
+
+test('Canvas version source accepts alternate SemVer fixtures', () => {
+  for (const version of ['0.1.1', '2.3.4-rc.1+build.007', '1.0.0']) {
+    assert.equal(readCanvasVersion(versionFixture(version)), version);
+  }
+});
+
+test('Canvas version source rejects invalid SemVer fixtures before artifact inspection', async () => {
+  for (const version of [undefined, null, 1, '', 'v0.1.0', '1.2', '01.2.3', '1.02.3',
+    '1.2.03', '1.2.3-01', '1.2.3-a.01', '1.2.3-', '1.2.3+', '1.2.3+bad!',
+    ' 1.2.3', '1.2.3\n', '1.2.3\r\n']) {
+    const path = versionFixture(version);
+    assert.throws(() => readCanvasVersion(path), /version source.*valid SemVer/);
+    await assert.rejects(verifyCanvasPlugin(join(scratch, 'absent'), path), /version source.*valid SemVer/);
+  }
+});
+
+test('Canvas build rejects an invalid source before dependencies or output changes', () => {
+  const root = join(scratch, `build-${index++}`);
+  for (const dir of ['standalone', 'scripts', 'plugins/squad-pod']) mkdirSync(join(root, dir), { recursive: true });
+  for (const name of ['standalone/build.canvas.mjs', 'scripts/canvas-version.mjs']) {
+    cpSync(join(repo, name), join(root, name));
+  }
+  writeFileSync(join(root, 'standalone/canvas-plugin.json'), '{"version":"01.2.3"}');
+  const sentinel = join(root, 'plugins/squad-pod/plugin.json');
+  writeFileSync(sentinel, 'existing output');
+  const result = spawnSync(process.execPath, [join(root, 'standalone/build.canvas.mjs')], { encoding: 'utf8' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /version source.*valid SemVer/);
+  assert.equal(readFileSync(sentinel, 'utf8'), 'existing output');
+});
+
+test('Canvas verifier rejects artifact/source mismatch without build dependencies', async () => {
+  const root = join(scratch, `mismatch-${index++}`);
+  mkdirSync(root);
+  const manifest = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
+  writeFileSync(join(root, 'plugin.json'), JSON.stringify({
+    $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
+    name: 'squad-pod', version: '0.1.1', description: manifest.description,
+    author: manifest.author, homepage: manifest.homepage, repository: manifest.repository.url,
+    license: manifest.license, keywords: ['canvas'], extensions: {},
+  }));
+  await assert.rejects(verifyCanvasPlugin(root), /manifest identity\/version\/schema/);
+});
+
+test('alternate Canvas source version is required in the artifact and receipt', async () => {
+  const version = '2.3.4-rc.1+build.007';
+  const buildRoot = isolatedBuildFixture(version);
+  const root = join(buildRoot, 'plugins/squad-pod');
+  const { verifyCanvasPlugin: verify } = await import(
+    pathToFileURL(join(buildRoot, 'scripts/verify-canvas-plugin.mjs')).href);
+  const manifest = JSON.parse(readFileSync(join(root, 'plugin.json'), 'utf8'));
+  const persisted = JSON.parse(readFileSync(join(root, 'checksums.json'), 'utf8'));
+  assert.equal(manifest.version, version, 'production build propagates the Canvas source, not a hardcoded or VSIX version');
+  assert.deepEqual(persisted.plugin, { name: 'squad-pod', version }, 'build persists the alternate version receipt');
+  const receipt = await verify(root);
+  assert.deepEqual(receipt.plugin, { name: 'squad-pod', version });
+  assert.deepEqual(receipt, persisted, 'build receipt agrees with independent verification');
+  await assert.rejects(verify(root, versionFixture('0.1.0')), /manifest identity\/version\/schema/);
+  update(root, 'plugin.json', value => { value.version = '0.1.0'; });
+  await assert.rejects(verify(root), /manifest identity\/version\/schema/);
+  assert.deepEqual(JSON.parse(readFileSync(join(root, 'checksums.json'), 'utf8')), persisted,
+    'mismatched artifacts never overwrite the accepted receipt');
 });
 
 for (const [label, mutate, expected] of [

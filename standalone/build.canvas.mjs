@@ -1,11 +1,13 @@
-import { build } from 'esbuild';
 import { cpSync, renameSync, rmSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, relative, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { readCanvasVersion } from '../scripts/canvas-version.mjs';
 
+const version = readCanvasVersion();
+const { build } = await import('esbuild');
 const repo = fileURLToPath(new URL('../', import.meta.url));
 const output = join(repo, 'plugins/squad-pod');
 const extension = join(output, 'com.github.copilot/extensions/squad-pod');
@@ -57,7 +59,7 @@ for (const input of inputs.filter(path => path.includes('node_modules'))) {
 const pkg = json(join(repo, 'package.json'));
 const manifest = {
   $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
-  name: 'squad-pod', version: '0.1.0', description: pkg.description,
+  name: 'squad-pod', version, description: pkg.description,
   author: pkg.author, homepage: pkg.homepage, repository: pkg.repository.url, license: pkg.license,
   keywords: [...pkg.keywords, 'canvas'],
   extensions: { 'com.github.copilot': { logo: 'assets/preview.png' } },

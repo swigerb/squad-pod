@@ -5,6 +5,7 @@ import { startTransport } from '../transport.js';
 import { createOfficeControl } from '../officeControl.js';
 import type { OutboundMessage } from '../../../src/types.js';
 import { CanvasActivity } from './activity.js';
+import { CanvasReadiness, type ReadinessSnapshot } from './readiness.js';
 
 /** Explicit local inputs supplied by a host adapter, not by a browser request. */
 export interface CanvasOfficeHostOptions {
@@ -18,6 +19,8 @@ export interface CanvasOfficeHostOptions {
 export interface CanvasOfficeHost {
   url: string;
   snapshot(): Promise<OutboundMessage[]>;
+  /** Safe instance observations, available only while this host is alive. */
+  readiness?(): ReadinessSnapshot | undefined;
   acceptActivity?(event: unknown): void;
   clearActivity?(): void;
   dispose(): Promise<void>;
@@ -58,6 +61,7 @@ async function validateRoot(selected: string): Promise<string> {
  */
 export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): Promise<CanvasOfficeHost> {
   const root = await validateRoot(options.projectRoot);
+  const readiness = new CanvasReadiness();
   let observer: ReturnType<typeof createObserver> | undefined;
   let transport: Awaited<ReturnType<typeof startTransport>> | undefined;
   const listeners = new Set<(messages: OutboundMessage[]) => void>();
@@ -71,7 +75,7 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
     observer = createObserver(root, options.bundledAssetsRoot, 1000, { liveActivity: false, fileActivity: false });
     await snapshot();
     transport = await startTransport({
-      staticRoot: options.staticRoot, canvas: true,
+      staticRoot: options.staticRoot, canvas: true, canvasReadiness: event => readiness.observe(event),
       officeControl: createOfficeControl(root),
       snapshot, subscribe: listener => {
         listeners.add(listener);
@@ -83,6 +87,7 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
       },
     });
   } catch {
+    readiness.dispose();
     try { await transport?.dispose(); } finally { observer?.dispose(); }
     throw new Error('CANVAS_START_FAILED');
   }
@@ -92,10 +97,12 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
   return {
     url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}`,
     snapshot,
+    readiness: () => readiness.snapshot(),
     acceptActivity: event => live?.accept(event),
     clearActivity: () => live?.clear(),
     dispose() {
       if (!disposal) {
+        readiness.dispose();
         live?.clear();
         listeners.clear();
         ownedObserver.dispose();

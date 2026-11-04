@@ -14,6 +14,9 @@ import { createVSCodeClient } from './hostClient.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { getColorizedSprite } from './office/colorize.js';
 import { CANVAS_CONTROL_CAPABILITIES, CANVAS_OBSERVER_CAPABILITIES } from '../../src/core/hostCapabilities.js';
+import { CanvasPanel } from './canvas/CanvasPanel.js';
+import { createCanvasBootstrap } from './canvas/bootstrap.js';
+import { CanvasBootstrapError, canvasDiagnostic } from './canvas/diagnostics.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -99,6 +102,28 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     root = createRoot(host);
     act(() => root.render(<App client={client} />));
   }
+  it('keeps the startup diagnosis visible when the real Canvas office subscription cannot construct a WebSocket', async () => {
+    const privateData = 'secret Cookie=private http://private/path C:\\private prompt';
+    const socket = vi.spyOn(globalThis, 'WebSocket').mockImplementation(function () { throw new Error(privateData); });
+    const request = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ serverIdentity: 'a'.repeat(43) }),
+    } as Response);
+    const status = vi.fn();
+    const bootstrap = createCanvasBootstrap(status, window, request);
+    const send = vi.spyOn(await bootstrap(), 'send');
+    const caught = vi.fn();
+    act(() => root.unmount());
+    root = createRoot(host, { onCaughtError: caught });
+    await act(async () => root.render(<CanvasPanel bootstrap={bootstrap} />));
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(canvasDiagnostic('OFFICE_START_FAILED'));
+    expect(caught.mock.calls[0][0]).toEqual(new CanvasBootstrapError('OFFICE_START_FAILED'));
+    expect(status).toHaveBeenLastCalledWith(canvasDiagnostic('OFFICE_START_FAILED'));
+    expect(status.mock.calls.flat()).not.toContain(canvasDiagnostic('WS_DISCONNECTED'));
+    expect(JSON.stringify(status.mock.calls) + host.textContent).not.toContain(privateData);
+    expect(send).not.toHaveBeenCalled();
+    expect(socket).toHaveBeenCalledOnce();
+    expect(request).toHaveBeenCalledOnce();
+  });
   beforeEach(() => {
     resetPetTemplates();
     persisted = undefined;
@@ -144,7 +169,8 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     try {
       root = createRoot(host);
       act(() => root.render(<App client={null} canvas />));
-      expect(host.querySelector('[role="alert"]')?.textContent).toContain('Reopen the canvas.');
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain('[OFFICE_START_FAILED] Office client startup failed. Reopen the canvas.');
+      expect(host.textContent).not.toContain('expired');
       expect(host.textContent).not.toContain('VS Code');
       act(() => root.render(<App client={client} canvas />));
       snapshot(imported, 'canvas');
@@ -156,7 +182,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       }
       click('Telemetry');
       expect(host.textContent).toContain('CLI usage import is unavailable in Canvas.');
-      expect(host.textContent).toContain('Live logs and session tasks are unavailable in Canvas.');
+      expect(host.textContent).toContain('Canvas displays bounded live observations from the exact joined SDK session.');
       expect(host.textContent).not.toContain('VS Code');
       expect(host.textContent).not.toContain('--live-activity');
       expect(host.textContent).not.toContain('then explicitly select');
@@ -197,7 +223,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       const charter = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === 'View Charter');
       expect(charter?.disabled).toBe(true);
       expect(charter?.title).toContain('Opening files is unavailable');
-      expect(host.textContent).toContain('Runtime model observation is unavailable in Canvas');
+      expect(host.textContent).toContain('Joined-session SDK observation is off');
       expect(host.textContent).not.toContain('--live-activity');
       act(() => charter?.click());
       expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual([
@@ -224,7 +250,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     click('Settings');
     expect(host.querySelector('[role="dialog"]')).not.toBeNull();
     expect(host.textContent).not.toMatch(/VS Code|--live-activity|newest matching-project|normal terminal/);
-    expect(host.textContent).toContain('Live logs and session tasks are unavailable in Canvas');
+    expect(host.textContent).toContain('Canvas can display bounded task and model observations from the exact joined SDK session');
     expect(host.textContent).toContain('Directory navigation, CLI launch, terminals and opening local files are unavailable');
     expect(host.textContent).toContain('Export downloads validated JSON');
     for (const label of ['Export Layout', 'Import Layout']) {
@@ -272,6 +298,77 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(directory?.disabled).toBe(true);
     expect(directory?.title).toContain('Directory mapping is unavailable in Canvas');
     expect(host.textContent).toContain('Named Areas can still be painted, renamed and colored');
+  });
+
+  it('exposes bounded Canvas SDK task evidence and diagnostics without stale sessions or log authority', () => {
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: CANVAS_CONTROL_CAPABILITIES };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'canvas-evidence');
+    click('Telemetry');
+    const tasks = () => host.querySelector('[aria-label="Observed transient tasks"]')!;
+    const diagnostics = () => host.querySelector('[aria-label="Squad source status"]')!;
+    expect(tasks().textContent).toContain('Joined-session SDK source status is unavailable');
+    expect(tasks().textContent).toContain('Observed transient tasks (unavailable)');
+    const status: SourceStatus = {
+      workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad', teamFound: true,
+      observer: 'watching', nativeWatch: false, error: null,
+      liveActivity: { state: 'following', sessionId: 'joined-a', selection: 'owned-session',
+        reason: 'Exact joined SDK session; live events only, no replay.' },
+    };
+    const task = {
+      sessionId: 'joined-a', toolCallId: 'call-a', parentToolCallId: null,
+      name: 'SDK task fixture', agentType: 'general-purpose', mode: 'sync',
+      description: 'Read-only evidence', agentId: null, state: 'running' as const, fieldsTruncated: false,
+    };
+    const emitTasks = (sessionId = 'joined-a', limited = false) => send({
+      type: 'observedTasks', snapshot: { sessionId, tasks: [task], limited },
+    });
+    send({ type: 'sourceStatus', status });
+    expect(tasks().textContent).toContain('No task snapshot available for the exact joined SDK session');
+    expect(diagnostics().textContent).toContain('Joined-session SDK observer: following (joined-a)');
+    expect(diagnostics().textContent).toContain('Selection: owned-session');
+    expect(diagnostics().textContent).toContain(status.liveActivity!.reason);
+    expect(diagnostics().textContent).toContain('Live CLI observer: Unavailable in Canvas');
+    emitTasks('joined-a', true);
+    expect(tasks().textContent).toContain('Observed transient tasks (1)');
+    expect(tasks().textContent).toContain('SDK task fixture');
+    expect(tasks().textContent).toContain('Partial coverage');
+    expect(tasks().textContent).toContain('Live events only; no history replay');
+    expect(tasks().textContent).not.toContain('Startup restores');
+    expect(tasks().textContent).toContain('not durable membership or recorded usage');
+    expect(tasks().textContent).toContain('Missing observations are not zero activity or usage');
+    click('Clear activity');
+    expect(tasks().textContent).toContain('SDK task fixture');
+    send({ type: 'sourceStatus', status: { ...status, liveActivity: { ...status.liveActivity!,
+      sessionId: 'joined-b' } } });
+    expect(tasks().textContent).not.toContain('SDK task fixture');
+    emitTasks();
+    expect(tasks().textContent).not.toContain('SDK task fixture');
+    expect(tasks().textContent).not.toContain('Observed transient tasks (0)');
+    emitTasks('joined-b');
+    expect(tasks().textContent).not.toContain('SDK task fixture'); // mismatched task inside a current snapshot
+    send({ type: 'observedTasks', snapshot: { sessionId: 'joined-b', tasks: [], limited: false } });
+    expect(tasks().textContent).toContain('No in-flight or recent task calls observed');
+    for (const state of ['searching', 'error', 'off'] as const) {
+      send({ type: 'sourceStatus', status: { ...status, liveActivity: {
+        state, sessionId: null, selection: 'unavailable', reason: `SDK fixture ${state}`,
+      } } });
+      emitTasks();
+      expect(tasks().textContent).not.toContain('SDK task fixture');
+      expect(tasks().textContent).toContain('Observed transient tasks (unavailable)');
+      expect(diagnostics().textContent).toContain(`Joined-session SDK observer: ${state}`);
+      expect(diagnostics().textContent).toContain(`SDK fixture ${state}`);
+    }
+    send({ type: 'sourceStatus', status: { ...status, liveActivity: undefined } });
+    expect(tasks().textContent).toContain('Joined-session SDK source status is unavailable');
+    expect(diagnostics().textContent).toContain('Unavailable (no joined-session source status)');
+    expect(host.textContent).not.toMatch(/--live-activity|Startup restores|Observation settings and consent/);
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
+    click('Settings');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Private CLI-log scanning (unavailable)');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Joined-session SDK observer: Unavailable');
   });
 
   it.each([false, true])('keeps labels expanded by default outside Canvas (standalone=%s)', async standalone => {
