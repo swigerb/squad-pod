@@ -81,11 +81,11 @@ These checks do not install the plugin or change app configuration.
 
 ## Canvas 0.1.2 host-mediated candidates (#223)
 
-Canvas 0.1.2 includes these host-mediated candidates. The currently published
-0.1.1 ZIP and catalog pin remain unchanged until the separate catalog update;
-installing 0.1.1 does not provide these capabilities. Native acceptance for
-0.1.2 remains pending in #218. The charter/CLI-import OPEN rows and
-browser-transfer gates remain unchanged.
+Canvas 0.1.2 is the current published preview; 0.1.1 is historical. The 0.1.2
+artifact adds host-mediated charter opening, joined-session usage metrics and
+JSON transfers. Native acceptance for 0.1.2 remains pending in #218. CLI usage
+import remains OPEN, and browser-transfer gates remain unchanged where native
+embedded transfer is still unqualified.
 
 `standalone/src/canvas/hostCapabilities.ts` owns each instance's optional bridge.
 The installed experimental SDK's generated RPC declarations document

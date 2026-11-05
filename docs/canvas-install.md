@@ -56,8 +56,10 @@ human/compositor acceptance or proof of a real paid task.
    private paths out of shared evidence.
 2. Discover this installation's `squad-pod` canvas capabilities using
    `list_canvas_capabilities`; use its actual provider identifier if ambiguous.
-   Verify `get_office_snapshot` exists. If it does not, record **BLOCKED** for
-   this candidate procedure, not a defect in the installed 0.1.2 release.
+   Verify `get_office_snapshot` exists. If it does not, record **BLOCKED** and
+   investigate the actual provider, installed build and registration. Treat the
+   mismatch as unexpected for 0.1.2; do not dismiss it as an expected limitation
+   or substitute an older artifact.
 3. In session A, invoke the following tools (examples show their JSON inputs):
 
    ```text

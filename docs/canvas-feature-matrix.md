@@ -5,9 +5,11 @@ local-session preview**, not generally available or a VSIX/CLI replacement
 (#214, epic #172). Prior **0.1.0** evidence qualified app **1.1.34**; this is
 not acceptance of 0.1.2, a minimum or a broad compatibility promise.
 Native 0.1.2 checks remain pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
-The catalog pins the published 0.1.2 artifact. The 0.1.1 tables below preserve
-the prior release truth; the 0.1.2 C14/C15 rows describe current candidates and
-remain pending native acceptance.
+The catalog pins the published 0.1.2 artifact. It retains the prior 0.1.1
+office, editor and preferences behavior. The 0.1.1 tables below preserve
+historical release truth; the 0.1.2 C14/C15 rows describe current candidates
+and supersede the corresponding charter and import/export rows. All 0.1.2
+candidates remain pending native acceptance.
 macOS, Linux, WSL and remote sessions
 are unsupported. See the [install and lifecycle guide](canvas-install.md).
 It observes only the exact joined session/project. No directory browsing,
@@ -22,9 +24,11 @@ settings, not arbitrary files, launches, logs or other projects.
 
 In the 0.1.1 tables, **Candidate** means implemented in that prior preview, not a
 promise of full native parity; **OPEN** marks unavailable capabilities/remaining
-parity work. The owner-approved preview does not close those broader capability
-gaps. **Transfer gate** means implemented browser behavior, embedded transfer
-unverified. The separate 0.1.2 section describes current candidate features.
+parity work at that release. These decisions are historical, not current 0.1.2
+availability. **Transfer gate** means implemented browser behavior, embedded
+transfer unverified. The separate 0.1.2 section describes current candidate
+features; CLI usage import, terminal and directory management remain OPEN or
+excluded.
 
 ## Previous published 0.1.1: office, editor and preferences
 
@@ -57,7 +61,7 @@ unverified. The separate 0.1.2 section describes current candidate features.
 | Control (including subcontrols) | Canvas behavior | Reason | Release decision |
 |---|---|---|---|
 | Squad Info open/close; member expand/collapse | Shows selected roster, inline charter summary/source and available detail. | Read-only observation of selected project. | Candidate |
-| Agent View Charter; member Open charter | Native file-opening action disabled with reason. Inline information remains readable. | No native editor/file-opening authority in published 0.1.1. | OPEN |
+| Agent View Charter; member Open charter | Native file-opening action disabled with reason. Inline information remains readable. | No native editor/file-opening authority in published 0.1.1. Superseded for 0.1.2 by the host-mediated action below. | OPEN in 0.1.1 only |
 | Runtime model details/status | Show source-reported joined-session model/context observations when supplied and attributable; missing fields remain unavailable. | SDK events, not live-log scanning; configured preference is not observed runtime truth. | Candidate; producer-dependent |
 | Missing-team setup guide link | External Squad documentation; selected-project explanation, no in-panel directory navigation. | Panel cannot select another project or initialize a team. | Candidate; external-link native gate |
 | Asset warning/details disclosure | Inspect load diagnostics and existing directory status. | Observation only. | Candidate |
@@ -86,8 +90,11 @@ unverified. The separate 0.1.2 section describes current candidate features.
 ## Canvas 0.1.2 release truth (C14/C15; native acceptance pending #218)
 
 The C14 renderer diagnostics and snapshot action and the C15 host-mediated
-capabilities are included in the published 0.1.2 artifact. The charter/CLI-import
-OPEN rows and browser-transfer gates in the prior 0.1.1 tables remain unchanged.
+capabilities are included in the published 0.1.2 artifact. This release retains
+the prior office, editor and preferences behavior. The C15 charter and
+import/export rows below supersede their corresponding 0.1.1 rows; CLI usage
+import, terminal and directory management remain OPEN or excluded. Browser
+transfer remains a fallback, and native embedded transfer is still unqualified.
 
 | Control | 0.1.2 candidate behavior | Boundary | Release decision |
 |---|---|---|---|
