@@ -1,10 +1,10 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useRef, useEffect, useState, useId } from 'react';
 import type { EditorState } from '../office/editor/editorState.js';
 import { EditTool, TileType } from '../office/types.js';
 import type { FloorColor, EditTool as EditToolType } from '../office/types.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
-import { FLOOR_PATTERNS, getFloorSprite } from '../office/floorTiles.js';
-import { getCarpetPreview, hasCarpetVariant } from '../office/sprites/carpetTiles.js';
+import { FLOOR_PATTERNS, type FloorAssets } from '../office/floorTiles.js';
+import type { CarpetAssets } from '../office/sprites/carpetTiles.js';
 import type { SpriteData } from '../office/types.js';
 import {
   getItemsByType,
@@ -19,6 +19,8 @@ import { DEFAULT_FLOOR_COLOR } from '../constants.js';
 
 // ─── Props ─────────────────────────────────────────────────────
 export interface EditorToolbarProps {
+  floorAssets: FloorAssets;
+  carpetAssets: CarpetAssets;
   editorState: EditorState;
   isEditMode: boolean;
   onToolChange: (tool: EditToolType) => void;
@@ -41,6 +43,7 @@ export interface EditorToolbarProps {
   areas: AreaDefinition[];
   areaMappings?: Record<string, string[]>;
   directories: DirectoryEntry[];
+  directoryMappingAvailable?: boolean;
   selectedAreaLabel: string | null;
   transformError: string | null;
   onAreaAdd: (label: string, color: string) => boolean;
@@ -429,6 +432,7 @@ function ColorSliders({
   onGestureStart?: () => void;
   onGestureEnd?: () => void;
 }) {
+  const colorizeId = useId();
   const handleChange = useCallback(
     (field: keyof FloorColor, value: number | boolean) => {
       onChange({ ...color, [field]: value });
@@ -533,9 +537,9 @@ function ColorSliders({
           type="checkbox"
           checked={!!color.colorize}
           onChange={(e) => handleChange('colorize', e.target.checked)}
-          id={`colorize-${label}`}
+          id={colorizeId}
         />
-        <label htmlFor={`colorize-${label}`} style={{ fontSize: '10px', color: TEXT_DIM, cursor: 'pointer' }}>
+        <label htmlFor={colorizeId} style={{ fontSize: '10px', color: TEXT_DIM, cursor: 'pointer' }}>
           Colorize
         </label>
       </div>}
@@ -545,6 +549,8 @@ function ColorSliders({
 
 // ─── Main Component ────────────────────────────────────────────
 export function EditorToolbar({
+  floorAssets,
+  carpetAssets,
   editorState,
   isEditMode,
   onToolChange,
@@ -567,6 +573,7 @@ export function EditorToolbar({
   areas,
   areaMappings,
   directories,
+  directoryMappingAvailable = true,
   selectedAreaLabel,
   transformError,
   onAreaAdd,
@@ -590,6 +597,7 @@ export function EditorToolbar({
   hasSelection,
   onExpandGrid,
 }: EditorToolbarProps) {
+  const areaDirectoryId = useId();
   // Force re-render when tileset assets become available
   const [_assetTick, setAssetTick] = useState(0);
   const [newAreaLabel, setNewAreaLabel] = useState('');
@@ -647,17 +655,17 @@ export function EditorToolbar({
           <div style={styles.toolGrid}>
             {[0, 1, 2].map((variant) => (
               <button key={variant} title={`Carpet ${variant + 1}`}
-                disabled={!hasCarpetVariant(variant)}
+                disabled={!carpetAssets.hasCarpetVariant(variant)}
                 aria-pressed={editorState.carpetVariant === variant}
                 style={styles.furnitureBtn(editorState.carpetVariant === variant)}
                 onClick={() => onCarpetVariantChange(variant)}>
-                <SpritePreview sprite={getCarpetPreview(variant, editorState.carpetColor, editorState.carpetAccentColor)} size={52} />
+                <SpritePreview sprite={carpetAssets.getCarpetPreview(variant, editorState.carpetColor, editorState.carpetAccentColor)} size={52} />
                 <span style={{ fontSize: '10px' }}>Style {variant + 1}</span>
               </button>
             ))}
           </div>
           <p style={{ fontSize: '10px', color: TEXT_DIM }}>Drag to paint over floors. Right-drag erases only carpet. Eyedrop copies style and both colors.</p>
-          {!hasCarpetVariant(editorState.carpetVariant) && <p role="alert">Carpet style unavailable. Check asset diagnostics.</p>}
+          {!carpetAssets.hasCarpetVariant(editorState.carpetVariant) && <p role="alert">Carpet style unavailable. Check asset diagnostics.</p>}
           <ColorSliders label="Carpet Main" color={editorState.carpetColor} onChange={(color) => onCarpetColorChange(color)} flat />
           <ColorSliders label="Carpet Accent" color={editorState.carpetAccentColor} onChange={(color) => onCarpetColorChange(color, true)} flat />
         </div>
@@ -739,11 +747,13 @@ export function EditorToolbar({
           ))}
           {selectedArea && (
             <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: '8px', marginTop: '8px' }}>
-              <label htmlFor="area-directory" style={{ display: 'block', marginBottom: '4px', fontSize: '10px', color: TEXT_DIM }}>
+              <label htmlFor={areaDirectoryId} style={{ display: 'block', marginBottom: '4px', fontSize: '10px', color: TEXT_DIM }}>
                 Map {selectedArea.label} to directory
               </label>
               <select
-                id="area-directory"
+                id={areaDirectoryId}
+                disabled={!directoryMappingAvailable}
+                title={!directoryMappingAvailable ? 'Directory mapping is unavailable in Canvas; only the selected project is observed.' : undefined}
                 data-testid="area-directory"
                 value={selectedDirectoryId}
                 onChange={(event) => setSelectedDirectoryId(event.target.value)}
@@ -761,13 +771,17 @@ export function EditorToolbar({
                   type="checkbox"
                   aria-label={`Map ${selectedArea.label} to selected directory`}
                   data-testid="area-mapping"
-                  disabled={!selectedDirectoryId || !directoryOptions.some((directory) => directory.id === selectedDirectoryId)}
+                  disabled={!directoryMappingAvailable || !selectedDirectoryId || !directoryOptions.some((directory) => directory.id === selectedDirectoryId)}
+                  title={!directoryMappingAvailable ? 'Directory mapping is unavailable in Canvas.' : undefined}
                   checked={selectedDirectoryId ? (areaMappings?.[selectedDirectoryId] ?? []).includes(selectedArea.label) : false}
                   onChange={(event) => onAreaMappingChange(selectedDirectoryId, selectedArea.label, event.target.checked)}
                 />
                 Prefer this Area for observed agents
               </label>
-              {directoryOptions.length === 0 && (
+              {!directoryMappingAvailable && <p role="status" style={{ fontSize: '10px', color: TEXT_DIM }}>
+                Directory mapping is unavailable in Canvas. Named Areas can still be painted, renamed and colored; existing mappings are preserved.
+              </p>}
+              {directoryMappingAvailable && directoryOptions.length === 0 && (
                 <p style={{ margin: '6px 0 0', fontSize: '10px', color: TEXT_DIM }}>No workspace or saved directories are available. Recent launch entries are not mapping identities.</p>
               )}
             </div>
@@ -826,7 +840,7 @@ export function EditorToolbar({
                   title={`Floor ${type}${itemId ? ` (${formatItemLabel(itemId)})` : ''}`}
                   aria-pressed={editorState.tileType === type}
                 >
-                  <SpritePreview sprite={getFloorSprite(patternIndex)} size={22} />
+                  <SpritePreview sprite={floorAssets.getFloorSprite(patternIndex)} size={22} />
                 </button>
               );
             })}
@@ -997,15 +1011,17 @@ export function EditorToolbar({
           </button>
           <button
             style={styles.actionBtn(!canUndo)}
+            disabled={!canUndo}
             onClick={canUndo ? onUndo : undefined}
-            title="Undo (Ctrl+Z)"
+            title={canUndo ? 'Undo (Ctrl+Z)' : 'No layout change to undo'}
           >
             Undo
           </button>
           <button
             style={styles.actionBtn(!canRedo)}
+            disabled={!canRedo}
             onClick={canRedo ? onRedo : undefined}
-            title="Redo (Ctrl+Y)"
+            title={canRedo ? 'Redo (Ctrl+Y)' : 'No undone layout change to redo'}
           >
             Redo
           </button>

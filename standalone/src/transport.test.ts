@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket } from 'ws';
 import type { OutboundMessage, WebviewMessage } from '../../src/types.js';
 import { startTransport, type TransportOptions } from './transport.js';
+import { createOfficeControl } from './officeControl.js';
 
 type Running = Awaited<ReturnType<typeof startTransport>>;
 type Envelope = { version: number; kind: string; code?: string; message?: OutboundMessage };
@@ -91,6 +92,32 @@ async function cookie(transport: Running) {
   return response.headers['set-cookie']![0].split(';')[0];
 }
 
+it('keeps Canvas control secrets private and revokes outstanding page challenges on rotation', async () => {
+  const { root, bundle } = await fixture();
+  const transport = await startTransport({
+    canvas: true, staticRoot: bundle, officeControl: createOfficeControl(root),
+    snapshot: async () => [settings], subscribe: () => () => {},
+  });
+  transports.push(transport);
+  expect(transport.controlToken).toBeNull();
+  const viewer = await cookie(transport);
+  const origin = `http://127.0.0.1:${transport.port}`;
+  const challenge = await http(transport, '/control-intent', {
+    method: 'POST', headers: { Origin: origin, Cookie: viewer },
+  });
+  expect(challenge.status).toBe(200);
+  expect(JSON.parse(challenge.body).nonce).toMatch(/^[a-zA-Z0-9_-]{43}$/);
+  transport.rotate();
+  const nextViewer = await cookie(transport);
+  const revoked = await http(transport, '/control-auth', {
+    method: 'POST', body: challenge.body,
+    headers: { Origin: origin, Cookie: nextViewer, 'Content-Type': 'application/json' },
+  });
+  expect(revoked.status).toBe(403);
+  expect(revoked.headers['set-cookie']).toBeUndefined();
+  expect(transport.controlToken).toBeNull();
+});
+
 async function office(
   transport: Running, session: string, overrides: Record<string, string> = {}, autoPong = true,
 ) {
@@ -133,6 +160,28 @@ async function refused(transport: Running, headers: Record<string, string>, path
 }
 
 describe('loopback transport HTTP boundary', () => {
+  it('never observes Canvas diagnostics for a non-Canvas transport', async () => {
+    const canvasReadiness = vi.fn();
+    const { transport } = await launch({ canvasReadiness });
+    await http(transport, '/');
+    await http(transport, '/assets/app.js');
+    await http(transport, '/office-context');
+    const client = await office(transport, await cookie(transport));
+    client.send({ type: 'webviewReady' }); await client.next();
+    await transport.dispose(); await client.closed;
+    expect(canvasReadiness).not.toHaveBeenCalled();
+  });
+
+  it('refuses combining Canvas bootstrap with terminal authority', async () => {
+    const { bundle } = await fixture();
+    const options: TransportOptions = {
+      staticRoot: bundle, canvas: true, snapshot: async () => [], subscribe: () => () => undefined,
+    };
+    await expect(startTransport({
+      ...options, terminals: {} as NonNullable<TransportOptions['terminals']>,
+    })).rejects.toThrow('Canvas does not support terminal authority');
+  });
+
   it('serves the indexed bundle with bundled-only scripts and renderer-compatible inline styles', async () => {
     const { transport } = await launch();
     const page = await http(transport, '/');

@@ -211,7 +211,7 @@ async function main() {
         const eyedropChangedPixels = changedPixelCount(copiedDesk, beforeDesk);
         assert.ok(eyedropChangedPixels > 0, 'surface-item eyedrop must render copied furniture color on the desk');
         assert.equal(await page.getByRole('slider', { name: 'Selected Furniture Color saturation' }).inputValue(), '85');
-        assert.equal(await page.locator('#colorize-Selected\\ Furniture\\ Color').isChecked(), true);
+        assert.equal(await hue.locator('..').locator('..').getByLabel('Colorize', { exact: true }).isChecked(), true);
         record.eyedrop = {
           sampledSurfaceItem: 'color-pc', selectedHue: 205, selectedSaturation: 85,
           selectedColorize: true, changedDeskPixels: eyedropChangedPixels,

@@ -8,10 +8,9 @@
  * | Homer Simpson | 🏗️ Lead | `.squad/agents/homer-simpson/charter.md` | ✅ Active |
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
 import type { SquadTeamMember } from './types.js';
-import { resolveSquadDir } from './squadPaths.js';
+import { ProjectFiles } from './projectFiles.js';
+import { readTeamSource } from './teamSource.js';
 
 /**
  * Derive an agent slug from the charter path.
@@ -174,26 +173,27 @@ export function parseProjectContext(content: string): string | null {
 }
 
 /**
- * Read `.squad/team.md` from disk and parse it.
- * Returns an empty array if the file doesn't exist or can't be parsed.
+ * Read the host-selected absolute workspace's guarded team.md and parse it.
+ * Returns [] for missing, refused or unusable input; see readTeamFile for refusals
+ * and readTeamSource for explicit source availability.
  */
 export function readTeamRoster(workspaceRoot: string): SquadTeamMember[] {
-  const teamFile = path.join(resolveSquadDir(workspaceRoot), 'team.md');
-  try {
-    const content = fs.readFileSync(teamFile, 'utf-8');
-    return parseTeamRoster(content);
-  } catch {
-    return [];
-  }
+  const content = readTeamFile(workspaceRoot);
+  return content === null ? [] : parseTeamRoster(content);
 }
 
 /**
- * Read `.squad/team.md` raw content from disk.
+ * Read raw team.md from an explicit host-selected absolute workspace.
+ * Preserves readable content, including empty/non-roster documents. Returns null
+ * for absence or refusal: invalid preferred directory, internal links/junctions,
+ * changed identity, non-files, invalid UTF-8 or >256 KiB. Only an absent .squad
+ * directory permits .ai-team fallback. Never derives selection from cwd.
+ * This compatibility wrapper collapses errors; readTeamSource retains them.
  */
 export function readTeamFile(workspaceRoot: string): string | null {
-  const teamFile = path.join(resolveSquadDir(workspaceRoot), 'team.md');
   try {
-    return fs.readFileSync(teamFile, 'utf-8');
+    const source = readTeamSource(new ProjectFiles(workspaceRoot));
+    return source.status === 'available' ? source.content : null;
   } catch {
     return null;
   }

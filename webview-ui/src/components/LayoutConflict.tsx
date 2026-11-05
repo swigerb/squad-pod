@@ -2,12 +2,15 @@ import { useState } from 'react';
 import type { LayoutDraft } from '../office/editor/layoutDraft.js';
 import { useHostClient } from '../HostClientContext.js';
 
-export function LayoutConflict({ protection, onResolve, standalone = false }: {
+export function LayoutConflict({ protection, onResolve }: {
   protection: LayoutDraft;
   onResolve: (id: number, choice: 'local' | 'incoming') => void;
-  standalone?: boolean;
 }) {
   const client = useHostClient();
+  const canExport = client.capabilities.actions.includes('exportLayoutSnapshot');
+  const exportSnapshot = (layout: NonNullable<LayoutDraft['state']['draft']>) => {
+    if (canExport) client.send({ type: 'exportLayoutSnapshot', layout });
+  };
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const { draft, pending, retained } = protection.state;
   const error = protection.error ?? protection.watcherError;
@@ -20,22 +23,25 @@ export function LayoutConflict({ protection, onResolve, standalone = false }: {
     <strong>{pending.length ? `Layout conflict: ${pending.length} pending snapshot(s)` : 'Layout recovery copies'}</strong>
     <p>Both versions are retained. Keep editing locally, or explicitly use an incoming snapshot.
       Save is blocked until every pending snapshot is resolved. Imported layouts need Save to reach disk.</p>
-    <p>{standalone
+    <p>{client.capabilities.recoveryState === 'browser-storage'
       ? 'Recovery uses browser storage scoped to this project and server instance, not a durable backup. Export copies before clearing browser data or restarting the server.'
-      : 'Recovery uses this VS Code panel\'s state, not a durable backup. Export copies before closing the panel or changing workspace.'}</p>
+      : client.capabilities.recoveryState === 'webview-state'
+        ? 'Recovery uses this VS Code panel\'s state, not a durable backup. Export copies before closing the panel or changing workspace.'
+        : 'This host does not provide recovery storage. Copies are held in memory only; copy the JSON below before closing this view.'}</p>
+    {!canExport && <p role="status">Recovery export is unavailable in this host. Copy the JSON below to preserve these versions.</p>}
     {error && <p role="alert">{error}</p>}
     {protection.invalidRecovery && <details><summary>Inspect original recovery state (copy before reopening)</summary>
       <pre>{JSON.stringify(protection.recoveryInput, null, 2)}</pre>
     </details>}
     {draft && <details><summary>Inspect local draft</summary>
       <pre>{JSON.stringify(draft, null, 2)}</pre>
-      <button onClick={() => client.send({ type: 'exportLayoutSnapshot', layout: draft })}>Export local draft</button>
+      <button disabled={!canExport} onClick={() => exportSnapshot(draft)}>Export local draft</button>
     </details>}
     {pending.map((snapshot) => <div key={snapshot.id}>
       <details><summary>Incoming {snapshot.source} #{snapshot.id}</summary>
         {snapshot.workspaceRoot && <p>Source workspace: {snapshot.workspaceRoot}</p>}
         <pre>{JSON.stringify(snapshot.layout, null, 2)}</pre>
-        <button onClick={() => client.send({ type: 'exportLayoutSnapshot', layout: snapshot.layout })}>Export snapshot #{snapshot.id}</button>
+        <button disabled={!canExport} onClick={() => exportSnapshot(snapshot.layout)}>Export snapshot #{snapshot.id}</button>
       </details>
       <button onClick={() => { onResolve(snapshot.id, 'local'); setConfirmId(null); }}>Keep local draft #{snapshot.id}</button>
       {confirmId === snapshot.id
@@ -48,7 +54,7 @@ export function LayoutConflict({ protection, onResolve, standalone = false }: {
       {retained.map((snapshot) => <details key={snapshot.id}>
         <summary>Retained {snapshot.source} #{snapshot.id}</summary>
         <pre>{JSON.stringify(snapshot.layout, null, 2)}</pre>
-        <button onClick={() => client.send({ type: 'exportLayoutSnapshot', layout: snapshot.layout })}>Export retained #{snapshot.id}</button>
+        <button disabled={!canExport} onClick={() => exportSnapshot(snapshot.layout)}>Export retained #{snapshot.id}</button>
       </details>)}
     </details>}
   </section>;

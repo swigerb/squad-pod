@@ -12,7 +12,7 @@ import {
   type AgentSnapshot,
   type AgentStatus,
 } from '../office/engine/agentSync.js';
-import { playDoneSound, setSoundEnabled } from '../notificationSound.js';
+import { NotificationSound } from '../notificationSound.js';
 import type { DirectoryCatalog, LiveModelSnapshot, PodSettings, SourceStatus } from '../../../src/types.js';
 import type { AssetSnapshot } from '../../../src/manifestAssets.js';
 import type { RecordedUsageSnapshot } from '../../../src/recordedUsage.js';
@@ -23,15 +23,13 @@ import { pruneCompletedTools, setContextUsage } from '../office/toolUtils.js';
 
 // Static imports — dynamic import() creates code-split chunks in Vite whose
 // module-level state is isolated from the main bundle.  That means calling
-// e.g. setFloorSprites on the chunk's copy has NO effect on the renderer's
+// e.g. setCharacterTemplates on the chunk's copy has NO effect on the renderer's
 // copy imported statically in renderer.ts.  Static imports guarantee a single
 // module instance shared across the entire bundle.
 import { isRendererCharacters, isRendererTiles } from '../legacySprites.js';
 import { setCharacterTemplates } from '../office/sprites/defaultCharacters.js';
 import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
-import { setFloorSprites } from '../office/floorTiles.js';
-import { setWallSprites } from '../office/wallTiles.js';
-import { setCarpetSprites } from '../office/sprites/carpetTiles.js';
+import { clearColorizeCache } from '../office/colorize.js';
 import { setPetTemplates } from '../office/sprites/petSpriteData.js';
 import {
   setAssetBaseUrl,
@@ -104,6 +102,11 @@ export function useExtensionMessages(
   standalone = false,
 ): ExtensionMessageState {
   const client = useHostClient();
+  const [sound] = useState(() => new NotificationSound());
+  useEffect(() => {
+    sound.activate();
+    return () => sound.dispose();
+  }, [sound]);
   const [observedTasks, setObservedTasks] = useState<ObservedTaskSnapshot | null>(null);
   const [liveModels, setLiveModels] = useState<LiveModelSnapshot | null>(null);
   const [recordedUsage, setRecordedUsage] = useState<RecordedUsageSnapshot | null>(null);
@@ -160,12 +163,12 @@ export function useExtensionMessages(
   const updateSetting = useCallback((setting: keyof PodSettings, enabled: boolean) => {
     if (!standalone) {
       setSettings((prev) => ({ ...prev, [setting]: enabled }));
-      if (setting === 'soundEnabled' && soundSettingsLoadedRef.current) setSoundEnabled(enabled);
+      if (setting === 'soundEnabled' && soundSettingsLoadedRef.current) sound.setEnabled(enabled);
     }
     const type = setting === 'soundEnabled' ? 'setSoundEnabled'
       : setting === 'debugEnabled' ? 'setDebugEnabled' : 'setShowAreas';
     client.send({ type, enabled });
-  }, [client, standalone]);
+  }, [client, standalone, sound]);
 
   useEffect(() => {
     const rejectLegacySprites = (type: string) => {
@@ -267,9 +270,11 @@ export function useExtensionMessages(
         case 'manifestAssetsLoaded': {
           const snapshot = message.snapshot as AssetSnapshot;
           buildDynamicCatalog(snapshot.furniture);
-          setFloorSprites(snapshot.floors);
-          setWallSprites(snapshot.walls);
-          setCarpetSprites(snapshot.carpets);
+          // Furniture still uses the shared recolor cache, unlike owned surfaces.
+          clearColorizeCache();
+          getOfficeState().floorAssets.setFloorSprites(snapshot.floors);
+          getOfficeState().wallAssets.setWallSprites(snapshot.walls);
+          getOfficeState().carpetAssets.setCarpetSprites(snapshot.carpets);
           setPetTemplates(snapshot.pets ?? []);
           getOfficeState().refreshAssets();
           setAssetStatus({ directories: snapshot.directories, diagnostics: snapshot.diagnostics });
@@ -349,7 +354,7 @@ export function useExtensionMessages(
           }));
           applyAgentStatus(getOfficeState(), id, status);
           if (previous === 'active' && status !== 'active') {
-            playDoneSound();
+            sound.playDoneSound();
           }
           if (status === 'idle') {
             getOfficeState().setAgentTool(id, null);
@@ -520,8 +525,9 @@ export function useExtensionMessages(
         case 'wallTilesLoaded': {
           const tiles: unknown = message.tiles ?? message.sprites;
           if (isRendererTiles(tiles)) {
-            if (message.type === 'floorTilesLoaded') setFloorSprites(tiles);
-            else setWallSprites(tiles);
+            if (message.type === 'floorTilesLoaded') getOfficeState().floorAssets.setFloorSprites(tiles);
+            else getOfficeState().wallAssets.setWallSprites(tiles);
+            clearColorizeCache();
             clearLegacyDiagnostic(message.type);
           } else rejectLegacySprites(message.type);
           break;
@@ -534,7 +540,7 @@ export function useExtensionMessages(
             debugEnabled: message.debugEnabled,
             showAreas: message.showAreas === true,
           });
-          setSoundEnabled(message.soundEnabled);
+          sound.setEnabled(message.soundEnabled);
           break;
         }
 
@@ -594,7 +600,7 @@ export function useExtensionMessages(
         }
 
         case 'soundEnabled': {
-          if (soundSettingsLoadedRef.current) setSoundEnabled(message.enabled);
+          if (soundSettingsLoadedRef.current) sound.setEnabled(message.enabled);
           break;
         }
 
@@ -692,12 +698,13 @@ export function useExtensionMessages(
       }
     };
 
-    const unsubscribe = connectOffice(client, handleMessage);
-    if (!readOnly) client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
-
-    return unsubscribe;
+    return connectOffice(client, handleMessage, () => {
+      if (!readOnly && client.capabilities.actions.includes('diagnosticReport')) {
+        client.send({ type: 'diagnosticReport', ...getFullDiagnosticReport() });
+      }
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly, standalone]);
+  }, [client, getOfficeState, onLayoutLoaded, onLayoutSaved, onLayoutError, readOnly, standalone, sound]);
 
   return {
     observedTasks,

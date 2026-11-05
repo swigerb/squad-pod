@@ -9,6 +9,7 @@
   "engines": { "node": ">=22.13.0" },
   "scripts": {
     "build": "node build.mjs",
+    "build:canvas": "node build.canvas.mjs",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "acceptance": "node scripts/acceptance.mjs",

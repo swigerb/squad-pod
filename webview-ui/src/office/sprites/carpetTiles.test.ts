@@ -4,7 +4,8 @@ import * as path from 'node:path';
 import { PNG } from 'pngjs';
 import type { CarpetTile, FloorColor, SpriteData } from '../types.js';
 import * as carpetSprites from './carpetTiles.js';
-import { carpetJunctionCase, getCarpetPaletteKey, getCarpetPreview, getCarpetSprite, hasCarpetVariant, setCarpetSprites } from './carpetTiles.js';
+import { carpetJunctionCase, getCarpetPaletteKey, createCarpetAssets } from './carpetTiles.js';
+import { OfficeState } from '../engine/officeState.js';
 import { renderCarpetLayer } from './carpetRenderer.js';
 import { CARPET_DEFAULT_COLOR as main, CARPET_DEFAULT_ACCENT_COLOR as accent } from '../../constants.js';
 
@@ -37,8 +38,11 @@ function recordedDraws(calls: unknown[][]): Draw[] {
   return output;
 }
 
+let assets = createCarpetAssets();
+
 beforeEach(() => {
-  setCarpetSprites(sheets);
+  assets = createCarpetAssets();
+  assets.setCarpetSprites(sheets);
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement) {
     const calls: Draw[] = [];
     composites.set(this, calls);
@@ -48,13 +52,61 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('pinned three-style marching-squares carpet sprites', () => {
+  it('isolates same-realm offices at equal revisions, including rebinding one context and independent reloads', () => {
+    const a = new OfficeState(), b = new OfficeState();
+    a.carpetAssets.setCarpetSprites(sheets);
+    b.carpetAssets.setCarpetSprites(sheets.map(variant =>
+      variant.map(sprite => sprite.map(row => row.map(hex => hex ? '#111111' : '')))));
+    expect(a.carpetAssets.revision).toBe(b.carpetAssets.revision);
+    const ctx = context(), otherCtx = context(), tiles = [{ variant: 0 }], map = [[1]];
+    const render = (office: OfficeState, target = ctx) => {
+      target.drawImage.mockClear();
+      renderCarpetLayer(target as unknown as CanvasRenderingContext2D,
+        office.carpetAssets, tiles, map, 1, 1, 0, 0, 1);
+      return recordedDraws(target.drawImage.mock.calls);
+    };
+    const first = render(a);
+    const aCanvas = ctx.drawImage.mock.calls[0][0];
+    const second = render(b);
+    expect(second).not.toEqual(first);
+    expect(aCanvas).toMatchObject({ width: 0, height: 0 });
+    expect(render(a)).toEqual(first);
+    render(b, otherCtx);
+    const bCanvas = otherCtx.drawImage.mock.calls[0][0];
+    const bSprite = b.carpetAssets.getCarpetSprite(0, 4);
+    a.carpetAssets.setCarpetSprites([]);
+    expect(render(a)).toEqual([]);
+    expect(render(b, otherCtx)).toEqual(second);
+    expect(otherCtx.drawImage.mock.calls[0][0]).toBe(bCanvas);
+    expect(b.carpetAssets.getCarpetSprite(0, 4)).toBe(bSprite);
+    a.carpetAssets.setCarpetSprites(sheets);
+    expect(render(a)).toEqual(first);
+  });
+
+  it('bounds each recolor cache at 1024 entries without evicting another office or sharing reload invalidation', () => {
+    const a = new OfficeState(), b = new OfficeState();
+    a.carpetAssets.setCarpetSprites(sheets);
+    b.carpetAssets.setCarpetSprites(sheets);
+    const first = a.carpetAssets.getCarpetSprite(0, 1, { ...main, h: 0 });
+    const other = b.carpetAssets.getCarpetSprite(0, 1, { ...main, h: 0 });
+    expect(first).not.toBe(other);
+    for (let h = 1; h < 1024; h++) a.carpetAssets.getCarpetSprite(0, 1, { ...main, h });
+    expect(a.carpetAssets.getCarpetSprite(0, 1, { ...main, h: 0 })).toBe(first);
+    a.carpetAssets.getCarpetSprite(0, 1, { ...main, h: 1024 });
+    expect(a.carpetAssets.getCarpetSprite(0, 1, { ...main, h: 0 })).not.toBe(first);
+    expect(b.carpetAssets.getCarpetSprite(0, 1, { ...main, h: 0 })).toBe(other);
+    a.carpetAssets.setCarpetSprites([]);
+    expect(b.carpetAssets.revision).toBe(1);
+    expect(b.carpetAssets.getCarpetSprite(0, 1, { ...main, h: 0 })).toBe(other);
+  });
+
   it.each([0, 1, 2])('uses every case of the real sheet for style %i, retaining transparent pixels', (variant) => {
-    expect(hasCarpetVariant(variant)).toBe(true);
+    expect(assets.hasCarpetVariant(variant)).toBe(true);
     const allColors = new Set<string>();
     for (let mask = 0; mask < 16; mask++) {
       const tiles: Array<CarpetTile | null> = [1, 2, 8, 4].map((bit) => mask & bit ? { variant } : null);
       expect(carpetJunctionCase(1, 1, variant, tiles, 2, 2)).toBe(mask);
-      const sprite = getCarpetSprite(variant, mask);
+      const sprite = assets.getCarpetSprite(variant, mask);
       if (!mask) { expect(sprite).toBeNull(); continue; }
       expect(sprite).toHaveLength(16);
       expect(sprite?.map((row) => row.map(Boolean))).toEqual(sheets[variant][mask].map((row) => row.map(Boolean)));
@@ -65,7 +117,7 @@ describe('pinned three-style marching-squares carpet sprites', () => {
       }
     }
     expect([...allColors].sort()).toEqual(['#941919', '#dba35a']);
-    expect(getCarpetPreview(variant, main, accent).flat().some(Boolean)).toBe(true);
+    expect(assets.getCarpetPreview(variant, main, accent).flat().some(Boolean)).toBe(true);
   });
 
   // Original #24 renderer, deliberately independent of the production cache/cull.
@@ -89,7 +141,7 @@ describe('pinned three-style marching-squares carpet sprites', () => {
       }
       for (const { variant, color, accent: trim } of [...groups.values()].sort((a, b) => a.order - b.order)) {
         const mask = carpetJunctionCase(jx, jy, variant, visible, cols, rows, getCarpetPaletteKey(color, trim));
-        const sprite = getCarpetSprite(variant, mask, color, trim);
+        const sprite = assets.getCarpetSprite(variant, mask, color, trim);
         if (sprite) calls.push([sprite, ox + jx * 16 * zoom - 8 * zoom, oy + jy * 16 * zoom - 8 * zoom]);
       }
     }
@@ -122,7 +174,7 @@ describe('pinned three-style marching-squares carpet sprites', () => {
   function draw(ctx: ReturnType<typeof context>, tiles: Array<CarpetTile | null> | undefined, map: number[][],
     cols: number, rows: number, x = 0, y = 0, zoom = 1) {
     ctx.drawImage.mockClear();
-    renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, tiles, map, cols, rows, x, y, zoom);
+    renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, assets, tiles, map, cols, rows, x, y, zoom);
     return recordedDraws(ctx.drawImage.mock.calls);
   }
 
@@ -152,7 +204,7 @@ describe('pinned three-style marching-squares carpet sprites', () => {
         get(target, key, receiver) { reads++; return Reflect.get(target, key, receiver); },
       });
       const palette = vi.spyOn(carpetSprites, 'getCarpetPaletteKey');
-      const sprite = vi.spyOn(carpetSprites, 'getCarpetSprite');
+      const sprite = vi.spyOn(assets, 'getCarpetSprite');
       const ctx = context(1280, 720);
       draw(ctx, tiles, map, cols, rows, -600, -400, 4);
       const derived = palette.mock.calls.length, colored = sprite.mock.calls.length, scanned = reads;
@@ -177,7 +229,7 @@ describe('pinned three-style marching-squares carpet sprites', () => {
     });
 
     it('keeps translucent replacement sprites on the exact ordered direct-draw path', () => {
-      setCarpetSprites([Array.from({ length: 16 }, () => [['#11111180', '#eeeeee40']])]);
+      assets.setCarpetSprites([Array.from({ length: 16 }, () => [['#11111180', '#eeeeee40']])]);
       const ctx = context(), tiles = [{ variant: 0 }, { variant: 0 }], map = [[1, 1]];
       expect(draw(ctx, tiles, map, 2, 1)).toEqual(reference(tiles, map, 2, 1, 0, 0, 1));
       expect(ctx.drawImage.mock.calls.every(call => call[0] instanceof HTMLCanvasElement)).toBe(false);
@@ -229,12 +281,12 @@ describe('pinned three-style marching-squares carpet sprites', () => {
       expect(draw(ctx, changed, map, 2, 1)).not.toEqual(first);
       expect(draw(ctx, tiles, [[0, 1]], 2, 1)).toEqual([]);
       expect(draw(ctx, tiles, map, 1, 2)).toEqual(reference(tiles, map, 1, 2, 0, 0, 1));
-      setCarpetSprites([]);
+      assets.setCarpetSprites([]);
       expect(draw(ctx, tiles, map, 2, 1)).toEqual([]);
-      setCarpetSprites(sheets);
+      assets.setCarpetSprites(sheets);
       expect(draw(ctx, tiles, map, 2, 1)).toEqual(first);
       const alternate = sheets.map(variant => variant.map(sprite => sprite.map(row => row.map(hex => hex ? '#111111' : ''))));
-      setCarpetSprites(alternate);
+      assets.setCarpetSprites(alternate);
       expect(draw(ctx, tiles, map, 2, 1)).not.toEqual(first);
     });
   });
@@ -248,30 +300,30 @@ describe('pinned three-style marching-squares carpet sprites', () => {
     expect(carpetJunctionCase(0, 0, 0, tiles, 2, 2)).toBe(4);
     expect(carpetJunctionCase(2, 2, 0, tiles, 2, 2)).toBe(1);
     expect(carpetJunctionCase(-1, 1, 0, tiles, 2, 2)).toBe(0);
-    expect(getCarpetSprite(3, 15)).toBeNull();
+    expect(assets.getCarpetSprite(3, 15)).toBeNull();
   });
 
   it('changes main and accent independently, preserves alpha, and invalidates caches on reload', () => {
     const base = sheets[0][1];
     const palette = [...new Set(base.flat().filter(Boolean))].sort();
-    const original = getCarpetSprite(0, 1)!;
-    const recolored = getCarpetSprite(0, 1, { ...main, h: 120 }, { ...accent, h: 240 })!;
+    const original = assets.getCarpetSprite(0, 1)!;
+    const recolored = assets.getCarpetSprite(0, 1, { ...main, h: 120 }, { ...accent, h: 240 })!;
     expect(recolored).not.toEqual(original);
     expect(recolored.flat()).toContain('#199419');
     expect(recolored.flat()).toContain('#5a5adb');
     expect(palette.length).toBe(2);
-    const mainOnly = getCarpetSprite(0, 1, { ...main, h: 120 }, accent)!;
-    const accentOnly = getCarpetSprite(0, 1, main, { ...accent, h: 240 })!;
+    const mainOnly = assets.getCarpetSprite(0, 1, { ...main, h: 120 }, accent)!;
+    const accentOnly = assets.getCarpetSprite(0, 1, main, { ...accent, h: 240 })!;
     original.forEach((row, y) => row.forEach((hex, x) => {
       expect(mainOnly[y][x]).toBe(hex === '#941919' ? '#199419' : hex);
       expect(accentOnly[y][x]).toBe(hex === '#dba35a' ? '#5a5adb' : hex);
     }));
     const translucent = Array.from({ length: 16 }, () => [['#11111180', '#eeeeee40', '']]);
-    setCarpetSprites([translucent]);
-    expect(getCarpetSprite(0, 15)).toEqual([['#94191980', '#dba35a40', '']]);
-    setCarpetSprites([]);
-    expect(hasCarpetVariant(0)).toBe(false);
-    expect(getCarpetSprite(0, 15)).toBeNull();
+    assets.setCarpetSprites([translucent]);
+    expect(assets.getCarpetSprite(0, 15)).toEqual([['#94191980', '#dba35a40', '']]);
+    assets.setCarpetSprites([]);
+    expect(assets.hasCarpetVariant(0)).toBe(false);
+    expect(assets.getCarpetSprite(0, 15)).toBeNull();
   });
 
   it('draws centered junctions above floors, orders overlapping palettes, and hides carpet on wall/void', () => {
@@ -279,15 +331,15 @@ describe('pinned three-style marching-squares carpet sprites', () => {
     const red = { variant: 0, color: main, accentColor: accent, order: 2 };
     const blue = { ...red, color: { ...main, h: 210 }, order: 1 };
     const tiles = [red, blue];
-    renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, tiles, [[1, 1]], 2, 1, 10, 20, 2);
+    renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, assets, tiles, [[1, 1]], 2, 1, 10, 20, 2);
     const calls = recordedDraws(ctx.drawImage.mock.calls);
     expect(calls[0].slice(1)).toEqual([-6, 4]);
     const atShared = calls.filter((call) => call[1] === 26 && call[2] === 4);
     expect(atShared).toHaveLength(2);
-    expect(atShared[0][0]).toEqual(getCarpetSprite(0, 4, blue.color, accent));
-    expect(atShared[1][0]).toEqual(getCarpetSprite(0, 8, main, accent));
+    expect(atShared[0][0]).toEqual(assets.getCarpetSprite(0, 4, blue.color, accent));
+    expect(atShared[1][0]).toEqual(assets.getCarpetSprite(0, 8, main, accent));
     ctx.drawImage.mockClear();
-    renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, tiles, [[0, 8]], 2, 1, 0, 0, 1);
+    renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, assets, tiles, [[0, 8]], 2, 1, 0, 0, 1);
     expect(ctx.drawImage).not.toHaveBeenCalled();
     expect(tiles).toEqual([red, blue]);
   });

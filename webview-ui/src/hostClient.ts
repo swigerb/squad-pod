@@ -1,7 +1,8 @@
 import type { WebviewApi } from "vscode-webview";
 import type { OutboundMessage } from "../../src/types.js";
 import type { HostClient } from "../../src/core/officeChannel.js";
-export type { HostClient } from "../../src/core/officeChannel.js";
+import { VSCODE_HOST_CAPABILITIES } from "../../src/core/hostCapabilities.js";
+export type { HostClient, HostAction, HostCapabilities } from "../../src/core/officeChannel.js";
 
 type MessageTarget = Pick<Window, "addEventListener" | "removeEventListener">;
 
@@ -12,6 +13,7 @@ export function createVSCodeClient(
   const api = acquireApi();
 
   return {
+    capabilities: VSCODE_HOST_CAPABILITIES,
     send(message) {
       api.postMessage(message);
     },
@@ -51,6 +53,7 @@ export function createDefaultHostClient(
   }
 }
 
-const defaultHost = createDefaultHostClient();
-export const defaultHostClient = defaultHost.client;
-export const defaultHostError = defaultHost.error;
+let defaultHost: ReturnType<typeof createDefaultHostClient> | undefined;
+export function getDefaultHost() {
+  return defaultHost ??= createDefaultHostClient();
+}

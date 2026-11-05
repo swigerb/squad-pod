@@ -13,8 +13,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { ProjectFiles, projectFileDiagnostic } from './projectFiles.js';
+import { readLayoutSnapshot, type LayoutSnapshot } from './layoutSnapshot.js';
 import type { LayoutData, WebviewMessage, OutboundMessage, AgentDetailInfo, TelemetryEvent, SquadInfoData, SourceStatus, PodSettings, DirectoryCatalog } from './types.js';
 import { parseCharterModel, readModelConfig } from './declaredModels.js';
+import { readMemberCharter } from './memberCharter.js';
 import {
   WORKSPACE_KEY_LAYOUT,
   VIEW_ID,
@@ -33,7 +36,7 @@ import {
   isLiveAgent,
   setExternalCharacterPalettes,
 } from './agentManager.js';
-import { startSquadWatching, type ActivitySource } from './squadWatcher.js';
+import { SquadWatcher, type ActivitySource, type SquadWatcherCallbacks } from './squadWatcher.js';
 import { pickSquadWorkspace, resolveSquadDir } from './squadPaths.js';
 import {
   loadCharacterSprites,
@@ -45,8 +48,6 @@ import {
   watchLayoutFile,
   exportLayoutToFile,
   importLayoutFromFile,
-  readLayoutRevision,
-  parseLayoutJson,
   saveLayoutIfUnchanged,
   isValidLayout,
 } from './layoutPersistence.js';
@@ -55,6 +56,7 @@ import {
   parseTeamName,
   parseProjectContext,
   parseAllMembers,
+  parseTeamRoster,
 } from './teamParser.js';
 import { readSettings, saveSetting } from './settings.js';
 import { assetSourceFingerprint, loadAssetSnapshot, watchAssetSnapshots } from './manifestAssets.js';
@@ -312,11 +314,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     // A reloaded webview only needs a fresh snapshot; keep agent state,
     // timers and watchers alive so in-flight activity is not lost.
     this.loadAndSendCustomAssetUris();
-    let agents = getAgents();
+    let finishStartup: (() => void) | undefined;
     if (this.watchedRoot !== workspaceRoot || !this.disposeSquadWatcher) {
       this.stopWatching();
-      agents = initializeAgents(workspaceRoot, this.context, webview);
-      this.startWatching(workspaceRoot, webview);
+      finishStartup = this.startWatching(workspaceRoot, webview);
     }
 
     // Establish workspace identity before replaying data to a fresh webview.
@@ -325,7 +326,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     // buffers roster until layout arrives, so either order is safe).
     this.loadAndSendAssets();
     this.loadAndSendLayout(workspaceRoot);
-    sendExistingAgents(agents, this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
+    sendExistingAgents(getAgents(), this.context, webview, this.getWorkspaceDirectoryIds(workspaceRoot));
+    finishStartup?.();
     this.sendRecordedUsage(workspaceRoot);
     this.postMessage({ type: 'cliUsage', snapshot: this.cliUsage.snapshot });
     this.liveActivity?.replay();
@@ -432,43 +434,62 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private startWatching(workspaceRoot: string, webview: vscode.Webview): void {
+  /** Baseline silently until the caller publishes layout and the current roster. */
+  private startWatching(workspaceRoot: string, webview: vscode.Webview): () => void {
     this.watchedRoot = workspaceRoot;
-    this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
     this.usageTimer = setInterval(() => this.sendRecordedUsage(workspaceRoot), 2000);
-    this.disposeSquadWatcher = startSquadWatching(workspaceRoot, {
+    let starting = true;
+    let stopped = false;
+    const pendingActivity: Parameters<SquadWatcherCallbacks['onAgentActivity']>[0][] = [];
+    const onAgentActivity: SquadWatcherCallbacks['onAgentActivity'] = (event) => {
+      if (stopped) { return; }
+      if (starting) {
+        pendingActivity.push(event);
+        return;
+      }
+      if (isLiveAgent(event.agentId)) {return;}
+      const agent = getAgents().get(event.agentId)
+        ?? [...getAgents().values()].find(a => event.agentId.startsWith(a.id));
+      const displayName = agent?.name ?? event.agentId;
+      this.emitTelemetry(
+        telemetryCategoryFor(event.source),
+        agent?.id ?? event.agentId,
+        displayName,
+        `[${event.source}] ${displayName} — ${event.task ?? 'activity detected'}`,
+        event.task,
+      );
+      updateAgentStatus(event.agentId, event.status, event.task, webview);
+    };
+    const watcher = new SquadWatcher(workspaceRoot, {
       onStatusChanged: (status) => {
-        if (status.squadDir !== this.sourceStatus.squadDir) {
-          this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
-        }
         this.sourceStatus = { ...status, liveActivity: this.sourceStatus.liveActivity };
         this.postMessage({ type: 'sourceStatus', status: this.sourceStatus });
         if (status.error) { this.log(status.error); }
       },
       onRosterChanged: () => {
-        this.usageRoster = parseAllMembers(readTeamFile(workspaceRoot) ?? '');
-        this.sendRecordedUsage(workspaceRoot);
+        const source = watcher.getTeamSource();
+        if (source === null) { throw new Error('Roster callback requires a guarded source snapshot.'); }
+        const content = source.status === 'available' ? source.content : '';
+        this.usageRoster = parseAllMembers(content);
+        if (starting) {
+          initializeAgents(workspaceRoot, this.context, webview, parseTeamRoster(content));
+          return;
+        }
         const directoryIds = this.getWorkspaceDirectoryIds(workspaceRoot);
-        const updated = refreshAgents(workspaceRoot, this.context, webview, directoryIds);
+        const updated = refreshAgents(workspaceRoot, this.context, webview, directoryIds, parseTeamRoster(content));
+        this.sendRecordedUsage(workspaceRoot);
         sendExistingAgents(updated, this.context, webview, directoryIds);
         this.liveActivity?.replay();
         this.emitTelemetry('log', null, null, 'Team roster updated');
       },
-      onAgentActivity: (event) => {
-        if (isLiveAgent(event.agentId)) {return;}
-        const agent = getAgents().get(event.agentId)
-          ?? [...getAgents().values()].find(a => event.agentId.startsWith(a.id));
-        const displayName = agent?.name ?? event.agentId;
-        this.emitTelemetry(
-          telemetryCategoryFor(event.source),
-          agent?.id ?? event.agentId,
-          displayName,
-          `[${event.source}] ${displayName} — ${event.task ?? 'activity detected'}`,
-          event.task,
-        );
-        updateAgentStatus(event.agentId, event.status, event.task, webview);
-      },
+      onAgentActivity,
     });
+    this.disposeSquadWatcher = () => {
+      stopped = true;
+      pendingActivity.length = 0;
+      watcher.dispose();
+    };
+    watcher.start();
 
     this.disposeLayoutWatcher = watchLayoutFile(workspaceRoot, (layout, revision) => {
       this.postMessage({ type: 'layoutLoaded', layout, revision, workspaceRoot });
@@ -476,6 +497,10 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
         this.postMessage({ type: 'layoutError', error: `Could not cache external layout: ${String(error)}` });
       });
     }, (error) => this.postMessage({ type: 'layoutError', error, source: 'watcher' }));
+    return () => {
+      starting = false;
+      for (const event of pendingActivity.splice(0)) { onAgentActivity(event); }
+    };
   }
 
   private stopWatching(): void {
@@ -822,15 +847,19 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
   // ─── Layout ───────────────────────────────────────────────────
 
   private loadAndSendLayout(workspaceRoot: string): void {
-    // Try workspace-persisted layout first
-    let revision: string | null;
+    let snapshot: LayoutSnapshot;
     try {
-      revision = readLayoutRevision(workspaceRoot);
+      snapshot = readLayoutSnapshot(new ProjectFiles(workspaceRoot));
     } catch (error) {
-      this.postMessage({ type: 'layoutError', error: `Cannot read saved layout; no layout was replaced. ${String(error)}` });
+      this.postMessage({ type: 'layoutError', error: `Cannot read saved layout; no layout was replaced. ${projectFileDiagnostic(error)}` });
       return;
     }
-    let layout = revision === null ? null : parseLayoutJson(revision);
+    if (snapshot.status === 'unreadable') {
+      this.postMessage({ type: 'layoutError', error: `Cannot read saved layout; no layout was replaced. ${snapshot.diagnostic}` });
+      return;
+    }
+    const revision = snapshot.revision;
+    let layout = snapshot.status === 'valid' ? snapshot.layout : null;
 
     // Fall back to VS Code workspace state
     if (!layout) {
@@ -856,8 +885,8 @@ export class SquadPodViewProvider implements vscode.WebviewViewProvider {
 
     // Always send layoutLoaded message
     this.postMessage({ type: 'layoutLoaded', layout, revision, workspaceRoot });
-    if (revision !== null && !parseLayoutJson(revision)) {
-      this.postMessage({ type: 'layoutError', error: 'Saved layout is malformed. The file was not overwritten; recover it before saving.' });
+    if (snapshot.status === 'malformed') {
+      this.postMessage({ type: 'layoutError', error: snapshot.diagnostic });
     }
   }
 
@@ -1193,51 +1222,6 @@ function getNonce(): string {
   return nonce;
 }
 
-const MAX_AGENT_CHARTER_BYTES = 64 * 1024;
-
-function readAgentCharter(workspaceRoot: string, filePath: string): string {
-  let fd: number | undefined;
-  try {
-    const root = fs.realpathSync(workspaceRoot);
-    const relative = path.relative(workspaceRoot, filePath);
-    if (relative.split(path.sep).includes('..') || path.isAbsolute(relative)) {throw new Error('Charter escapes selected workspace.');}
-    const target = path.join(root, relative);
-    const guard = () => {
-      let current = root;
-      for (const part of relative.split(path.sep)) {
-        current = path.join(current, part);
-        if (fs.lstatSync(current).isSymbolicLink() || fs.realpathSync(current) !== current) {throw new Error('Charter symlinks/junctions are not observed.');}
-      }
-    };
-    const sameFile = (a: fs.BigIntStats, b: fs.BigIntStats) =>
-      a.ino === b.ino && (a.dev === b.dev || (process.platform === 'win32' && a.dev === 0n));
-    guard();
-    const before = fs.lstatSync(target, { bigint: true });
-    if (!before.isFile() || before.size > BigInt(MAX_AGENT_CHARTER_BYTES)) {throw new Error('Charter is not a regular file within 64 KiB.');}
-    fd = fs.openSync(target, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
-    if (!sameFile(before, fs.fstatSync(fd, { bigint: true }))) {throw new Error('Charter changed while opening.');}
-    const stat = fs.fstatSync(fd);
-    if (!stat.isFile()) { throw new Error('Charter is not a regular file.'); }
-    if (stat.size > MAX_AGENT_CHARTER_BYTES) {
-      throw new Error('Charter exceeds the 64 KiB detail limit.');
-    }
-    const buffer = Buffer.alloc(Math.min(stat.size + 1, MAX_AGENT_CHARTER_BYTES + 1));
-    const bytes = fs.readSync(fd, buffer, 0, buffer.length, 0);
-    const after = fs.fstatSync(fd);
-    guard();
-    if (fs.realpathSync(workspaceRoot) !== root || !sameFile(fs.lstatSync(target, { bigint: true }), fs.fstatSync(fd, { bigint: true }))) {
-      throw new Error('Charter path changed while reading.');
-    }
-    if (bytes !== stat.size || after.size !== stat.size
-      || after.mtimeMs !== stat.mtimeMs || after.ctimeMs !== stat.ctimeMs) {
-      throw new Error('Charter changed while reading.');
-    }
-    return new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, bytes));
-  } finally {
-    if (fd !== undefined) { fs.closeSync(fd); }
-  }
-}
-
 function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo | null {
   const agents = getAgents();
   const agent = agents.get(agentId);
@@ -1245,53 +1229,11 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
     return null;
   }
 
+  const charter = readMemberCharter({ workspaceRoot, isCurrentMember: id => getAgents().has(id) }, agentId);
+  if (charter.charterStatus === 'unavailable') {return null;}
+  const { charterSummary, charterContent, charterStatus, expertise, responsibilities, boundaries } = charter;
   const squadDir = resolveSquadDir(workspaceRoot);
-  let charterSummary: string | null = null;
-  let charterContent: string | null = null;
-  let charterStatus: AgentDetailInfo['charterStatus'] = 'missing';
-  let expertise: string | null = null;
-  let responsibilities: string | null = null;
-  let boundaries: string | null = null;
   const charterPath = path.join(squadDir, 'agents', agentId, 'charter.md');
-  try {
-    const source = readAgentCharter(workspaceRoot, charterPath);
-    charterContent = source;
-    charterStatus = 'available';
-    const lines = source.split(/\r?\n/);
-    const titleIndex = lines.findIndex(line => /^\s*#\s+/.test(line));
-    const paragraphLines: string[] = [];
-    if (titleIndex >= 0) {
-      let index = titleIndex + 1;
-      while (index < lines.length && !lines[index].trim()) {
-        index++;
-      }
-      while (index < lines.length && lines[index].trim() && !/^\s*#{1,6}\s+/.test(lines[index])) {
-        paragraphLines.push(lines[index].trim());
-        index++;
-      }
-    }
-
-    if (paragraphLines.length > 0) {
-      const paragraph = paragraphLines.join(' ');
-      // Take first 2-3 sentences
-      const sentences = paragraph.split(/\.\s+/);
-      charterSummary = sentences.slice(0, 3).join('. ');
-      if (!charterSummary.endsWith('.')) {
-        charterSummary += '.';
-      }
-    }
-    expertise = source.split(/\r?\n/).map(line => /^\s*[-*]\s+\*\*Expertise:\*\*\s*(.+)$/i.exec(line)?.[1]?.trim() ?? '')
-      .find(Boolean) ?? null;
-    responsibilities = extractDeclaredSection(source, ['Responsibilities', 'What I Own']);
-    boundaries = extractDeclaredSection(source, ['Boundaries']);
-  } catch (error) {
-    charterSummary = null;
-    charterContent = null;
-    charterStatus = (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'unreadable';
-    expertise = null;
-    responsibilities = null;
-    boundaries = null;
-  }
 
   // Scan log directory for recent activity
   const recentActivity: string[] = [];
@@ -1367,18 +1309,4 @@ function getAgentDetail(workspaceRoot: string, agentId: string): AgentDetailInfo
     lastActiveAt: agent.lastActiveAt,
     lastActiveAtStatus: agent.lastActiveAtStatus,
   };
-}
-
-function extractDeclaredSection(source: string, headings: string[]): string | null {
-  const lines = source.split(/\r?\n/);
-  const heading = new RegExp(`^#{1,6}\\s+(?:${headings.map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s*#*\\s*$`, 'i');
-  const start = lines.findIndex(line => heading.test(line.trim()));
-  if (start < 0) {return null;}
-  const section: string[] = [];
-  for (const line of lines.slice(start + 1)) {
-    if (/^#{1,6}\s+/.test(line.trim())) {break;}
-    if (line.trim()) {section.push(line.trim());}
-  }
-  const text = section.join('\n').trim();
-  return text ? text.slice(0, 4096) : null;
 }

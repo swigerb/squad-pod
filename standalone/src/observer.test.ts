@@ -1,17 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
-import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createObserver } from './observer.js';
 import { ProjectFiles } from './projectFiles.js';
 import { decodeEvent } from './events.js';
+import { MAX_DECLARED_ROSTER_BYTES } from '../../src/declaredRoster.js';
+import { readTeamFile, readTeamRoster } from '../../src/teamParser.js';
 import type { OutboundMessage } from '../../src/types.js';
 
 const owned: string[] = [];
 const packageRoot = fileURLToPath(new URL('../../webview-ui/public/assets', import.meta.url));
 function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'squad observer test '));
+  const root = fs.mkdtempSync(path.resolve('.observer-fixture-'));
   owned.push(root);
   fs.mkdirSync(path.join(root, '.squad', 'log'), { recursive: true });
   fs.mkdirSync(path.join(root, '.squad-pod'));
@@ -19,11 +20,107 @@ function fixture() {
   return root;
 }
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
   for (const root of owned.splice(0)) fs.rmSync(root, { recursive: true, force: true });
 });
 
 describe('read-only selected-project observer', () => {
+  it('reuses guarded team validation on unchanged snapshots and invalidates refused content', async () => {
+    const root = fixture();
+    const observer = createObserver(root, packageRoot);
+    const read = vi.spyOn(ProjectFiles.prototype, 'read');
+    const teamReads = () => read.mock.calls.filter(([relative]) => relative === path.join('.squad', 'team.md'));
+    try {
+      await observer.snapshot();
+      await observer.snapshot();
+      expect(teamReads()).toHaveLength(1);
+      fs.writeFileSync(path.join(root, '.squad', 'team.md'), Buffer.from([0xff]));
+      const refused = await observer.snapshot();
+      expect(refused.find(m => m.type === 'sourceStatus')).toMatchObject({
+        status: { teamFound: false, error: expect.stringContaining('UTF-8') },
+      });
+      expect(refused.find(m => m.type === 'existingAgents')).toMatchObject({ agents: [] });
+      await observer.snapshot();
+      expect(teamReads()).toHaveLength(2);
+    } finally { observer.dispose(); }
+  });
+
+  it('matches existing read API membership for accepted, refused and recovered sources', async () => {
+    const root = fixture();
+    const team = path.join(root, '.squad', 'team.md');
+    const original = readTeamFile(root)!;
+    const observer = createObserver(root, packageRoot);
+    try {
+      for (const content of [original, original.padEnd(MAX_DECLARED_ROSTER_BYTES + 1, ' '),
+        Buffer.from([0xff]), original.replace('test-agent-1', 'Mixed_Name-2')]) {
+        fs.writeFileSync(team, content);
+        const messages = await observer.snapshot();
+        const expected = readTeamRoster(root).map(member => ({ id: member.slug, name: member.name, role: member.role }));
+        const agents = messages.find(m => m.type === 'existingAgents');
+        expect(agents).toMatchObject({ agents: expected });
+        if (agents?.type !== 'existingAgents') throw new Error('Missing roster.');
+        expect(agents.agents).toHaveLength(expected.length);
+        expect(readTeamFile(root) === null).toBe(expected.length === 0);
+      }
+    } finally { observer.dispose(); }
+  });
+
+  it('surfaces guarded roster failures without adopting the usable legacy roster', async () => {
+    const root = fixture();
+    fs.renameSync(path.join(root, '.squad'), path.join(root, '.ai-team'));
+    fs.symlinkSync(path.join(root, '.ai-team'), path.join(root, '.squad'), 'junction');
+    const observer = createObserver(root, packageRoot);
+    try {
+      const linked = await observer.snapshot();
+      expect(linked.find(m => m.type === 'existingAgents')).toMatchObject({ agents: [] });
+      expect(linked.find(m => m.type === 'sourceStatus')).toMatchObject({
+        status: { teamFound: false, error: expect.stringContaining('symlinks') },
+      });
+      fs.unlinkSync(path.join(root, '.squad'));
+      fs.mkdirSync(path.join(root, '.squad'));
+      const valid = fs.readFileSync(path.join(root, '.ai-team', 'team.md'), 'utf8');
+      fs.writeFileSync(path.join(root, '.squad', 'team.md'), valid.padEnd(MAX_DECLARED_ROSTER_BYTES + 1, ' '));
+      const oversized = await observer.snapshot();
+      expect(oversized.find(m => m.type === 'existingAgents')).toMatchObject({ agents: [] });
+      expect(oversized.find(m => m.type === 'sourceStatus')).toMatchObject({
+        status: { teamFound: false, error: expect.stringContaining('262144 bytes') },
+      });
+    } finally { observer.dispose(); }
+  });
+
+  it('uses the guarded declared roster independently per project and clears removed members', async () => {
+    const first = fixture();
+    const second = fixture();
+    fs.renameSync(path.join(second, '.squad'), path.join(second, '.ai-team'));
+    const team = path.join(second, '.ai-team', 'team.md');
+    fs.writeFileSync(team, fs.readFileSync(team, 'utf8').replaceAll('test-agent-1', 'Mixed_Name-2'));
+    const one = createObserver(first, packageRoot);
+    const two = createObserver(second, packageRoot);
+    const agents = async (observer: ReturnType<typeof createObserver>) =>
+      (await observer.snapshot()).find(message => message.type === 'existingAgents');
+    try {
+      expect(await agents(one)).toMatchObject({ agents: [{ id: 'test-agent-1', name: 'TestBot', role: 'Developer' }] });
+      expect(await agents(two)).toMatchObject({ agents: [{ id: 'Mixed_Name-2', name: 'TestBot', role: 'Developer' }] });
+      fs.writeFileSync(path.join(second, '.ai-team', 'log', 'task.md'), '**Agent:** task-only');
+      fs.writeFileSync(team, fs.readFileSync(team, 'utf8').replaceAll('Mixed_Name-2', 'replacement'));
+      expect(await agents(two)).toMatchObject({ agents: [{ id: 'replacement' }] });
+      fs.mkdirSync(path.join(second, '.squad'));
+      const missing = await two.snapshot();
+      expect(missing.find(m => m.type === 'existingAgents')).toMatchObject({ agents: [] });
+      expect(missing.find(m => m.type === 'sourceStatus')).toMatchObject({
+        status: { teamFound: false, error: expect.stringContaining('team.md') },
+      });
+      fs.writeFileSync(path.join(second, '.squad', 'team.md'), 'not a roster');
+      const invalid = await two.snapshot();
+      expect(invalid.find(m => m.type === 'existingAgents')).toMatchObject({ agents: [] });
+      expect(invalid.find(m => m.type === 'sourceStatus')).toMatchObject({
+        status: { teamFound: true, error: expect.stringContaining('Members table') },
+      });
+      expect(await agents(one)).toMatchObject({ agents: [{ id: 'test-agent-1' }] });
+    } finally { one.dispose(); two.dispose(); }
+  });
+
   it('uses the production parsers and bundled assets within measured frame/queue budgets', async () => {
     const root = fixture();
     const before = fs.readdirSync(root, { recursive: true });

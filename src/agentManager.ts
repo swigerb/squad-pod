@@ -129,13 +129,15 @@ export function resolveAgentId(
  * Read the roster and build agent state, restoring persisted palette and
  * seat assignments. Nothing is posted here: the caller sends a single
  * `existingAgents` snapshot so the webview never sees duplicate creates.
+ * A watcher can supply its guarded baseline without opening the source again.
  */
 export function initializeAgents(
   workspaceRoot: string,
   context: vscode.ExtensionContext,
   _webview?: vscode.Webview,
+  validatedMembers?: readonly SquadTeamMember[],
 ): Map<string, SquadAgentState> {
-  const members = readTeamRoster(workspaceRoot);
+  const members = validatedMembers ?? readTeamRoster(workspaceRoot);
   const persisted = loadPersistedMeta(context);
   cancelAllTimers();
   liveRuns.clear();
@@ -157,15 +159,17 @@ export function initializeAgents(
 
 /**
  * Re-read the roster: add new members, remove departed ones, and update
- * name/role changes for existing members.
+ * name/role changes for existing members. Watchers can supply the membership
+ * parsed from their validated source snapshot rather than re-opening the path.
  */
 export function refreshAgents(
   workspaceRoot: string,
   context: vscode.ExtensionContext,
   webview: vscode.Webview,
   directoryIds?: readonly string[],
+  validatedMembers?: readonly SquadTeamMember[],
 ): Map<string, SquadAgentState> {
-  const members = readTeamRoster(workspaceRoot);
+  const members = validatedMembers ?? readTeamRoster(workspaceRoot);
   const persisted = loadPersistedMeta(context);
   const newIds = new Set(members.map(m => m.slug));
 

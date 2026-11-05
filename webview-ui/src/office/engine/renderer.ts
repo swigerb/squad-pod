@@ -35,12 +35,13 @@ import {
 } from '../../constants.js';
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/defaultCharacters.js';
-import { getColorizedFloorSprite, getFloorPatternIndex, hasFloorSprites } from '../floorTiles.js';
+import { getFloorPatternIndex, type FloorAssets } from '../floorTiles.js';
 import type { CarpetTile } from '../types.js';
 import { getCharacterAnimation, getCharacterWorldPosition, isReadingTool } from './characters.js';
 import { getCharacterScreenBounds } from './characterGeometry.js';
 import { renderCarpetLayer } from '../sprites/carpetRenderer.js';
-import { wallColorToHex, getColorizedWallSprite, hasWallSprites } from '../wallTiles.js';
+import type { CarpetAssets } from '../sprites/carpetTiles.js';
+import { wallColorToHex, type WallAssets } from '../wallTiles.js';
 import { areTilesetAssetsReady, getAssetLoadSnapshot } from '../sprites/assetLoader.js';
 import { drawTilesetFurniture, drawTilesetTile, drawMetadataItemScaled } from '../sprites/tilesetRenderer.js';
 import {
@@ -84,8 +85,15 @@ const DEFAULT_FLOOR_COLOR: FloorColor = { h: 35, s: 40, b: 15, c: 0 };
 const DEFAULT_WALL_COLOR: FloorColor = { h: 20, s: 30, b: -25, c: 0 };
 const EMPTY_TILE_COLORS = new Map<string, FloorColor>();
 
+interface OfficeRenderAssets {
+  floorAssets: FloorAssets;
+  wallAssets: WallAssets;
+  carpetAssets: CarpetAssets;
+}
+
 export function renderTileGrid(
   ctx: CanvasRenderingContext2D,
+  assets: Pick<OfficeRenderAssets, 'floorAssets' | 'wallAssets'>,
   tileMap: number[][],
   offsetX: number,
   offsetY: number,
@@ -93,6 +101,8 @@ export function renderTileGrid(
   tileColors: Map<string, FloorColor>,
   cols: number
 ): void {
+  const { hasFloorSprites, getColorizedFloorSprite } = assets.floorAssets;
+  const { hasWallSprites, getColorizedWallSprite } = assets.wallAssets;
   const rows = tileMap.length;
   const flatTiles = tileMap.flat();
   const tilesetReady = areTilesetAssetsReady();
@@ -638,6 +648,7 @@ export function renderBubbles(
 
 export function renderFrame(
   ctx: CanvasRenderingContext2D,
+  assets: OfficeRenderAssets,
   canvasWidth: number,
   canvasHeight: number,
   tileMap: number[][],
@@ -678,8 +689,8 @@ export function renderFrame(
   const offsetX = panX;
   const offsetY = panY;
 
-  renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors ?? EMPTY_TILE_COLORS, cols);
-  renderCarpetLayer(ctx, carpetTiles, tileMap, cols, rows, offsetX, offsetY, zoom);
+  renderTileGrid(ctx, assets, tileMap, offsetX, offsetY, zoom, tileColors ?? EMPTY_TILE_COLORS, cols);
+  renderCarpetLayer(ctx, assets.carpetAssets, carpetTiles, tileMap, cols, rows, offsetX, offsetY, zoom);
   if (showAreas) renderAreaOverlay(ctx, areaTiles, areas, cols, rows, offsetX, offsetY, zoom, activeAreaLabel);
 
   if (seats) {

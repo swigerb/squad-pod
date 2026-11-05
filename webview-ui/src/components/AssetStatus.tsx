@@ -19,13 +19,19 @@ export function AssetWarnings({ status, furniture }: { status: AssetStatusData; 
 
 export function AssetDirectories({ status }: { status?: AssetStatusData }) {
   const client = useHostClient();
+  const canAdd = client.capabilities.actions.includes('addAssetDirectory');
+  const canRemove = client.capabilities.actions.includes('removeAssetDirectory');
   return (
     <div>
       <strong>Local furniture assets</strong>
-      <p>Changes reload automatically. Removing a directory does not delete files or layout items.</p>
-      <button onClick={() => client.send({ type: 'addAssetDirectory' })}>Add Asset Directory</button>
+      {canAdd && <p>Changes reload automatically. Removing a directory does not delete files or layout items.</p>}
+      {!canAdd && <p role="status">External asset directories are unavailable: this host cannot browse local folders. Bundled art and third-party notices are unchanged.</p>}
+      <button disabled={!canAdd} title={!canAdd ? 'Local folder access is unavailable in this host.' : undefined}
+        onClick={() => { if (canAdd) client.send({ type: 'addAssetDirectory' }); }}>Add Asset Directory</button>
       {status?.directories.map((directory) => (
-        <p key={directory}>{directory} <button onClick={() => client.send({ type: 'removeAssetDirectory', directory })}>Unload</button></p>
+        <p key={directory}>{directory} <button disabled={!canRemove}
+          title={!canRemove ? 'Asset directory management is unavailable in this host.' : undefined}
+          onClick={() => { if (canRemove) client.send({ type: 'removeAssetDirectory', directory }); }}>Unload</button></p>
       ))}
       {status?.diagnostics.map((message) => <p role="alert" key={message}>{message}</p>)}
     </div>

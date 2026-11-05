@@ -10,6 +10,7 @@ import type { LiveSourceStatus, SourceStatus } from '../../../src/types.js';
 import { SourceStatusView } from './SourceStatusView.js';
 
 interface TelemetryDrawerProps {
+  canvas?: boolean;
   readOnly?: boolean;
   events: TelemetryEvent[];
   recordedUsage: RecordedUsageSnapshot | null;
@@ -47,7 +48,7 @@ function formatTimestamp(ts: number): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function TelemetryDrawer({ readOnly = false, events, recordedUsage, cliUsage = null, onCliUsageAction, observedTasks = null, liveSource, sourceStatus = null, onOpenSettings, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
+export function TelemetryDrawer({ canvas = false, readOnly = false, events, recordedUsage, cliUsage = null, onCliUsageAction, observedTasks = null, liveSource, sourceStatus = null, onOpenSettings, isOpen, onToggle, onClear }: TelemetryDrawerProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -164,17 +165,18 @@ export function TelemetryDrawer({ readOnly = false, events, recordedUsage, cliUs
           </div>
         ) : null}
         <RecordedUsage snapshot={recordedUsage} />
-        <CliUsage snapshot={cliUsage} readOnly={readOnly} onAction={type => onCliUsageAction?.(type)} />
+        <CliUsage snapshot={cliUsage} readOnly={readOnly} canvas={canvas} onAction={type => onCliUsageAction?.(type)} />
         <div style={{ padding: '6px 12px', overflowWrap: 'anywhere' }}>
-          {readOnly ? <p role="status">Browser settings cannot grant live-log consent. Live observation requires explicit local CLI --live-activity opt-in; opening this drawer enables nothing.</p>
+          {canvas ? <p role="status">Canvas displays bounded live observations from the exact joined SDK session. Private CLI-log scanning is unavailable; office editing grants no log access.</p>
+            : readOnly ? <p role="status">Browser settings cannot grant live-log consent. Live observation requires explicit local CLI --live-activity opt-in; opening this drawer enables nothing.</p>
             : <><button onClick={onOpenSettings} style={smallButtonStyle}>Observation settings and consent</button>
               <p>Review live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.</p></>}
           <details>
             <summary>Activity source diagnostics</summary>
-            <SourceStatusView status={sourceStatus} readOnly={readOnly} />
+            <SourceStatusView status={sourceStatus} readOnly={readOnly} canvas={canvas} />
           </details>
         </div>
-        {isOpen && <ObservedTasks readOnly={readOnly} snapshot={observedTasks} source={liveSource} />}
+        {isOpen && <ObservedTasks canvas={canvas} readOnly={readOnly} snapshot={observedTasks} source={liveSource} />}
         {events.length > 0 && (
           events.map((event) => {
             const isExpanded = expandedIds.has(event.id);

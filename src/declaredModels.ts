@@ -1,6 +1,6 @@
-import * as fs from 'fs';
 import * as path from 'path';
-import { resolveSquadDir } from './squadPaths.js';
+import { ProjectFiles, projectFileDiagnostic } from './projectFiles.js';
+import { selectTeamSourceDirectory } from './teamSource.js';
 
 export const MAX_MODEL_CONFIG_BYTES = 64 * 1024;
 export type ModelReadState = 'ready' | 'missing' | 'malformed' | 'unreadable' | 'ambiguous' | 'unsupported';
@@ -107,80 +107,102 @@ export function parseModelConfig(content: string, agentName: string, sourcePath:
   return result('ready', values.length ? 'Declared preferences only; runtime selection is not known.' : 'No supported preferences declared for this exact agent name.', values);
 }
 
-function inside(root: string, candidate: string): boolean {
-  const relative = path.relative(root, candidate);
-  return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
-}
-
-function guardedPath(root: string, squadDir: string): string {
-  const candidate = path.join(root, path.basename(squadDir), 'config.json');
-  for (const entry of [path.dirname(candidate), candidate]) {
-    if (fs.lstatSync(entry).isSymbolicLink() || fs.realpathSync(entry) !== entry) {
-      throw new Error('Configuration symlinks/junctions are not observed.');
-    }
+function modelDirectory(files: ProjectFiles): { directory: '.squad' | '.ai-team'; fingerprint: string } {
+  const directory = selectTeamSourceDirectory(files);
+  const preferred = files.inspect('.squad');
+  const selected = directory === '.squad' ? preferred : files.inspect(directory);
+  if ((directory === '.ai-team' && preferred.status !== 'missing')
+    || selected.status === 'unreadable'
+    || (selected.status === 'present' && selected.kind !== 'directory')) {
+    throw new Error('Selected model directory changed or is unavailable.');
   }
-  return candidate;
+  return { directory, fingerprint: `${preferred.fingerprint}||${selected.fingerprint}` };
 }
 
-function sameFile(before: fs.BigIntStats, after: fs.BigIntStats): boolean {
-  // Windows lstat can report dev=0 before the file has been opened.
-  return before.ino === after.ino && (before.dev === after.dev || (process.platform === 'win32' && before.dev === 0n));
-}
-
-/** Bounded local read; legacy executable sources are inspected for presence only. */
-export function readModelConfig(workspaceRoot: string, agentName: string): ModelConfigSource[] {
-  const squadDir = resolveSquadDir(workspaceRoot);
-  const sourcePath = path.join(squadDir, 'config.json');
-  const sources: ModelConfigSource[] = [];
-  let fd: number | undefined;
-  let reading = false;
+function readJsonConfig(files: ProjectFiles, relative: string, agentName: string, sourcePath: string): ModelConfigSource {
+  const result = (state: ModelReadState, diagnostic: string): ModelConfigSource =>
+    ({ sourcePath, state, diagnostic, values: [] });
+  const before = files.inspect(relative);
+  if (before.status !== 'present') {
+    return result(before.status, before.status === 'missing' ? 'No JSON configuration file.' : before.reason);
+  }
+  if (before.kind !== 'file' || before.size > BigInt(MAX_MODEL_CONFIG_BYTES)) {
+    return result('unreadable', 'Configuration is not a regular file within the 64 KiB read limit.');
+  }
   try {
-    const root = fs.realpathSync(workspaceRoot);
-    const realFile = guardedPath(root, squadDir);
-    const before = fs.lstatSync(realFile, { bigint: true });
-    if (!before.isFile() || before.size > BigInt(MAX_MODEL_CONFIG_BYTES)) {throw new Error('Configuration is not a regular file within the 64 KiB read limit.');}
-    fd = fs.openSync(realFile, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
-    reading = true;
-    const stat = fs.fstatSync(fd, { bigint: true });
-    if (!sameFile(before, stat) || !stat.isFile() || stat.size > BigInt(MAX_MODEL_CONFIG_BYTES)) {
-      throw new Error('Configuration changed while opening; reopen to retry.');
+    const content = files.read(relative, MAX_MODEL_CONFIG_BYTES);
+    if (content === null || files.inspect(relative).fingerprint !== before.fingerprint) {
+      return result('ambiguous', 'Configuration changed while reading; reopen to retry.');
     }
-    const buffer = Buffer.alloc(Number(stat.size) + 1);
-    const bytes = fs.readSync(fd, buffer, 0, buffer.length, 0);
-    const after = fs.fstatSync(fd, { bigint: true });
-    if (fs.realpathSync(workspaceRoot) !== root || guardedPath(root, squadDir) !== realFile
-      || !sameFile(fs.lstatSync(realFile, { bigint: true }), stat)
-      || BigInt(bytes) !== stat.size || after.size !== stat.size || after.mtimeNs !== stat.mtimeNs || after.ctimeNs !== stat.ctimeNs) {
-      sources.push({ sourcePath, state: 'ambiguous', diagnostic: 'Configuration changed while reading; reopen to retry.', values: [] });
-    } else {
-      let content: string;
-      try {content = new TextDecoder('utf-8', { fatal: true }).decode(buffer.subarray(0, bytes));}
-      catch {return [{ sourcePath, state: 'malformed', diagnostic: 'Configuration is not valid UTF-8.', values: [] }, ...legacySources(workspaceRoot, squadDir)];}
-      sources.push(parseModelConfig(content, agentName, sourcePath));
+    return parseModelConfig(content, agentName, sourcePath);
+  } catch (error) {
+    const diagnostic = projectFileDiagnostic(error);
+    if (files.inspect(relative).fingerprint !== before.fingerprint || /changed/i.test(diagnostic)) {
+      return result('ambiguous', diagnostic);
+    }
+    return result((error as NodeJS.ErrnoException | null)?.code === 'ERR_ENCODING_INVALID_ENCODED_DATA'
+      ? 'malformed' : 'unreadable', diagnostic);
+  }
+}
+
+function inspectExecutable(files: ProjectFiles, relative: string, sourcePath: string): ModelConfigSource {
+  const inspected = files.inspect(relative);
+  let state: ModelReadState;
+  let diagnostic: string;
+  if (inspected.status !== 'present') {
+    state = inspected.status;
+    diagnostic = inspected.status === 'missing' ? 'No executable/legacy configuration at this path.' : inspected.reason;
+  } else if (inspected.kind !== 'file') {
+    state = 'unreadable';
+    diagnostic = 'Executable/legacy configuration is not a regular file.';
+  } else {
+    state = 'unsupported';
+    diagnostic = 'Executable/legacy configuration is present; not imported, executed or resolved.';
+  }
+  if (files.inspect(relative).fingerprint !== inspected.fingerprint) {
+    state = 'ambiguous';
+    diagnostic = 'Executable/legacy configuration changed while inspecting; reopen to retry.';
+  }
+  return { sourcePath, state, diagnostic, values: [] };
+}
+
+/**
+ * Observe declarations in an explicitly host-selected project, without granting
+ * root/session authority. Shared guards enforce bounded strict UTF-8 JSON reads;
+ * executable sources receive metadata inspection only, never content reads.
+ */
+export function readModelConfig(workspaceRoot: string, agentName: string): ModelConfigSource[] {
+  let directory: '.squad' | '.ai-team' = '.squad';
+  // Invalid relative input is a label only, never authority relative to cwd.
+  const sourcePath = (relative: string): string => path.isAbsolute(workspaceRoot)
+    ? path.join(workspaceRoot, relative) : relative.split(path.sep).join('/');
+  const paths = (): string[] => [
+    path.join(directory, 'config.json'), 'squad.config.ts', path.join(directory, 'squad.config.ts'),
+  ];
+  let files: ProjectFiles;
+  let before: ReturnType<typeof modelDirectory>;
+  try {
+    files = new ProjectFiles(workspaceRoot);
+    before = modelDirectory(files);
+    directory = before.directory;
+  } catch (error) {
+    return paths().map(relative => ({ sourcePath: sourcePath(relative), state: 'unreadable',
+      diagnostic: projectFileDiagnostic(error), values: [] }));
+  }
+  const relativePaths = paths();
+  const sources = [
+    readJsonConfig(files, relativePaths[0], agentName, sourcePath(relativePaths[0])),
+    ...relativePaths.slice(1).map(relative => inspectExecutable(files, relative, sourcePath(relative))),
+  ];
+  try {
+    const after = modelDirectory(files);
+    if (before.directory === after.directory && before.fingerprint === after.fingerprint) {
+      return sources;
     }
   } catch (error) {
-    const missing = (error as NodeJS.ErrnoException).code === 'ENOENT';
-    sources.push({ sourcePath, state: reading ? 'ambiguous' : missing ? 'missing' : 'unreadable',
-      diagnostic: reading ? `Configuration changed or became unreadable; reopen to retry: ${String(error)}`
-        : missing ? 'No JSON configuration file.' : `Cannot read configuration: ${String(error)}`, values: [] });
-  } finally {
-    if (fd !== undefined) {fs.closeSync(fd);}
+    return sources.map(source => ({ ...source, state: 'ambiguous',
+      diagnostic: `Selected model source changed or became unavailable; reopen to retry. ${projectFileDiagnostic(error)}`, values: [] }));
   }
-  return [...sources, ...legacySources(workspaceRoot, squadDir)];
-}
-
-function legacySources(workspaceRoot: string, squadDir: string): ModelConfigSource[] {
-  return [path.join(workspaceRoot, 'squad.config.ts'), path.join(squadDir, 'squad.config.ts')].map(sourcePath => {
-    try {
-      if (path.dirname(sourcePath) === squadDir && !inside(fs.realpathSync(workspaceRoot), fs.realpathSync(squadDir))) {
-        throw new Error('Legacy configuration path escapes the selected workspace.');
-      }
-      fs.lstatSync(sourcePath);
-      return { sourcePath, state: 'unsupported', diagnostic: 'Executable/legacy configuration is present; not imported, executed or resolved.', values: [] };
-    } catch (error) {
-      const missing = (error as NodeJS.ErrnoException).code === 'ENOENT';
-      return { sourcePath, state: missing ? 'missing' : 'unreadable',
-        diagnostic: missing ? 'No executable/legacy configuration at this path.' : `Cannot inspect legacy configuration: ${String(error)}`, values: [] };
-    }
-  });
+  return sources.map(source => ({ ...source, state: 'ambiguous',
+    diagnostic: 'Selected model source changed while observing declarations; reopen to retry.', values: [] }));
 }

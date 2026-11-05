@@ -141,6 +141,51 @@ Responsive controls provide touch pan/zoom, page navigation and deliberate clipb
 
 See the [build/run and security instructions](standalone/README.md). The companion is separate from the Marketplace extension and is not published as an npm product.
 
+### GitHub Copilot app Canvas plugin — Windows preview
+
+**Canvas plugin 0.1.0** is an owner-approved Windows local-session preview, not
+generally available or the VS Code Marketplace/VSIX extension. App **1.1.34** was
+tested; this is not a minimum-version promise. macOS, Linux, WSL and remote
+sessions are unsupported. No source checkout or build is needed.
+
+In the app: **Customize → Add extension → Manage marketplaces** → add
+**`swigerb/squad-pod`** → **Install Squad Pod**. In a local project session,
+ask Copilot to open the Squad Pod canvas or use **Open canvas**.
+The [install guide's quick links](docs/canvas-install.md#install-and-open)
+prefill confirmation forms; they never install silently.
+
+The canvas starts read-only; **Enable editing** is opt-in per instance. It shows
+the joined session's live Squad member activity without replaying history.
+See the [install, privacy and lifecycle guide](docs/canvas-install.md) and
+[feature matrix](docs/canvas-feature-matrix.md). Scout verified the public install
+on **2026-11-03**, on **Windows x64** with app **1.1.34** / runtime **1.0.102**
+([#216](https://github.com/swigerb/squad-pod/issues/216)); this does not verify
+updates, plugin uninstall or rollback. Local checks are not native install proof.
+VSIX versions, defaults and behavior are unchanged.
+
+#### Canvas browser client (source-only)
+
+Build the separate Copilot app panel client with `cd webview-ui` then
+`npx vite build --config vite.canvas.config.ts`. Its entry is
+`standalone/dist/canvas-browser/canvas.html`; the Canvas office host (#194) must serve
+that entry at `/`, with `/auth`, `/office-context` and `/office` on the same origin.
+This does not change the standalone CLI's credential-paste entry or host defaults.
+
+Canvas checks the existing HttpOnly viewer cookie first. Only an unauthenticated
+response allows a single `c` exchange from `#c=<viewer>`; the
+whole fragment is removed before network requests and is never stored.
+**Read-only remains the default**, including reloads. **Enable editing** explicitly
+requests a cookie-authenticated, same-origin one-time anti-forgery challenge
+(or reuses its valid control cookie) for revision-checked layout, declared-member
+seats and settings changes. Control authority never appears in the URL.
+The [authorization and recovery design](standalone/README.md#host-neutral-canvas-module-read-only-by-default)
+reuses the standalone guarded store and conflict UI, without changing VS Code's
+layout format or migrating workspace state. An expired session must be reopened;
+export unresolved drafts before closing the instance. File opening, directory
+management and CLI-log scanning remain unavailable; joined-session live activity
+is supported. No agent-callable write actions are
+registered. The panel follows the system light/dark preference.
+
 ## Squad Pod and Pixel Agents
 
 Squad Pod brings the Pixel Agents office experience to **Squad and Copilot CLI**. It shares the visual-office foundations while using Squad's own roster, charters and task identities.

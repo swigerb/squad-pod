@@ -1,4 +1,4 @@
-import { act, useState } from 'react';
+import { act, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,8 +17,6 @@ import * as renderer from '../engine/renderer.js';
 import { ZoomControls } from '../../components/ZoomControls.js';
 import { TILE_SIZE } from '../../constants.js';
 import type { FloorColor, OfficeLayout } from '../types.js';
-import { setFloorSprites } from '../floorTiles.js';
-import { setWallSprites } from '../wallTiles.js';
 import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -57,7 +55,7 @@ it.each([[1, 1], [2, 2], [4, 3]])('anchors transient links to interpolated walki
     expect(ctx.setTransform).toHaveBeenCalledWith(dpr, 0, 0, dpr, 0, 0);
     expect(ctx.moveTo).toHaveBeenCalledWith(32 * zoom + pan.current.x, 24 * zoom + pan.current.y);
     expect(ctx.lineTo).toHaveBeenCalledWith(40 * zoom + pan.current.x, 40 * zoom + pan.current.y);
-    expect(frame.mock.lastCall?.[5]).toEqual([parent, child]);
+    expect(frame.mock.lastCall?.[6]).toEqual([parent, child]);
   } finally {
     act(() => root.unmount());
     vi.restoreAllMocks();
@@ -115,8 +113,6 @@ it.each([
     callbacks.render(ctx as unknown as CanvasRenderingContext2D);
     return () => {};
   });
-  setFloorSprites([]);
-  setWallSprites([]);
   const layout: OfficeLayout = {
     version: 2, cols: 3, rows: 1, tiles: [TileType.WALL, TileType.FLOOR_1, TileType.VOID], furniture: [],
     ...(tileColors === undefined ? {} : { tileColors }),
@@ -245,7 +241,7 @@ it('renders a moving followed character at the camera center until manual touch 
     drawFrame();
     expect(pan.current.x).toBe(firstPan.x - 64);
     expect(center()).toEqual({ x: 400, y: 300 });
-    expect(rendered.mock.lastCall?.slice(6, 9)).toEqual([2, pan.current.x, pan.current.y]);
+    expect(rendered.mock.lastCall?.slice(7, 10)).toEqual([2, pan.current.x, pan.current.y]);
 
     const canvas = host.querySelector('canvas')!;
     const dispatch = (type: string, points: number[]) => {
@@ -374,10 +370,11 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
     const getOffice = () => office;
     const panRef = { current: { x: 0, y: 0 } };
     function Harness() {
+      const boundary = useRef(host);
       actions = useEditorActions(getOffice, editorState, undefined);
       useEditorKeyboard(actions.isEditMode, editorState, actions.handleDeleteSelected,
         actions.handleRotateSelected, actions.handleUndo, actions.handleRedo,
-        () => actions.handleEditorSelectionChange(null), actions.handleToggleEditMode);
+        () => actions.handleEditorSelectionChange(null), actions.handleToggleEditMode, boundary);
       return withClient(<OfficeCanvas officeState={office} editorState={editorState}
         isEditMode={actions.isEditMode} editorTick={actions.editorTick} zoom={1} panRef={panRef}
         onEditorSelectionChange={actions.handleEditorSelectionChange}
@@ -410,7 +407,7 @@ describe('real canvas gestures with editor actions and keyboard history', () => 
   }
 
   function key(key: string, ctrlKey = false) {
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey, bubbles: true })));
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey, bubbles: true })));
   }
 
   function drag(col: number, row: number, alt = false) {
@@ -621,7 +618,7 @@ describe('zoom keeps the office in view', () => {
   /** Office rectangle actually handed to the renderer on the latest frame. */
   function renderedOffice() {
     const args = frame.mock.lastCall!;
-    const zoom = args[6] as number, x = args[7] as number, y = args[8] as number;
+    const zoom = args[7] as number, x = args[8] as number, y = args[9] as number;
     return { zoom, x, y, width: 20 * TILE_SIZE * zoom, height: 15 * TILE_SIZE * zoom };
   }
 

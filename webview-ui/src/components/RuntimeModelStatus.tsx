@@ -10,7 +10,17 @@ export function memberRuntimeModel(
 export function liveModelUnavailableReason(
   status: LiveSourceStatus | undefined,
   readOnly = false,
+  canvas = false,
 ): string {
+  if (canvas) {
+    if (!status) {return 'Joined-session SDK source status is unavailable; no runtime model observation is available.';}
+    switch (status.state) {
+      case 'off': return 'Joined-session SDK observation is off; no runtime model observation is available.';
+      case 'searching': return 'Waiting for the exact joined SDK session; no runtime model observation is available.';
+      case 'error': return 'Joined-session SDK source error; no runtime model observation is available.';
+      case 'following': return 'No supported runtime model observation has been emitted for this joined SDK session or member.';
+    }
+  }
   if (!status) {return 'Live source status is unavailable; no runtime model observation is available.';}
   switch (status?.state ?? 'off') {
     case 'off': return readOnly
@@ -40,17 +50,19 @@ export function RuntimeModelStatus({
   label,
   observation,
   unavailableReason,
+  canvas = false,
 }: {
   label: string;
   observation: RuntimeModelObservation | null | undefined;
   unavailableReason: string;
+  canvas?: boolean;
 }) {
   return (
     <div>
       <strong>{label}:</strong> {observation ? modelLabel(observation.model) : 'unavailable'}
       {observation ? (
         <div>
-          {observationKind(observation.kind)} ({observation.source}) at{' '}
+          {observationKind(observation.kind)} ({canvas ? 'joined-session SDK; ' : ''}{observation.source}) at{' '}
           <time dateTime={observation.timestamp}>{observation.timestamp}</time>
         </div>
       ) : <div role="status">{unavailableReason}</div>}

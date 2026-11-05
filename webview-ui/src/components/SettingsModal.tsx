@@ -1,9 +1,11 @@
+import { useId } from 'react';
 import { useHostClient } from '../HostClientContext.js';
 import type { PodSettings, SourceStatus } from '../../../src/types.js';
 import { SourceStatusView } from './SourceStatusView.js';
 import { AssetDirectories, type AssetStatusData } from './AssetStatus.js';
 
 interface SettingsModalProps {
+  canvas?: boolean;
   standalone?: boolean;
   assetStatus?: AssetStatusData;
   onClose: () => void;
@@ -15,18 +17,24 @@ interface SettingsModalProps {
   sourceStatus: SourceStatus | null;
 }
 
-export function SettingsModal({ standalone = false, assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
+export function SettingsModal({ canvas = false, standalone = false, assetStatus, onClose, isDebugMode = false, onToggleDebugMode, settings, onSoundChange, onShowAreasChange, sourceStatus }: SettingsModalProps) {
   const client = useHostClient();
+  const id = useId();
+  const canExport = client.capabilities.actions.includes('exportLayout');
+  const canImport = client.capabilities.actions.includes('importLayout');
   const handleExport = () => {
-    client.send({ type: 'exportLayout' });
+    if (canExport) client.send({ type: 'exportLayout' });
   };
 
   const handleImport = () => {
-    client.send({ type: 'importLayout' });
+    if (canImport) client.send({ type: 'importLayout' });
   };
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
       style={{
         position: 'fixed',
         inset: 0,
@@ -72,9 +80,9 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label htmlFor="squad-pod-sound" style={{ fontSize: '13px' }}>Sound Notifications</label>
+            <label htmlFor={`${id}-sound`} style={{ fontSize: '13px' }}>Sound Notifications</label>
             <input
-              id="squad-pod-sound"
+              id={`${id}-sound`}
               type="checkbox"
               checked={settings.soundEnabled}
               onChange={() => onSoundChange(!settings.soundEnabled)}
@@ -83,9 +91,9 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label htmlFor="squad-pod-show-areas" style={{ fontSize: '13px' }}>Show Named Areas</label>
+            <label htmlFor={`${id}-areas`} style={{ fontSize: '13px' }}>Show Named Areas</label>
             <input
-              id="squad-pod-show-areas"
+              id={`${id}-areas`}
               type="checkbox"
               checked={settings.showAreas}
               onChange={() => onShowAreasChange(!settings.showAreas)}
@@ -95,9 +103,9 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
 
           {onToggleDebugMode && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="squad-pod-debug-view" style={{ fontSize: '13px' }}>Debug View</label>
+              <label htmlFor={`${id}-debug`} style={{ fontSize: '13px' }}>Debug View</label>
               <input
-                id="squad-pod-debug-view"
+                id={`${id}-debug`}
                 type="checkbox"
                 checked={isDebugMode}
                 onChange={onToggleDebugMode}
@@ -107,8 +115,8 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
           )}
 
           {!standalone && <><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label htmlFor="squad-pod-live-activity" style={{ fontSize: '13px' }}>Live Activity (opt-in)</label>
-            <input id="squad-pod-live-activity" type="checkbox"
+            <label htmlFor={`${id}-live`} style={{ fontSize: '13px' }}>Live Activity (opt-in)</label>
+            <input id={`${id}-live`} type="checkbox"
               checked={!!sourceStatus?.liveActivity && sourceStatus.liveActivity.state !== 'off'}
               onChange={(event) => client.send({ type: 'setLiveActivity', enabled: event.target.checked })} />
           </div>
@@ -117,9 +125,15 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
             {sourceStatus?.liveActivity?.sessionId ? ` (${sourceStatus.liveActivity.sessionId})` : ''}.
             {' '}Reads local Copilot CLI session metadata for this workspace after confirmation.
           </p></>}
-          <SourceStatusView status={sourceStatus} readOnly={standalone} />
-          {!standalone && <AssetDirectories status={assetStatus} />}
-          {standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and browser-granted private/live log consent are unavailable. Live observation requires local CLI --live-activity opt-in. Import selects a browser file; export downloads validated JSON. Neither grants filesystem or terminal access.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
+          {canvas && <div>
+            <label><input type="checkbox" disabled checked={false} readOnly
+              title="Canvas cannot grant access to private CLI logs." /> Private CLI-log scanning (unavailable)</label>
+            <p role="status">Canvas can display bounded task and model observations from the exact joined SDK session, not private CLI logs. Enabling office editing does not grant log access.</p>
+          </div>}
+          <SourceStatusView status={sourceStatus} readOnly={standalone} canvas={canvas} />
+          {(!standalone || canvas) && <AssetDirectories status={assetStatus} />}
+          {canvas ? <p role="status">Only this selected project is available. Directory navigation, CLI launch, terminals and opening local files are unavailable: Canvas has no native filesystem or terminal authority.</p>
+            : standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and browser-granted private/live log consent are unavailable. Live observation requires local CLI --live-activity opt-in.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
             Automatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code&apos;s normal terminal and Copilot permission prompts.
             Live tools and context use an undocumented, best-effort Copilot CLI session format.
           </p>}
@@ -128,6 +142,8 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
             <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Layout</div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
+                disabled={!canExport}
+                title={!canExport ? 'Layout export is unavailable in this host.' : undefined}
                 onClick={handleExport}
                 style={{
                   flex: 1,
@@ -136,13 +152,16 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
                   color: 'var(--vscode-button-foreground)',
                   border: 'none',
                   borderRadius: '4px',
-                  cursor: 'pointer',
+                  cursor: canExport ? 'pointer' : 'not-allowed',
+                  opacity: canExport ? 1 : 0.5,
                   fontSize: '12px',
                 }}
               >
                 Export Layout
               </button>
               <button
+                disabled={!canImport}
+                title={!canImport ? 'Layout import is unavailable in this host.' : undefined}
                 onClick={handleImport}
                 style={{
                   flex: 1,
@@ -151,13 +170,20 @@ export function SettingsModal({ standalone = false, assetStatus, onClose, isDebu
                   color: 'var(--vscode-button-foreground)',
                   border: 'none',
                   borderRadius: '4px',
-                  cursor: 'pointer',
+                  cursor: canImport ? 'pointer' : 'not-allowed',
+                  opacity: canImport ? 1 : 0.5,
                   fontSize: '12px',
                 }}
               >
                 Import Layout
               </button>
             </div>
+            {!canExport && <p role="status">Layout export is unavailable in this host.</p>}
+            {!canImport && <p role="status">Layout import is unavailable in this host.</p>}
+            {standalone && (canImport || canExport) && <p role="status">
+              {canImport && 'Import selects a browser file. '}{canExport && 'Export downloads validated JSON. '}
+              Neither grants filesystem or terminal access.
+            </p>}
           </div>
         </div>
       </div>

@@ -11,7 +11,7 @@ const { PNG } = require('pngjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const playwrightPackage = require(path.join(path.dirname(require.resolve(process.env.PLAYWRIGHT_MODULE || 'playwright')), 'package.json'));
 require('tsx/cjs');
-const { getColorizedTileSprite } = require('../webview-ui/src/office/colorize.ts');
+const { colorizeTileSprite } = require('../webview-ui/src/office/colorize.ts');
 
 const root = path.resolve(__dirname, '..');
 const output = path.resolve(process.env.ACCEPTANCE_OUTPUT_DIR || path.join(os.tmpdir(), 'squad-floor-evidence'));
@@ -232,7 +232,7 @@ async function main() {
   const source = PNG.sync.read(fs.readFileSync(path.join(root, 'webview-ui', 'public', 'assets', 'floors', 'floor_7.png')));
   const sprite = Array.from({ length: 16 }, (_, r) => Array.from({ length: 16 }, (_, c) =>
     '#' + source.data.subarray((r * 16 + c) * 4, (r * 16 + c) * 4 + 3).toString('hex')));
-  const tinted = getColorizedTileSprite('browser-floor-expected', sprite, newColor);
+  const tinted = colorizeTileSprite(sprite, newColor);
   const expectedPixels = tinted.slice(1, 15).flatMap((row) => row.slice(1, 15).flatMap((hex) => [...Buffer.from(hex.slice(1), 'hex'), 255]));
   assert.deepEqual(await sample(4, 3), expectedPixels, 'painted Floor 10 pixels must match the missing source sheet with the selected color');
   assert.deepEqual(await sample(1, 0), voidBefore, 'VOID pixels must remain unchanged');

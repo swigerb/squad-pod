@@ -35,6 +35,61 @@ Type `quit` in the CLI to stop the server.
 For automated checks, helper requirements, and evidence verification, see the
 [repository testing guide](../docs/testing.md).
 
+## Host-neutral Canvas module (read-only by default)
+
+`src/canvas/officeHost.ts` exports `startCanvasOfficeHost({ projectRoot,
+bundledAssetsRoot, staticRoot })`, returning `{ url, dispose() }`. Supply an
+explicit existing absolute local project containing `.squad/` or `.ai-team/`,
+bundled office assets, and the built standalone browser bundle. The caller must
+establish project/session authority; path validation does not grant it.
+UNC/WSL roots are refused. Errors contain stable `CANVAS_*` codes only.
+
+Load the returned URL directly: its fragment holds **only a single-use viewer
+credential**, `#c=<viewer>`. The Copilot app exposes this URL to the agent, transcript
+and debug logs. This is acceptable only for a consumed single-use viewer credential:
+the panel exchanges it once at `/auth`, which rotates it immediately. Before that
+exchange, anyone holding the URL can race the panel for viewer access. It never
+contains office-control authority. The bootstrap removes the fragment from browser
+history before networking and never persists it.
+Only after the user clicks **Enable editing** does the panel request a per-page
+one-time anti-forgery challenge from `/control-intent` and submit it to `/control-auth`.
+Both requests require the panel's HttpOnly SameSite=Strict viewer cookie and exact
+same-origin Origin; the challenge travels only in response/request bodies, never
+the URL. A missing cookie, foreign origin or consumed challenge is rejected.
+`/control-auth` issues a separate HttpOnly SameSite=Strict control cookie.
+Neither the viewer URL alone nor terminal authority grants control.
+Reloads use the cookies but **always start read-only**; enabling again may reuse
+that instance's valid control cookie. A consumed URL cannot authorize a new
+viewer/controller without its cookie. Close/context replacement/shutdown revokes
+the instance's authority and sockets; a reopened instance has new credentials.
+Each instance owns its listener and observation resources; await `dispose()`
+on close, including failed host integration. Disposal is idempotent.
+Canvas mode has no terminals or live CLI-log scanning.
+It writes nothing to stdout and leaves the CLI paste flow/defaults unchanged.
+
+Enabled editing reuses `officeControl.ts`, `officeStore.ts` and the browser office
+client, not a second persistence implementation. Layouts retain the existing
+VS Code version-2 JSON format at the selected project's `.squad-pod/layout.json`;
+settings and declared-member seats/appearance use `.squad-pod/office-preferences.json`.
+No plugin-cache writes or automatic VS Code workspace-state migration occur.
+Transient subagents cannot acquire persisted seats through this channel.
+Canvas/standalone revisions are SHA-256 hashes of the exact saved bytes;
+the VS Code host's raw-text revision is **not** a Canvas revision. Both use the
+cooperating lock protocol, with atomic staged/fsynced writes, size caps, root
+identity/authority rechecks and previous-byte recovery under `.squad-pod/recovery`.
+Stale saves surface the existing layout conflict UI, retaining local and incoming
+copies for deliberate resolution/export; failures never acknowledge a save.
+Unacknowledged settings/seat changes have explicit retry/export/discard controls.
+
+Editor recovery uses browser storage keyed by this instance's random server
+identity and project identity, separate from project preferences and credentials.
+It survives a UI reload while that host lives; a new host does not automatically
+adopt another instance's drafts. Export unresolved drafts before closing/reopening.
+Unavailable/malformed recovery storage fails explicitly without replacing its
+contents; lost acknowledgements are not automatically retried. None of this adds
+an agent-callable mutation action. Simultaneous native VS Code/Canvas acceptance
+remains part of #182, not a claim established by fixture tests.
+
 ## Build and run
 
 Requires Node 22.13+ and the repository's configured package feed. From the repository:
@@ -417,3 +472,36 @@ not establish real Squad/Copilot session or native VS Code acceptance. The separ
 [native acceptance plan](../docs/native-acceptance.md) defines those approval-gated
 tests and their evidence boundaries. Browser touch emulation is not physical-device
 acceptance.
+
+## Canvas entry (local production adapter)
+
+`npm run build:canvas` builds the dedicated `webview-ui/canvas.html` UI and
+`dist/extension.mjs`. The Copilot app must inject `@github/copilot-sdk/extension`;
+the build leaves that import external and never installs the SDK at runtime.
+This is not a distributable plugin or native-install qualification.
+Each open requires exact joined-session metadata within one second (at most four
+outstanding calls, including timed-out calls). Only its canonical local project
+root is authorized; optional `projectRoot` input must match. Offices are isolated,
+read-only until the UI opt-in above, and closed on context replacement, close or process shutdown.
+The provider subscribes once to the joined SDK session and fans only sanitized
+typed events into each open office. Each open starts empty, with no replay,
+home-directory discovery or session-log reads. Context changes revoke existing
+offices immediately but keep the provider available: the next open must obtain
+fresh exact-session project authority. Unknown subagents stay transient tasks;
+only exact roster IDs can drive member activity. Live model/context observations
+remain separate from declared preferences and recorded usage; absent fields are
+unavailable, not zero. Event IDs and aliases are bounded in memory (128 entries,
+160-character IDs), live tools are capped at 128 and observed tasks at 64; raw
+events are never queued or retained. Native-host evidence remains tracked in #182.
+Viewer and opted-in control channels share the same live overlay on snapshots,
+incremental updates and member-detail reads; editing does not grant session or
+terminal authority.
+`get_office_state` and `get_member_details` expose bounded selected-project
+metadata only. Model declarations are not runtime selection; absent data is null
+or unavailable. The CLI continues to use its separate paste-authenticated bundle.
+Only the authorized `get_office_state` action includes per-instance readiness counters
+(saturating at 65535, erased on close): indexed document/script GET/HEAD requests,
+completed office-context/viewer-bootstrap successes/refusals, authenticated viewer
+office websocket admissions/closures, and accepted `webviewReady` messages.
+These are requests observed, **not proof of a visible renderer or a host defect**.
+No request content is retained; no diagnostic endpoint, files or telemetry are added.

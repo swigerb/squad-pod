@@ -7,7 +7,6 @@ import { EditTool, TileType, type OfficeLayout, type SpriteData } from '../types
 import { OfficeCanvas } from '../components/OfficeCanvas.js';
 import { useEditorActions } from '../../hooks/useEditorActions.js';
 import { EditorToolbar } from '../../components/EditorToolbar.js';
-import { setCarpetSprites } from '../sprites/carpetTiles.js';
 import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
 import { applyCarpetPaint, applyCarpetErase, applyErase, applyTilePaint } from './editorActions.js';
 import { deserializeLayout, serializeLayout } from '../layout/layoutManager.js';
@@ -30,7 +29,6 @@ describe('carpets through real canvas/editor transactions', () => {
   beforeEach(() => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     vi.mocked(client.send).mockClear();
-    setCarpetSprites([0, 1, 2].map(() => Array.from({ length: 16 }, () => [['#111111', '#eeeeee']])));
     before = {
       version: 2, cols: 6, rows: 4, tiles: Array(24).fill(1),
       pets: [],
@@ -40,6 +38,7 @@ describe('carpets through real canvas/editor transactions', () => {
     before.tiles[0] = TileType.WALL;
     before.tiles[1] = TileType.VOID;
     office = new OfficeState(structuredClone(before));
+    office.carpetAssets.setCarpetSprites([0, 1, 2].map(() => Array.from({ length: 16 }, () => [['#111111', '#eeeeee']])));
     state = new EditorState();
     const getOffice = () => office;
     const panRef = { current: { x: 0, y: 0 } };
@@ -52,7 +51,7 @@ describe('carpets through real canvas/editor transactions', () => {
           onEditorTileAction={actions.handleEditorTileAction} onEditorEraseAction={actions.handleEditorEraseAction}
           onEditorEyedropper={actions.handleEyedropper}
           onGestureStart={actions.handleGestureStart} onGestureEnd={actions.handleGestureEnd} />
-        <EditorToolbar editorState={state} {...actions} onToolChange={actions.handleToolChange}
+        <EditorToolbar floorAssets={office.floorAssets} carpetAssets={office.carpetAssets} editorState={state} {...actions} onToolChange={actions.handleToolChange}
           onTileTypeChange={actions.handleTileTypeChange} onFloorColorChange={actions.handleFloorColorChange}
           onWallColorChange={actions.handleWallColorChange} onFurnitureTypeChange={actions.handleFurnitureTypeChange}
           selectedFurnitureColor={office.layout.furniture.find((item) => item.uid === state.selectedFurnitureUid)?.color ?? null}
@@ -89,7 +88,6 @@ describe('carpets through real canvas/editor transactions', () => {
   afterEach(() => {
     act(() => root.unmount());
     host.remove();
-    setCarpetSprites([]);
     resetPetTemplates();
     vi.restoreAllMocks();
   });
@@ -314,6 +312,18 @@ describe('carpets through real canvas/editor transactions', () => {
     expect(office.layout).toEqual(resized);
   });
 
+  it('keeps painting with this office assets when a peer independently loses its sheets', () => {
+    const otherOffice = new OfficeState(structuredClone(before));
+    otherOffice.carpetAssets.setCarpetSprites([Array.from({ length: 16 }, () => [['#111111', '#eeeeee']])]);
+    otherOffice.carpetAssets.setCarpetSprites([]);
+    stroke();
+    expect(office.layout.carpetTiles?.filter(Boolean)).toHaveLength(3);
+    expect(actions.canUndo).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('[title="Carpet 1"]')?.disabled).toBe(false);
+    expect(otherOffice.carpetAssets.hasCarpetVariant(0)).toBe(false);
+    expect(otherOffice.layout).toEqual(before);
+  });
+
   it('rejects wall/void/off-grid/missing-art strokes without undo entries, and repainting floors preserves carpets', () => {
     for (const col of [0, 1]) { mouse('mousedown', col, 0); mouse('mouseup', col, 0); }
     expect(office.layout).toEqual(before);
@@ -321,11 +331,14 @@ describe('carpets through real canvas/editor transactions', () => {
     expect(applyCarpetPaint(before, -1, 1, { variant: 0 })).toBe(before);
     expect(applyCarpetPaint(before, 6, 0, { variant: 0 })).toBe(before);
     expect(applyCarpetErase(before, 2, 1)).toBe(before);
-    setCarpetSprites([]);
+    office.carpetAssets.setCarpetSprites([]);
+    const otherOffice = new OfficeState(structuredClone(before));
+    otherOffice.carpetAssets.setCarpetSprites([Array.from({ length: 16 }, () => [['#111111', '#eeeeee']])]);
     stroke();
     expect(office.layout).toEqual(before);
     expect(actions.canUndo).toBe(false);
     expect(host.querySelector('[role=alert]')?.textContent).toMatch(/unavailable/);
+    expect(otherOffice.carpetAssets.hasCarpetVariant(0)).toBe(true);
     const painted = applyCarpetPaint(before, 2, 1, { variant: 0, color, accentColor });
     const floor = applyTilePaint(painted, 2, 1, TileType.FLOOR_2, color);
     expect(floor.carpetTiles).toEqual(painted.carpetTiles);
@@ -345,7 +358,7 @@ describe('carpets through real canvas/editor transactions', () => {
     const ctx = { drawImage: vi.fn(), canvas: { width: 1280, height: 720 }, getTransform: () => ({ a: 1, d: 1, e: 0, f: 0 }) };
     const render = () => {
       ctx.drawImage.mockClear();
-      renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, office.layout.carpetTiles,
+      renderCarpetLayer(ctx as unknown as CanvasRenderingContext2D, office.carpetAssets, office.layout.carpetTiles,
         office.tileMap, office.layout.cols, office.layout.rows, 0, 0, 1);
       const calls = ctx.drawImage.mock.calls.flatMap(([image, ...args]) => image instanceof HTMLCanvasElement
         ? composites.get(image)!.mock.calls.map(([sprite, x, y]) => [sprite, x - 8, y - 8])

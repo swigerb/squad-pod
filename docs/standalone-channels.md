@@ -11,13 +11,164 @@ typed office messages, API acquisition and recovery-state storage.
 
 `src/core/officeChannel.ts` owns the existing `HostClient` interface. The webview
 re-exports it for compatibility. `connectOffice` subscribes before sending
-`webviewReady`, so synchronous snapshots cannot race subscription. Office
+`webviewReady`, so synchronous snapshots cannot race subscription. It owns
+once-only cleanup and fences late delivery before calling adapter teardown.
+Its optional synchronous initializer includes the hook's initial diagnostics;
+initialization failure retires the connection and releases any returned subscription.
+Initialization and cleanup failures propagate together as an `AggregateError`.
+If subscription itself throws without returning a handle, delivery is retired
+but no adapter teardown authority is available. Office
 commands/events remain `WebviewMessage`/`OutboundMessage`; terminal messages are
 not added to that union. This is a trusted typed seam, **not** a JSON validator or
 an authenticated network boundary. The observer's isolated transport validates
 office commands before dispatch and rejects every observation-channel mutation server-side; its
 browser adapter separately validates server events. `/office` remains read-only:
 separate terminal authority never enables unsupported office mutations.
+
+`HostClient.capabilities` is an additive description of existing adapter support:
+an explicit allowlist of existing message action names plus recovery storage
+(`webview-state`, `browser-storage`, or `unavailable`). Unlisted actions are
+unsupported; the readiness handshake is mandatory and outside this allowlist.
+The VS Code profile describes its existing handlers. Standalone observation exposes
+only settings/detail reads and no recovery; opted-in control additionally describes
+its existing revision-checked editor/settings/seat writes and browser-local layout
+import/export. Neither standalone profile advertises native asset-directory management,
+navigation, directory launches or consent writes. Snapshot asset delivery is unchanged.
+These descriptions do not grant authority, guarantee storage availability or replace
+transport validation.
+
+The bounded layout-transfer UI now uses these capabilities: Settings import/export
+buttons require `importLayout`/`exportLayout`, and every local, incoming and retained
+recovery-copy export requires `exportLayoutSnapshot`. Unsupported buttons stay visible
+and disabled, with host-neutral unavailable text; their handlers do not send the action.
+Recovery storage wording follows `recoveryState`, including an in-memory-only warning
+and inspectable/copyable JSON when storage or export is unavailable. Existing native
+and standalone-control transfer defaults are unchanged; standalone observation still
+does not expose Settings. These are adapter-support checks, not new write authority.
+
+Remaining UI migration: settings/preferences, assets, details/navigation, directories,
+live consent/usage, editor/seat writes and recovery persistence itself still use existing
+`standalone`/`readOnly` assumptions. This slice does not make arbitrary injected clients
+safe across those other surfaces.
+
+### Mounted office state ownership (#174 increment)
+
+Each mounted `ConnectedOffice`, beneath the existing `HostClientProvider`, now
+allocates its own `OfficeState` and `EditorState`. Its stable getter is the only
+office-state path used by `useExtensionMessages`, `useEditorActions`, camera/card
+handlers, labels/debug UI and the existing `OfficeCanvas` renderer. There is no
+module-global office/editor fallback. Layouts, characters/seats, transient subagents,
+pets, selection/hover/camera fields and editor tool/color/selection fields belong
+to that mounted office. The already hook-local `LayoutDraft`, undo/redo history,
+pan/zoom, roster/activity/detail correlation and channel subscription now operate
+on that same office instead of a shared singleton.
+
+Unmount drops that instance and unsubscribes its channel; it does not dispose an
+injected client or reset a peer. Remount starts fresh scene/editor objects, with
+draft recovery only through the existing client's recovery state and layout
+handshake. Recovery-read failure never mounts the office or subscribes/sends ready.
+Single-view defaults, layout/recovery formats, subscribe-before-ready ordering and
+source-loss processing are unchanged. In-place client/project replacement is not
+implemented here; callers must remount when changing clients/projects.
+
+The office panel is also an explicit DOM input boundary. Editor Delete/Backspace,
+rotation, undo/redo and Escape listeners attach to that mounted panel, not window.
+Native focus within the panel owns its bubbling keys: Tab to the existing focusable
+canvas or controls can transfer ownership without a pointer. Mounting never steals
+focus. Form/text/select/contenteditable/dialog input, composing keys and already
+handled events are left alone; an open modal blocks shortcuts only in its office.
+Settings now identifies its dialog, and settings/editor label-control pairs use
+React-generated IDs rather than cross-office duplicate IDs.
+
+The existing renderer's Space-pan and Alt-copy-preview key listeners attach to its
+canvas. Canvas/window blur cancels held Space and unfinished pointer gestures.
+Listener effects remove their exact handlers on cleanup, including StrictMode replay.
+Middle-button, wheel and touch gestures remain canvas-local; no global event
+blocking, project/session ownership or new renderer was introduced.
+
+Notification audio is owned by a `NotificationSound` controller allocated inside
+each office's `useExtensionMessages` hook. Settings hydration, local setting changes,
+host `soundEnabled` events and the existing known-member active-to-non-active chime
+all use that controller, with no mutable global audio fallback. Before settings
+hydration it stays silent; standalone settings still wait for host acknowledgement.
+Settings and mounting never create an AudioContext. Only the existing notification
+request does, subject to browser permission/user-gesture restrictions; blocked or
+unsupported audio stays silent without prompts, retries or invented status.
+Unexpected context, resume, node/scheduling and cleanup failures emit operation-only
+`[NotificationSound]` console errors, never exception contents or notification data.
+Partial node setup is cleaned up; close rejections are handled asynchronously.
+Browser restrictions are silent only during context creation/resume, not node setup.
+Mute cancels that owner's scheduled notes and invalidates pending resume work.
+Unmount additionally closes only its context. Effect replay reactivates the controller
+without reviving old work; any later legitimate request lazily creates a fresh runtime.
+No global preference store or injected host client is disposed by audio cleanup.
+
+`App.instances.test.tsx` mounts two real Apps with separate synthetic clients in
+the normal webview Vitest runner (jsdom, no pixel-render qualification). It checks
+distinct OfficeState objects and visible rosters, editor tool choices, drafts,
+undo/redo, recovery writes and routed save/detail messages; source-loss/empty-roster
+delivery, unmount/remount and a recovery-read failure in one leave the other live.
+Input cases additionally check peer selection/layout/history after focused
+shortcuts, keyboard-only ownership transfer, editable/modal exclusions, generated
+label routing and continued operation after peer unmount, with StrictMode coverage.
+Tool isolation is checked after the peer rerenders. Canvas navigation tests run
+the real handlers and inspect pan values passed to a stubbed drawing function;
+the game-loop scheduler and canvas context are synthetic. These are normal-runner
+state/routing regressions, **not pixel, browser-native input or native Canvas API
+qualification**.
+
+`notificationSoundSilence.test.tsx` uses the same normal runner with two real
+StrictMode Apps, independent synthetic host clients and controlled AudioContext/node
+fakes. It checks distinct enablement, message-triggered playback, silence, local
+setting routing, peer survival and owned-node/context cleanup. Deferred/denied resume,
+mute/unmute, dispose/reactivate and synchronous-host StrictMode replay are covered.
+This proves scheduling/ownership behavior only, **not native audible/device or
+browser permission qualification**.
+
+Carpet assets now belong to each `OfficeState`: sheet copies, derived palettes,
+local revision and the 1024-entry FIFO recolor cache are created by
+`createCarpetAssets`. Manifest delivery, the existing engine/carpet renderer,
+toolbar previews/availability and paint validation all use that owner. The
+context-keyed carpet layer checks both asset-object identity and local revision,
+including rebinding one context between offices with equal revisions. Reloading
+one owner's carpets clears only its recolor cache; peer layers remain reusable.
+Palette-key and marching-square helpers are pure. Normal-runner regressions use
+two offices in the **same JavaScript realm**, distinct sheets, reload/recovery,
+picker sprite data, paint validation, bounded cache eviction and shared-context
+rendering. Canvas contexts remain synthetic; this is not native pixel qualification.
+
+Floor and wall sheets now also belong to each `OfficeState`, via `createFloorAssets`
+and `createWallAssets`. Both copy incoming rows, own their fallback arrays and
+local revisions, and each has a 1024-entry FIFO recolor cache. Replacing/clearing
+one sheet increments only its revision and clears only its cache. The existing
+pure tile transform is shared, not duplicated; furniture retains its separate
+global recolor cache and manifest/editor invalidation. Manifest and validated
+legacy delivery, `OfficeCanvas`/`renderFrame`/`renderTileGrid`, wall instances and
+floor picker previews use explicit owners, without global surface fallbacks.
+The canvas sprite cache is weakly keyed by the owned sprite identity, not a local
+revision or color string; equal revisions cannot alias peer floor/wall layers.
+Floor ID/source mapping (including VOID 8 and floor 10/sheet 7), wall masks,
+bottom anchors, alpha and missing-asset/default behavior are unchanged.
+Normal-runner synthetic tests cover two same-realm offices, actual render calls
+and toolbar preview sprite data, both tile color modes, caller/default aliasing,
+reload/clear isolation and bounded eviction. They do not qualify native pixels
+or claim separate webviews share modules.
+
+**Still outside this increment:** mutable module-level asset registries/loaders
+(pet/character templates, furniture catalog, tileset metadata,
+loading generations/diagnostics) and their rendering/colorization caches remain shared.
+Distinct furniture/tileset/character/pet asset streams are not qualified as isolated. Other document-level card dismissal/
+focus-trap listeners and non-editor DOM identities are not migrated by this boundary.
+Host-side agent/session stores, adapter/transport lifetime,
+default VS Code client acquisition and standalone server/terminal session ownership
+are unchanged. No new session identity or write authority is inferred from this seam.
+
+This is a bounded state-allocation, editor/canvas-input, notification-audio and carpet/floor/wall-assets slice of #174, not Canvas support
+or full multi-instance acceptance.
+Canvas entry/theme/error UX, explicit validated current-root/exact-session authority,
+remaining shared-state/input isolation, two-project/session tests, and integrated
+failed-init/disposal qualification remain required. No single-instance exemption applies;
+unproved native APIs and #173 runtime/live gates remain unchanged.
 
 The explicit local `--office-control` opt-in adds independent `POST /control-auth`
 authentication and a `/control` WebSocket. Its credential/cookie is neither the

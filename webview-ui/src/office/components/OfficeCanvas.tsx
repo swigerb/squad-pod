@@ -18,6 +18,7 @@ import {
 import { getCharacterScreenBounds } from '../engine/characterGeometry.js';
 import { updatePet } from '../engine/petEntity.js';
 import { useHostClient } from '../../HostClientContext.js';
+import { acceptsOfficeKey } from '../../officeInput.js';
 import {
   TILE_SIZE,
   PAN_MARGIN_FRACTION,
@@ -259,6 +260,7 @@ export function OfficeCanvas({
         const chars = [...officeState.characters.values(), ...[...officeState.subagents.values()].map(entry => entry.character)];
         renderFrame(
           ctx,
+          officeState,
           cw,
           ch,
           officeState.tileMap,
@@ -569,11 +571,6 @@ export function OfficeCanvas({
   }, [isEditMode, editorState, screenToWorld, onDragMove, finishGesture]);
 
   useEffect(() => {
-    window.addEventListener('blur', finishGesture);
-    return () => window.removeEventListener('blur', finishGesture);
-  }, [finishGesture]);
-
-  useEffect(() => {
     if (!isEditMode) finishGesture();
   }, [isEditMode, finishGesture]);
 
@@ -600,6 +597,9 @@ export function OfficeCanvas({
   );
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const boundary = canvas.closest<HTMLElement>('[data-office-input-root]') ?? canvas;
     const updateCopyPreview = (duplicate: boolean) => {
       const drag = draggedFurnitureRef.current;
       const target = dragPreviewRef.current?.items[0];
@@ -608,15 +608,11 @@ export function OfficeCanvas({
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target;
-      if (target instanceof Element && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
-        return;
-      }
+      if (!acceptsOfficeKey(boundary, e)) return;
       if (e.key === 'Alt') updateCopyPreview(true);
       if (e.code === 'Space') {
         spaceKeyRef.current = false;
-        if (e.defaultPrevented || target !== canvasRef.current || e.altKey || e.ctrlKey || e.metaKey
-          || document.querySelector('[aria-modal="true"]')) return;
+        if (e.target !== canvas || e.altKey || e.ctrlKey || e.metaKey) return;
         e.preventDefault();
         spaceKeyRef.current = true;
       }
@@ -627,18 +623,22 @@ export function OfficeCanvas({
         spaceKeyRef.current = false;
       }
     };
-    const clearSpace = () => { spaceKeyRef.current = false; };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('blur', clearSpace);
-    window.addEventListener('focusin', clearSpace);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('blur', clearSpace);
-      window.removeEventListener('focusin', clearSpace);
+    const clearSpace = () => {
+      spaceKeyRef.current = false;
+      finishGesture();
     };
-  }, [officeState]);
+    canvas.addEventListener('keydown', handleKeyDown);
+    canvas.addEventListener('keyup', handleKeyUp);
+    canvas.addEventListener('blur', clearSpace);
+    window.addEventListener('blur', clearSpace);
+    return () => {
+      canvas.removeEventListener('keydown', handleKeyDown);
+      canvas.removeEventListener('keyup', handleKeyUp);
+      canvas.removeEventListener('blur', clearSpace);
+      window.removeEventListener('blur', clearSpace);
+      spaceKeyRef.current = false;
+    };
+  }, [officeState, finishGesture]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

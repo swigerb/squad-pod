@@ -1,0 +1,40 @@
+{
+  "name": "squad-pod-plugins",
+  "metadata": {
+    "description": "Squad Pod plugins for the GitHub Copilot app",
+    "version": "0.1.0"
+  },
+  "owner": {
+    "name": "Brian Swiger",
+    "url": "https://www.mightybs.com/"
+  },
+  "plugins": [
+    {
+      "name": "squad-pod",
+      "description": "Pixel art office where your Squad agents come to life as animated characters",
+      "version": "0.1.0",
+      "author": {
+        "name": "Brian Swiger",
+        "url": "https://www.mightybs.com/"
+      },
+      "homepage": "https://www.mightybs.com/",
+      "repository": "https://github.com/swigerb/squad-pod.git",
+      "license": "MIT",
+      "keywords": [
+        "squad",
+        "copilot",
+        "pixel-art",
+        "agents",
+        "office",
+        "canvas"
+      ],
+      "source": {
+        "source": "github",
+        "repo": "swigerb/squad-pod",
+        "path": "plugins/squad-pod",
+        "ref": "canvas-v0.1.0",
+        "sha": "16d33ae623f82b7c10a5d46f892bcc98b97b39d6"
+      }
+    }
+  ]
+}

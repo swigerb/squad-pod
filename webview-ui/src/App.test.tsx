@@ -2,7 +2,6 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.js';
-import { isSoundEnabled } from './notificationSound.js';
 import { resetPetTemplates } from './office/sprites/petSpriteData.js';
 import type { DirectoryCatalog, OutboundMessage, SourceStatus } from '../../src/types.js';
 import type { AssetSnapshot } from '../../src/manifestAssets.js';
@@ -10,11 +9,14 @@ import type { LayoutRecovery } from './office/editor/layoutDraft.js';
 import type { OfficeLayout } from './office/types.js';
 import { createHostClientFixture } from './__tests__/hostClientFixture.js';
 import type { HostClientFixture } from './__tests__/hostClientFixture.js';
-import { getFloorSprite, setFloorSprites } from './office/floorTiles.js';
-import { getWallSprite, setWallSprites } from './office/wallTiles.js';
 import { getCharacterSprites, setCharacterTemplates } from './office/sprites/defaultCharacters.js';
 import { createVSCodeClient } from './hostClient.js';
 import { OfficeState } from './office/engine/officeState.js';
+import { getColorizedSprite } from './office/colorize.js';
+import { CANVAS_CONTROL_CAPABILITIES, CANVAS_OBSERVER_CAPABILITIES } from '../../src/core/hostCapabilities.js';
+import { CanvasPanel } from './canvas/CanvasPanel.js';
+import { createCanvasBootstrap } from './canvas/bootstrap.js';
+import { CanvasBootstrapError, canvasDiagnostic } from './canvas/diagnostics.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -64,11 +66,64 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   function saves() {
     return vi.mocked(client.send).mock.calls.map(([m]) => m).filter((m) => m.type === 'saveLayout');
   }
+  function mediaEnvironment(width: number, coarse: boolean) {
+    touchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    const queries: Array<{ media: string; matches: boolean; listeners: Set<() => void> }> = [];
+    const matches = (query: string) => query.split(',').some(condition =>
+      condition.trim() === '(pointer: coarse)' ? coarse
+        : condition.trim() === '(max-width: 700px)' && width <= 700);
+    const matchMedia = vi.fn((media: string) => {
+      const query = { media, matches: matches(media), listeners: new Set<() => void>() };
+      queries.push(query);
+      return Object.assign(query, {
+        addEventListener: (_type: string, listener: () => void) => query.listeners.add(listener),
+        removeEventListener: (_type: string, listener: () => void) => query.listeners.delete(listener),
+      });
+    });
+    Object.defineProperty(window, 'matchMedia', { configurable: true, value: matchMedia });
+    return {
+      matchMedia,
+      change(nextWidth: number, nextCoarse: boolean) {
+        width = nextWidth;
+        coarse = nextCoarse;
+        act(() => {
+          for (const query of queries) {
+            const next = matches(query.media);
+            if (next === query.matches) continue;
+            query.matches = next;
+            query.listeners.forEach(listener => listener());
+          }
+        });
+      },
+    };
+  }
   function remount() {
     act(() => root.unmount());
     root = createRoot(host);
     act(() => root.render(<App client={client} />));
   }
+  it('keeps the startup diagnosis visible when the real Canvas office subscription cannot construct a WebSocket', async () => {
+    const privateData = 'secret Cookie=private http://private/path C:\\private prompt';
+    const socket = vi.spyOn(globalThis, 'WebSocket').mockImplementation(function () { throw new Error(privateData); });
+    const request = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ serverIdentity: 'a'.repeat(43) }),
+    } as Response);
+    const status = vi.fn();
+    const bootstrap = createCanvasBootstrap(status, window, request);
+    const send = vi.spyOn(await bootstrap(), 'send');
+    const caught = vi.fn();
+    act(() => root.unmount());
+    root = createRoot(host, { onCaughtError: caught });
+    await act(async () => root.render(<CanvasPanel bootstrap={bootstrap} />));
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(canvasDiagnostic('OFFICE_START_FAILED'));
+    expect(caught.mock.calls[0][0]).toEqual(new CanvasBootstrapError('OFFICE_START_FAILED'));
+    expect(status).toHaveBeenLastCalledWith(canvasDiagnostic('OFFICE_START_FAILED'));
+    expect(status.mock.calls.flat()).not.toContain(canvasDiagnostic('WS_DISCONNECTED'));
+    expect(JSON.stringify(status.mock.calls) + host.textContent).not.toContain(privateData);
+    expect(send).not.toHaveBeenCalled();
+    expect(socket).toHaveBeenCalledOnce();
+    expect(request).toHaveBeenCalledOnce();
+  });
   beforeEach(() => {
     resetPetTemplates();
     persisted = undefined;
@@ -94,8 +149,6 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     if (touchPointsDescriptor) Object.defineProperty(navigator, 'maxTouchPoints', touchPointsDescriptor);
     else Reflect.deleteProperty(navigator, 'maxTouchPoints');
     resetPetTemplates();
-    setFloorSprites([]);
-    setWallSprites([]);
     setCharacterTemplates([]);
     vi.restoreAllMocks();
   });
@@ -105,6 +158,296 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(client.events.slice(0, 3)).toEqual([
       'subscribe', 'send:webviewReady', 'send:diagnosticReport',
     ]);
+  });
+
+  it('renders Canvas as an observer with unavailable host controls and host-neutral telemetry', async () => {
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: CANVAS_OBSERVER_CAPABILITIES };
+    vi.spyOn(client, 'setState');
+    const acquireApi = vi.fn(() => { throw new Error('Canvas must not acquire VS Code'); });
+    vi.stubGlobal('acquireVsCodeApi', acquireApi);
+    try {
+      root = createRoot(host);
+      act(() => root.render(<App client={null} canvas />));
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain('[OFFICE_START_FAILED] Office client startup failed. Reopen the canvas.');
+      expect(host.textContent).not.toContain('expired');
+      expect(host.textContent).not.toContain('VS Code');
+      act(() => root.render(<App client={client} canvas />));
+      snapshot(imported, 'canvas');
+      for (const label of ['Edit Layout', 'Directories', 'Settings']) {
+        const button = [...host.querySelectorAll('button')].find(item => item.textContent === label);
+        expect(button?.disabled, label).toBe(true);
+        expect(button?.title, label).toBeTruthy();
+        click(label);
+      }
+      click('Telemetry');
+      expect(host.textContent).toContain('CLI usage import is unavailable in Canvas.');
+      expect(host.textContent).toContain('Canvas displays bounded live observations from the exact joined SDK session.');
+      expect(host.textContent).not.toContain('VS Code');
+      expect(host.textContent).not.toContain('--live-activity');
+      expect(host.textContent).not.toContain('then explicitly select');
+      expect(host.textContent).not.toContain('copilot --agent');
+      click('Squad Info');
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
+      expect(client.setState).not.toHaveBeenCalled();
+      expect(client.getState).not.toHaveBeenCalled();
+      expect(acquireApi).not.toHaveBeenCalled();
+      send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: true, showAreas: true });
+      expect([...host.querySelectorAll('h2')].map(heading => heading.textContent)).not.toContain('Debug View');
+      send({ type: 'sourceStatus', status: {
+        workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad', teamFound: true,
+        observer: 'watching', nativeWatch: false, error: null,
+        liveActivity: { state: 'off', sessionId: null },
+      } });
+      send({ type: 'existingAgents', agents: [{
+        id: 'canvas-agent', name: 'CanvasBot', role: 'Developer', paletteIndex: 0,
+        seatId: null, status: 'idle', currentTask: null,
+      }] });
+      await nextFrame();
+      const toggle = [...host.querySelectorAll('button')].find(button => button.textContent === 'Show office labels');
+      expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).not.toBe(toggle);
+      click('Show office labels');
+      const label = host.querySelector<HTMLButtonElement>('[data-agent-label="canvas-agent"]');
+      expect(label).not.toBeNull();
+      act(() => label!.click());
+      const request = vi.mocked(client.send).mock.calls.map(([message]) => message)
+        .filter(message => message.type === 'requestAgentDetail').at(-1);
+      expect(request?.agentId).toBe('canvas-agent');
+      send({ type: 'agentDetailLoaded', requestId: request?.requestId, detail: {
+        id: 'canvas-agent', name: 'CanvasBot', role: 'Developer', workspaceRoot: 'workspace-A',
+        status: 'idle', currentTask: null, charterSummary: null, charterContent: null,
+        charterStatus: 'unavailable', expertise: null, responsibilities: null, boundaries: null,
+        recentActivity: [], lastActiveAt: 0, lastActiveAtStatus: 'unobserved',
+      } });
+      const charter = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === 'View Charter');
+      expect(charter?.disabled).toBe(true);
+      expect(charter?.title).toContain('Opening files is unavailable');
+      expect(host.textContent).toContain('Joined-session SDK observation is off');
+      expect(host.textContent).not.toContain('--live-activity');
+      act(() => charter?.click());
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual([
+        'webviewReady', 'requestAgentDetail',
+      ]);
+      send({ type: 'noWorkspace' });
+      const manage = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === 'Manage / Launch Directories');
+      expect(manage?.disabled).toBe(true);
+      expect(manage?.title).toContain('unavailable');
+    } finally { vi.unstubAllGlobals(); }
+  });
+
+  it('exposes working Canvas office settings and transfers while explaining unsupported subcontrols', () => {
+    act(() => root.unmount());
+    client = { ...client, capabilities: CANVAS_CONTROL_CAPABILITIES };
+    vi.mocked(client.send).mockClear();
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    send({ type: 'sourceStatus', status: {
+      workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad', teamFound: true,
+      observer: 'watching', nativeWatch: false, error: null,
+    } });
+    click('Settings');
+    expect(host.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(host.textContent).not.toMatch(/VS Code|--live-activity|newest matching-project|normal terminal/);
+    expect(host.textContent).toContain('Canvas can display bounded task and model observations from the exact joined SDK session');
+    expect(host.textContent).toContain('Directory navigation, CLI launch, terminals and opening local files are unavailable');
+    expect(host.textContent).toContain('Export downloads validated JSON');
+    for (const label of ['Export Layout', 'Import Layout']) {
+      const button = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === label);
+      expect(button?.disabled, label).toBe(false);
+      click(label);
+    }
+    for (const label of ['Sound Notifications', 'Show Named Areas', 'Debug View']) {
+      const control = [...host.querySelectorAll('label')].find(item => item.textContent === label);
+      const input = host.querySelector<HTMLInputElement>(`#${control!.htmlFor}`);
+      expect(input?.disabled, label).toBe(false);
+      act(() => input!.click());
+    }
+    const live = [...host.querySelectorAll<HTMLInputElement>('input')].find(input => input.disabled);
+    expect(live?.title).toContain('private CLI logs');
+    const assets = [...host.querySelectorAll('button')].find(item => item.textContent === 'Add Asset Directory');
+    expect(assets?.disabled).toBe(true);
+    expect(assets?.title).toContain('Local folder access');
+    act(() => assets?.click());
+    const actions = vi.mocked(client.send).mock.calls.map(([message]) => message.type);
+    expect(actions).toEqual(expect.arrayContaining([
+      'exportLayout', 'importLayout', 'setSoundEnabled', 'setShowAreas', 'setDebugEnabled',
+    ]));
+    expect(actions).not.toEqual(expect.arrayContaining(['setLiveActivity', 'addAssetDirectory', 'launchDirectory']));
+    for (const action of actions) {
+      if (action !== 'webviewReady') expect(client.capabilities.actions).toContain(action);
+    }
+    const close = host.querySelector<HTMLButtonElement>('[role="dialog"] button');
+    act(() => close!.click());
+    click('Edit Layout');
+    for (const label of ['Undo', 'Redo']) {
+      const button = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === label);
+      expect(button?.disabled, label).toBe(true);
+      expect(button?.title, label).toContain('layout change');
+    }
+    act(() => host.querySelector<HTMLButtonElement>('button[title="Area"]')!.click());
+    const areaName = host.querySelector<HTMLInputElement>('[aria-label="New Area name"]');
+    expect(areaName).not.toBeNull();
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(areaName, 'Canvas area');
+      areaName!.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    click('Add');
+    const directory = host.querySelector<HTMLSelectElement>('[data-testid="area-directory"]');
+    expect(directory?.disabled).toBe(true);
+    expect(directory?.title).toContain('Directory mapping is unavailable in Canvas');
+    expect(host.textContent).toContain('Named Areas can still be painted, renamed and colored');
+  });
+
+  it('exposes bounded Canvas SDK task evidence and diagnostics without stale sessions or log authority', () => {
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: CANVAS_CONTROL_CAPABILITIES };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'canvas-evidence');
+    click('Telemetry');
+    const tasks = () => host.querySelector('[aria-label="Observed transient tasks"]')!;
+    const diagnostics = () => host.querySelector('[aria-label="Squad source status"]')!;
+    expect(tasks().textContent).toContain('Joined-session SDK source status is unavailable');
+    expect(tasks().textContent).toContain('Observed transient tasks (unavailable)');
+    const status: SourceStatus = {
+      workspaceRoot: 'workspace-A', squadDir: 'workspace-A/.squad', teamFound: true,
+      observer: 'watching', nativeWatch: false, error: null,
+      liveActivity: { state: 'following', sessionId: 'joined-a', selection: 'owned-session',
+        reason: 'Exact joined SDK session; live events only, no replay.' },
+    };
+    const task = {
+      sessionId: 'joined-a', toolCallId: 'call-a', parentToolCallId: null,
+      name: 'SDK task fixture', agentType: 'general-purpose', mode: 'sync',
+      description: 'Read-only evidence', agentId: null, state: 'running' as const, fieldsTruncated: false,
+    };
+    const emitTasks = (sessionId = 'joined-a', limited = false) => send({
+      type: 'observedTasks', snapshot: { sessionId, tasks: [task], limited },
+    });
+    send({ type: 'sourceStatus', status });
+    expect(tasks().textContent).toContain('No task snapshot available for the exact joined SDK session');
+    expect(diagnostics().textContent).toContain('Joined-session SDK observer: following (joined-a)');
+    expect(diagnostics().textContent).toContain('Selection: owned-session');
+    expect(diagnostics().textContent).toContain(status.liveActivity!.reason);
+    expect(diagnostics().textContent).toContain('Live CLI observer: Unavailable in Canvas');
+    emitTasks('joined-a', true);
+    expect(tasks().textContent).toContain('Observed transient tasks (1)');
+    expect(tasks().textContent).toContain('SDK task fixture');
+    expect(tasks().textContent).toContain('Partial coverage');
+    expect(tasks().textContent).toContain('Live events only; no history replay');
+    expect(tasks().textContent).not.toContain('Startup restores');
+    expect(tasks().textContent).toContain('not durable membership or recorded usage');
+    expect(tasks().textContent).toContain('Missing observations are not zero activity or usage');
+    click('Clear activity');
+    expect(tasks().textContent).toContain('SDK task fixture');
+    send({ type: 'sourceStatus', status: { ...status, liveActivity: { ...status.liveActivity!,
+      sessionId: 'joined-b' } } });
+    expect(tasks().textContent).not.toContain('SDK task fixture');
+    emitTasks();
+    expect(tasks().textContent).not.toContain('SDK task fixture');
+    expect(tasks().textContent).not.toContain('Observed transient tasks (0)');
+    emitTasks('joined-b');
+    expect(tasks().textContent).not.toContain('SDK task fixture'); // mismatched task inside a current snapshot
+    send({ type: 'observedTasks', snapshot: { sessionId: 'joined-b', tasks: [], limited: false } });
+    expect(tasks().textContent).toContain('No in-flight or recent task calls observed');
+    for (const state of ['searching', 'error', 'off'] as const) {
+      send({ type: 'sourceStatus', status: { ...status, liveActivity: {
+        state, sessionId: null, selection: 'unavailable', reason: `SDK fixture ${state}`,
+      } } });
+      emitTasks();
+      expect(tasks().textContent).not.toContain('SDK task fixture');
+      expect(tasks().textContent).toContain('Observed transient tasks (unavailable)');
+      expect(diagnostics().textContent).toContain(`Joined-session SDK observer: ${state}`);
+      expect(diagnostics().textContent).toContain(`SDK fixture ${state}`);
+    }
+    send({ type: 'sourceStatus', status: { ...status, liveActivity: undefined } });
+    expect(tasks().textContent).toContain('Joined-session SDK source status is unavailable');
+    expect(diagnostics().textContent).toContain('Unavailable (no joined-session source status)');
+    expect(host.textContent).not.toMatch(/--live-activity|Startup restores|Observation settings and consent/);
+    expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type)).toEqual(['webviewReady']);
+    click('Settings');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Private CLI-log scanning (unavailable)');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Joined-session SDK observer: Unavailable');
+  });
+
+  it.each([false, true])('keeps labels expanded by default outside Canvas (standalone=%s)', async standalone => {
+    act(() => root.render(<App client={client} standalone={standalone} />));
+    send({ type: 'existingAgents', agents: [{
+      id: 'default-agent', name: 'Default', role: 'Developer', paletteIndex: 0,
+      seatId: null, status: 'idle', currentTask: null,
+    }] });
+    await nextFrame();
+    expect([...host.querySelectorAll('button')].some(button => button.textContent === 'Hide office labels')).toBe(true);
+    expect([...host.querySelectorAll('button')].some(button => button.textContent === 'Show office labels')).toBe(false);
+  });
+
+  it('uses the existing Canvas editor conflict UI with SHA revisions and retains both drafts across reload', () => {
+    act(() => root.unmount());
+    client = { ...client, capabilities: CANVAS_CONTROL_CAPABILITIES };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    click('Edit Layout');
+    click('→');
+    const local = structuredClone(persisted!.draft);
+    click('● Save Layout');
+    expect(saves().at(-1)).toMatchObject({
+      layout: local, expectedRevision: 'a'.repeat(64), workspaceRoot: 'workspace-A',
+    });
+    snapshot(external, 'b'.repeat(64));
+    send({ type: 'layoutError', error: 'Save conflict: the saved office changed. Your draft was kept.' });
+    expect(host.textContent).toContain('Layout conflict');
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(external);
+    const saveCount = saves().length;
+    const id = persisted!.pending[0].id;
+    act(() => root.unmount());
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(external, 'b'.repeat(64));
+    expect(persisted!.draft).toEqual(local);
+    expect(persisted!.pending[0].layout).toEqual(external);
+    expect(saves()).toHaveLength(saveCount);
+    click(`Keep local draft #${id}`);
+    click('Edit Layout');
+    click('● Save Layout');
+    expect(saves().at(-1)).toMatchObject({ layout: local, expectedRevision: 'b'.repeat(64) });
+    send({ type: 'layoutSaved', layout: local!, revision: 'c'.repeat(64) });
+    expect(persisted!.baseline).toEqual(local);
+    expect(persisted!.revision).toBe('c'.repeat(64));
+  });
+
+  it('honors transfer restrictions in an injected client without standalone/readOnly flags', () => {
+    act(() => root.unmount());
+    const unrestricted = createHostClientFixture();
+    client = { ...unrestricted, capabilities: {
+      ...unrestricted.capabilities,
+      actions: unrestricted.capabilities.actions.filter(action =>
+        !['importLayout', 'exportLayout', 'exportLayoutSnapshot'].includes(action)),
+    } };
+    const acquireApi = vi.fn(() => { throw new Error('Must not acquire VS Code'); });
+    vi.stubGlobal('acquireVsCodeApi', acquireApi);
+    try {
+      root = createRoot(host);
+      act(() => root.render(<App client={client} />));
+      snapshot(imported, 'restricted');
+      click('Settings');
+      for (const label of ['Import Layout', 'Export Layout']) {
+        const button = [...host.querySelectorAll('button')].find(item => item.textContent === label);
+        expect(button?.disabled).toBe(true);
+        click(label);
+      }
+      expect(host.textContent).toContain('Layout import is unavailable in this host.');
+      expect(host.textContent).toContain('Layout export is unavailable in this host.');
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type))
+        .not.toEqual(expect.arrayContaining(['importLayout']));
+      expect(vi.mocked(client.send).mock.calls.map(([message]) => message.type))
+        .not.toEqual(expect.arrayContaining(['exportLayout']));
+      expect(acquireApi).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it.each(['ordinary', 'constructor', 'toString', '__proto__'])(
@@ -262,6 +605,103 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(host.textContent).not.toContain('Enable it in Settings');
   });
 
+  const hostMediaCases = (['canvas', 'standalone', 'vscode'] as const).flatMap(shell =>
+    [600, 700, 701, 750].flatMap(width => [false, true].map(coarse => ({
+      shell, width, coarse,
+      touch: shell === 'canvas' ? coarse : shell === 'standalone' && (width <= 700 || coarse),
+    }))));
+
+  it.each(hostMediaCases)('selects touch behavior for $shell at $width CSS px, coarse=$coarse', ({ shell, width, coarse, touch }) => {
+    const media = mediaEnvironment(width, coarse);
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: shell === 'canvas'
+      ? CANVAS_CONTROL_CAPABILITIES : client.capabilities };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas={shell === 'canvas'} standalone={shell === 'standalone'} />));
+    snapshot(imported, 'a'.repeat(64));
+    const edit = [...host.querySelectorAll('button')].find(button => button.textContent === 'Edit Layout');
+    expect(Boolean(edit)).toBe(!touch);
+    expect(host.querySelector('.office-panel')?.hasAttribute('data-following-agent')).toBe(touch);
+    if (edit) {
+      expect(edit.disabled).toBe(false);
+      act(() => edit.click());
+      expect(host.querySelector('[aria-label="Layout editor"]')).not.toBeNull();
+      expect(host.querySelector('.office-panel')?.getAttribute('data-edit-mode')).toBe('true');
+    }
+    if (shell === 'vscode') expect(media.matchMedia).not.toHaveBeenCalled();
+  });
+
+  it('keeps an active Canvas editor through fine-pointer panel resizing, but exits on a coarse pointer', () => {
+    const media = mediaEnvironment(750, false);
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: CANVAS_CONTROL_CAPABILITIES };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    click('Edit Layout');
+    click('→');
+    media.change(600, false);
+    expect(host.querySelector('[aria-label="Layout editor"]')).not.toBeNull();
+    expect(host.querySelector('.office-panel')?.getAttribute('data-edit-mode')).toBe('true');
+    expect([...host.querySelectorAll('button')].some(button => button.textContent === '● Save Layout')).toBe(true);
+    media.change(600, true);
+    expect(host.querySelector('[aria-label="Layout editor"]')).toBeNull();
+    expect(host.querySelector('.office-panel')?.getAttribute('data-edit-mode')).toBe('false');
+    media.change(600, false);
+    click('Edit Layout');
+    expect(host.querySelector('[aria-label="Layout editor"]')).not.toBeNull();
+    click('● Save Layout');
+    expect(saves().at(-1)?.layout.cols).toBe(imported.cols + 1);
+  });
+
+  it('requires Canvas editing authority at 600px and preserves scrollable editor actions after enabling', () => {
+    mediaEnvironment(600, false);
+    act(() => root.unmount());
+    client = { ...createHostClientFixture(), capabilities: CANVAS_OBSERVER_CAPABILITIES };
+    root = createRoot(host);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    const button = (label: string) => [...host.querySelectorAll('button')]
+      .find(item => item.textContent?.trim() === label)!;
+    expect(button('Edit Layout')?.disabled).toBe(true);
+    click('Edit Layout');
+    expect(host.querySelector('[aria-label="Layout editor"]')).toBeNull();
+    expect(saves()).toHaveLength(0);
+
+    client = { ...client, capabilities: CANVAS_CONTROL_CAPABILITIES };
+    act(() => root.render(<App client={client} canvas readOnly />));
+    expect(button('Edit Layout')?.disabled).toBe(true);
+    act(() => root.render(<App client={client} canvas />));
+    snapshot(imported, 'a'.repeat(64));
+    expect(button('Edit Layout')?.disabled).toBe(false);
+    click('Edit Layout');
+    const editor = host.querySelector<HTMLElement>('[aria-label="Layout editor"]')!;
+    expect(editor.style.overflowY).toBe('auto');
+    expect(editor.style.maxWidth).toBe('100%');
+    expect(editor.style.bottom).toBe('48px');
+    expect(button('Save Layout').parentElement?.style.flexWrap).toBe('wrap');
+    expect(button('Undo').disabled).toBe(true);
+    click('→');
+    expect(button('Undo').disabled).toBe(false);
+    click('Undo');
+    expect(button('Save Layout')).toBeDefined();
+    click('Redo');
+    click('Reset');
+    expect(button('Save Layout')).toBeDefined();
+    click('→');
+    click('● Save Layout');
+    expect(saves()).toEqual([expect.objectContaining({
+      expectedRevision: 'a'.repeat(64), workspaceRoot: 'workspace-A',
+      layout: expect.objectContaining({ cols: imported.cols + 1 }),
+    })]);
+    const bottom = host.querySelector<HTMLElement>('.bottom-toolbar')!;
+    expect(bottom.style.overflowX).toBe('auto');
+    expect(bottom.style.justifyContent).toBe('safe center');
+    expect(bottom.contains(button('Exit Layout Editor'))).toBe(true);
+    click('Exit Layout Editor');
+    expect(host.querySelector('[aria-label="Layout editor"]')).toBeNull();
+  });
+
   it('preserves the desktop layout editor on a hybrid fine-pointer touchscreen', async () => {
     touchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
     touchPointsDescriptor = Object.getOwnPropertyDescriptor(navigator, 'maxTouchPoints');
@@ -378,9 +818,6 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     const assignments = vi.spyOn(OfficeState.prototype, 'getSeatAssignments');
     root = createRoot(host);
     act(() => root.render(<App client={client} standalone readOnly={readOnly} />));
-    // App's OfficeState outlives remounts; drop roster members leaked by earlier tests so
-    // test-agent-1 is seated fresh instead of reusing a stale randomly placed character.
-    send({ type: 'existingAgents', agents: [] });
     const chairCols = [2, 5, 8, 11];
     snapshot({ ...imported, furniture: chairCols.flatMap((col, index) => [
       { uid: `desk-${index}`, type: 'desk', col, row: 1, rotation: 0 },
@@ -515,6 +952,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
   });
 
   it('guards legacy sprite payloads at the real adapter boundary without replacing valid assets', () => {
+    const rebuild = vi.spyOn(OfficeState.prototype, 'rebuildFromLayout');
     const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {});
     act(() => root.unmount());
     const adapter = createVSCodeClient(() => ({
@@ -524,6 +962,9 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     act(() => root.render(<App client={adapter} />));
     const dispatch = (message: unknown) => act(() => window.dispatchEvent(new MessageEvent('message', { data: message })));
     dispatch({ type: 'layoutLoaded', layout: imported, revision: 'legacy-test' });
+    const office = rebuild.mock.contexts.at(-1)! as OfficeState;
+    const { getFloorSprite } = office.floorAssets;
+    const { getWallSprite } = office.wallAssets;
     const tile = { width: 2, height: 1, pixels: [0xabcdef80, 0] };
     const sprite = [['#abcdef80', '']];
     const frames = { 0: [sprite], 1: [sprite], 2: [sprite], 3: [sprite] };
@@ -547,10 +988,14 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       expect(diagnostic).toHaveBeenCalledWith(expect.stringContaining(`${type}: unsupported legacy sprite format`));
       expect(host.textContent).toContain(`${type}: unsupported legacy sprite format`);
     }
+    const color = { h: 0, s: 0, b: 0, c: 0 };
+    const furnitureBefore = getColorizedSprite('legacy-manifest-furniture-reload', [['#abcdef']], color);
     dispatch({ type: 'manifestAssetsLoaded', snapshot: {
       furniture: [], floors: [[['#123456']]], walls: Array.from({ length: 16 }, () => [['#654321']]),
       carpets: [], pets: [], directories: [], diagnostics: ['Manifest warning retained'],
     } });
+    expect(getColorizedSprite('legacy-manifest-furniture-reload', [['#123456']], color)).not.toBe(furnitureBefore);
+    expect(getColorizedSprite('legacy-manifest-furniture-reload', [], color)).toEqual([['#123456']]);
     expect(getFloorSprite(0)).toEqual([['#123456']]);
     expect(getWallSprite([0], 1, 1, 0, 0).sprite).toEqual([['#654321']]);
     expect(host.textContent).toContain('characterSpritesLoaded: unsupported legacy sprite format');
@@ -648,11 +1093,12 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
       type: 'updateDirectoryName', id: 'saved-1', name: 'Native rename',
     });
     act(() => host.querySelector<HTMLButtonElement>('[aria-label="Close directories"]')!.click());
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
+    act(() => canvas.focus());
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true })));
     expect(persisted!.draft!.furniture).toEqual([]);
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
     expect(persisted!.draft).toEqual(draft);
-    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
+    act(() => canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true })));
     expect(persisted!.draft).toEqual(layout);
   });
 
@@ -1257,16 +1703,15 @@ describe('settings and source UI with simulated host messages', () => {
   it('restores both settings on startup/reload, sends changes, and persists Debug Close as off', () => {
     send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: false, showAreas: false });
     load();
-    expect(isSoundEnabled()).toBe(false);
     click('Settings');
-    const sound = host.querySelector<HTMLInputElement>('#squad-pod-sound')!;
-    const debug = host.querySelector<HTMLInputElement>('#squad-pod-debug-view')!;
-    const showAreas = host.querySelector<HTMLInputElement>('#squad-pod-show-areas')!;
+    const sound = host.querySelector<HTMLInputElement>('[id$="-sound"]')!;
+    const debug = host.querySelector<HTMLInputElement>('[id$="-debug"]')!;
+    const showAreas = host.querySelector<HTMLInputElement>('[id$="-areas"]')!;
     expect(sound.checked).toBe(false);
     expect(debug.checked).toBe(false);
     expect(showAreas.checked).toBe(false);
     act(() => sound.click());
-    expect(isSoundEnabled()).toBe(true);
+    expect(sound.checked).toBe(true);
     expect(client.send).toHaveBeenCalledWith({ type: 'setSoundEnabled', enabled: true });
     act(() => debug.click());
     expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: true });
@@ -1278,13 +1723,13 @@ describe('settings and source UI with simulated host messages', () => {
     act(() => root.render(<App client={client} />));
     send({ type: 'settingsLoaded', soundEnabled: false, debugEnabled: true, showAreas: true });
     load();
-    expect(isSoundEnabled()).toBe(false);
     expect(host.textContent).toContain('opt-in live member lifecycle, tools and context');
     click('Close');
     expect(client.send).toHaveBeenCalledWith({ type: 'setDebugEnabled', enabled: false });
     click('Settings');
-    expect(host.querySelector<HTMLInputElement>('#squad-pod-debug-view')!.checked).toBe(false);
-    expect(host.querySelector<HTMLInputElement>('#squad-pod-show-areas')!.checked).toBe(true);
+    expect(host.querySelector<HTMLInputElement>('[id$="-sound"]')!.checked).toBe(false);
+    expect(host.querySelector<HTMLInputElement>('[id$="-debug"]')!.checked).toBe(false);
+    expect(host.querySelector<HTMLInputElement>('[id$="-areas"]')!.checked).toBe(true);
   });
 
   it('shows only host-reported observer status and labels absent producers/launch explicitly', () => {

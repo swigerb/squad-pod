@@ -30,6 +30,7 @@ interface AgentCardProps {
   onViewCharter?: (agentId: string) => void;
   runtimeModel?: RuntimeModelObservation | null;
   liveActivity?: LiveSourceStatus;
+  canvas?: boolean;
   readOnly?: boolean;
 }
 
@@ -65,7 +66,7 @@ function formatAge(timestamp: number, now: number): string {
 }
 
 export function AgentCard({
-  detail, position, onClose, onViewCharter, runtimeModel, liveActivity, readOnly = false,
+  detail, position, onClose, onViewCharter, runtimeModel, liveActivity, readOnly = false, canvas = false,
 }: AgentCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState({ width: window.innerWidth, height: window.innerHeight, cardHeight: 0 });
@@ -237,9 +238,10 @@ export function AgentCard({
 
       <div style={{ marginBottom: '12px', overflowWrap: 'anywhere' }}>
         <RuntimeModelStatus
+          canvas={canvas}
           label="Member runtime model"
           observation={runtimeModel}
-          unavailableReason={liveModelUnavailableReason(liveActivity, readOnly)}
+          unavailableReason={liveModelUnavailableReason(liveActivity, readOnly, canvas)}
         />
       </div>
 
@@ -270,6 +272,8 @@ export function AgentCard({
 
       {/* View Charter button */}
       <button
+        disabled={!onViewCharter}
+        title={!onViewCharter ? 'Opening files is unavailable in this host.' : undefined}
         onClick={() => onViewCharter?.(detail.id)}
         style={{
           width: '100%',

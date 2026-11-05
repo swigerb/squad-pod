@@ -29,7 +29,7 @@ const hash = (file) => crypto.createHash('sha256').update(fs.readFileSync(file))
 
 // Shared by the host and webview suites; only the VS Code boundary is mocked.
 function createProviderFixture({ artifactRoot = root, extensionCode, baseUrl = 'http://127.0.0.1', modelMetadata = false } = {}) {
-  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'squad-pod-interaction-fixture-'));
+  const workspaceRoot = fs.mkdtempSync(path.join(root, '.interaction-fixture-'));
   const squad = path.join(workspaceRoot, '.squad');
   fs.mkdirSync(path.join(squad, 'log'), { recursive: true });
   const team = '## Members\n| Name | Role | Charter |\n| --- | --- | --- |\n'
