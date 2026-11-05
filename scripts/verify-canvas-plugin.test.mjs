@@ -118,7 +118,7 @@ function isolatedBuildFixture(version) {
 
 test('Canvas version source preserves independent current package identities', () => {
   const pkg = path => JSON.parse(readFileSync(join(repo, path), 'utf8'));
-  assert.equal(readCanvasVersion(), '0.1.0');
+  assert.equal(readCanvasVersion(), '0.1.1');
   assert.equal(pkg('package.json').name, 'squad-pod');
   assert.equal(pkg('package.json').version, '1.0.0');
   assert.equal(pkg('standalone/package.json').name, 'squad-pod-observer');
@@ -162,7 +162,7 @@ test('Canvas verifier rejects artifact/source mismatch without build dependencie
   const manifest = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
   writeFileSync(join(root, 'plugin.json'), JSON.stringify({
     $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
-    name: 'squad-pod', version: '0.1.1', description: manifest.description,
+    name: 'squad-pod', version: '0.1.0', description: manifest.description,
     author: manifest.author, homepage: manifest.homepage, repository: manifest.repository.url,
     license: manifest.license, keywords: ['canvas'], extensions: {},
   }));

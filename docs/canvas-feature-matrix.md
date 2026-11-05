@@ -1,9 +1,11 @@
 # Canvas feature matrix
 
-Release truth for Canvas plugin **0.1.0**, an owner-approved **Windows
+Release truth for Canvas plugin **0.1.1**, an owner-approved **Windows
 local-session preview**, not generally available or a VSIX/CLI replacement
-(#214, epic #172). App **1.1.34** was qualified; this is a tested build, not a
-minimum or broad compatibility promise. macOS, Linux, WSL and remote sessions
+(#214, epic #172). Prior **0.1.0** evidence qualified app **1.1.34**; this is
+not 0.1.1 acceptance, a minimum or a broad compatibility promise.
+Native 0.1.1 checks remain pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
+macOS, Linux, WSL and remote sessions
 are unsupported. See the [install and lifecycle guide](canvas-install.md).
 It observes only the exact joined session/project. No directory browsing,
 terminal authority or private CLI-log consent is implied.
@@ -75,12 +77,14 @@ The owner-approved preview does not close those broader capability gaps.
 | Directories entry point | Disabled with selected-project/native-authority reason. | No directory catalog management in Canvas. | OPEN |
 | Nested directory add/remove/rename/navigation; directory CLI launch; terminal open/input/reconnect/close | Inaccessible through disabled directory entry point; no launch/terminal action offered. | No native filesystem, CLI-launch or terminal authority. | OPEN |
 | Startup diagnostic report | Unsupported request capability-gated; no visible button. | Host must advertise the action. | Candidate |
+| `get_office_state` readiness | Bounded per-instance request/handshake counters via the authorized Canvas action only. | Requests observed are not visible-renderer acceptance or host-fault evidence; no public diagnostics endpoint. | Candidate; 0.1.1 native checks pending |
 
 ## Remaining — OPEN release gates
 
-- Native qualification for the Windows preview is recorded in #182. Scout still
-  verifies the **public marketplace install after merge** (#214); local catalog
-  checks, links and browser tests do not establish that installation path.
+- Historical 0.1.0 Windows qualification is recorded in #182 and the public
+  marketplace install in #216. Neither qualifies 0.1.1. Its update/rollback,
+  repeated lifecycle, fault handling and separate native VS Code checks remain
+  pending #218; local catalog checks and browser tests do not establish them.
 - Retain exact project/session and host-build evidence for read-only/enabled
   editing, narrow labels/editor, keyboard/focus, system theme and panel resize;
   qualification of one build is not cross-platform or general parity evidence.

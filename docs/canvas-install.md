@@ -1,14 +1,21 @@
 # Install Squad Pod in the GitHub Copilot app
 
-**Canvas plugin 0.1.0 is an owner-approved Windows preview, not generally
+**Canvas plugin 0.1.1 is an owner-approved Windows preview, not generally
 available.** It brings the pixel-art Squad office into a GitHub Copilot app
 session. This is separate from the [VS Code Marketplace extension](../README.md#install)
 and the source-only [standalone browser companion](../standalone/README.md).
 Installing a VSIX or updating Copilot CLI does not install or update this plugin.
+The **GitHub Copilot app** is the native agent desktop application, **not GitHub
+Desktop** (the Git client) and not VS Code.
+
+**Native 0.1.1 qualification is pending** in
+[#218](https://github.com/swigerb/squad-pod/issues/218). All prior native PASS
+records below remain pinned to 0.1.0; automated packaging checks do not extend
+them to the new artifact.
 
 ## Compatibility
 
-- **Windows, local sessions only.** Native qualification used GitHub Copilot app
+- **Windows x64, local sessions only.** Prior 0.1.0 native qualification used GitHub Copilot app
   **1.1.34** with `copilot-sdk-runtime` **1.0.102**. These are tested versions,
   not minimum versions or a promise of compatibility with other builds.
 - macOS, Linux, WSL and remote sessions are **not supported** in this preview.
@@ -17,17 +24,22 @@ Installing a VSIX or updating Copilot CLI does not install or update this plugin
   browse to a different project.
 - No source checkout, npm install, SDK install or build is needed by end users.
   The published plugin includes its runtime, browser UI and bundled assets.
+- Sign in to the GitHub Copilot app with access to the marketplace repository.
+  Your organization must allow the plugin; do not bypass managed policy or trust
+  prompts. See GitHub's [marketplace prerequisites](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/create-and-share-plugin-marketplaces#share-the-marketplace).
 
 ## Install and open
 
 1. In the GitHub Copilot app, choose **Customize**.
-2. Choose **Add extension**, then **Manage marketplaces**.
+2. Select the **marketplace settings control next to the marketplace dropdown**,
+   as described in GitHub's [current app guide](https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app#adding-a-plugin-marketplace).
+   The previously qualified 1.1.34 build used **Add extension → Manage marketplaces**.
 3. Add the GitHub repository **`swigerb/squad-pod`** and confirm the form.
    The marketplace name is **`squad-pod-plugins`**, with **1 plugin**.
    If fetching the catalog fails transiently, use the marketplace's **Refresh
    catalog** action, or **Retry** if offered. Scout encountered a Windows file
    lock (`os error 32`) on the first fetch; **Refresh catalog** succeeded.
-4. Find **Squad Pod** in Customize and choose **Install**. Review and confirm the
+4. Find **Squad Pod** on Customize's **Browse** page and choose **Install**. Review and confirm the
    installation prompts; install only if you trust the publisher and code.
 5. In a supported local project session, ask Copilot to **open the Squad Pod
    canvas**, or use **Open canvas** and select Squad Pod.
@@ -41,7 +53,7 @@ These links **prefill confirmation forms**, never install silently. Add the
 marketplace before using the install link. If your browser does not open
 `ghapp://` links, use the manual flow above.
 
-### Verified public install
+### Verified public install of 0.1.0 (historical)
 
 Scout recorded native verification in [issue #216](https://github.com/swigerb/squad-pod/issues/216)
 on **2026-11-03**, using **GitHub Copilot app 1.1.34**, runtime **1.0.102**,
@@ -60,11 +72,29 @@ on **Windows x64**. These are tested versions, not minimum requirements.
 - **Disable / Enable** worked both ways in **Customize → Installed**. Removing
   the marketplace through **Actions → Remove marketplace** removed it from the list.
 
-This evidence does not establish support for other platforms/builds or verify
-updates, plugin uninstall or rollback. Local metadata, link and documentation
-checks are not native install evidence; this record does not close the remaining
-[publication](https://github.com/swigerb/squad-pod/issues/183) or
-[Canvas epic](https://github.com/swigerb/squad-pod/issues/172) acceptance gaps.
+This evidence does not establish 0.1.1 native acceptance, support for other
+platforms/builds, updates, plugin uninstall or rollback. Local metadata, link and
+documentation checks are not native install evidence. The owner closed the
+0.1.0 preview epic under reduced scope; the deferred native gates remain in
+[#218](https://github.com/swigerb/squad-pod/issues/218), not retroactively passed.
+
+## Distribution and discovery
+
+The public [owner-hosted marketplace catalog](https://github.com/swigerb/squad-pod/blob/master/.github/plugin/marketplace.json)
+in **`swigerb/squad-pod`** is the distribution hub for the desktop plugin.
+It pins an immutable distribution tag, commit and plugin version, rather than
+requiring a local build. The [Canvas GitHub releases](https://github.com/swigerb/squad-pod/releases)
+provide downloadable preview artifacts and integrity information separately from
+the stable VSIX `v1.0.0` release.
+
+[Awesome Copilot](https://github.com/github/awesome-copilot) provides central
+discovery and plugin catalogs. Squad Pod was submitted in
+[github/awesome-copilot#6270](https://github.com/github/awesome-copilot/issues/6270)
+for the native-qualified **0.1.0** artifact at `16d33ae623f82b7c10a5d46f892bcc98b97b39d6`,
+not for unqualified 0.1.1. Intake acceptance and listing are **pending**: do not
+assume it is listed, featured or GitHub-verified. Use the owner marketplace above
+now. Adding that marketplace is not publication to Visual Studio Marketplace;
+the latter distributes only the separate VS Code extension.
 
 ## What this preview does
 
@@ -143,8 +173,10 @@ describes marketplaces and the Installed toggle.
 
 ### Roll back with your own marketplace
 
-There is **no promise that an earlier Canvas release tag exists**. If a suitable
-earlier immutable release is available and qualified for your app:
+For the distinct-version 0.1.1-to-0.1.0 comparison, `canvas-v0.1.0` remains
+available at the exact distribution SHA in the historical provenance table
+below. **Native update/rollback and saved-data compatibility are pending #218**;
+tag availability is not a successful downgrade test. Owner-operated procedure:
 
 1. Back up `.squad-pod/` and export unresolved drafts before closing canvases.
 2. Create a marketplace you control, with a distinct marketplace name and an
@@ -161,7 +193,30 @@ Never move or overwrite published tags, edit the public release in place, or use
 [marketplace authoring guide](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/create-and-share-plugin-marketplaces)
 for catalog structure.
 
-## Pinned preview provenance
+## Troubleshooting and diagnostics
+
+| Symptom | Safe next step |
+|---|---|
+| Marketplace missing or fetch failed | Confirm repository `swigerb/squad-pod`; use marketplace **Refresh catalog** or **Retry** if offered. If policy blocks it, ask your administrator rather than changing permissions. |
+| Quick link does not open | Use the manual Customize flow; allow/deny prompts still apply. |
+| Squad Pod is absent or disabled | Check **Customize → Installed**, its toggle and marketplace name. A VSIX installation or CLI upgrade is not a Canvas installation. |
+| Empty or wrong team | Check the exact joined local session project has `.squad/team.md` or `.ai-team/team.md`. A sibling worktree's roster does not apply; the office cannot switch projects. |
+| Office does not load or loses its connection | Close and reopen the canvas in the supported session. Reopening starts read-only; preserve unresolved drafts first when possible. Do not copy its private viewer URL into a report. |
+| Layout/settings controls disabled | Choose **Enable editing** for this instance. This does not grant terminal, private-log or arbitrary-file authority. |
+| No task bubbles or runtime model | Only matching exact-session events appear; missing producer fields are unavailable, not zero or guessed activity. |
+| Import/export or native file action unavailable | Check the [feature matrix](canvas-feature-matrix.md). Embedded transfers are unqualified; native charter opening, directory/terminal management and CLI usage imports are unavailable. |
+
+For a report, retain the installed plugin version/marketplace, app build, Windows
+architecture, source/dist pins and the exact operation and visible error.
+The authorized `get_office_state` Canvas action in 0.1.1 includes bounded
+per-instance `readiness` counters: document/script requests, viewer bootstrap,
+office-context requests, office socket admissions/closures and `webviewReady`.
+These are **requests observed, not proof of visible rendering or a host defect**.
+They reset with the instance; they are not a public HTTP diagnostics endpoint.
+Share only sanitized results, never credentials, private URLs, private logs,
+authentication screens or unrelated project content.
+
+## Historical 0.1.0 provenance (unchanged evidence)
 
 | Field | Canvas preview value |
 |---|---|

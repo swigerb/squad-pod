@@ -13,7 +13,9 @@ node --test scripts\verify-canvas-plugin.test.mjs
 `plugins/squad-pod/` is generated, gitignored, ready to run and excluded from
 the VSIX. Do not commit it to master. Distribution commits/catalog publication
 are separate release work (#181/C11); end users must not run npm builds.
-The plugin version starts at **0.1.0**, independently of the VSIX version.
+The plugin version is **0.1.1**, sourced only from
+`standalone/canvas-plugin.json`, independently of VSIX **1.0.0** and the private
+standalone observer **0.1.0**. Do not bump those other products for Canvas.
 
 The package contains Agent Plugins 1.0 metadata, the existing icon as
 `assets/preview.png`, namespaced Canvas ESM/UI/sprites, notices and full dependency
@@ -48,7 +50,7 @@ Create a separate local marketplace directory with
   "name": "squad-pod-local",
   "owner": { "name": "Brian Swiger" },
   "plugins": [{
-    "name": "squad-pod", "version": "0.1.0",
+    "name": "squad-pod", "version": "0.1.1",
     "description": "Experimental read-only Squad Pod Canvas",
     "source": "./plugins/squad-pod"
   }]
@@ -75,4 +77,34 @@ defer native installation to the separately approved immutable distribution.
 The automated smoke uses only a synthetic project and an injected SDK stub. It
 proves dependency-free ESM startup and static UI serving, **not** native app
 acceptance, SDK compatibility, real-session observation or editor behavior.
-No install, publication, tag, or app configuration change is part of this issue.
+These checks do not install the plugin or change app configuration.
+
+## Immutable preview publication
+
+Use the repository's manual Canvas path, not the retired Squad/npm release
+workflows. Never publish this plugin to npm or commit generated `plugins/` to
+master.
+
+1. Prepare a focused source/version/docs PR targeting master. Run the build,
+   verifier and packaging tests above. Require green exact-head CI and no
+   actionable review blocker before merging.
+2. Build again from the approved **clean source commit** after green CI.
+   Verify `build-info.json` has its exact source SHA and `sourceDirty: false`.
+   Preserve `checksums.json`, dependency licenses and third-party notices.
+3. Make an additive distribution commit containing `plugins/squad-pod/` on
+   `canvas-dist`, retaining its prior release history. Preserve payload bytes;
+   verify Git blobs match the checksum receipt (including on Windows).
+4. Create a new immutable `canvas-v<version>` tag at that distribution commit.
+   Never move an existing tag. Publish a GitHub **pre-release**, explicitly
+   **not Latest**, with a downloadable plugin archive and its SHA-256. Keep
+   stable VSIX `v1.0.0` as Latest.
+5. In a separate focused PR, update `.github/plugin/marketplace.json` version,
+   `source.ref` and full `source.sha` together. Include the exact provenance in
+   the install guide. Require exact-head CI before merging; catalog publication
+   is not native acceptance.
+
+Record source SHA/tree, dist SHA/tag, plugin entry/build-info/checksum hashes,
+receipt payload byte/file counts, downloadable archive URL/hash and CI run IDs.
+Keep the 0.1.0 evidence pins unchanged. New 0.1.1 native checks, including
+update/rollback between distinct releases with retained data, belong to #218.
+Only the designated owner/Scout should install or qualify the native candidate.
