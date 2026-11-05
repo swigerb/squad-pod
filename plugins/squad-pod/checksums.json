@@ -1,9 +1,9 @@
 {
   "plugin": {
     "name": "squad-pod",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
-  "sourceCommit": "0f4f08bbfdfc7c6c3a8c3bf8715847c130df5967",
+  "sourceCommit": "5bd74603b8ce40edb16af519dca281438c56a652",
   "sourceDirty": false,
   "sdk": {
     "name": "@github/copilot-sdk/extension",
@@ -64,8 +64,8 @@
     },
     {
       "path": "build-info.json",
-      "bytes": 15026,
-      "sha256": "73b71bf8a8f40bd1736413602033fa6a5b4d0696f82b5377ef3e222d33520144"
+      "bytes": 15954,
+      "sha256": "b00f2b9dd213d656888467157f84906f3e99d3a6b5ad6bd6e40277c0b6a04a8c"
     },
     {
       "path": "com.github.copilot/extensions/squad-pod/assets/carpets/carpet_0.png",
@@ -513,9 +513,9 @@
       "sha256": "f2afc6dacc44986a388695a720839ed00da03e9b308d6c727f5292740a62adfa"
     },
     {
-      "path": "com.github.copilot/extensions/squad-pod/canvas-browser/assets/canvas-DMFz5-oJ.js",
-      "bytes": 816557,
-      "sha256": "dfd71f78f07d2778f799685eb6d701c2ace81d342d28ec0eed8e3ed88fcb89b7"
+      "path": "com.github.copilot/extensions/squad-pod/canvas-browser/assets/canvas-BCr4IsUC.js",
+      "bytes": 823371,
+      "sha256": "99d565d3b8b8171421df619ac71f4473b9ededb8368803a56c66400cc2f7dea1"
     },
     {
       "path": "com.github.copilot/extensions/squad-pod/canvas-browser/assets/canvas-DO1406gs.css",
@@ -525,12 +525,12 @@
     {
       "path": "com.github.copilot/extensions/squad-pod/canvas-browser/index.html",
       "bytes": 508,
-      "sha256": "4eef0d653fd03cd9fc9eabc955f41e762c2afd611f8ec3cf9282cf2e90a959af"
+      "sha256": "d2b8b7b961af8e51438c7ded1dbd0fb93772dc6e0578511556b43675fe7877c7"
     },
     {
       "path": "com.github.copilot/extensions/squad-pod/extension.mjs",
-      "bytes": 412992,
-      "sha256": "caa39af2efdabdb6531c8865b9313f4d3e02b3c349a7cd9c6b0dc662f2a0b3b1"
+      "bytes": 429314,
+      "sha256": "0b2e9819175942669b21e5ac32e5a38e0335cf5c4c1c5c5dc7b57e317c4747c9"
     },
     {
       "path": "licenses/pngjs-7.0.0.txt",
@@ -560,7 +560,7 @@
     {
       "path": "plugin.json",
       "bytes": 628,
-      "sha256": "7f74c6c6a460a417f0f31eb2b555cf12f2a907b425871b4ab6d05d7eec17e46a"
+      "sha256": "3b14adac87cab6d9af99fbb3093ea0cd60a4f3e6191f657a9a637a2eb4546923"
     }
   ]
 }

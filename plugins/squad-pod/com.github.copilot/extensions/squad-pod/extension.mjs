@@ -1995,7 +1995,7 @@ var require_png = __commonJS({
     var Parser = require_parser_async();
     var Packer = require_packer_async();
     var PNGSync = require_png_sync();
-    var PNG2 = exports.PNG = function(options) {
+    var PNG3 = exports.PNG = function(options) {
       Stream.call(this);
       options = options || {};
       this.width = options.width | 0;
@@ -2024,9 +2024,9 @@ var require_png = __commonJS({
       this._parser.on("close", this._handleClose.bind(this));
       this._packer.on("error", this.emit.bind(this, "error"));
     };
-    util.inherits(PNG2, Stream);
-    PNG2.sync = PNGSync;
-    PNG2.prototype.pack = function() {
+    util.inherits(PNG3, Stream);
+    PNG3.sync = PNGSync;
+    PNG3.prototype.pack = function() {
       if (!this.data || !this.data.length) {
         this.emit("error", "No data provided");
         return this;
@@ -2038,7 +2038,7 @@ var require_png = __commonJS({
       );
       return this;
     };
-    PNG2.prototype.parse = function(data, callback) {
+    PNG3.prototype.parse = function(data, callback) {
       if (callback) {
         let onParsed, onError;
         onParsed = function(parsedData) {
@@ -2056,27 +2056,27 @@ var require_png = __commonJS({
       this.end(data);
       return this;
     };
-    PNG2.prototype.write = function(data) {
+    PNG3.prototype.write = function(data) {
       this._parser.write(data);
       return true;
     };
-    PNG2.prototype.end = function(data) {
+    PNG3.prototype.end = function(data) {
       this._parser.end(data);
     };
-    PNG2.prototype._metadata = function(metadata) {
+    PNG3.prototype._metadata = function(metadata) {
       this.width = metadata.width;
       this.height = metadata.height;
       this.emit("metadata", metadata);
     };
-    PNG2.prototype._gamma = function(gamma) {
+    PNG3.prototype._gamma = function(gamma) {
       this.gamma = gamma;
     };
-    PNG2.prototype._handleClose = function() {
+    PNG3.prototype._handleClose = function() {
       if (!this._parser.writable && !this._packer.readable) {
         this.emit("close");
       }
     };
-    PNG2.bitblt = function(src, dst, srcX, srcY, width, height, deltaX, deltaY) {
+    PNG3.bitblt = function(src, dst, srcX, srcY, width, height, deltaX, deltaY) {
       srcX |= 0;
       srcY |= 0;
       width |= 0;
@@ -2098,11 +2098,11 @@ var require_png = __commonJS({
         );
       }
     };
-    PNG2.prototype.bitblt = function(dst, srcX, srcY, width, height, deltaX, deltaY) {
-      PNG2.bitblt(this, dst, srcX, srcY, width, height, deltaX, deltaY);
+    PNG3.prototype.bitblt = function(dst, srcX, srcY, width, height, deltaX, deltaY) {
+      PNG3.bitblt(this, dst, srcX, srcY, width, height, deltaX, deltaY);
       return this;
     };
-    PNG2.adjustGamma = function(src) {
+    PNG3.adjustGamma = function(src) {
       if (src.gamma) {
         for (let y = 0; y < src.height; y++) {
           for (let x = 0; x < src.width; x++) {
@@ -2117,8 +2117,8 @@ var require_png = __commonJS({
         src.gamma = 0;
       }
     };
-    PNG2.prototype.adjustGamma = function() {
-      PNG2.adjustGamma(this);
+    PNG3.prototype.adjustGamma = function() {
+      PNG3.adjustGamma(this);
     };
   }
 });
@@ -4362,7 +4362,7 @@ var require_websocket = __commonJS({
     var http = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes2, createHash: createHash5 } = __require("crypto");
+    var { randomBytes: randomBytes3, createHash: createHash5 } = __require("crypto");
     var { Duplex, Readable } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -4913,7 +4913,7 @@ var require_websocket = __commonJS({
         }
       }
       const defaultPort = isSecure ? 443 : 80;
-      const key = randomBytes2(16).toString("base64");
+      const key = randomBytes3(16).toString("base64");
       const request = isSecure ? https.request : http.request;
       const protocolSet = /* @__PURE__ */ new Set();
       let perMessageDeflate;
@@ -5156,16 +5156,16 @@ var require_websocket = __commonJS({
         process.nextTick(cb, err);
       }
     }
-    function receiverOnConclude(code, reason) {
+    function receiverOnConclude(code, reason2) {
       const websocket = this[kWebSocket];
       websocket._closeFrameReceived = true;
-      websocket._closeMessage = reason;
+      websocket._closeMessage = reason2;
       websocket._closeCode = code;
       if (websocket._socket[kWebSocket] === void 0) return;
       websocket._socket.removeListener("data", socketOnData);
       process.nextTick(resume, websocket._socket);
       if (code === 1005) websocket.close();
-      else websocket.close(code, reason);
+      else websocket.close(code, reason2);
     }
     function receiverOnDrain() {
       const websocket = this[kWebSocket];
@@ -5811,8 +5811,8 @@ import * as sdk from "@github/copilot-sdk/extension";
 import { fileURLToPath } from "node:url";
 
 // src/canvas/provider.ts
-import { realpathSync as realpathSync5, statSync as statSync4 } from "node:fs";
-import { isAbsolute as isAbsolute7 } from "node:path";
+import { realpathSync as realpathSync6, statSync as statSync4 } from "node:fs";
+import { isAbsolute as isAbsolute8 } from "node:path";
 
 // src/canvas/officeHost.ts
 import { lstat as lstat2, realpath, stat } from "node:fs/promises";
@@ -5857,7 +5857,7 @@ var ProjectFiles = class {
    * Fingerprints include root identity and each traversed component's identity,
    * type, size and timestamps. Native failures are retried, never cached as success.
    */
-  inspect(relative5) {
+  inspect(relative6) {
     const stamps = [];
     let rootValidated = false;
     try {
@@ -5867,7 +5867,7 @@ var ProjectFiles = class {
         throw new ProjectFileError("Selected project root changed.");
       }
       rootValidated = true;
-      const target = path.resolve(this.root, relative5);
+      const target = path.resolve(this.root, relative6);
       const rel = path.relative(this.root, target);
       if (rel.split(path.sep).includes("..") || path.isAbsolute(rel)) {
         throw new ProjectFileError("Project path escapes selected root.");
@@ -5894,7 +5894,7 @@ var ProjectFiles = class {
           throw new ProjectFileError("Project symlinks/junctions are not observed.");
         }
       }
-      if (this.resolve(relative5) !== target) {
+      if (this.resolve(relative6) !== target) {
         throw new ProjectFileError("Project source changed.");
       }
       return {
@@ -5905,21 +5905,21 @@ var ProjectFiles = class {
       };
     } catch (error) {
       const missing = rootValidated && error?.code === "ENOENT";
-      const reason = missing ? "Source is missing." : projectFileDiagnostic(error);
+      const reason2 = missing ? "Source is missing." : projectFileDiagnostic(error);
       return {
         status: missing ? "missing" : "unreadable",
-        reason,
-        fingerprint: `${stamps.join("|")}|${missing ? "missing" : reason}`,
+        reason: reason2,
+        fingerprint: `${stamps.join("|")}|${missing ? "missing" : reason2}`,
         retry: !missing && !(error instanceof ProjectFileError)
       };
     }
   }
   /** Resolve only within the still-identical root, refusing internal links/junctions. */
-  resolve(relative5) {
+  resolve(relative6) {
     if (fs.realpathSync(this.selectedRoot) !== this.root || !sameFile(this.rootIdentity, fs.statSync(this.root, { bigint: true }))) {
       throw new ProjectFileError("Selected project root changed.");
     }
-    const target = path.resolve(this.root, relative5);
+    const target = path.resolve(this.root, relative6);
     const parts = path.relative(this.root, target).split(path.sep);
     if (parts.includes("..") || path.isAbsolute(path.relative(this.root, target))) {
       throw new ProjectFileError("Project path escapes selected root.");
@@ -5936,8 +5936,8 @@ var ProjectFiles = class {
    * Read bounded strict UTF-8; missing returns null, unsafe/changed sources throw.
    * Raw-content consumers can preserve the BOM; other consumers keep decoder defaults.
    */
-  read(relative5, limit, options = {}) {
-    const buffer = this.readBytes(relative5, limit, false);
+  read(relative6, limit, options = {}) {
+    const buffer = this.readBytes(relative6, limit, false);
     return buffer === null ? null : new TextDecoder("utf-8", { fatal: true, ignoreBOM: options.preserveBOM }).decode(buffer);
   }
   /**
@@ -5945,13 +5945,13 @@ var ProjectFiles = class {
    * Attempt a one-byte read even at EOF; missing returns false, refusals throw.
    * This establishes readability, not content equality or UTF-8 validity.
    */
-  probe(relative5, limit) {
-    return this.readBytes(relative5, limit, true) !== null;
+  probe(relative6, limit) {
+    return this.readBytes(relative6, limit, true) !== null;
   }
-  readBytes(relative5, limit, probe) {
+  readBytes(relative6, limit, probe) {
     let fd;
     try {
-      const target = this.resolve(relative5);
+      const target = this.resolve(relative6);
       const before = fs.lstatSync(target, { bigint: true });
       if (!before.isFile() || before.size > BigInt(limit)) throw new ProjectFileError(`Source is not a regular file within ${limit} bytes.`);
       fd = fs.openSync(target, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
@@ -5963,7 +5963,7 @@ var ProjectFiles = class {
       const size = fs.readSync(fd, buffer, 0, buffer.length, 0);
       const after = fs.fstatSync(fd, { bigint: true });
       const expected = probe && opened.size > 0n ? 1n : opened.size;
-      if (size > limit || expected !== BigInt(size) || after.size !== opened.size || opened.mtimeNs !== after.mtimeNs || opened.ctimeNs !== after.ctimeNs || this.resolve(relative5) !== target || !sameFile(fs.lstatSync(target, { bigint: true }), opened)) {
+      if (size > limit || expected !== BigInt(size) || after.size !== opened.size || opened.mtimeNs !== after.mtimeNs || opened.ctimeNs !== after.ctimeNs || this.resolve(relative6) !== target || !sameFile(fs.lstatSync(target, { bigint: true }), opened)) {
         throw new ProjectFileError("Source changed while reading; retry on next poll.");
       }
       return buffer.subarray(0, size);
@@ -5975,9 +5975,9 @@ var ProjectFiles = class {
     }
   }
   /** Enumerate at most 256 entries under a guarded project directory. */
-  entries(relative5) {
+  entries(relative6) {
     try {
-      const dir = fs.opendirSync(this.resolve(relative5));
+      const dir = fs.opendirSync(this.resolve(relative6));
       const names = [];
       let entries2 = 0;
       try {
@@ -6016,15 +6016,15 @@ function inspectTeamSource(files, directoryOnly = false) {
   let directory = SQUAD_DIR_NAMES[0];
   const fingerprints = [];
   let retry = false;
-  const inspect = (relative5) => {
-    const result = files.inspect(relative5);
+  const inspect = (relative6) => {
+    const result = files.inspect(relative6);
     fingerprints.push(result.fingerprint);
     if (result.status !== "present") {
       retry ||= result.retry;
     }
     return result;
   };
-  const unavailable = (status, reason) => ({
+  const unavailable2 = (status, reason2) => ({
     directory,
     fingerprint: fingerprints.join("||"),
     retry,
@@ -6032,7 +6032,7 @@ function inspectTeamSource(files, directoryOnly = false) {
       status,
       directory,
       byteLength: 0,
-      reason: status === "missing" ? "No selected-project team.md found." : reason
+      reason: status === "missing" ? "No selected-project team.md found." : reason2
     }
   });
   let dir = inspect(directory);
@@ -6041,20 +6041,20 @@ function inspectTeamSource(files, directoryOnly = false) {
     dir = inspect(directory);
   }
   if (dir.status !== "present") {
-    return unavailable(dir.status, dir.reason);
+    return unavailable2(dir.status, dir.reason);
   }
   if (dir.kind !== "directory") {
-    return unavailable("unreadable", "Selected roster path is not a directory.");
+    return unavailable2("unreadable", "Selected roster path is not a directory.");
   }
   if (directoryOnly) {
     return { directory, fingerprint: fingerprints.join("||"), retry };
   }
   const file = inspect(path2.join(directory, "team.md"));
   if (file.status !== "present") {
-    return unavailable(file.status, file.reason);
+    return unavailable2(file.status, file.reason);
   }
   if (file.kind !== "file" || file.size > BigInt(MAX_TEAM_SOURCE_BYTES)) {
-    return unavailable("unreadable", `Source is not a regular file within ${MAX_TEAM_SOURCE_BYTES} bytes.`);
+    return unavailable2("unreadable", `Source is not a regular file within ${MAX_TEAM_SOURCE_BYTES} bytes.`);
   }
   return { directory, fingerprint: fingerprints.join("||"), retry };
 }
@@ -6063,21 +6063,24 @@ function readProbedTeamSource(files, probe) {
   if (probe.source) {
     return { source: probe.source, retry: probe.retry };
   }
-  const unavailable = (reason) => ({ status: "unreadable", directory, byteLength: 0, reason });
+  const unavailable2 = (reason2) => ({ status: "unreadable", directory, byteLength: 0, reason: reason2 });
   try {
     const content = files.read(path2.join(directory, "team.md"), MAX_TEAM_SOURCE_BYTES, { preserveBOM: true });
     const after = inspectTeamSource(files);
     if (content === null || probe.fingerprint !== after.fingerprint || after.source) {
-      return { source: unavailable("Selected roster source changed while reading; retry on next poll."), retry: true };
+      return { source: unavailable2("Selected roster source changed while reading; retry on next poll."), retry: true };
     }
     return { source: { status: "available", directory, byteLength: Buffer.byteLength(content), content }, retry: false };
   } catch (error) {
     return {
-      source: unavailable(projectFileDiagnostic(error)),
+      source: unavailable2(projectFileDiagnostic(error)),
       // Only a stable, strictly decoded content refusal can be cached after a read.
       retry: error?.code !== "ERR_ENCODING_INVALID_ENCODED_DATA" || inspectTeamSource(files).fingerprint !== probe.fingerprint
     };
   }
+}
+function readTeamSource(files) {
+  return readProbedTeamSource(files, inspectTeamSource(files)).source;
 }
 var TeamSourceState = class {
   files;
@@ -6762,8 +6765,8 @@ function safePath(root, segments) {
       throw new Error("Asset symlinks/junctions are not allowed");
     }
     current = fs2.realpathSync(candidate);
-    const relative5 = path3.relative(base, current);
-    if (relative5 === ".." || relative5.startsWith(`..${path3.sep}`) || path3.isAbsolute(relative5)) {
+    const relative6 = path3.relative(base, current);
+    if (relative6 === ".." || relative6.startsWith(`..${path3.sep}`) || path3.isAbsolute(relative6)) {
       throw new Error("Asset path escapes its approved directory");
     }
   }
@@ -7405,7 +7408,7 @@ var layout = (v) => isValidLayout(v) && object({
   areaTiles: optional(array(nullable(short), 65536)),
   areaMappings: optional(dictionary(array(short, 100), 500))
 })(v);
-var isObserverLayout = layout;
+var isObserverLayout = (value) => layout(value);
 var agent = {
   id: short,
   name: short,
@@ -7702,25 +7705,25 @@ var OfficeStore = class {
     const current = fs3.lstatSync(this.root, { bigint: true });
     if (current.isSymbolicLink() || !current.isDirectory() || !sameIdentity(this.identity, current) || fs3.realpathSync(this.root) !== this.root) throw new Error("Selected project identity changed.");
   }
-  read(relative5, limit) {
+  read(relative6, limit) {
     this.assertRoot();
-    return this.files.read(relative5, limit);
+    return this.files.read(relative6, limit);
   }
-  ensureDirectory(relative5) {
+  ensureDirectory(relative6) {
     this.assertRoot();
-    const parent = path4.dirname(relative5);
+    const parent = path4.dirname(relative6);
     const parentPath = parent === "." ? this.root : this.files.resolve(parent);
-    const target = path4.join(parentPath, path4.basename(relative5));
+    const target = path4.join(parentPath, path4.basename(relative6));
     try {
       fs3.mkdirSync(target);
     } catch (error) {
       if (error.code !== "EEXIST") throw error;
     }
-    const resolved = this.files.resolve(relative5);
+    const resolved = this.files.resolve(relative6);
     if (!fs3.lstatSync(resolved).isDirectory()) throw new Error("Office storage is not a directory.");
     return resolved;
   }
-  commit(relative5, content, expectedRevision, limit, assertAuthority, snapshot) {
+  commit(relative6, content, expectedRevision, limit, assertAuthority, snapshot) {
     if (expectedRevision !== null && (typeof expectedRevision !== "string" || !/^[a-f0-9]{64}$/.test(expectedRevision))) throw new Error("Invalid office revision.");
     assertAuthority();
     const directory = this.ensureDirectory(DIRECTORY);
@@ -7732,13 +7735,13 @@ var OfficeStore = class {
         throw new Error("Office storage identity changed.");
       }
     };
-    const target = path4.join(this.root, relative5);
+    const target = path4.join(this.root, relative6);
     const lockPath = `${target}.lock`;
     const lock = fs3.openSync(lockPath, "wx", 384);
     const temporary = `${target}.${randomUUID()}.tmp`;
     let staged = false;
     try {
-      const previous = this.read(relative5, limit);
+      const previous = this.read(relative6, limit);
       const current = snapshot(previous);
       if (current.revision !== expectedRevision) return { ...current, saved: false };
       assertDirectory();
@@ -7752,7 +7755,7 @@ var OfficeStore = class {
       }
       assertAuthority();
       assertDirectory();
-      const beforeCommit = this.read(relative5, limit);
+      const beforeCommit = this.read(relative6, limit);
       if (beforeCommit !== previous) return { ...snapshot(beforeCommit), saved: false };
       if (previous !== null) {
         const recovery = this.ensureDirectory(path4.join(DIRECTORY, "recovery"));
@@ -7761,11 +7764,11 @@ var OfficeStore = class {
       }
       assertAuthority();
       assertDirectory();
-      const finalRevision = this.read(relative5, limit);
+      const finalRevision = this.read(relative6, limit);
       if (finalRevision !== previous) return { ...snapshot(finalRevision), saved: false };
       fs3.renameSync(temporary, target);
       staged = false;
-      const written = this.read(relative5, limit);
+      const written = this.read(relative6, limit);
       if (written !== content) throw new Error("Office changed after commit; reload before retrying. Draft must be retained.");
       return { ...snapshot(written), saved: true };
     } finally {
@@ -7848,8 +7851,8 @@ function listCopilotSessions(copilotHome, options) {
       try {
         const dir = path5.join(root, entry.name);
         const real = fs4.realpathSync.native(dir);
-        const relative5 = path5.relative(root, real);
-        if (relative5.startsWith(`..${path5.sep}`) || relative5 === ".." || path5.isAbsolute(relative5)) {
+        const relative6 = path5.relative(root, real);
+        if (relative6.startsWith(`..${path5.sep}`) || relative6 === ".." || path5.isAbsolute(relative6)) {
           continue;
         }
         sessions.push({ id: entry.name, dir, mtimeMs: fs4.statSync(dir).mtimeMs });
@@ -8969,14 +8972,14 @@ function createObserver(project, bundledAssetsRoot, pollMs = 1e3, options = {}) 
   function readSnapshot(observeActivity = listeners.size > 0) {
     const errors = [];
     let remainingBytes = 8 * 1024 * 1024;
-    function read(relative5, limit) {
+    function read(relative6, limit) {
       try {
         if (remainingBytes <= 0) throw new Error("8 MiB project observation budget exhausted; reduce source sizes.");
-        const content = files.read(relative5, Math.min(limit, remainingBytes));
+        const content = files.read(relative6, Math.min(limit, remainingBytes));
         if (content !== null) remainingBytes -= Buffer.byteLength(content);
         return content;
       } catch (error) {
-        errors.push(`${relative5}: ${String(error)}`);
+        errors.push(`${relative6}: ${String(error)}`);
         return null;
       }
     }
@@ -9015,17 +9018,17 @@ function createObserver(project, bundledAssetsRoot, pollMs = 1e3, options = {}) 
       }
       for (const name of names) {
         if (!(folder === "sessions" ? name.endsWith(".json") : name.endsWith(".md"))) continue;
-        const relative5 = path8.join(squad, folder, name);
-        const content = read(relative5, 128 * 1024);
+        const relative6 = path8.join(squad, folder, name);
+        const content = read(relative6, 128 * 1024);
         if (content === null) continue;
-        seen.add(relative5);
+        seen.add(relative6);
         const hash = createHash2("sha256").update(content).digest("hex");
-        const prior = activity.get(relative5);
+        const prior = activity.get(relative6);
         const changedAt = !observeActivity ? null : prior?.hash === hash ? prior.changedAt : Date.now();
         const reportedAgent = folder === "sessions" ? parseSessionFile(content)?.agent : detectAgentFromFilename(name) ?? parseLogEntry(content)?.agent;
         const agent2 = reportedAgent ? resolveFileAgentId(reportedAgent, identities) : null;
         const observedAt = agent2 && liveAgents.has(agent2) ? null : changedAt;
-        activity.set(relative5, { hash, changedAt: observedAt, agentId: agent2 });
+        activity.set(relative6, { hash, changedAt: observedAt, agentId: agent2 });
         if (agent2 && observedAt !== null && Date.now() - observedAt < 3e4) active.set(agent2, observedAt);
       }
     }
@@ -9174,7 +9177,7 @@ function createObserver(project, bundledAssetsRoot, pollMs = 1e3, options = {}) 
 }
 
 // src/transport.ts
-import { createHash as createHash4, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash as createHash4, randomBytes as randomBytes2, timingSafeEqual } from "node:crypto";
 import { lstat, readFile, readdir } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join as join10, resolve as resolve3 } from "node:path";
@@ -9319,12 +9322,12 @@ function attachTerminal(source, cursor, sink) {
     subscription.unsubscribe?.();
     subscription.failure?.();
   };
-  const fail = (reason) => {
+  const fail = (reason2) => {
     if (stopped) {
       return;
     }
     dispose();
-    sink.abort({ version: 1, type: "resync", runId: source.runId, reason, earliest, latest });
+    sink.abort({ version: 1, type: "resync", runId: source.runId, reason: reason2, earliest, latest });
   };
   const reserve = (frames) => {
     const size = frames.reduce((total, frame) => total + utf8Bytes(encodeTerminalFrame(frame)), 0);
@@ -9745,9 +9748,95 @@ function createOfficeControl(project) {
   return { store, projectIdentity, preferences, mutate };
 }
 
+// src/canvas/rendering.ts
+var import_pngjs2 = __toESM(require_png(), 1);
+import { randomBytes } from "node:crypto";
+
+// ../src/canvasRendering.ts
+var SNAPSHOT_WIDTH = 1024;
+var SNAPSHOT_HEIGHT = 768;
+var SNAPSHOT_BYTES = 1024 * 1024;
+var SNAPSHOT_FRAME = Math.ceil(SNAPSHOT_BYTES / 3) * 4 + 1024;
+var SNAPSHOT_TIMEOUT = 2e3;
+function isCanvasPaint(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const v = value;
+  return Object.keys(v).length === 6 && typeof v.firstPaintTime === "number" && Number.isFinite(v.firstPaintTime) && v.firstPaintTime >= 0 && v.firstPaintTime <= Number.MAX_SAFE_INTEGER && Number.isSafeInteger(v.frameCount) && Number(v.frameCount) > 0 && Number(v.frameCount) <= 65535 && Number.isSafeInteger(v.width) && Number(v.width) > 0 && Number(v.width) <= 32768 && Number.isSafeInteger(v.height) && Number(v.height) > 0 && Number(v.height) <= 32768 && (v.visibilityState === "visible" || v.visibilityState === "hidden") && (v.onScreen === null || typeof v.onScreen === "boolean");
+}
+
+// src/canvas/rendering.ts
+var unavailable = () => new Error("CANVAS_SNAPSHOT_UNAVAILABLE");
+var CanvasRendering = class {
+  constructor(send) {
+    this.send = send;
+  }
+  send;
+  paint = null;
+  disposed = false;
+  pending;
+  state() {
+    return this.paint ? { ...this.paint } : null;
+  }
+  receive(value) {
+    if (this.disposed || value.version !== 1) return false;
+    if (value.kind === "rendered") {
+      if (Object.keys(value).length !== 3 || !isCanvasPaint(value.paint)) return false;
+      this.paint ??= { ...value.paint };
+      return true;
+    }
+    if (value.kind !== "snapshotResult") return false;
+    const pending = this.pending;
+    if (!pending || value.requestId !== pending.id) return false;
+    this.pending = void 0;
+    clearTimeout(pending.timer);
+    try {
+      if (Date.now() >= pending.deadline || Object.keys(value).length !== 4 || typeof value.png !== "string" || !value.png || value.png.length > Math.ceil(SNAPSHOT_BYTES / 3) * 4 || value.png.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(value.png)) throw unavailable();
+      const bytes = Buffer.from(value.png, "base64");
+      if (bytes.length > SNAPSHOT_BYTES || bytes.toString("base64") !== value.png || bytes.length < 33 || bytes.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a" || bytes.readUInt32BE(8) !== 13 || bytes.toString("ascii", 12, 16) !== "IHDR") throw unavailable();
+      const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
+      if (!width || !height || width > SNAPSHOT_WIDTH || height > SNAPSHOT_HEIGHT) throw unavailable();
+      const image = import_pngjs2.PNG.sync.read(bytes, { checkCRC: true });
+      if (image.width !== width || image.height !== height) throw unavailable();
+      pending.resolve(value.png);
+      return true;
+    } catch {
+      pending.reject(unavailable());
+      return false;
+    }
+  }
+  capture() {
+    if (this.disposed || !this.paint || this.pending) return Promise.reject(unavailable());
+    return new Promise((resolve4, reject) => {
+      const id2 = randomBytes(16).toString("hex");
+      const timer = setTimeout(() => {
+        this.pending = void 0;
+        reject(unavailable());
+      }, SNAPSHOT_TIMEOUT);
+      this.pending = { id: id2, resolve: resolve4, reject, timer, deadline: Date.now() + SNAPSHOT_TIMEOUT };
+      try {
+        this.send(JSON.stringify({ version: 1, kind: "snapshotRequest", requestId: id2 }));
+      } catch {
+        this.dispose();
+      }
+    });
+  }
+  dispose() {
+    this.disposed = true;
+    this.paint = null;
+    if (this.pending) {
+      clearTimeout(this.pending.timer);
+      this.pending.reject(unavailable());
+      this.pending = void 0;
+    }
+  }
+};
+
 // src/transport.ts
 var MAX_CONNECTIONS = 8;
 var MAX_INBOUND = 4096;
+var MAX_HOST_REQUEST = 4 * 1024 * 1024 + 8192;
 var MAX_FRAME = 8 * 1024 * 1024;
 var MAX_QUEUE = 16 * 1024 * 1024;
 var READ_TIMEOUT = 5e3;
@@ -9773,7 +9862,7 @@ var MIME = {
   ".ogg": "audio/ogg"
 };
 function credential() {
-  return randomBytes(32).toString("base64url");
+  return randomBytes2(32).toString("base64url");
 }
 function equalCredential(candidate, expected) {
   const hash = (value) => createHash4("sha256").update(value).digest();
@@ -9897,9 +9986,10 @@ async function startTransport(options) {
   let port = 0;
   const sockets = /* @__PURE__ */ new Set();
   const cleanups = /* @__PURE__ */ new Map();
+  const renderers = /* @__PURE__ */ new Set();
   const wss = new import_websocket_server.default({
     noServer: true,
-    maxPayload: MAX_INBOUND,
+    maxPayload: options.canvas ? SNAPSHOT_FRAME : MAX_INBOUND,
     perMessageDeflate: false,
     clientTracking: true
   });
@@ -9978,6 +10068,53 @@ async function startTransport(options) {
     }
     if (!validHost(request)) {
       reply(response, 403, "FORBIDDEN");
+      return;
+    }
+    if (options.canvas && request.url === "/canvas-host" && request.method === "POST") {
+      if (!options.canvasHost || !validOrigin(request) || !authenticated(request) || singleHeader(request, "content-type") !== "application/json") {
+        reply(response, 403, "FORBIDDEN");
+        return;
+      }
+      const admittedGeneration = generation;
+      let size = 0;
+      const chunks = [];
+      const timer = setTimeout(() => {
+        reply(response, 408, "TIMEOUT");
+        request.destroy();
+      }, READ_TIMEOUT);
+      request.once("close", () => clearTimeout(timer));
+      request.on("error", () => clearTimeout(timer));
+      request.on("data", (chunk) => {
+        size += chunk.length;
+        if (size > MAX_HOST_REQUEST) {
+          clearTimeout(timer);
+          reply(response, 413, "TOO_LARGE");
+          response.once("finish", () => request.destroy());
+        } else chunks.push(chunk);
+      });
+      request.once("end", () => {
+        clearTimeout(timer);
+        if (size > MAX_HOST_REQUEST || disposed) return;
+        if (generation !== admittedGeneration) {
+          reply(response, 403, "FORBIDDEN");
+          return;
+        }
+        let input;
+        try {
+          input = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        } catch {
+          reply(response, 400, "INVALID_MESSAGE");
+          return;
+        }
+        void options.canvasHost(input, controlAuthenticated(request)).then((result) => {
+          if (disposed || generation !== admittedGeneration) {
+            reply(response, 403, "FORBIDDEN");
+            return;
+          }
+          response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          response.end(JSON.stringify(result));
+        }, () => reply(response, 503, "HOST_UNAVAILABLE"));
+      });
       return;
     }
     if (options.canvas && request.url === "/control-intent" && request.method === "POST") {
@@ -10076,7 +10213,10 @@ async function startTransport(options) {
       response.end(JSON.stringify({
         serverIdentity,
         projectIdentity: options.officeControl?.projectIdentity ?? null,
-        ...options.canvas ? { controlAuthorized: controlAuthenticated(request) } : {}
+        ...options.canvas ? {
+          controlAuthorized: controlAuthenticated(request),
+          hostCapabilities: options.canvasHost?.available?.()
+        } : {}
       }));
       return;
     }
@@ -10139,6 +10279,8 @@ async function startTransport(options) {
     let unsubscribe;
     let sendTimer;
     let readTimer;
+    const rendering = options.canvas ? new CanvasRendering((frame) => sendFrame(frame)) : void 0;
+    if (rendering) renderers.add(rendering);
     const cleanup = () => {
       if (!active) {
         return;
@@ -10150,6 +10292,10 @@ async function startTransport(options) {
       pending = [];
       queued = 0;
       cleanups.delete(ws);
+      if (rendering) {
+        renderers.delete(rendering);
+        rendering.dispose();
+      }
       try {
         unsubscribe?.();
       } catch {
@@ -10313,7 +10459,7 @@ async function startTransport(options) {
         error("INVALID_MESSAGE");
         return;
       }
-      if (Buffer.byteLength(data.toString()) > (control ? MAX_CONTROL_FRAME : MAX_INBOUND)) {
+      if (Buffer.byteLength(data.toString()) > (control ? MAX_CONTROL_FRAME : options.canvas ? SNAPSHOT_FRAME : MAX_INBOUND)) {
         cleanup();
         ws.close(1009, "Office frame exceeds limit");
         const closing = setTimeout(() => ws.terminate(), 1e3);
@@ -10325,6 +10471,14 @@ async function startTransport(options) {
       try {
         payload = JSON.parse(data.toString());
       } catch {
+        error("INVALID_MESSAGE");
+        return;
+      }
+      if (record4(payload) && (payload.kind === "rendered" || payload.kind === "snapshotResult")) {
+        if (!ready || !rendering || !rendering.receive(payload)) error("INVALID_MESSAGE");
+        return;
+      }
+      if (!control && Buffer.byteLength(data.toString()) > MAX_INBOUND) {
         error("INVALID_MESSAGE");
         return;
       }
@@ -10406,6 +10560,11 @@ async function startTransport(options) {
   }
   return {
     port,
+    rendered: () => [...renderers].reverse().find((renderer) => renderer.state())?.state() ?? null,
+    capture: () => {
+      const renderer = [...renderers].reverse().find((candidate) => candidate.state());
+      return renderer ? renderer.capture() : Promise.reject(new Error("CANVAS_SNAPSHOT_UNAVAILABLE"));
+    },
     get token() {
       return token;
     },
@@ -10907,6 +11066,7 @@ async function startCanvasOfficeHost(options) {
       canvas: true,
       canvasReadiness: (event) => readiness.observe(event),
       officeControl: createOfficeControl(root),
+      canvasHost: options.hostCapabilities?.(snapshot),
       snapshot,
       subscribe: (listener) => {
         listeners.add(listener);
@@ -10937,6 +11097,8 @@ async function startCanvasOfficeHost(options) {
     url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}`,
     snapshot,
     readiness: () => readiness.snapshot(),
+    rendered: () => ownedTransport.rendered(),
+    capture: () => ownedTransport.capture(),
     acceptActivity: (event) => live?.accept(event),
     clearActivity: () => live?.clear(),
     dispose() {
@@ -11028,11 +11190,11 @@ function readMemberCharter(context, id2) {
   try {
     const files = new ProjectFiles(context.workspaceRoot);
     const directory = selectTeamSourceDirectory(files);
-    const relative5 = path10.join(directory, "agents", id2, "charter.md");
+    const relative6 = path10.join(directory, "agents", id2, "charter.md");
     if (!context.isCurrentMember(id2)) {
       return empty2("unavailable");
     }
-    const source = files.read(relative5, 64 * 1024);
+    const source = files.read(relative6, 64 * 1024);
     if (!context.isCurrentMember(id2)) {
       return empty2("unavailable");
     }
@@ -11163,9 +11325,9 @@ function modelDirectory(files) {
   }
   return { directory, fingerprint: `${preferred.fingerprint}||${selected.fingerprint}` };
 }
-function readJsonConfig(files, relative5, agentName, sourcePath) {
+function readJsonConfig(files, relative6, agentName, sourcePath) {
   const result = (state, diagnostic) => ({ sourcePath, state, diagnostic, values: [] });
-  const before = files.inspect(relative5);
+  const before = files.inspect(relative6);
   if (before.status !== "present") {
     return result(before.status, before.status === "missing" ? "No JSON configuration file." : before.reason);
   }
@@ -11173,21 +11335,21 @@ function readJsonConfig(files, relative5, agentName, sourcePath) {
     return result("unreadable", "Configuration is not a regular file within the 64 KiB read limit.");
   }
   try {
-    const content = files.read(relative5, MAX_MODEL_CONFIG_BYTES);
-    if (content === null || files.inspect(relative5).fingerprint !== before.fingerprint) {
+    const content = files.read(relative6, MAX_MODEL_CONFIG_BYTES);
+    if (content === null || files.inspect(relative6).fingerprint !== before.fingerprint) {
       return result("ambiguous", "Configuration changed while reading; reopen to retry.");
     }
     return parseModelConfig(content, agentName, sourcePath);
   } catch (error) {
     const diagnostic = projectFileDiagnostic(error);
-    if (files.inspect(relative5).fingerprint !== before.fingerprint || /changed/i.test(diagnostic)) {
+    if (files.inspect(relative6).fingerprint !== before.fingerprint || /changed/i.test(diagnostic)) {
       return result("ambiguous", diagnostic);
     }
     return result(error?.code === "ERR_ENCODING_INVALID_ENCODED_DATA" ? "malformed" : "unreadable", diagnostic);
   }
 }
-function inspectExecutable(files, relative5, sourcePath) {
-  const inspected = files.inspect(relative5);
+function inspectExecutable(files, relative6, sourcePath) {
+  const inspected = files.inspect(relative6);
   let state;
   let diagnostic;
   if (inspected.status !== "present") {
@@ -11200,7 +11362,7 @@ function inspectExecutable(files, relative5, sourcePath) {
     state = "unsupported";
     diagnostic = "Executable/legacy configuration is present; not imported, executed or resolved.";
   }
-  if (files.inspect(relative5).fingerprint !== inspected.fingerprint) {
+  if (files.inspect(relative6).fingerprint !== inspected.fingerprint) {
     state = "ambiguous";
     diagnostic = "Executable/legacy configuration changed while inspecting; reopen to retry.";
   }
@@ -11208,7 +11370,7 @@ function inspectExecutable(files, relative5, sourcePath) {
 }
 function readModelConfig(workspaceRoot, agentName) {
   let directory = ".squad";
-  const sourcePath = (relative5) => path11.isAbsolute(workspaceRoot) ? path11.join(workspaceRoot, relative5) : relative5.split(path11.sep).join("/");
+  const sourcePath = (relative6) => path11.isAbsolute(workspaceRoot) ? path11.join(workspaceRoot, relative6) : relative6.split(path11.sep).join("/");
   const paths = () => [
     path11.join(directory, "config.json"),
     "squad.config.ts",
@@ -11221,8 +11383,8 @@ function readModelConfig(workspaceRoot, agentName) {
     before = modelDirectory(files);
     directory = before.directory;
   } catch (error) {
-    return paths().map((relative5) => ({
-      sourcePath: sourcePath(relative5),
+    return paths().map((relative6) => ({
+      sourcePath: sourcePath(relative6),
       state: "unreadable",
       diagnostic: projectFileDiagnostic(error),
       values: []
@@ -11231,7 +11393,7 @@ function readModelConfig(workspaceRoot, agentName) {
   const relativePaths = paths();
   const sources = [
     readJsonConfig(files, relativePaths[0], agentName, sourcePath(relativePaths[0])),
-    ...relativePaths.slice(1).map((relative5) => inspectExecutable(files, relative5, sourcePath(relative5)))
+    ...relativePaths.slice(1).map((relative6) => inspectExecutable(files, relative6, sourcePath(relative6)))
   ];
   try {
     const after = modelDirectory(files);
@@ -11257,10 +11419,11 @@ function readModelConfig(workspaceRoot, agentName) {
 // src/canvas/readActions.ts
 var text5 = (value, limit = 512) => value === null ? null : value.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, limit);
 var members = (messages) => messages.find((message) => message.type === "existingAgents")?.agents.slice(0, 128) ?? [];
-function officeState(messages, readiness) {
+function officeState(messages, readiness, rendered = null) {
   const layout2 = messages.find((message) => message.type === "layoutLoaded")?.layout;
   const source = messages.find((message) => message.type === "sourceStatus")?.status;
   return {
+    rendering: { semantics: "application-reported-drawing-not-compositor-visibility", firstFrame: rendered },
     ...readiness ? { readiness } : {},
     members: members(messages).map((member) => ({
       slug: text5(member.id, 128),
@@ -11305,13 +11468,154 @@ function memberDetails(root, slug, messages) {
   };
 }
 
+// src/canvas/hostCapabilities.ts
+import { randomUUID as randomUUID2 } from "node:crypto";
+import { execFile } from "node:child_process";
+import { realpathSync as realpathSync5 } from "node:fs";
+import { isAbsolute as isAbsolute7, join as join14, relative as relative5, sep as sep5 } from "node:path";
+import { promisify } from "node:util";
+var object5 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+var MAX_BYTES = 2 * 1024 * 1024;
+var HOST_RPC_TIMEOUT_MS = 1e3;
+var reason = "Host capability unavailable or rejected. Outcome unconfirmed; no automatic retry.";
+function createHostCapabilities(session, root, instanceId, assertActive, snapshot) {
+  const files = new ProjectFiles(root);
+  const failed = /* @__PURE__ */ new Set();
+  const available = () => ({
+    charter: !failed.has("charter") && typeof session.rpc?.canvas?.open === "function" && typeof session.rpc?.canvas?.list === "function",
+    usage: !failed.has("usage") && typeof session.rpc?.usage?.getMetrics === "function",
+    export: !failed.has("export") && typeof session.rpc?.workspaces?.createFile === "function"
+  });
+  let busy = false;
+  const handle = async (input, editing) => {
+    let operation = "";
+    let invoked = false;
+    try {
+      const generation = assertActive();
+      const check = () => {
+        if (assertActive() !== generation) throw new Error();
+      };
+      async function invoke(call) {
+        let timer;
+        invoked = true;
+        try {
+          return await Promise.race([
+            Promise.resolve().then(() => {
+              check();
+              return call();
+            }),
+            new Promise((_resolve, reject) => {
+              timer = setTimeout(() => reject(new Error()), HOST_RPC_TIMEOUT_MS);
+            })
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+      if (!object5(input) || typeof input.operation !== "string") throw new Error();
+      operation = input.operation;
+      const field = operation === "charter" ? "slug" : operation === "export" ? "content" : operation === "import" ? "path" : null;
+      if (!["capabilities", "usage", "charter", "export", "import"].includes(operation) || Object.keys(input).length !== (field ? 2 : 1) || field && typeof input[field] !== "string" || failed.has(operation) || busy) throw new Error();
+      if (operation === "capabilities") return { ok: true, capabilities: available() };
+      if ((operation === "import" || operation === "export") && !editing) throw new Error();
+      busy = true;
+      try {
+        if (operation === "charter") {
+          if (!available().charter || typeof input.slug !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(input.slug)) throw new Error();
+          const slug = input.slug;
+          const messages = await invoke(snapshot);
+          check();
+          const roster = messages.find((message) => message.type === "existingAgents")?.agents ?? [];
+          const charter = readMemberCharter({ workspaceRoot: root, isCurrentMember: (id2) => roster.some((m) => m.id === id2) }, slug);
+          if (charter.charterStatus !== "available") throw new Error();
+          const path12 = join14(selectTeamSourceDirectory(files), "agents", slug, "charter.md");
+          const catalog = await invoke(() => session.rpc.canvas.list());
+          if (!object5(catalog) || !Array.isArray(catalog.canvases)) throw new Error();
+          const editors = catalog.canvases.filter((c) => object5(c) && c.canvasId === "editor");
+          if (editors.length !== 1) throw new Error();
+          const editor = editors[0];
+          if (!object5(editor) || typeof editor.extensionId !== "string" || !object5(editor.inputSchema)) throw new Error();
+          const editorProvider = editor.extensionId;
+          const schema = editor.inputSchema;
+          if (!object5(schema.properties) || !object5(schema.properties.scope) || !object5(schema.properties.path) || schema.properties.path.type !== "string" || !Array.isArray(schema.properties.scope.enum) || !schema.properties.scope.enum.includes("repo") || !Array.isArray(schema.required) || schema.required.some((key) => key !== "scope" && key !== "path")) throw new Error();
+          const git = await promisify(execFile)(
+            "git",
+            ["-C", root, "rev-parse", "--show-toplevel"],
+            { timeout: 1e3, maxBuffer: 8192, windowsHide: true }
+          );
+          const repo = realpathSync5(git.stdout.trim());
+          const prefix = relative5(repo, files.root);
+          if (isAbsolute7(prefix) || prefix.split(sep5).includes("..")) throw new Error();
+          const target = files.resolve(path12);
+          const source = readTeamSource(files);
+          if (source.status !== "available") throw new Error();
+          const declared = parseTeamRoster(source.content).filter((member) => member.slug === slug);
+          if (declared.length !== 1 || declared[0].charterPath.replace(/\\/g, "/") !== path12.split(sep5).join("/")) throw new Error();
+          const repoPath = relative5(repo, target).split(sep5).join("/");
+          check();
+          const targetInstance = `squad-charter-${instanceId}-${slug}`;
+          const opened = await invoke(() => session.rpc.canvas.open({
+            extensionId: editorProvider,
+            canvasId: "editor",
+            instanceId: targetInstance,
+            input: { scope: "repo", path: repoPath }
+          }));
+          check();
+          if (!object5(opened) || opened.canvasId !== "editor" || opened.extensionId !== editorProvider || opened.instanceId !== targetInstance) throw new Error();
+          return { ok: true };
+        }
+        if (operation === "usage") {
+          if (!available().usage) throw new Error();
+          const metrics = await invoke(() => session.rpc.usage.getMetrics());
+          check();
+          if (!object5(metrics)) throw new Error();
+          const quantities = [];
+          for (const [key, label, unit] of [
+            ["totalUserRequests", "User-initiated API requests", "requests"],
+            ["totalPremiumRequestCost", "Premium-request cost (multiplier applied)", "premium requests"],
+            ["totalApiDurationMs", "API time", "ms"],
+            ["totalNanoAiu", "AI usage", "nano-AI units"]
+          ]) {
+            const value = metrics[key];
+            if (typeof value === "number" && Number.isFinite(value) && value >= 0) quantities.push({ label, value, unit });
+          }
+          return { ok: true, quantities };
+        }
+        if (operation === "export") {
+          if (!available().export || typeof input.content !== "string" || Buffer.byteLength(input.content) > MAX_BYTES || !isObserverLayout(JSON.parse(input.content))) throw new Error();
+          const path12 = `squad-pod-layout-${randomUUID2()}.json`;
+          check();
+          const content2 = input.content;
+          await invoke(() => session.rpc.workspaces.createFile({ path: path12, content: content2 }));
+          check();
+          return { ok: true, path: path12 };
+        }
+        if (typeof input.path !== "string" || input.path.length > 4096 || !input.path.endsWith(".json") || /[\\:\x00-\x1f\x7f]/.test(input.path) || isAbsolute7(input.path) || input.path.split("/").some((part) => !part || part === "." || part === "..")) throw new Error();
+        const content = files.read(input.path, MAX_BYTES);
+        if (content === null) throw new Error();
+        const layout2 = JSON.parse(content.replace(/^\uFEFF/, ""));
+        if (!isObserverLayout(layout2)) throw new Error();
+        check();
+        return { ok: true, layout: layout2 };
+      } finally {
+        busy = false;
+      }
+    } catch {
+      if (invoked) failed.add(operation);
+      return { ok: false, reason };
+    }
+  };
+  handle.available = available;
+  return handle;
+}
+
 // src/canvas/provider.ts
 var id = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
-var object5 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+var object6 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 var empty = { type: "object", properties: {}, additionalProperties: false };
 function directoryIdentity(value) {
-  if (typeof value !== "string" || !value || value.length > 4096 || /[\x00-\x1f\x7f]/.test(value) || !isAbsolute7(value) || /^[\\/]{2}|^\\|^\/(?:mnt\/[a-z](?:\/|$)|wsl(?:\/|$))/i.test(value) || process.platform === "win32" && (!/^[A-Za-z]:[\\/]/.test(value) || value.slice(2).includes(":"))) throw new Error();
-  const path12 = realpathSync5.native(value);
+  if (typeof value !== "string" || !value || value.length > 4096 || /[\x00-\x1f\x7f]/.test(value) || !isAbsolute8(value) || /^[\\/]{2}|^\\|^\/(?:mnt\/[a-z](?:\/|$)|wsl(?:\/|$))/i.test(value) || process.platform === "win32" && (!/^[A-Za-z]:[\\/]/.test(value) || value.slice(2).includes(":"))) throw new Error();
+  const path12 = realpathSync6.native(value);
   if (process.platform === "win32" && !/^[A-Za-z]:[\\/]/.test(path12)) throw new Error();
   const stat2 = statSync4(path12, { bigint: true });
   if (!stat2.isDirectory()) throw new Error();
@@ -11378,10 +11682,10 @@ async function startOfficeExtension(sdk2, paths, lifecycle = process) {
       })]);
       if ("error" in result) fail(result.error);
       const value = result.value;
-      if (!object5(value) || value.sessionId !== ctx.sessionId || value.sessionId !== session?.sessionId) fail("canvas_metadata_mismatch");
+      if (!object6(value) || value.sessionId !== ctx.sessionId || value.sessionId !== session?.sessionId) fail("canvas_metadata_mismatch");
       try {
         const root = directoryIdentity(value.workingDirectory);
-        if (object5(ctx.input) && Object.hasOwn(ctx.input, "projectRoot") && !same(root, directoryIdentity(ctx.input.projectRoot))) fail("canvas_root_mismatch");
+        if (object6(ctx.input) && Object.hasOwn(ctx.input, "projectRoot") && !same(root, directoryIdentity(ctx.input.projectRoot))) fail("canvas_root_mismatch");
         return root;
       } catch (error) {
         if (error instanceof sdk2.CanvasError) throw error;
@@ -11428,7 +11732,7 @@ async function startOfficeExtension(sdk2, paths, lifecycle = process) {
     inputSchema: { ...empty, properties: { projectRoot: { type: "string", minLength: 1, maxLength: 4096 } } },
     async open(ctx) {
       let entry = validate(ctx);
-      if (ctx.input !== void 0 && (!object5(ctx.input) || Object.keys(ctx.input).some((key) => key !== "projectRoot"))) fail("canvas_input_invalid");
+      if (ctx.input !== void 0 && (!object6(ctx.input) || Object.keys(ctx.input).some((key) => key !== "projectRoot"))) fail("canvas_input_invalid");
       if (!entry) {
         if (entries2.size >= 4) fail("canvas_instance_limit");
         providerId ??= ctx.extensionId;
@@ -11447,7 +11751,22 @@ async function startOfficeExtension(sdk2, paths, lifecycle = process) {
           const owned = entry;
           entry.ready = Promise.resolve().then(async () => {
             active(ctx, owned);
-            const host2 = await startCanvasOfficeHost({ ...paths, projectRoot: root.path, sessionId: session.sessionId });
+            const host2 = await startCanvasOfficeHost({
+              ...paths,
+              projectRoot: root.path,
+              sessionId: session.sessionId,
+              hostCapabilities: (snapshot) => createHostCapabilities(
+                session,
+                root.path,
+                ctx.instanceId,
+                () => {
+                  active(ctx, owned);
+                  if (owned.pending) fail("canvas_instance_unavailable");
+                  return owned.generation;
+                },
+                snapshot
+              )
+            });
             try {
               active(ctx, owned);
             } catch (error) {
@@ -11476,10 +11795,10 @@ async function startOfficeExtension(sdk2, paths, lifecycle = process) {
       }
     },
     onClose: close,
-    actions: ["get_office_state", "get_member_details"].map((name) => ({
+    actions: ["get_office_state", "get_member_details", "get_office_snapshot"].map((name) => ({
       name,
-      description: name === "get_office_state" ? "Bounded office members, layout, source status and requests-observed readiness." : "Exact-member charter summary, expertise and declared model provenance.",
-      inputSchema: name === "get_office_state" ? empty : {
+      description: name === "get_office_snapshot" ? "Fresh bounded office PNG readback for this instance only; not compositor visibility or native acceptance." : name === "get_office_state" ? "Bounded office members, layout, source status, requests-observed readiness and application-reported drawing." : "Exact-member charter summary, expertise and declared model provenance.",
+      inputSchema: name !== "get_member_details" ? empty : {
         ...empty,
         properties: { slug: { type: "string", pattern: "^[A-Za-z0-9_-]{1,128}$" } },
         required: ["slug"]
@@ -11489,16 +11808,28 @@ async function startOfficeExtension(sdk2, paths, lifecycle = process) {
         if (!entry?.host || !entry.root || entry.pending) fail("canvas_instance_unavailable");
         const { host, root, generation } = entry;
         const input = ctx.input === void 0 ? {} : ctx.input;
-        if (ctx.actionName !== name || !object5(input) || (name === "get_office_state" ? Object.keys(input).length !== 0 : Object.keys(input).length !== 1 || typeof input.slug !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(input.slug))) fail("canvas_input_invalid");
+        if (ctx.actionName !== name || !object6(input) || (name !== "get_member_details" ? Object.keys(input).length !== 0 : Object.keys(input).length !== 1 || typeof input.slug !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(input.slug))) fail("canvas_input_invalid");
         try {
           active(ctx, entry, generation);
+          if (name === "get_office_snapshot") {
+            if (!host.capture) fail("canvas_snapshot_unavailable");
+            const png = await host.capture();
+            active(ctx, entry, generation);
+            if (entry.pending) fail("canvas_instance_unavailable");
+            const result = {
+              resultType: "success",
+              textResultForLlm: "Current office canvas PNG readback (application-reported drawing, not compositor visibility or native acceptance).",
+              binaryResultsForLlm: [{ type: "image", mimeType: "image/png", data: png }]
+            };
+            return result;
+          }
           const messages = await host.snapshot();
           active(ctx, entry, generation);
           if (entry.pending) fail("canvas_instance_unavailable");
-          return name === "get_office_state" ? officeState(messages, host.readiness?.()) : memberDetails(root.path, input.slug, messages);
+          return name === "get_office_state" ? officeState(messages, host.readiness?.(), host.rendered?.() ?? null) : memberDetails(root.path, input.slug, messages);
         } catch (error) {
           if (error instanceof sdk2.CanvasError) throw error;
-          return fail("canvas_action_unavailable");
+          return fail(name === "get_office_snapshot" ? "canvas_snapshot_unavailable" : "canvas_action_unavailable");
         }
       }
     }))

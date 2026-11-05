@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "0f4f08bbfdfc7c6c3a8c3bf8715847c130df5967",
+  "sourceCommit": "5bd74603b8ce40edb16af519dca281438c56a652",
   "sourceDirty": false,
   "sdk": {
     "name": "@github/copilot-sdk/extension",
@@ -10,6 +10,8 @@
     "src/activityLifecycle.ts",
     "src/activityProjection.ts",
     "src/activitySource.ts",
+    "src/canvasRendering.ts",
+    "src/canvasRendering.ts",
     "src/carpetValidation.ts",
     "src/carpetValidation.ts",
     "src/charterDetails.ts",
@@ -79,10 +81,12 @@
     "standalone/node_modules/ws/wrapper.mjs",
     "standalone/src/canvas/activity.ts",
     "standalone/src/canvas/extension.ts",
+    "standalone/src/canvas/hostCapabilities.ts",
     "standalone/src/canvas/officeHost.ts",
     "standalone/src/canvas/provider.ts",
     "standalone/src/canvas/readActions.ts",
     "standalone/src/canvas/readiness.ts",
+    "standalone/src/canvas/rendering.ts",
     "standalone/src/events.ts",
     "standalone/src/events.ts",
     "standalone/src/observer.ts",
@@ -107,10 +111,14 @@
     "webview-ui/src/App.tsx",
     "webview-ui/src/HostClientContext.tsx",
     "webview-ui/src/canvas/CanvasPanel.tsx",
+    "webview-ui/src/canvas/ProjectLayoutImport.tsx",
+    "webview-ui/src/canvas/SessionUsage.tsx",
     "webview-ui/src/canvas/bootstrap.ts",
     "webview-ui/src/canvas/canvas.css",
     "webview-ui/src/canvas/diagnostics.ts",
+    "webview-ui/src/canvas/hostBridge.ts",
     "webview-ui/src/canvas/main.tsx",
+    "webview-ui/src/canvas/rendering.ts",
     "webview-ui/src/components/AgentCard.tsx",
     "webview-ui/src/components/AgentLabels.tsx",
     "webview-ui/src/components/AssetStatus.tsx",
@@ -500,6 +508,11 @@
       "external": true
     },
     {
+      "path": "node:crypto",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
       "path": "node:path",
       "kind": "import-statement",
       "external": true
@@ -511,6 +524,31 @@
     },
     {
       "path": "path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:crypto",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:child_process",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:fs",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:path",
+      "kind": "import-statement",
+      "external": true
+    },
+    {
+      "path": "node:util",
       "kind": "import-statement",
       "external": true
     }
@@ -547,5 +585,5 @@
       "licensePath": "licenses/ws-8.22.0.txt"
     }
   ],
-  "extensionSha256": "caa39af2efdabdb6531c8865b9313f4d3e02b3c349a7cd9c6b0dc662f2a0b3b1"
+  "extensionSha256": "0b2e9819175942669b21e5ac32e5a38e0335cf5c4c1c5c5dc7b57e317c4747c9"
 }
