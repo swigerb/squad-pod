@@ -91,7 +91,9 @@ the stable VSIX `v1.0.0` release.
 discovery and plugin catalogs. Squad Pod was submitted in
 [github/awesome-copilot#6270](https://github.com/github/awesome-copilot/issues/6270)
 for the native-qualified **0.1.0** artifact at `16d33ae623f82b7c10a5d46f892bcc98b97b39d6`,
-not for unqualified 0.1.1. Intake acceptance and listing are **pending**: do not
+not for unqualified 0.1.1.
+[Automated intake passed](https://github.com/github/awesome-copilot/actions/runs/42086032096);
+maintainer acceptance and listing are **pending**: do not
 assume it is listed, featured or GitHub-verified. Use the owner marketplace above
 now. Adding that marketplace is not publication to Visual Studio Marketplace;
 the latter distributes only the separate VS Code extension.
