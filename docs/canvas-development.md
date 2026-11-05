@@ -108,3 +108,16 @@ receipt payload byte/file counts, downloadable archive URL/hash and CI run IDs.
 Keep the 0.1.0 evidence pins unchanged. New 0.1.1 native checks, including
 update/rollback between distinct releases with retained data, belong to #218.
 Only the designated owner/Scout should install or qualify the native candidate.
+
+When creating the downloadable archive on Windows, disable checkout-style CRLF
+conversion for that command, then compare the ZIP's decompressed payload bytes
+to every receipt entry before publication. For example:
+
+```powershell
+git -c core.autocrlf=false archive --format=zip --prefix=squad-pod/ --output squad-pod-canvas-0.1.1.zip canvas-v0.1.1:plugins/squad-pod
+```
+
+Default `git archive` settings can otherwise convert text despite byte-exact
+Git blobs, invalidating the packaged checksums. The
+[published provenance](canvas-install.md#published-011-preview-provenance)
+records the verified 0.1.1 archive, not an unverified source ZIP.
