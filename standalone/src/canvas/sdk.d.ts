@@ -1,5 +1,10 @@
 /** Host-injected experimental SDK contract (public v1.0.28 surface only). */
 declare module '@github/copilot-sdk/extension' {
+  export interface ToolResultObject {
+    textResultForLlm: string;
+    resultType: 'success' | 'failure' | 'rejected' | 'denied' | 'timeout';
+    binaryResultsForLlm?: Array<{ data: string; mimeType: string; type: 'image' | 'resource'; description?: string }>;
+  }
   export interface CanvasContext {
     sessionId: string; extensionId: string; canvasId: string; instanceId: string;
     input?: unknown; actionName?: string;

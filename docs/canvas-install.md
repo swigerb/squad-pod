@@ -28,6 +28,96 @@ them to the new artifact.
   Your organization must allow the plugin; do not bypass managed policy or trust
   prompts. See GitHub's [marketplace prerequisites](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/create-and-share-plugin-marketplaces#share-the-marketplace).
 
+## Agent-runnable qualification (C14 source candidate)
+
+The source now adds application-reported first-frame evidence and a read-only
+`get_office_snapshot` action. This is **not a new published version**, an
+installation instruction for an unapproved artifact, or a claim that the
+0.1.1 native gates passed. No native app execution is required to build/test
+these changes. Only run the procedure below later against an **owner-approved,
+installed artifact** with these capabilities.
+
+Keep evidence classes distinct: **CI/unit/synthetic harness**, **native app
+agent-tool observation using synthetic project data**, **human native UI
+acceptance**, **native VS Code**, and **REAL/paid task**. A unit-test socket reply
+or mocked canvas is synthetic evidence only. Running agent tools inside the
+native app can produce artifact-pinned native *observations*, not automatic
+human/compositor acceptance or proof of a real paid task.
+
+### Disposable-project tool procedure
+
+1. Prepare two disposable local synthetic Squad projects A and B, each with a
+   `.squad/team.md` roster containing visibly distinct synthetic names. Use
+   separate project sessions joined to A and B. Never pass B's path to A's
+   canvas: `projectRoot` is an optional equality assertion, not a project picker.
+   Record the approved artifact version, source/distribution SHA and checksums,
+   actual app/runtime builds, platform, project/session identities, timestamps
+   and expected synthetic rosters. Keep credentials, raw loopback URLs and
+   private paths out of shared evidence.
+2. Discover this installation's `squad-pod` canvas capabilities using
+   `list_canvas_capabilities`; use its actual provider identifier if ambiguous.
+   Verify `get_office_snapshot` exists. If it does not, record **BLOCKED** for
+   this candidate procedure, not a defect in the installed 0.1.1 release.
+3. In session A, invoke the following tools (examples show their JSON inputs):
+
+   ```text
+   open_canvas({"canvasId":"squad-pod","instanceId":"c14-a"})
+   invoke_canvas_action({"instanceId":"c14-a","actionName":"get_office_state","input":{}})
+   invoke_canvas_action({"instanceId":"c14-a","actionName":"get_office_snapshot","input":{}})
+   open_canvas({"canvasId":"squad-pod","instanceId":"c14-a"})
+   invoke_canvas_action({"instanceId":"c14-a","actionName":"get_office_state","input":{}})
+   invoke_canvas_action({"instanceId":"c14-a","actionName":"get_office_snapshot","input":{}})
+   ```
+
+   `open_canvas` with the same handle reopens/focuses; it **does not close**
+   anything. Record the roster/source/layout projection, requests-observed
+   counters, and `rendering.firstFrame`. A null first frame means **unknown**,
+   not rendering failure or host defect. The acknowledgement reports completed
+   application drawing, document visibility and IntersectionObserver
+   intersection, not compositor presentation or an unobscured window.
+   A snapshot requests a **new next-draw** readback, not a cached image. Inspect
+   the returned PNG and record its actual dimensions/byte count and synthetic
+   roster appearance. It excludes labels/cards outside the office canvas.
+   No frame, stalled/hidden rendering, timeout or lost authority produces one
+   sanitized action error, never a placeholder success/image. Retry deliberately
+   after the panel has had a chance to draw; do not loop without a bound (at most
+   three attempts per observation).
+4. Repeat in session B with `c14-b`, then refocus A and observe again. Confirm
+   each action returns only its own synthetic project. Do not copy cookies,
+   viewer credentials, instance handles or URLs between project sessions.
+5. For the **ten open/close cycles across two projects** row in #218, first
+   verify a supported close mechanism actually disposes the provider instance
+   (`onClose`), rather than merely hiding/focusing a tab. The current agent
+   `open_canvas`/`invoke_canvas_action` tools have no close action. Without an
+   independently verified host close mechanism or a person closing the panel,
+   record **BLOCKED: close unavailable** and stop this lifecycle subtest.
+   **Do not emulate closure by opening more handles.**
+   When a verified close mechanism is available, perform ten cycles total,
+   alternating A/B: open, bounded state/snapshot observation, close, and verify
+   disposal before the next cycle. Record instance/session/root isolation and
+   independently measured process/subscription counts before and after each
+   cycle. If those measurements are unavailable, record **NOT-PRODUCED** for
+   orphan/subscription evidence rather than inferring it from a successful open.
+   The CI synthetic disposal tests are not a substitute for native measurements.
+
+### What an agent can and cannot qualify
+
+| #218 area | Agent session subset | Still needs separate evidence/person |
+|---|---|---|
+| Rendering/read-only actions and two-project isolation (historical checks; rerun for the candidate) | Open, state, fresh bounded PNG, same-handle re-open/focus; synthetic project data only. | Compositor/human visible rendering, keyboard/focus/theme/resize and actual native UI acceptance. |
+| Ten open/close cycles across two projects | Ten alternating cycles only with a verified close/dispose mechanism and resource measurements; otherwise BLOCKED/NOT-PRODUCED as above. | Human close when no tool exists; independently measured orphan processes/subscriptions and native lifecycle acceptance. |
+| Update/rollback with preserved layouts | Read state after separately approved operations. | Person installs two approved distinct versions, updates/rolls back, and checks preserved data. |
+| Fault handling | Read state/snapshot after a separately controlled fault; unit/synthetic fault coverage remains CI evidence. | Controlled lost connections, malformed data, concurrent edits, source loss and denied permissions; this read-only action cannot inject faults or authorize edits. |
+| Disable/uninstall/reinstall | Observe availability after separately approved operations. | Person drives Customize lifecycle, verifies data preservation and app usability while unavailable. |
+| Native VS Code regression | None from these Canvas tools. | Separate VS Code native run and artifact-pinned receipt. |
+| Editing, embedded transfers and REAL/paid tasks (separate gates) | No write, launch, transfer or payment authority from state/snapshot. | Person performs per-instance Enable editing clicks and verifies picker/download/recovery; separately authorized REAL/paid acceptance. |
+
+Use one **PASS, FAIL, BLOCKED or NOT-PRODUCED** receipt per check in the #182
+format, referencing #218 and the exact artifact. Label the evidence class and
+limits on every receipt. First-frame acknowledgement, PNG, CI green or tool
+success alone must never promote an entire #218 row to native PASS. Installation,
+release approval and unsupported-platform restrictions remain unchanged.
+
 ## Install and open
 
 1. In the GitHub Copilot app, choose **Customize**.

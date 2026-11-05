@@ -78,6 +78,24 @@ The owner-approved preview does not close those broader capability gaps.
 | Nested directory add/remove/rename/navigation; directory CLI launch; terminal open/input/reconnect/close | Inaccessible through disabled directory entry point; no launch/terminal action offered. | No native filesystem, CLI-launch or terminal authority. | OPEN |
 | Startup diagnostic report | Unsupported request capability-gated; no visible button. | Host must advertise the action. | Candidate |
 | `get_office_state` readiness | Bounded per-instance request/handshake counters via the authorized Canvas action only. | Requests observed are not visible-renderer acceptance or host-fault evidence; no public diagnostics endpoint. | Candidate; 0.1.1 native checks pending |
+| `get_office_state` rendering (C14 source candidate) | `rendering.firstFrame` is null (unknown) until an authenticated webview reports a completed nonzero-area office draw. Reports first draw time (Unix milliseconds), frame count (saturates at 65535), backing-store pixel width/height, document visibility and IntersectionObserver intersection (`null` until known/unavailable). | Application-reported drawing, not compositor visibility, human observation or host-defect diagnosis. Request counters retain their separate meaning. | Source implementation; not published or native-qualified |
+| `get_office_snapshot` (C14 source candidate) | Read-only agent action returns one fresh PNG through SDK `ToolResultObject.binaryResultsForLlm` for the exact authorized requesting instance. On-demand next-draw readback; maximum 1024 x 768 pixels (aspect ratio preserved, no upscaling), 1 MiB decoded PNG, 2-second response deadline, one pending request per viewer socket. | Random request correlation, authenticated instance socket, PNG signature/dimensions/full decode/CRC checks. No image cache, cross-project lookup, control opt-in, filesystem writes or diagnostics endpoint. Missing frame, malformed/stale/oversized image, disconnect or timeout cannot return an image; action errors are sanitized. | Source implementation; application readback is not native acceptance |
+
+These C14 source changes do **not** change plugin version 0.1.1 or its catalog pin,
+and do not extend historical native results. First-frame evidence is a bounded
+first observation for the live viewer connection, not a continuous visibility
+monitor. `onScreen: true` means IntersectionObserver reported intersection,
+not that the window was unobscured or its pixels reached a display. PNG readback
+shows canvas contents, not the native compositor or other app UI. A hidden or
+stalled panel can have historical drawing evidence while a fresh snapshot times
+out. Disconnect discards that connection's evidence and pending reads.
+A deliberate retry replaces a timed-out request still queued in a stalled
+webview; resuming drawing returns only the latest nonce without disconnecting
+the office. The server continues to reject old/unsolicited snapshot results.
+
+See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-source-candidate)
+for the subset of #218 that can be investigated without UI automation; no result
+automatically changes a native gate to PASS.
 
 ## Remaining — OPEN release gates
 

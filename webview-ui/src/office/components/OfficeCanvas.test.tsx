@@ -18,12 +18,60 @@ import { ZoomControls } from '../../components/ZoomControls.js';
 import { TILE_SIZE } from '../../constants.js';
 import type { FloorColor, OfficeLayout } from '../types.js';
 import { resetPetTemplates, setPetTemplates } from '../sprites/petSpriteData.js';
+import { observeOfficeDrawing } from '../../canvas/rendering.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const client = createHostClientFixture();
 function withClient(children: ReactNode) {
   return <HostClientProvider client={client}>{children}</HostClientProvider>;
 }
+
+it.each([0, 800])('reports application drawing only after a nonzero-area renderer completes (width %s)', width => {
+  let render!: () => void;
+  let intersect!: (entries: Partial<IntersectionObserverEntry>[]) => void;
+  const disconnect = vi.fn();
+  vi.stubGlobal('IntersectionObserver', class {
+    constructor(callback: typeof intersect) { intersect = callback; }
+    observe = vi.fn();
+    disconnect = disconnect;
+  });
+  const ctx = { setTransform: vi.fn(), imageSmoothingEnabled: false };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0, y: 0, left: 0, top: 0, right: width, bottom: 600, width, height: 600, toJSON: () => ({}),
+  });
+  vi.spyOn(gameLoop, 'startGameLoop').mockImplementation((_canvas, callbacks) => {
+    render = () => callbacks.render(ctx as unknown as CanvasRenderingContext2D);
+    return () => {};
+  });
+  const frame = vi.spyOn(renderer, 'renderFrame').mockImplementation(() => {});
+  const office = new OfficeState({ version: 2, cols: 2, rows: 1, tiles: [1, 1], furniture: [] });
+  const container = document.createElement('div'), root = createRoot(container);
+  const send = vi.fn(), drawing = observeOfficeDrawing(send);
+  try {
+    act(() => root.render(withClient(<OfficeCanvas officeState={office} editorState={new EditorState()}
+      isEditMode={false} editorTick={0} zoom={1} panRef={{ current: { x: 0, y: 0 } }} />)));
+    expect(send).not.toHaveBeenCalled();
+    intersect([{ target: container.querySelector('canvas')!, isIntersecting: true, intersectionRatio: 1 }]);
+    render();
+    if (width) {
+      expect(frame).toHaveBeenCalledOnce();
+      expect(JSON.parse(send.mock.lastCall![0])).toEqual({ version: 1, kind: 'rendered', paint: {
+        firstPaintTime: expect.any(Number), frameCount: 1, width: 800, height: 600,
+        visibilityState: document.visibilityState, onScreen: true,
+      } });
+      expect(frame.mock.invocationCallOrder[0]).toBeLessThan(send.mock.invocationCallOrder[0]);
+    } else {
+      expect(frame).not.toHaveBeenCalled();
+      expect(send).not.toHaveBeenCalled();
+    }
+  } finally {
+    drawing.dispose();
+    act(() => root.unmount());
+    expect(disconnect).toHaveBeenCalledOnce();
+    vi.restoreAllMocks(); vi.unstubAllGlobals();
+  }
+});
 
 it.each([[1, 1], [2, 2], [4, 3]])('anchors transient links to interpolated walking geometry at zoom %s / DPR %s', (zoom, dpr) => {
   vi.stubGlobal('devicePixelRatio', dpr);

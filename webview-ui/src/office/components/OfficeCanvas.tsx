@@ -9,6 +9,7 @@ import { getFurnitureFootprint } from '../layout/layoutManager.js';
 import { getCatalogEntry } from '../layout/furnitureCatalog.js';
 import { startGameLoop } from '../engine/gameLoop.js';
 import { renderFrame } from '../engine/renderer.js';
+import { officeDrawn } from '../../canvas/rendering.js';
 import { clampPanOffset, fitOffice, zoomPanAroundAnchor, type CameraRequest } from '../engine/viewport.js';
 import { officePanStep, pinchZoom, type OfficePanAnchor, type Point } from '../../mobile/touchDecisions.js';
 import {
@@ -93,6 +94,7 @@ export function OfficeCanvas({
 }: OfficeCanvasProps) {
   const client = useHostClient();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawingRef = useRef<{ firstPaintTime?: number; frameCount: number }>({ frameCount: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -184,6 +186,12 @@ export function OfficeCanvas({
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    let onScreen: boolean | null = null;
+    const intersection = typeof IntersectionObserver === 'undefined' ? undefined
+      : new IntersectionObserver(entries => {
+        onScreen = entries.some(entry => entry.target === canvas && entry.isIntersecting && entry.intersectionRatio > 0);
+      });
+    intersection?.observe(canvas);
 
     // Initial sizing — may be 0 if webview hasn't laid out yet; that's OK,
     // the render callback re-checks every frame.
@@ -220,6 +228,7 @@ export function OfficeCanvas({
         dpr = window.devicePixelRatio || 1;
         const targetW = Math.round(r.width * dpr);
         const targetH = Math.round(r.height * dpr);
+        if (targetW <= 0 || targetH <= 0) return;
         if (targetW > 0 && targetH > 0 && (canvas.width !== targetW || canvas.height !== targetH)) {
           canvas.width = targetW;
           canvas.height = targetH;
@@ -320,10 +329,16 @@ export function OfficeCanvas({
           }
           ctx.restore();
         }
+        const drawing = drawingRef.current;
+        drawing.firstPaintTime ??= Date.now();
+        drawing.frameCount = Math.min(65535, drawing.frameCount + 1);
+        officeDrawn(canvas, { firstPaintTime: drawing.firstPaintTime, frameCount: drawing.frameCount,
+          width: canvas.width, height: canvas.height,
+          visibilityState: document.visibilityState === 'hidden' ? 'hidden' : 'visible', onScreen });
       },
     });
 
-    return () => { cleanup(); };
+    return () => { intersection?.disconnect(); cleanup(); };
   }, [officeState, isEditMode, isDebugMode, editorState, zoom, panRef, clampPan, showAreas, touchGestures]);
 
   const handleMouseDown = useCallback(
