@@ -124,22 +124,68 @@ test('allows valid repository issues, PRs, releases, pinned content and master r
   assert.doesNotThrow(() => validatePackagedMarkdown(`${packagedReadme}\n${validDestinations}`, 'README.md'));
 });
 
-test('storefront leads with the extension pitch and keeps observer guidance below installation', () => {
+test('storefront leads with the pitch, showcase and three-step onboarding within the copy budget', () => {
   const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
-  const tagline = readme.indexOf('**Your Squad AI team, but make it pixel art.**');
-  const features = readme.indexOf('## Features');
-  const showcase = readme.indexOf('## See Squad Pod in action');
-  const installation = readme.search(/^## Install\r?$/m);
-  const observer = readme.indexOf('## Local browser observer');
-  assert(tagline >= 0 && tagline < features && features < showcase);
-  assert(installation >= 0 && observer > installation);
+  const wordCount = readme.trim().split(/\s+/).length;
+  assert(wordCount >= 500 && wordCount <= 700, `README word count: ${wordCount}`);
+  const sections = [
+    'Your Squad AI team, brought to life in a pixel-art office.',
+    'Squad-Pod-Sizzle-preview.gif',
+    '## Get started',
+    '## What you can do',
+    '## Settings',
+    '## Compatibility and privacy',
+    '## Learn more',
+  ].map(text => readme.indexOf(text));
+  assert(sections.every((position, index) => position >= 0 && (index === 0 || position > sections[index - 1])));
+  const onboarding = readme.slice(sections[2], sections[3]);
+  assert.deepEqual([...onboarding.matchAll(/^(\d+)\. /gm)].map(match => match[1]), ['1', '2', '3']);
+  const features = readme.slice(sections[3], sections[4]);
+  const featureCount = [...features.matchAll(/^- \*\*/gm)].length;
+  assert(featureCount >= 5 && featureCount <= 6, `Feature count: ${featureCount}`);
   assert(!readme.includes('## Preview release scope'));
-  assert(readme.includes('Opt in to matching local Copilot CLI sessions'));
+});
+
+test('storefront settings reflect the manifest and preserve consent and explicit launch boundaries', () => {
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const properties = manifest.contributes.configuration.properties;
+  const settings = [...readme.matchAll(/^\|\s*`(squad-pod\.[^`]+)`\s*\|\s*`(true|false)`\s*\|/gm)];
+  assert.deepEqual(settings.map(match => match[1]).sort(), Object.keys(properties).sort());
+  for (const [, setting, defaultValue] of settings) {
+    assert.equal(defaultValue, String(properties[setting].default), setting);
+  }
+  assert(!readme.includes('squad-pod.soundNotifications'));
+  assert(readme.includes('Sound notifications are in the office **Settings** panel'));
+  assert(readme.includes('Live activity is opt-in'));
+  assert(readme.includes('Opening the panel never starts a task'));
+  assert(readme.includes('only when you select **Launch**'));
   assert(readme.includes('## Compatibility and privacy'));
-  assert(readme.includes('not permanent reporting lines or automatic roster promotions'));
-  assert(readme.includes('not a remote-access service or a supported phone/tablet product'));
+});
+
+test('storefront links to preserved user and contributor guidance, credits and compatibility limits', () => {
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  const guide = fs.readFileSync(path.join(root, 'docs', 'user-guide.md'), 'utf8');
+  const contributing = fs.readFileSync(path.join(root, 'docs', 'contributing.md'), 'utf8');
+  for (const target of [
+    'docs/user-guide.md',
+    'docs/user-guide.md#compatibility-and-privacy',
+    'docs/user-guide.md#showcase-credits',
+    'docs/contributing.md',
+    'docs/native-acceptance.md#cli-import-contract',
+    'standalone/README.md#optional-live-activity',
+    'assets/showcase/Squad-Pod-Sizzle.srt',
+    'THIRD_PARTY_NOTICES.md',
+  ]) {
+    assert(readme.includes(`](${target})`), `Missing README link: ${target}`);
+  }
+  assert(guide.includes('not permanent reporting lines or automatic roster promotions'));
+  assert(guide.includes('not a remote-access service or a supported phone/tablet product'));
+  assert(guide.includes('Switch to Release Version'));
+  assert(guide.includes('Squad-Pod-Soundtrack.mp3'));
+  assert(guide.includes('## Showcase credits'));
+  assert(contributing.includes('npm run install:all'));
+  assert(contributing.includes('npm run package'));
   assert(readme.includes('docs/testing.md#stable-10-release-scope'));
-  assert(readme.includes('Switch to Release Version'));
   assert(readme.includes('Squad-Pod-Sizzle-preview.gif'));
 });
 

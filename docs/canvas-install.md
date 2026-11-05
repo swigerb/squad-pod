@@ -3,7 +3,7 @@
 **Canvas 0.1.2 is being prepared.** The currently published pre-release and
 marketplace pin remain at plugin **0.1.1**, an owner-approved Windows preview,
 not generally available. It brings the pixel-art Squad office into a GitHub
-Copilot app session. This is separate from the [VS Code Marketplace extension](../README.md#install)
+Copilot app session. This is separate from the [VS Code Marketplace extension](user-guide.md#install)
 and the source-only [standalone browser companion](../standalone/README.md).
 Installing a VSIX or updating Copilot CLI does not install or update this plugin.
 The **GitHub Copilot app** is the native agent desktop application, **not GitHub
