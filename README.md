@@ -149,11 +149,12 @@ See the [build/run and security instructions](standalone/README.md). The compani
 
 ## GitHub Copilot app Canvas plugin — Windows preview
 
-**Canvas plugin 0.1.1** is an owner-approved Windows local-session preview, not
-generally available or the VS Code Marketplace/VSIX extension. Prior **0.1.0**
-native evidence used app **1.1.34** / runtime **1.0.102** on Windows x64; it is
-not 0.1.1 acceptance or a minimum-version promise. Native 0.1.1 checks are
-pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
+**Canvas plugin 0.1.2 is being prepared.** The currently published, owner-approved
+Windows local-session preview remains **0.1.1**, not generally available or the
+VS Code Marketplace/VSIX extension. Prior **0.1.0** native evidence used app
+**1.1.34** / runtime **1.0.102** on Windows x64; it is not 0.1.1 or 0.1.2
+acceptance or a minimum-version promise. Native checks for both newer versions
+remain pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
 macOS, Linux, WSL and remote sessions are unsupported. No source checkout,
 Node.js installation or build is needed by plugin users.
 

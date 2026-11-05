@@ -13,7 +13,7 @@ node --test scripts\verify-canvas-plugin.test.mjs
 `plugins/squad-pod/` is generated, gitignored, ready to run and excluded from
 the VSIX. Do not commit it to master. Distribution commits/catalog publication
 are separate release work (#181/C11); end users must not run npm builds.
-The plugin version is **0.1.1**, sourced only from
+The plugin version is **0.1.2**, sourced only from
 `standalone/canvas-plugin.json`, independently of VSIX **1.0.0** and the private
 standalone observer **0.1.0**. Do not bump those other products for Canvas.
 
@@ -50,7 +50,7 @@ Create a separate local marketplace directory with
   "name": "squad-pod-local",
   "owner": { "name": "Brian Swiger" },
   "plugins": [{
-    "name": "squad-pod", "version": "0.1.1",
+    "name": "squad-pod", "version": "0.1.2",
     "description": "Experimental read-only Squad Pod Canvas",
     "source": "./plugins/squad-pod"
   }]
@@ -79,11 +79,13 @@ proves dependency-free ESM startup and static UI serving, **not** native app
 acceptance, SDK compatibility, real-session observation or editor behavior.
 These checks do not install the plugin or change app configuration.
 
-## Optional host-mediated capabilities (#223; source/unreleased)
+## Canvas 0.1.2 host-mediated candidates (#223)
 
-This section describes unshipped source candidates, **not the published 0.1.1
-ZIP/catalog pin**. Installing 0.1.1 does not provide these capabilities. Its
-charter/CLI-import OPEN rows and browser-transfer gates remain unchanged.
+Canvas 0.1.2 includes these host-mediated candidates. The currently published
+0.1.1 ZIP and catalog pin remain unchanged until the separate catalog update;
+installing 0.1.1 does not provide these capabilities. Native acceptance for
+0.1.2 remains pending in #218. The charter/CLI-import OPEN rows and
+browser-transfer gates remain unchanged.
 
 `standalone/src/canvas/hostCapabilities.ts` owns each instance's optional bridge.
 The installed experimental SDK's generated RPC declarations document
@@ -133,7 +135,7 @@ The new headless mocked-SDK smoke in `officeHost.test.ts` exercises a real
 provider/loopback listener, auth refusals, session metrics, editing-gated export,
 exact JSON bytes and disposal on all three CI operating systems. It does not
 run the app, install a plugin, authorize terminal execution or establish native
-acceptance. All these capabilities are **Candidate; pending native**. See the
+acceptance. All these capabilities are **Candidate; pending native acceptance (#218)**. See the
 [feature matrix](canvas-feature-matrix.md#platform-investigation-static-only-223)
 for the static URL/loopback findings and explicit unsupported WSL/remote disposition.
 
@@ -154,8 +156,10 @@ master.
    verify Git blobs match the checksum receipt (including on Windows).
 4. Create a new immutable `canvas-v<version>` tag at that distribution commit.
    Never move an existing tag. Publish a GitHub **pre-release**, explicitly
-   **not Latest**, with a downloadable plugin archive and its SHA-256. Keep
-   stable VSIX `v1.0.0` as Latest.
+   **not Latest**, with `squad-pod-canvas-0.1.2.zip`,
+   `canvas-0.1.2-freeze.json`, `canvas-0.1.2-build-info.json`,
+   `canvas-0.1.2-checksums.json` and `SHA256SUMS`. Keep stable VSIX `v1.0.0`
+   as Latest.
 5. In a separate focused PR, update `.github/plugin/marketplace.json` version,
    `source.ref` and full `source.sha` together. Include the exact provenance in
    the install guide. Require exact-head CI before merging; catalog publication
@@ -163,7 +167,7 @@ master.
 
 Record source SHA/tree, dist SHA/tag, plugin entry/build-info/checksum hashes,
 receipt payload byte/file counts, downloadable archive URL/hash and CI run IDs.
-Keep the 0.1.0 evidence pins unchanged. New 0.1.1 native checks, including
+Keep the 0.1.0 evidence pins unchanged. New 0.1.2 native checks, including
 update/rollback between distinct releases with retained data, belong to #218.
 Only the designated owner/Scout should install or qualify the native candidate.
 
@@ -172,7 +176,7 @@ conversion for that command, then compare the ZIP's decompressed payload bytes
 to every receipt entry before publication. For example:
 
 ```powershell
-git -c core.autocrlf=false archive --format=zip --prefix=squad-pod/ --output squad-pod-canvas-0.1.1.zip canvas-v0.1.1:plugins/squad-pod
+git -c core.autocrlf=false archive --format=zip --prefix=squad-pod/ --output squad-pod-canvas-0.1.2.zip canvas-v0.1.2:plugins/squad-pod
 ```
 
 Default `git archive` settings can otherwise convert text despite byte-exact
