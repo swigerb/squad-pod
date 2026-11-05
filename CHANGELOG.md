@@ -4,17 +4,17 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
-## Canvas plugin 0.1.2 — Windows preview (preparing)
+## Canvas plugin 0.1.2 — Windows preview — 2026-11-05
 
-This focused source/version/docs update prepares the separate GitHub Copilot
-app plugin. The published marketplace pin and release remain at 0.1.1; the
-catalog update is separate, and native acceptance remains pending in #218.
+This is the separate GitHub Copilot app plugin, not a VSIX release or version
+bump. The pre-release and marketplace now pin Canvas plugin 0.1.2; native
+acceptance remains pending in #218.
 
 - Bump only the Canvas plugin version to 0.1.2; the VSIX and private standalone
   observer versions remain unchanged.
-- Include the C14 renderer drawing evidence/snapshot and C15 host-mediated
-  charter, session usage and layout transfer capabilities in the candidate
-  release truth. These remain **Candidate; pending native acceptance (#218)**.
+- Publish the C14 renderer drawing evidence/snapshot and C15 host-mediated
+  charter, session usage and layout transfer capabilities as candidates.
+  Native checks remain pending; these features are not accepted native behavior.
 - Preserve the historical 0.1.0 native evidence and the published 0.1.1
   provenance; no automated build or test is native acceptance.
 
