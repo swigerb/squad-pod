@@ -38,7 +38,7 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     const client = await pending;
     expect(f.request.mock.calls).toEqual([['/office-context', { credentials: 'same-origin', cache: 'no-store' }]]);
     expect(client.capabilities).toBe(CANVAS_OBSERVER_CAPABILITIES);
-    expect(f.createClient).toHaveBeenCalledWith(expect.any(Function), undefined, window.location.origin);
+    expect(f.createClient).toHaveBeenCalledWith(expect.any(Function), undefined, window.location.origin, undefined, true);
     const reload = fixture([response(200)]);
     await reload.bootstrap();
     expect(reload.request).toHaveBeenCalledTimes(1);

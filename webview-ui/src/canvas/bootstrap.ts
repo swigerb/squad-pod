@@ -70,7 +70,7 @@ export function createCanvasBootstrap(
         || !/^[a-zA-Z0-9_-]{43}$/.test(identity.serverIdentity)) throw new Error();
       failure = 'OFFICE_START_FAILED';
       status(canvasDiagnostic('OFFICE_STARTING'));
-      const client = observe(createClient(onStatus, undefined, target.location.origin));
+      const client = observe(createClient(onStatus, undefined, target.location.origin, undefined, true));
       let editing: Promise<BrowserHostClient> | undefined;
       return {
         ...client, capabilities: CANVAS_OBSERVER_CAPABILITIES,
@@ -105,7 +105,7 @@ export function createCanvasBootstrap(
               const control = observe(createClient(onStatus,
                 undefined, target.location.origin, {
                 recoveryKey: `squad-office:${context.serverIdentity}:${context.projectIdentity}`, onPreferenceDraft,
-              }));
+              }, true));
               try { control.getState(); }
               catch (error) { control.dispose(); throw error; }
               return { ...control, capabilities: CANVAS_CONTROL_CAPABILITIES };

@@ -80,6 +80,65 @@ afterEach(async () => {
 });
 
 describe('host-injected Canvas provider', () => {
+  it('returns unknown drawing until reported and projects evidence only for the authorized instance', async () => {
+    const f = await fixture();
+    await f.canvas.open(ctx());
+    await f.canvas.open(ctx(undefined, 'second'));
+    const paint = { firstPaintTime: 123, frameCount: 1, width: 800, height: 600,
+      visibilityState: 'visible' as const, onScreen: true };
+    hosts[0].rendered = vi.fn(() => paint);
+    expect(await action(f.canvas, 'get_office_state')).toMatchObject({ rendering: { firstFrame: paint } });
+    expect(await action(f.canvas, 'get_office_state', {}, ctx(undefined, 'second')))
+      .toMatchObject({ rendering: { firstFrame: null } });
+  });
+
+  it('returns SDK image results from only the exact authorized instance without granting write/control access', async () => {
+    const f = await fixture();
+    await f.canvas.open(ctx());
+    await f.canvas.open(ctx(undefined, 'second'));
+    const first = vi.fn(async () => 'first-png'), second = vi.fn(async () => 'second-png');
+    hosts[0].capture = first; hosts[1].capture = second;
+    for (const context of [{ ...ctx(), sessionId: 'foreign' }, { ...ctx(), extensionId: 'foreign' },
+      { ...ctx(), canvasId: 'foreign' }, ctx(undefined, 'absent')]) {
+      await expect(action(f.canvas, 'get_office_snapshot', {}, context)).rejects.toThrow();
+    }
+    await expect(action(f.canvas, 'get_office_snapshot', { projectRoot: other })).rejects.toThrow();
+    await expect(action(f.canvas, 'get_office_snapshot', { enableEditing: true })).rejects.toThrow();
+    expect(first).not.toHaveBeenCalled(); expect(second).not.toHaveBeenCalled();
+    expect(await action(f.canvas, 'get_office_snapshot')).toEqual({
+      resultType: 'success',
+      textResultForLlm: expect.stringContaining('not compositor visibility or native acceptance'),
+      binaryResultsForLlm: [{ type: 'image', mimeType: 'image/png', data: 'first-png' }],
+    });
+    expect(await action(f.canvas, 'get_office_snapshot', {}, ctx(undefined, 'second')))
+      .toMatchObject({ binaryResultsForLlm: [{ data: 'second-png' }] });
+    expect(first).toHaveBeenCalledOnce(); expect(second).toHaveBeenCalledOnce();
+    await f.canvas.onClose(ctx());
+    await expect(action(f.canvas, 'get_office_snapshot')).rejects.toThrow();
+    expect(first).toHaveBeenCalledOnce();
+  });
+
+  it('sanitizes capture errors and withholds results after close, reopen or context revocation', async () => {
+    const f = await fixture();
+    await f.canvas.open(ctx());
+    hosts[0].capture = vi.fn(async () => { throw new Error('private-path credential raw PNG'); });
+    await expect(action(f.canvas, 'get_office_snapshot')).rejects.toMatchObject({
+      code: 'canvas_snapshot_unavailable', message: 'Squad Pod Canvas authority or resource unavailable',
+    });
+    for (const revoke of [
+      () => f.canvas.onClose(ctx()), () => f.canvas.open(ctx()),
+      () => { f.event('session.context_changed'); },
+    ]) {
+      await f.canvas.open(ctx());
+      let resolve!: (value: string) => void;
+      hosts[hosts.length - 1].capture = () => new Promise(accept => { resolve = accept; });
+      const read = action(f.canvas, 'get_office_snapshot');
+      await revoke();
+      resolve('private-stale-image');
+      await expect(read).rejects.toThrow();
+    }
+  });
+
   it('reads readiness only after state-action authority and input validation, never for member details', async () => {
     const f = await fixture();
     await f.canvas.open(ctx());
@@ -99,13 +158,13 @@ describe('host-injected Canvas provider', () => {
     expect(readiness).not.toHaveBeenCalled();
   });
 
-  it('joins once, declares exactly two read-only actions, and starts only the authoritative root', async () => {
+  it('joins once, declares exactly three read-only actions, and starts only the authoritative root', async () => {
     const f = await fixture();
     expect(f.sdk.joinSession).toHaveBeenCalledExactlyOnceWith({ canvases: [f.canvas] });
     expect(f.sdk.createCanvas).toHaveBeenCalledOnce();
     expect(f.canvas).toMatchObject({ id: 'squad-pod', displayName: 'Squad Pod',
       inputSchema: { additionalProperties: false, properties: { projectRoot: { maxLength: 4096 } } } });
-    expect(f.canvas.actions.map(value => value.name)).toEqual(['get_office_state', 'get_member_details']);
+    expect(f.canvas.actions.map(value => value.name)).toEqual(['get_office_state', 'get_member_details', 'get_office_snapshot']);
     expect(f.canvas.actions[1].inputSchema).toMatchObject({ required: ['slug'], additionalProperties: false });
     expect(startCanvasOfficeHost).not.toHaveBeenCalled();
     const opened = await f.canvas.open(ctx());
@@ -544,6 +603,7 @@ describe('host-injected Canvas provider', () => {
     await f.canvas.open(ctx());
     expect(await action(f.canvas, 'get_office_state')).toEqual({
       members: [{ slug: 'lisa', name: 'Lisa', role: 'Developer', status: 'idle', statusSource: 'local-file-observation' }],
+      rendering: { semantics: 'application-reported-drawing-not-compositor-visibility', firstFrame: null },
       layout: { cols: 2, rows: 1, furnitureCount: 0 },
       source: { teamFound: true, observer: 'watching', liveActivity: 'unavailable', diagnostics: 'unavailable' },
     });
