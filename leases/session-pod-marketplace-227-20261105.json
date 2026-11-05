@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "leaseKey": "session-pod-marketplace-227-20261105",
+  "sessionId": "pod-marketplace-227-20261105",
+  "repository": "swigerb/squad-pod",
+  "issueNumber": null,
+  "dispatchSource": "local-cli",
+  "route": "aca-job",
+  "executionMode": "aca-job",
+  "state": "claimed",
+  "attempts": 1,
+  "startedAt": "2026-11-05T20:27:15.246Z",
+  "lastHeartbeatAt": "2026-11-05T20:27:15.246Z",
+  "updatedAt": "2026-11-05T20:27:15.246Z",
+  "terminalReason": null,
+  "executionRef": null
+}
