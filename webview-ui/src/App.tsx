@@ -512,7 +512,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone, canvas }: { reco
         } : null}
         position={cardPosition}
         onClose={handleCloseCard}
-        onViewCharter={readOnly || standalone ? undefined : handleViewCharter}
+        onViewCharter={client.canvasHost?.charter || (!readOnly && !standalone) ? handleViewCharter : undefined}
         runtimeModel={agentDetail ? memberRuntimeModel(liveModels, agentDetail.id) : null}
         liveActivity={sourceStatus?.liveActivity}
         readOnly={readOnly || standalone}
@@ -527,7 +527,7 @@ function ConnectedOffice({ recoveryState, readOnly, standalone, canvas }: { reco
         agentDetails={agentDetails}
         availableAgentIds={agents}
         onRequestAgentDetail={handleRequestSquadDetail}
-        onOpenCharter={readOnly || standalone ? undefined : handleViewCharter}
+        onOpenCharter={client.canvasHost?.charter || (!readOnly && !standalone) ? handleViewCharter : undefined}
         onClose={handleCloseSquadInfo}
       />
       {isDirectoryModalOpen && (

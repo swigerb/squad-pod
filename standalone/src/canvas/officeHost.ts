@@ -6,6 +6,7 @@ import { createOfficeControl } from '../officeControl.js';
 import type { OutboundMessage } from '../../../src/types.js';
 import { CanvasActivity } from './activity.js';
 import { CanvasReadiness, type ReadinessSnapshot } from './readiness.js';
+import type { CanvasHostHandler } from './hostCapabilities.js';
 
 /** Explicit local inputs supplied by a host adapter, not by a browser request. */
 export interface CanvasOfficeHostOptions {
@@ -13,6 +14,7 @@ export interface CanvasOfficeHostOptions {
   bundledAssetsRoot: string;
   staticRoot: string;
   sessionId?: string;
+  hostCapabilities?: (snapshot: () => Promise<OutboundMessage[]>) => CanvasHostHandler;
 }
 
 /** Instance-owned office. The fragment contains only a single-use viewer secret. */
@@ -77,6 +79,7 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
     transport = await startTransport({
       staticRoot: options.staticRoot, canvas: true, canvasReadiness: event => readiness.observe(event),
       officeControl: createOfficeControl(root),
+      canvasHost: options.hostCapabilities?.(snapshot),
       snapshot, subscribe: listener => {
         listeners.add(listener);
         const stop = observer!.subscribe(messages => listener(live ? live.snapshot(messages) : messages));

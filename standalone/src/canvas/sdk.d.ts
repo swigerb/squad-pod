@@ -1,4 +1,4 @@
-/** Host-injected experimental SDK contract (public v1.0.28 surface only). */
+/** Host-injected experimental SDK contract; optional runtime methods are capability-gated. */
 declare module '@github/copilot-sdk/extension' {
   export interface CanvasContext {
     sessionId: string; extensionId: string; canvasId: string; instanceId: string;
@@ -6,7 +6,17 @@ declare module '@github/copilot-sdk/extension' {
   }
   export interface JoinedSession {
     sessionId: string;
-    rpc?: { metadata?: { snapshot(): Promise<unknown> } };
+    rpc?: {
+      metadata?: { snapshot(): Promise<unknown> };
+      canvas?: {
+        list?(): Promise<unknown>;
+        open(params: {
+          extensionId?: string; canvasId: string; instanceId: string; input: { scope: 'repo'; path: string };
+        }): Promise<unknown>;
+      };
+      usage?: { getMetrics(): Promise<unknown> };
+      workspaces?: { createFile(params: { path: string; content: string }): Promise<void> };
+    };
     on(handler: (event: { type: string; id?: string; agentId?: string; timestamp?: string; data?: unknown }) => void): () => void;
   }
   export interface CanvasDefinition {

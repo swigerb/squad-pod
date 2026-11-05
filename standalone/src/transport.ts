@@ -10,6 +10,7 @@ import { terminalSocket } from './terminalSocket.js';
 import { decodeControl, MAX_CONTROL_FRAME, type OfficeControl } from './officeControl.js';
 import { defaultPreferences } from './officePreferences.js';
 import type { ReadinessEvent } from './canvas/readiness.js';
+import type { CanvasHostHandler } from './canvas/hostCapabilities.js';
 
 export interface TransportOptions {
   port?: number;
@@ -24,10 +25,12 @@ export interface TransportOptions {
   canvas?: boolean;
   /** Canvas-instance facts only; never request data or diagnostics on other hosts. */
   canvasReadiness?: (event: ReadinessEvent) => void;
+  canvasHost?: CanvasHostHandler;
 }
 
 const MAX_CONNECTIONS = 8;
 const MAX_INBOUND = 4096;
+const MAX_HOST_REQUEST = 4 * 1024 * 1024 + 8192; // JSON string escaping of a 2 MiB export.
 const MAX_FRAME = 8 * 1024 * 1024;
 const MAX_QUEUE = 16 * 1024 * 1024;
 const READ_TIMEOUT = 5000;
@@ -248,6 +251,40 @@ export async function startTransport(options: TransportOptions): Promise<{
       ));
     }
     if (!validHost(request)) { reply(response, 403, 'FORBIDDEN'); return; }
+    if (options.canvas && request.url === '/canvas-host' && request.method === 'POST') {
+      if (!options.canvasHost || !validOrigin(request) || !authenticated(request)
+        || singleHeader(request, 'content-type') !== 'application/json') {
+        reply(response, 403, 'FORBIDDEN'); return;
+      }
+      const admittedGeneration = generation;
+      let size = 0;
+      const chunks: Buffer[] = [];
+      const timer = setTimeout(() => { reply(response, 408, 'TIMEOUT'); request.destroy(); }, READ_TIMEOUT);
+      request.once('close', () => clearTimeout(timer));
+      request.on('error', () => clearTimeout(timer));
+      request.on('data', (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > MAX_HOST_REQUEST) {
+          clearTimeout(timer);
+          reply(response, 413, 'TOO_LARGE');
+          response.once('finish', () => request.destroy());
+        } else chunks.push(chunk);
+      });
+      request.once('end', () => {
+        clearTimeout(timer);
+        if (size > MAX_HOST_REQUEST || disposed) return;
+        if (generation !== admittedGeneration) { reply(response, 403, 'FORBIDDEN'); return; }
+        let input: unknown;
+        try { input = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+        catch { reply(response, 400, 'INVALID_MESSAGE'); return; }
+        void options.canvasHost!(input, controlAuthenticated(request)).then(result => {
+          if (disposed || generation !== admittedGeneration) { reply(response, 403, 'FORBIDDEN'); return; }
+          response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          response.end(JSON.stringify(result));
+        }, () => reply(response, 503, 'HOST_UNAVAILABLE'));
+      });
+      return;
+    }
     if (options.canvas && request.url === '/control-intent' && request.method === 'POST') {
       if (!options.officeControl || !validOrigin(request) || !authenticated(request)) {
         reply(response, 403, 'FORBIDDEN'); return;
@@ -318,7 +355,8 @@ export async function startTransport(options: TransportOptions): Promise<{
       if (!authenticated(request) && !controlAuthenticated(request)) { reply(response, 403, 'FORBIDDEN'); return; }
       response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       response.end(JSON.stringify({ serverIdentity, projectIdentity: options.officeControl?.projectIdentity ?? null,
-        ...(options.canvas ? { controlAuthorized: controlAuthenticated(request) } : {}) }));
+        ...(options.canvas ? { controlAuthorized: controlAuthenticated(request),
+          hostCapabilities: options.canvasHost?.available?.() } : {}) }));
       return;
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {

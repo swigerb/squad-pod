@@ -4,6 +4,7 @@ import { connectOffice } from '../../../src/core/officeChannel.js';
 import { LayoutDraft } from '../office/editor/layoutDraft.js';
 import type { OfficeLayout } from '../office/types.js';
 import { defaultPreferences } from '../../../standalone/src/officePreferences.js';
+import type { CanvasHostBridge } from '../../../src/core/canvasHost.js';
 
 class Socket {
   readyState = 0;
@@ -18,6 +19,35 @@ class Socket {
 afterEach(() => vi.useRealTimers());
 describe('production browser HostClient adapter', () => {
   const layout: OfficeLayout = { version: 2, cols: 2, rows: 2, tiles: [1, 1, 1, 1], furniture: [] };
+  it('routes Canvas charter and recovery exports through the host and imports only as an opted-in draft', async () => {
+    const bridge: CanvasHostBridge = { charter: true, usage: true, export: true,
+      openCharter: vi.fn(async () => undefined), getUsage: vi.fn(async () => []),
+      exportLayout: vi.fn(async () => 'squad-pod-layout-11111111-1111-1111-1111-111111111111.json'),
+      importLayout: vi.fn(async () => layout),
+    };
+    const status = vi.fn();
+    const createSocket = () => new Socket() as unknown as WebSocket;
+    const observer = createBrowserClient(status, createSocket, 'http://127.0.0.1:1234', undefined, bridge);
+    const control = createBrowserClient(status, createSocket, 'http://127.0.0.1:1234',
+      { recoveryKey: 'fixture', storage: { getItem: () => null, setItem: vi.fn() } }, bridge);
+    const received = vi.fn();
+    const stop = control.subscribe(received);
+    try {
+      observer.send({ type: 'openSquadAgent', agentId: 'test-bot' });
+      expect(bridge.openCharter).toHaveBeenCalledExactlyOnceWith('test-bot');
+      observer.send({ type: 'exportLayoutSnapshot', layout });
+      expect(bridge.exportLayout).not.toHaveBeenCalled();
+      await expect(observer.canvasHost!.importLayout('office.json')).rejects.toThrow();
+      expect(bridge.importLayout).not.toHaveBeenCalled();
+      control.send({ type: 'exportLayoutSnapshot', layout });
+      await vi.waitFor(() => expect(status).toHaveBeenCalledWith(
+        "Layout JSON exported to this session's workspace files: squad-pod-layout-11111111-1111-1111-1111-111111111111.json"));
+      expect(bridge.exportLayout).toHaveBeenCalledExactlyOnceWith(JSON.stringify(layout, null, 2));
+      await control.canvasHost!.importLayout('office.json');
+      expect(received).toHaveBeenLastCalledWith({ type: 'layoutLoaded', layout, revision: null, workspaceRoot: '', source: 'import' });
+      expect(received.mock.calls.flat().some(m => m.type === 'layoutSaved')).toBe(false);
+    } finally { stop(); observer.dispose(); control.dispose(); }
+  });
   it('advertises only existing observer reads and keeps writes, recovery and navigation unavailable', () => {
     const status = vi.fn();
     const ws = new Socket();

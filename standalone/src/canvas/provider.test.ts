@@ -110,7 +110,7 @@ describe('host-injected Canvas provider', () => {
     expect(startCanvasOfficeHost).not.toHaveBeenCalled();
     const opened = await f.canvas.open(ctx());
     expect(opened).toEqual({ title: 'Squad Pod', url: hosts[0].url });
-    expect(startCanvasOfficeHost).toHaveBeenCalledExactlyOnceWith({ ...paths, projectRoot: root, sessionId: 'joined-session' });
+    expect(startCanvasOfficeHost).toHaveBeenCalledExactlyOnceWith({ ...paths, projectRoot: root, sessionId: 'joined-session', hostCapabilities: expect.any(Function) });
   });
 
   it('accepts a canonical alias but rejects an arbitrary projectRoot before startup', async () => {
@@ -420,7 +420,7 @@ describe('host-injected Canvas provider', () => {
     });
     await f.canvas.open(ctx());
     expect(startCanvasOfficeHost).toHaveBeenLastCalledWith({
-      ...paths, projectRoot: other, sessionId: 'joined-session',
+      ...paths, projectRoot: other, sessionId: 'joined-session', hostCapabilities: expect.any(Function),
     });
     expect(f.session.on).toHaveBeenCalledOnce();
   });

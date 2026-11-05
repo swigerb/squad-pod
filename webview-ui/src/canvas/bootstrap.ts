@@ -2,6 +2,7 @@ import { CANVAS_CONTROL_CAPABILITIES, CANVAS_OBSERVER_CAPABILITIES } from '../..
 import { createBrowserClient, type BrowserHostClient } from '../standalone/browserClient.js';
 import type { PreferenceMutation } from '../../../standalone/src/officePreferences.js';
 import { CanvasBootstrapError, canvasDiagnostic, canvasTransportStatus, type CanvasDiagnosticCode } from './diagnostics.js';
+import { createHostBridge, HOST_UNAVAILABLE } from './hostBridge.js';
 
 export const CANVAS_EDIT_FAILED = 'Editing authority or recovery storage unavailable. No office changes were sent; existing drafts were kept. Reopen the canvas or recover its browser storage.';
 export interface CanvasHostClient extends BrowserHostClient {
@@ -24,7 +25,9 @@ export function createCanvasBootstrap(
       try { return await request(...args); }
       catch { throw new CanvasBootstrapError('NETWORK_FAILED'); }
     };
-    const onStatus = (state: string) => status(canvasTransportStatus(state));
+    const onStatus = (state: string) => status(state === HOST_UNAVAILABLE
+      || /^Layout JSON exported to this session's workspace files: squad-pod-layout-[a-f0-9-]{36}\.json$/.test(state)
+      ? state : canvasTransportStatus(state));
     const observe = (client: BrowserHostClient): BrowserHostClient => ({
       ...client,
       subscribe(listener) {
@@ -70,7 +73,9 @@ export function createCanvasBootstrap(
         || !/^[a-zA-Z0-9_-]{43}$/.test(identity.serverIdentity)) throw new Error();
       failure = 'OFFICE_START_FAILED';
       status(canvasDiagnostic('OFFICE_STARTING'));
-      const client = observe(createClient(onStatus, undefined, target.location.origin));
+      const bridge = createHostBridge(request, () => disposed, status,
+        'hostCapabilities' in identity ? identity.hostCapabilities : undefined);
+      const client = observe(createClient(onStatus, undefined, target.location.origin, undefined, bridge));
       let editing: Promise<BrowserHostClient> | undefined;
       return {
         ...client, capabilities: CANVAS_OBSERVER_CAPABILITIES,
@@ -102,13 +107,17 @@ export function createCanvasBootstrap(
                 || !('projectIdentity' in context) || typeof context.projectIdentity !== 'string'
                 || !/^[a-f0-9]{64}$/.test(context.projectIdentity)
                 || !('controlAuthorized' in context) || context.controlAuthorized !== true) throw new Error();
+              let controlDisposed = false;
+              const controlBridge = createHostBridge(request, () => controlDisposed, status,
+                'hostCapabilities' in context ? context.hostCapabilities : undefined);
               const control = observe(createClient(onStatus,
                 undefined, target.location.origin, {
                 recoveryKey: `squad-office:${context.serverIdentity}:${context.projectIdentity}`, onPreferenceDraft,
-              }));
+              }, controlBridge));
               try { control.getState(); }
               catch (error) { control.dispose(); throw error; }
-              return { ...control, capabilities: CANVAS_CONTROL_CAPABILITIES };
+              return { ...control, capabilities: CANVAS_CONTROL_CAPABILITIES,
+                dispose() { controlDisposed = true; control.dispose(); } };
             } catch { throw new Error(CANVAS_EDIT_FAILED); }
           })();
         },

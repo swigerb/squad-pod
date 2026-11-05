@@ -38,12 +38,33 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     const client = await pending;
     expect(f.request.mock.calls).toEqual([['/office-context', { credentials: 'same-origin', cache: 'no-store' }]]);
     expect(client.capabilities).toBe(CANVAS_OBSERVER_CAPABILITIES);
-    expect(f.createClient).toHaveBeenCalledWith(expect.any(Function), undefined, window.location.origin);
+    expect(f.createClient).toHaveBeenCalledWith(expect.any(Function), undefined, window.location.origin, undefined,
+      expect.objectContaining({ charter: false, usage: false, export: false }));
     const reload = fixture([response(200)]);
     await reload.bootstrap();
     expect(reload.request).toHaveBeenCalledTimes(1);
     expect(Storage.prototype.getItem).not.toHaveBeenCalled();
     expect(Storage.prototype.setItem).not.toHaveBeenCalled();
+  });
+
+  it('keeps the opted-in host bridge alive when retiring the observer during editing handoff', async () => {
+    const hostCapabilities = { charter: true, usage: true, export: true };
+    const f = fixture([response(200, { ...identity, hostCapabilities }),
+      response(200, { ...identity, hostCapabilities, projectIdentity: 'b'.repeat(64), controlAuthorized: true })]);
+    f.createClient.mockImplementation((_status, _socket, _origin, _control, bridge) => ({
+      capabilities: CANVAS_OBSERVER_CAPABILITIES, canvasHost: bridge,
+      send: vi.fn(), subscribe: vi.fn(), getState: vi.fn(), setState: value => value,
+      dispose: vi.fn(), discardPreferenceDraft: vi.fn(),
+    }));
+    const viewer = await f.bootstrap();
+    const control = await viewer.enableEditing!(vi.fn());
+    viewer.dispose();
+    f.request.mockResolvedValueOnce(response(200, { ok: true, quantities: [] }));
+    expect(await control.canvasHost!.getUsage()).toEqual([]);
+    const count = f.request.mock.calls.length;
+    control.dispose();
+    await expect(control.canvasHost!.getUsage()).rejects.toThrow('Host capability unavailable or rejected');
+    expect(f.request).toHaveBeenCalledTimes(count);
   });
 
   it.each([401, 403])('exchanges the decoded fragment once after unauthenticated %s, then validates context', async status => {

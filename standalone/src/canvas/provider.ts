@@ -3,6 +3,7 @@ import { isAbsolute } from 'node:path';
 import type * as SDK from '@github/copilot-sdk/extension';
 import { startCanvasOfficeHost, type CanvasOfficeHost, type CanvasOfficeHostOptions } from './officeHost.js';
 import { memberDetails, officeState } from './readActions.js';
+import { createHostCapabilities } from './hostCapabilities.js';
 
 type Sdk = Pick<typeof SDK, 'createCanvas' | 'joinSession' | 'CanvasError'>;
 type Context = SDK.CanvasContext;
@@ -133,7 +134,14 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
           // Startup belongs to the instance; only the latest open owns authority.
           entry.ready = Promise.resolve().then(async () => {
             active(ctx, owned);
-            const host = await startCanvasOfficeHost({ ...paths, projectRoot: root.path, sessionId: session!.sessionId });
+            const host = await startCanvasOfficeHost({ ...paths, projectRoot: root.path, sessionId: session!.sessionId,
+              hostCapabilities: snapshot => createHostCapabilities(session!, root.path, ctx.instanceId,
+                () => {
+                  active(ctx, owned);
+                  if (owned.pending) fail('canvas_instance_unavailable');
+                  return owned.generation;
+                }, snapshot),
+            });
             try { active(ctx, owned); } catch (error) { await release(host); throw error; }
             owned.host = host;
             return host;

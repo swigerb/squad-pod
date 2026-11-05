@@ -53,7 +53,7 @@ The owner-approved preview does not close those broader capability gaps.
 | Control (including subcontrols) | Canvas behavior | Reason | Release decision |
 |---|---|---|---|
 | Squad Info open/close; member expand/collapse | Shows selected roster, inline charter summary/source and available detail. | Read-only observation of selected project. | Candidate |
-| Agent View Charter; member Open charter | Native file-opening action disabled with reason. Inline information remains readable. | No native editor/file-opening authority. | OPEN |
+| Agent View Charter; member Open charter | On explicit click, attempt the host `editor` canvas only when its advertised schema supports repo scope. Missing/rejected capability disables opening with one sanitized reason; inline information remains readable. | Current declared member only, guarded `.squad`/`.ai-team` charter; translate joined-project paths from the actual Git worktree root. Not arbitrary file-opening authority. | Candidate; pending native |
 | Runtime model details/status | Show source-reported joined-session model/context observations when supplied and attributable; missing fields remain unavailable. | SDK events, not live-log scanning; configured preference is not observed runtime truth. | Candidate; producer-dependent |
 | Missing-team setup guide link | External Squad documentation; selected-project explanation, no in-panel directory navigation. | Panel cannot select another project or initialize a team. | Candidate; external-link native gate |
 | Asset warning/details disclosure | Inspect load diagnostics and existing directory status. | Observation only. | Candidate |
@@ -63,15 +63,16 @@ The owner-approved preview does not close those broader capability gaps.
 | Event detail expansion | Inspect available event detail. Live activity-source diagnostics/consent controls are not offered in Canvas. | Missing data remains unavailable, not fabricated. | Candidate |
 | Recorded usage coverage/source diagnostics and recent-history disclosures; CLI model-breakdown and provenance disclosures | Display only available recorded quantities with source/units; missing is not zero. CLI snapshot is separate from ledger totals. | No invented billing, runtime model or cross-source sums. | Candidate |
 | CLI usage Select JSON, Refresh selected export, Forget export | Action controls absent; explicit Canvas-unavailable explanation replaces import/launch instructions. | Canvas does not import CLI usage files or launch CLI. | OPEN |
+| Joined-session usage Refresh | Explicit click calls joined-session `usage.getMetrics()` when available. Displays supplied nonnegative finite session quantities and units only; rejected paths become unavailable. | Separate source, not a replacement for external CLI export import/refresh/Forget, recorded ledger totals, USD billing or runtime model observation. Missing is not zero. | Candidate; pending native |
 | Joined-session live activity: Squad member sub-agents, tools, task bubbles | Available from the exact current session, with exact roster attribution and no historical event replay (#209/#210). | Bounded SDK projection; no cross-session discovery or private CLI-log reads. Missing/unmatched data is not invented. | Candidate |
 
 ## Files, recovery and host-bound operations
 
 | Control (including subcontrols) | Canvas behavior | Reason | Release decision |
 |---|---|---|---|
-| Import Layout | After opt-in, browser JSON picker; 2 MiB limit and schema validation; replaces draft, does not automatically save. | Existing browser path, not native filesystem access. | Transfer gate |
-| Export Layout | After opt-in, browser download of bounded JSON (2 MiB). | Browser transfer, not arbitrary file writing. | Transfer gate |
-| Conflict JSON disclosures; Export local draft/snapshot/retained copy | Inspect preserved versions and download copies. | Recovery is scoped to project/server instance, not a durable backup. | Transfer gate |
+| Import Layout | After opt-in, explicit project-relative JSON path with guarded read, 2 MiB and layout-schema validation; replaces draft only. Browser JSON picker remains the fallback. | Exact joined project only; no links, absolute paths or traversal. No automatic save. Embedded picker remains unqualified. | Candidate; pending native |
+| Export Layout | After opt-in, attempt `workspaces.createFile` with exact validated layout JSON (2 MiB) and a generated filename in the joined session's workspace files. Show the filename after success. Missing capability uses browser download; rejection shows one sanitized reason and a subsequent explicit Export uses browser fallback. | Method presence is not permission. No caller-supplied export destination or Markdown substitute. Embedded transfers remain unqualified. | Candidate; pending native |
+| Conflict JSON disclosures; Export local draft/snapshot/retained copy | Inspect preserved versions and export exact validated JSON through the same host-mediated path, with browser fallback. | Recovery is scoped to project/server instance, not a durable backup. | Candidate; pending native |
 | Keep local draft; Use incoming; Confirm incoming; Cancel replacement | Deliberate conflict resolution retains copies; incoming replacement requires confirmation. | Revision protection; no silent overwrite. | Candidate |
 | Unacknowledged preference/seat Retry, Export, Discard | Explicit recovery choices; no automatic retry after lost acknowledgement. | Shared guarded preferences and instance-scoped recovery. | Candidate; export transfer gate |
 | Directories entry point | Disabled with selected-project/native-authority reason. | No directory catalog management in Canvas. | OPEN |
@@ -89,11 +90,36 @@ The owner-approved preview does not close those broader capability gaps.
   editing, narrow labels/editor, keyboard/focus, system theme and panel resize;
   qualification of one build is not cross-platform or general parity evidence.
 - Verify embedded JSON picker/download and recovery exports end-to-end; browser
-  tests do not establish native embedded file-transfer support.
+  tests do not establish native embedded file-transfer support. Host-mediated
+  charter, joined-session metrics and JSON transfers are **Candidate; pending native**,
+  not PASS. Method detection and successful mocked calls are not permission grants.
 - OPEN capabilities remain disclosed preview limitations, not parity claims.
   Any broader release needs its own owner disposition and native evidence.
 - Independent final code/documentation review remains required. Local
   tests/builds and synthetic fixtures are not native app passes.
+
+## Platform investigation (static only; #223)
+
+The experimental SDK `CanvasProviderOpenResult` supplies a URL, not a forwarded
+socket or tunnel contract. `standalone/src/canvas/officeHost.ts` returns
+`http://127.0.0.1:<port>/`; `transport.ts` binds only that address and validates
+the exact Host/Origin plus instance viewer/control cookies. In WSL or a remote
+session, that address may identify a different machine/network namespace from
+the app webview. No documented forwarding guarantee was found in the inspected
+SDK contracts. A URL-only result does not prove forwarding or usable office data.
+
+**WSL/remote remain unsupported and deferred**; do not broaden the listener,
+relax origin/auth checks or add a forwarding workaround. This is the owner-directed
+disposition, not a failed native probe. macOS/Linux code portability is exercised
+by the mocked-SDK headless provider smoke in `standalone/src/canvas/officeHost.test.ts`,
+already included in Ubuntu, Windows and macOS CI standalone suites.
+Those are **Candidate; pending native** checks only: native macOS/Linux Pod
+qualification remains unsupported/unverified. The
+[official app documentation](https://docs.github.com/en/copilot/concepts/copilot-surfaces/github-copilot-app)
+lists macOS, Linux and Windows, and the [app install page](https://github.com/github/app#install)
+offers Mac Apple Silicon/Intel and Linux x64/ARM builds (checked 2026-11-05).
+App availability is not Pod qualification; neither platform becomes supported
+through CI.
 
 Bundled artwork and attribution are unchanged. Keep [third-party notices](../THIRD_PARTY_NOTICES.md),
 [LICENSE](../LICENSE) and asset provenance with distributions. Character permission

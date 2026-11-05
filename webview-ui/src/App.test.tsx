@@ -251,7 +251,7 @@ describe('layout conflict UI and panel-state recovery (simulated host boundary)'
     expect(host.querySelector('[role="dialog"]')).not.toBeNull();
     expect(host.textContent).not.toMatch(/VS Code|--live-activity|newest matching-project|normal terminal/);
     expect(host.textContent).toContain('Canvas can display bounded task and model observations from the exact joined SDK session');
-    expect(host.textContent).toContain('Directory navigation, CLI launch, terminals and opening local files are unavailable');
+    expect(host.textContent).toContain('Directory navigation, CLI launch and terminals are unavailable');
     expect(host.textContent).toContain('Export downloads validated JSON');
     for (const label of ['Export Layout', 'Import Layout']) {
       const button = [...host.querySelectorAll('button')].find(item => item.textContent?.trim() === label);

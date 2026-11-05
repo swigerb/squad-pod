@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import { mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import * as fs from 'node:fs';
 import { request, type IncomingHttpHeaders } from 'node:http';
@@ -94,7 +95,7 @@ async function connect(host: Pick<CanvasOfficeHost, 'url'>, cookie: string, cont
   await vi.waitFor(() => expect(messages.some(message => message.type === 'recordedUsage')).toBe(true));
   return { socket, messages, results, states };
 }
-async function controlCookie(host: CanvasOfficeHost, viewerCookie?: string) {
+async function controlCookie(host: Pick<CanvasOfficeHost, 'url'>, viewerCookie?: string) {
   const url = new URL(host.url);
   viewerCookie ??= (await auth(host)).headers['set-cookie']![0].split(';')[0];
   const headers = { Origin: url.origin, Cookie: viewerCookie, 'Content-Type': 'application/json' };
@@ -115,6 +116,66 @@ function waitForSocketClose(socket: WebSocket, label: string) {
     socket.once('close', onClose);
   });
 }
+
+describe('headless Canvas SDK host-capability smoke (all CI operating systems)', () => {
+  it('joins, opens a real loopback provider, gates host RPCs and retires them on close', async () => {
+    const options = await fixture('test-bot');
+    const getMetrics = vi.fn(async () => ({ totalUserRequests: 3 }));
+    const createFile = vi.fn(async () => undefined);
+    const lifecycle = new EventEmitter();
+    class CanvasError extends Error { constructor(readonly code: string, message: string) { super(message); } }
+    const session: JoinedSession = { sessionId: 'smoke-session', on: () => () => {},
+      rpc: { metadata: { snapshot: async () => ({ sessionId: 'smoke-session', workingDirectory: options.projectRoot }) },
+        usage: { getMetrics }, workspaces: { createFile } } };
+    const provider = await startOfficeExtension({
+      CanvasError, createCanvas: definition => definition, joinSession: async () => session,
+    }, options, lifecycle as unknown as NodeJS.Process);
+    const ctx = { sessionId: session.sessionId, extensionId: 'smoke-provider', canvasId: 'squad-pod', instanceId: 'smoke-office' };
+    try {
+      const host = await provider.canvas.open(ctx);
+      const viewer = (await auth(host)).headers['set-cookie']![0].split(';')[0];
+      const headers = { Origin: new URL(host.url).origin, Cookie: viewer, 'Content-Type': 'application/json' };
+      const call = (input: unknown, extra: Record<string, string> = {}) =>
+        http(host, '/canvas-host', 'POST', JSON.stringify(input), { ...headers, ...extra });
+      expect((await call({ operation: 'usage' }, { Origin: 'https://foreign.test' })).status).toBe(403);
+      expect((await call({ operation: 'usage' }, { Cookie: '' })).status).toBe(403);
+      expect(getMetrics).not.toHaveBeenCalled();
+      const usage = await call({ operation: 'usage' });
+      expect(JSON.parse(usage.body)).toEqual({ ok: true, quantities: [
+        { label: 'User-initiated API requests', value: 3, unit: 'requests' },
+      ] });
+      const content = JSON.stringify({ version: 2, cols: 2, rows: 1, tiles: [1, 1], furniture: [] });
+      const refused = await call({ operation: 'export', content });
+      expect(JSON.parse(refused.body).ok).toBe(false);
+      expect(createFile).not.toHaveBeenCalled();
+      // Reopen creates a fresh instance; a rejected host path is never retried automatically.
+      await provider.canvas.onClose(ctx);
+      const reopened = await provider.canvas.open(ctx);
+      const viewer2 = (await auth(reopened)).headers['set-cookie']![0].split(';')[0];
+      const editCookie = await controlCookie(reopened, viewer2);
+      const exported = await http(reopened, '/canvas-host', 'POST', JSON.stringify({ operation: 'export', content }), {
+        Origin: new URL(reopened.url).origin, Cookie: `${viewer2}; ${editCookie}`, 'Content-Type': 'application/json',
+      });
+      expect(JSON.parse(exported.body)).toEqual({ ok: true, path: expect.stringMatching(/^squad-pod-layout-/) });
+      expect(createFile).toHaveBeenCalledExactlyOnceWith({ path: JSON.parse(exported.body).path, content });
+      const escapedLayout = { version: 2, cols: 1, rows: 1, tiles: [1], furniture: Array.from({ length: 1500 }, () => ({
+        uid: '"'.repeat(240), type: '"'.repeat(240), col: 0, row: 0,
+      })) };
+      const boundary = JSON.stringify(escapedLayout).padEnd(2 * 1024 * 1024, ' ');
+      const body = JSON.stringify({ operation: 'export', content: boundary });
+      expect(Buffer.byteLength(boundary)).toBe(2 * 1024 * 1024);
+      expect(Buffer.byteLength(body)).toBeGreaterThan(2 * 1024 * 1024 + 8192);
+      const boundaryExport = await http(reopened, '/canvas-host', 'POST', body, {
+        Origin: new URL(reopened.url).origin, Cookie: `${viewer2}; ${editCookie}`, 'Content-Type': 'application/json',
+      });
+      expect(JSON.parse(boundaryExport.body)).toEqual({ ok: true, path: expect.stringMatching(/^squad-pod-layout-/) });
+      expect(createFile).toHaveBeenLastCalledWith({ path: JSON.parse(boundaryExport.body).path, content: boundary });
+      await provider.canvas.onClose(ctx);
+      await expect(http(reopened, '/office-context')).rejects.toThrow();
+    } finally { await provider.dispose(); }
+    expect(lifecycle.eventNames()).toEqual([]);
+  });
+});
 async function save(client: Awaited<ReturnType<typeof connect>>, message: unknown, expectedRevision: string | null) {
   const requestId = client.results.length + 1;
   client.socket.send(JSON.stringify({ version: 1, kind: 'control', requestId, expectedRevision, message }));
