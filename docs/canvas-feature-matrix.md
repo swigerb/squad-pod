@@ -118,7 +118,7 @@ still queued in a stalled webview; resuming drawing returns only the latest
 nonce without disconnecting the office. The server continues to reject
 old/unsolicited snapshot results.
 
-See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-0-1-2-candidate)
+See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-012-candidate)
 for the subset of #218 that can be investigated without UI automation; no result
 automatically changes a native gate to PASS.
 
