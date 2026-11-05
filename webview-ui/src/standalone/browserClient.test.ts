@@ -5,6 +5,7 @@ import { LayoutDraft } from '../office/editor/layoutDraft.js';
 import type { OfficeLayout } from '../office/types.js';
 import { defaultPreferences } from '../../../standalone/src/officePreferences.js';
 import { officeDrawn } from '../canvas/rendering.js';
+import { SNAPSHOT_TIMEOUT } from '../../../src/canvasRendering.js';
 
 class Socket {
   readyState = 0;
@@ -18,6 +19,34 @@ class Socket {
 }
 afterEach(() => vi.useRealTimers());
 describe('production browser HostClient adapter', () => {
+  it('keeps the same Canvas socket alive through a no-draw timeout and retry, returning only the current nonce', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,AAAA');
+    const ws = new Socket(), status = vi.fn();
+    const client = createBrowserClient(status, () => ws as unknown as WebSocket,
+      'http://127.0.0.1:1234', undefined, true);
+    const stop = connectOffice(client, vi.fn()), canvas = document.createElement('canvas');
+    const paint = { firstPaintTime: 1, frameCount: 1, width: 300, height: 150,
+      visibilityState: 'visible' as const, onScreen: null };
+    const request = (id: string) => ws.onmessage!({
+      data: JSON.stringify({ version: 1, kind: 'snapshotRequest', requestId: id }),
+    });
+    try {
+      ws.open();
+      officeDrawn(canvas, paint);
+      request('a'.repeat(32));
+      await vi.advanceTimersByTimeAsync(SNAPSHOT_TIMEOUT + 1);
+      request('b'.repeat(32));
+      expect(ws.close).not.toHaveBeenCalled();
+      officeDrawn(canvas, { ...paint, frameCount: 2 });
+      expect(ws.send.mock.calls.map(([frame]) => JSON.parse(frame)).filter(frame => frame.kind === 'snapshotResult'))
+        .toEqual([{ version: 1, kind: 'snapshotResult', requestId: 'b'.repeat(32), png: 'AAAA' }]);
+      expect(ws.close).not.toHaveBeenCalled();
+    } finally { stop(); client.dispose(); vi.restoreAllMocks(); }
+  });
+
   it('does not let a failed drawing-report send stop the office render loop or expose raw errors', () => {
     const ws = new Socket(), status = vi.fn();
     const client = createBrowserClient(status, () => ws as unknown as WebSocket,

@@ -89,6 +89,9 @@ not that the window was unobscured or its pixels reached a display. PNG readback
 shows canvas contents, not the native compositor or other app UI. A hidden or
 stalled panel can have historical drawing evidence while a fresh snapshot times
 out. Disconnect discards that connection's evidence and pending reads.
+A deliberate retry replaces a timed-out request still queued in a stalled
+webview; resuming drawing returns only the latest nonce without disconnecting
+the office. The server continues to reject old/unsolicited snapshot results.
 
 See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-source-candidate)
 for the subset of #218 that can be investigated without UI automation; no result

@@ -1,11 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { officeDrawn, observeOfficeDrawing } from './rendering.js';
-import { SNAPSHOT_BYTES } from '../../../src/canvasRendering.js';
+import { SNAPSHOT_BYTES, SNAPSHOT_TIMEOUT } from '../../../src/canvasRendering.js';
 
 const paint = { firstPaintTime: 123, frameCount: 1, width: 2000, height: 1000,
   visibilityState: 'visible' as const, onScreen: true };
 const id = 'a'.repeat(32);
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 
 it('acknowledges only a completed draw, once per connection, and never caches a snapshot', () => {
   const send = vi.fn(), drawImage = vi.fn();
@@ -60,8 +60,27 @@ it('accepts only bounded exact request envelopes and drops pending requests on d
     expect(() => observer.request(value)).toThrow('Invalid snapshot request');
   }
   observer.request({ version: 1, kind: 'snapshotRequest', requestId: id });
-  expect(() => observer.request({ version: 1, kind: 'snapshotRequest', requestId: id })).toThrow();
   observer.dispose();
   officeDrawn(document.createElement('canvas'), paint);
   expect(send).not.toHaveBeenCalled();
+});
+
+it('replaces a timed-out queued request without drawing and returns only the latest nonce on resume', async () => {
+  vi.useFakeTimers();
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
+    .mockReturnValue({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,AAAA');
+  const send = vi.fn(), observer = observeOfficeDrawing(send);
+  const canvas = document.createElement('canvas'), nextId = 'b'.repeat(32);
+  try {
+    officeDrawn(canvas, paint);
+    observer.request({ version: 1, kind: 'snapshotRequest', requestId: id });
+    await vi.advanceTimersByTimeAsync(SNAPSHOT_TIMEOUT + 1);
+    expect(send).toHaveBeenCalledOnce();
+    expect(() => observer.request({ version: 1, kind: 'snapshotRequest', requestId: nextId })).not.toThrow();
+    officeDrawn(canvas, { ...paint, frameCount: 2 });
+    officeDrawn(canvas, { ...paint, frameCount: 3 });
+    expect(send.mock.calls.map(([frame]) => JSON.parse(frame)).filter(frame => frame.kind === 'snapshotResult'))
+      .toEqual([{ version: 1, kind: 'snapshotResult', requestId: nextId, png: 'AAAA' }]);
+  } finally { observer.dispose(); }
 });

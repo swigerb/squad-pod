@@ -44,7 +44,9 @@ export function observeOfficeDrawing(send: (frame: string) => void) {
       const v = value as Record<string, unknown>;
       if (v.kind !== 'snapshotRequest') return false;
       if (Object.keys(v).length !== 3 || v.version !== 1 || typeof v.requestId !== 'string'
-        || !/^[a-f0-9]{32}$/.test(v.requestId) || requestId) throw new Error('Invalid snapshot request');
+        || !/^[a-f0-9]{32}$/.test(v.requestId)) throw new Error('Invalid snapshot request');
+      // The server permits only one current read. A retry supersedes any timed-out
+      // request left here while a hidden/stalled panel could not draw.
       requestId = v.requestId;
       return true;
     },
