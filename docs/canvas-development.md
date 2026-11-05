@@ -79,7 +79,11 @@ proves dependency-free ESM startup and static UI serving, **not** native app
 acceptance, SDK compatibility, real-session observation or editor behavior.
 These checks do not install the plugin or change app configuration.
 
-## Optional host-mediated capabilities (#223)
+## Optional host-mediated capabilities (#223; source/unreleased)
+
+This section describes unshipped source candidates, **not the published 0.1.1
+ZIP/catalog pin**. Installing 0.1.1 does not provide these capabilities. Its
+charter/CLI-import OPEN rows and browser-transfer gates remain unchanged.
 
 `standalone/src/canvas/hostCapabilities.ts` owns each instance's optional bridge.
 The installed experimental SDK's generated RPC declarations document

@@ -75,7 +75,7 @@ export function createCanvasBootstrap(
       status(canvasDiagnostic('OFFICE_STARTING'));
       const bridge = createHostBridge(request, () => disposed, status,
         'hostCapabilities' in identity ? identity.hostCapabilities : undefined);
-      const client = observe(createClient(onStatus, undefined, target.location.origin, undefined, bridge));
+      const client = observe(createClient(onStatus, undefined, target.location.origin, undefined, true, bridge));
       let editing: Promise<BrowserHostClient> | undefined;
       return {
         ...client, capabilities: CANVAS_OBSERVER_CAPABILITIES,
@@ -113,7 +113,7 @@ export function createCanvasBootstrap(
               const control = observe(createClient(onStatus,
                 undefined, target.location.origin, {
                 recoveryKey: `squad-office:${context.serverIdentity}:${context.projectIdentity}`, onPreferenceDraft,
-              }, controlBridge));
+              }, true, controlBridge));
               try { control.getState(); }
               catch (error) { control.dispose(); throw error; }
               return { ...control, capabilities: CANVAS_CONTROL_CAPABILITIES,

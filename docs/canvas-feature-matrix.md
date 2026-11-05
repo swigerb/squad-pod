@@ -21,6 +21,8 @@ In the tables, **Candidate** means implemented in the preview, not a promise of
 full native parity; **OPEN** marks unavailable capabilities/remaining parity work.
 The owner-approved preview does not close those broader capability gaps.
 **Transfer gate** means implemented browser behavior, embedded transfer unverified.
+Explicit **source/unreleased** sections describe code not present in the published
+0.1.1 ZIP/catalog pin. Their candidates do not replace the shipping rows below.
 
 ## Office, editor and preferences
 
@@ -53,7 +55,7 @@ The owner-approved preview does not close those broader capability gaps.
 | Control (including subcontrols) | Canvas behavior | Reason | Release decision |
 |---|---|---|---|
 | Squad Info open/close; member expand/collapse | Shows selected roster, inline charter summary/source and available detail. | Read-only observation of selected project. | Candidate |
-| Agent View Charter; member Open charter | On explicit click, attempt the host `editor` canvas only when its advertised schema supports repo scope. Missing/rejected capability disables opening with one sanitized reason; inline information remains readable. | Current declared member only, guarded `.squad`/`.ai-team` charter; translate joined-project paths from the actual Git worktree root. Not arbitrary file-opening authority. | Candidate; pending native |
+| Agent View Charter; member Open charter | Native file-opening action disabled with reason. Inline information remains readable. | No native editor/file-opening authority in published 0.1.1. | OPEN |
 | Runtime model details/status | Show source-reported joined-session model/context observations when supplied and attributable; missing fields remain unavailable. | SDK events, not live-log scanning; configured preference is not observed runtime truth. | Candidate; producer-dependent |
 | Missing-team setup guide link | External Squad documentation; selected-project explanation, no in-panel directory navigation. | Panel cannot select another project or initialize a team. | Candidate; external-link native gate |
 | Asset warning/details disclosure | Inspect load diagnostics and existing directory status. | Observation only. | Candidate |
@@ -63,22 +65,59 @@ The owner-approved preview does not close those broader capability gaps.
 | Event detail expansion | Inspect available event detail. Live activity-source diagnostics/consent controls are not offered in Canvas. | Missing data remains unavailable, not fabricated. | Candidate |
 | Recorded usage coverage/source diagnostics and recent-history disclosures; CLI model-breakdown and provenance disclosures | Display only available recorded quantities with source/units; missing is not zero. CLI snapshot is separate from ledger totals. | No invented billing, runtime model or cross-source sums. | Candidate |
 | CLI usage Select JSON, Refresh selected export, Forget export | Action controls absent; explicit Canvas-unavailable explanation replaces import/launch instructions. | Canvas does not import CLI usage files or launch CLI. | OPEN |
-| Joined-session usage Refresh | Explicit click calls joined-session `usage.getMetrics()` when available. Displays supplied nonnegative finite session quantities and units only; rejected paths become unavailable. | Separate source, not a replacement for external CLI export import/refresh/Forget, recorded ledger totals, USD billing or runtime model observation. Missing is not zero. | Candidate; pending native |
 | Joined-session live activity: Squad member sub-agents, tools, task bubbles | Available from the exact current session, with exact roster attribution and no historical event replay (#209/#210). | Bounded SDK projection; no cross-session discovery or private CLI-log reads. Missing/unmatched data is not invented. | Candidate |
 
 ## Files, recovery and host-bound operations
 
 | Control (including subcontrols) | Canvas behavior | Reason | Release decision |
 |---|---|---|---|
-| Import Layout | After opt-in, explicit project-relative JSON path with guarded read, 2 MiB and layout-schema validation; replaces draft only. Browser JSON picker remains the fallback. | Exact joined project only; no links, absolute paths or traversal. No automatic save. Embedded picker remains unqualified. | Candidate; pending native |
-| Export Layout | After opt-in, attempt `workspaces.createFile` with exact validated layout JSON (2 MiB) and a generated filename in the joined session's workspace files. Show the filename after success. Missing capability uses browser download; rejection shows one sanitized reason and a subsequent explicit Export uses browser fallback. | Method presence is not permission. No caller-supplied export destination or Markdown substitute. Embedded transfers remain unqualified. | Candidate; pending native |
-| Conflict JSON disclosures; Export local draft/snapshot/retained copy | Inspect preserved versions and export exact validated JSON through the same host-mediated path, with browser fallback. | Recovery is scoped to project/server instance, not a durable backup. | Candidate; pending native |
+| Import Layout | After opt-in, browser JSON picker; 2 MiB limit and schema validation; replaces draft, does not automatically save. | Published 0.1.1 browser path, not native filesystem access. | Transfer gate |
+| Export Layout | After opt-in, browser download of bounded JSON (2 MiB). | Published 0.1.1 browser transfer, not arbitrary file writing. | Transfer gate |
+| Conflict JSON disclosures; Export local draft/snapshot/retained copy | Inspect preserved versions and download copies. | Published 0.1.1 recovery is scoped to project/server instance, not a durable backup. | Transfer gate |
 | Keep local draft; Use incoming; Confirm incoming; Cancel replacement | Deliberate conflict resolution retains copies; incoming replacement requires confirmation. | Revision protection; no silent overwrite. | Candidate |
 | Unacknowledged preference/seat Retry, Export, Discard | Explicit recovery choices; no automatic retry after lost acknowledgement. | Shared guarded preferences and instance-scoped recovery. | Candidate; export transfer gate |
 | Directories entry point | Disabled with selected-project/native-authority reason. | No directory catalog management in Canvas. | OPEN |
 | Nested directory add/remove/rename/navigation; directory CLI launch; terminal open/input/reconnect/close | Inaccessible through disabled directory entry point; no launch/terminal action offered. | No native filesystem, CLI-launch or terminal authority. | OPEN |
 | Startup diagnostic report | Unsupported request capability-gated; no visible button. | Host must advertise the action. | Candidate |
 | `get_office_state` readiness | Bounded per-instance request/handshake counters via the authorized Canvas action only. | Requests observed are not visible-renderer acceptance or host-fault evidence; no public diagnostics endpoint. | Candidate; 0.1.1 native checks pending |
+| `get_office_state` rendering (C14 source candidate) | `rendering.firstFrame` is null (unknown) until an authenticated webview reports a completed nonzero-area office draw. Reports first draw time (Unix milliseconds), frame count (saturates at 65535), backing-store pixel width/height, document visibility and IntersectionObserver intersection (`null` until known/unavailable). | Application-reported drawing, not compositor visibility, human observation or host-defect diagnosis. Request counters retain their separate meaning. | Source implementation; not published or native-qualified |
+| `get_office_snapshot` (C14 source candidate) | Read-only agent action returns one fresh PNG through SDK `ToolResultObject.binaryResultsForLlm` for the exact authorized requesting instance. On-demand next-draw readback; maximum 1024 x 768 pixels (aspect ratio preserved, no upscaling), 1 MiB decoded PNG, 2-second response deadline, one pending request per viewer socket. | Random request correlation, authenticated instance socket, PNG signature/dimensions/full decode/CRC checks. No image cache, cross-project lookup, control opt-in, filesystem writes or diagnostics endpoint. Missing frame, malformed/stale/oversized image, disconnect or timeout cannot return an image; action errors are sanitized. | Source implementation; application readback is not native acceptance |
+
+These C14 source changes do **not** change plugin version 0.1.1 or its catalog pin,
+and do not extend historical native results. First-frame evidence is a bounded
+first observation for the live viewer connection, not a continuous visibility
+monitor. `onScreen: true` means IntersectionObserver reported intersection,
+not that the window was unobscured or its pixels reached a display. PNG readback
+shows canvas contents, not the native compositor or other app UI. A hidden or
+stalled panel can have historical drawing evidence while a fresh snapshot times
+out. Disconnect discards that connection's evidence and pending reads.
+A deliberate retry replaces a timed-out request still queued in a stalled
+webview; resuming drawing returns only the latest nonce without disconnecting
+the office. The server continues to reject old/unsolicited snapshot results.
+
+See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-source-candidate)
+for the subset of #218 that can be investigated without UI automation; no result
+automatically changes a native gate to PASS.
+
+## C15 source/unreleased candidates (#223)
+
+These features are implemented in source only: **absent from the published
+0.1.1 ZIP and catalog pin**. No version bump, publication or native acceptance
+is implied. The shipping charter/CLI-import OPEN rows and browser-transfer gates
+above remain the release truth.
+
+| Control | Source/unreleased behavior | Boundary | Release decision |
+|---|---|---|---|
+| Agent View Charter; member Open charter | Explicit click attempts the host `editor` only when its discovered schema supports repo scope. Missing/rejected capability disables opening with one sanitized reason; inline text stays readable. | Current declared member only; guarded `.squad`/`.ai-team` charter translated from the actual Git worktree root, including nested joined-project prefixes. No arbitrary opening authority. | Candidate; pending native (source only) |
+| Joined-session usage Refresh | Explicit click calls joined-session `usage.getMetrics()` when available. Displays only supplied finite nonnegative session quantities and units. | New separate source, not external CLI export Select/Refresh/Forget, ledger totals, USD billing or model observation. The CLI-import OPEN row stays OPEN. Missing is not zero. | Candidate; pending native (source only) |
+| Import project JSON | After editing opt-in, a project-relative `.json` path receives guarded UTF-8 read, 2 MiB and layout-schema validation, replacing the draft only. | Exact joined project; no links, absolute paths or traversal. No automatic save. Browser picker remains the fallback and is still unqualified natively. | Candidate; pending native (source only) |
+| Export Layout | After editing opt-in, attempts `workspaces.createFile` with exact validated JSON (2 MiB), a generated filename in this session's workspace files, and a success filename disclosure. | Presence is not permission. No caller-supplied destination or Markdown substitute. Missing method uses browser download; after rejection the user must explicitly export again to use the browser fallback. | Candidate; pending native (source only) |
+| Export local draft/snapshot/retained layout copy | Uses the same exact-JSON host export path with browser fallback. | Instance/project-scoped recovery, not a durable backup. Workspace file accessibility and embedded transfer remain native gates. | Candidate; pending native (source only) |
+
+SDK awaits have one-second deadlines. A timed-out path is quarantined for the
+instance, and unrelated operations can continue. A timeout does not cancel an
+underlying write/open, permit automatic retry or prove a successful outcome.
+Late results cannot turn the unavailable response into success.
 
 ## Remaining — OPEN release gates
 
@@ -91,7 +130,7 @@ The owner-approved preview does not close those broader capability gaps.
   qualification of one build is not cross-platform or general parity evidence.
 - Verify embedded JSON picker/download and recovery exports end-to-end; browser
   tests do not establish native embedded file-transfer support. Host-mediated
-  charter, joined-session metrics and JSON transfers are **Candidate; pending native**,
+  source/unreleased charter, joined-session metrics and JSON transfers are **Candidate; pending native**,
   not PASS. Method detection and successful mocked calls are not permission grants.
 - OPEN capabilities remain disclosed preview limitations, not parity claims.
   Any broader release needs its own owner disposition and native evidence.

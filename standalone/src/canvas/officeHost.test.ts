@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WebSocket, WebSocketServer } from 'ws';
+import { PNG } from 'pngjs';
 import type { CanvasDefinition, JoinedSession } from '@github/copilot-sdk/extension';
 import * as observers from '../observer.js';
 import { startCanvasOfficeHost, type CanvasOfficeHost } from './officeHost.js';
@@ -28,6 +29,38 @@ const assets = fileURLToPath(new URL('../../../webview-ui/public/assets', import
 const roots: string[] = [];
 const hosts: CanvasOfficeHost[] = [];
 const sockets: WebSocket[] = [];
+it('roundtrips fresh drawing readback only through the authenticated instance socket and erases on disconnect', async () => {
+  const { host } = await launch();
+  const { host: other } = await launch('bart');
+  expect(host.rendered!()).toBeNull();
+  await expect(host.capture!()).rejects.toThrow('CANVAS_SNAPSHOT_UNAVAILABLE');
+  const cookie = (await auth(host)).headers['set-cookie']![0].split(';')[0];
+  const client = await connect(host, cookie);
+  const paint = { firstPaintTime: 123, frameCount: 1, width: 800, height: 600,
+    visibilityState: 'visible', onScreen: false };
+  client.socket.send(JSON.stringify({ version: 1, kind: 'rendered', paint }));
+  await vi.waitFor(() => expect(host.rendered!()).toEqual(paint));
+  expect(other.rendered!()).toBeNull();
+  await expect(other.capture!()).rejects.toThrow('CANVAS_SNAPSHOT_UNAVAILABLE');
+  const png = PNG.sync.write(new PNG({ width: 1024, height: 768 })).toString('base64');
+  const ids = new Set<string>();
+  client.socket.on('message', data => {
+    const frame = JSON.parse(data.toString());
+    if (frame.kind !== 'snapshotRequest') return;
+    expect(ids.has(frame.requestId)).toBe(false);
+    ids.add(frame.requestId);
+    client.socket.send(JSON.stringify({ version: 1, kind: 'snapshotResult', requestId: frame.requestId, png }));
+  });
+  expect(await host.capture!()).toBe(png);
+  expect(await host.capture!()).toBe(png);
+  expect(ids.size).toBe(2);
+  const close = waitForSocketClose(client.socket, 'readback viewer');
+  client.socket.close();
+  await close;
+  await vi.waitFor(() => expect(host.rendered!()).toBeNull());
+  await expect(host.capture!()).rejects.toThrow('CANVAS_SNAPSHOT_UNAVAILABLE');
+});
+
 afterEach(async () => {
   for (const socket of sockets.splice(0)) socket.terminate();
   await Promise.all(hosts.splice(0).map(host => host.dispose()));

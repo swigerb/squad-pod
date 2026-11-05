@@ -109,6 +109,9 @@ jobs:
       - name: Standalone types and native boundary tests
         run: npm run check --prefix standalone && npm test --prefix standalone
 
+      - name: Canvas webview types, tests and plugin contract
+        run: npm run check-types && npm run test:webview && npm run build:canvas && node scripts/verify-canvas-plugin.mjs && node --test scripts/verify-canvas-plugin.test.mjs
+
       - name: Build and verify installed read-only observer
         run: npm run build --prefix standalone && npm run acceptance --prefix standalone
 

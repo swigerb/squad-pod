@@ -7,6 +7,7 @@ import type { OutboundMessage } from '../../../src/types.js';
 import { CanvasActivity } from './activity.js';
 import { CanvasReadiness, type ReadinessSnapshot } from './readiness.js';
 import type { CanvasHostHandler } from './hostCapabilities.js';
+import type { CanvasPaint } from '../../../src/canvasRendering.js';
 
 /** Explicit local inputs supplied by a host adapter, not by a browser request. */
 export interface CanvasOfficeHostOptions {
@@ -23,6 +24,8 @@ export interface CanvasOfficeHost {
   snapshot(): Promise<OutboundMessage[]>;
   /** Safe instance observations, available only while this host is alive. */
   readiness?(): ReadinessSnapshot | undefined;
+  rendered?(): CanvasPaint | null;
+  capture?(): Promise<string>;
   acceptActivity?(event: unknown): void;
   clearActivity?(): void;
   dispose(): Promise<void>;
@@ -101,6 +104,8 @@ export async function startCanvasOfficeHost(options: CanvasOfficeHostOptions): P
     url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}`,
     snapshot,
     readiness: () => readiness.snapshot(),
+    rendered: () => ownedTransport.rendered(),
+    capture: () => ownedTransport.capture(),
     acceptActivity: event => live?.accept(event),
     clearActivity: () => live?.clear(),
     dispose() {

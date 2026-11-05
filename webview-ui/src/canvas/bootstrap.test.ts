@@ -4,6 +4,7 @@ import { connectOffice } from '../../../src/core/officeChannel.js';
 import { createBrowserClient } from '../standalone/browserClient.js';
 import { createCanvasBootstrap, CANVAS_EDIT_FAILED } from './bootstrap.js';
 import { CanvasBootstrapError, canvasDiagnostic } from './diagnostics.js';
+import { officeDrawn } from './rendering.js';
 
 const identity = { serverIdentity: 'a'.repeat(43), projectIdentity: null };
 const response = (status: number, body: unknown = identity) =>
@@ -38,7 +39,7 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     const client = await pending;
     expect(f.request.mock.calls).toEqual([['/office-context', { credentials: 'same-origin', cache: 'no-store' }]]);
     expect(client.capabilities).toBe(CANVAS_OBSERVER_CAPABILITIES);
-    expect(f.createClient).toHaveBeenCalledWith(expect.any(Function), undefined, window.location.origin, undefined,
+    expect(f.createClient).toHaveBeenCalledWith(expect.any(Function), undefined, window.location.origin, undefined, true,
       expect.objectContaining({ charter: false, usage: false, export: false }));
     const reload = fixture([response(200)]);
     await reload.bootstrap();
@@ -51,13 +52,14 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     const hostCapabilities = { charter: true, usage: true, export: true };
     const f = fixture([response(200, { ...identity, hostCapabilities }),
       response(200, { ...identity, hostCapabilities, projectIdentity: 'b'.repeat(64), controlAuthorized: true })]);
-    f.createClient.mockImplementation((_status, _socket, _origin, _control, bridge) => ({
+    f.createClient.mockImplementation((_status, _socket, _origin, _control, _canvas, bridge) => ({
       capabilities: CANVAS_OBSERVER_CAPABILITIES, canvasHost: bridge,
       send: vi.fn(), subscribe: vi.fn(), getState: vi.fn(), setState: value => value,
       dispose: vi.fn(), discardPreferenceDraft: vi.fn(),
     }));
     const viewer = await f.bootstrap();
     const control = await viewer.enableEditing!(vi.fn());
+    expect(f.createClient.mock.calls[1][4]).toBe(true);
     viewer.dispose();
     f.request.mockResolvedValueOnce(response(200, { ok: true, quantities: [] }));
     expect(await control.canvasHost!.getUsage()).toEqual([]);
@@ -317,7 +319,7 @@ describe('Canvas cookie-first single-use bootstrap', () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(response(200));
     const status = vi.fn();
     const bootstrap = createCanvasBootstrap(status, window, request,
-      (status, _, origin) => createBrowserClient(status, createSocket, origin));
+      (status, _, origin, control, canvas, bridge) => createBrowserClient(status, createSocket, origin, control, canvas, bridge));
     const client = await bootstrap();
     const listener = vi.fn();
     const unsubscribe = client.subscribe(listener);
@@ -335,6 +337,10 @@ describe('Canvas cookie-first single-use bootstrap', () => {
         version: 1, kind: 'office', message: { type: 'existingAgents', agents: [] },
       }) }));
       expect(status).toHaveBeenLastCalledWith(canvasDiagnostic('OFFICE_READY'));
+      officeDrawn(document.createElement('canvas'), { firstPaintTime: 1, frameCount: 1,
+        width: 300, height: 150, visibilityState: 'visible', onScreen: null });
+      expect(send).toHaveBeenCalledWith(JSON.stringify({ version: 1, kind: 'rendered',
+        paint: { firstPaintTime: 1, frameCount: 1, width: 300, height: 150, visibilityState: 'visible', onScreen: null } }));
       expect(client.getState()).toBeUndefined();
       expect(() => client.setState({ token: 'must-not-persist' })).toThrow();
     } finally { unsubscribe(); client.dispose(); }

@@ -11,6 +11,8 @@ import { decodeControl, MAX_CONTROL_FRAME, type OfficeControl } from './officeCo
 import { defaultPreferences } from './officePreferences.js';
 import type { ReadinessEvent } from './canvas/readiness.js';
 import type { CanvasHostHandler } from './canvas/hostCapabilities.js';
+import { CanvasRendering } from './canvas/rendering.js';
+import { SNAPSHOT_FRAME, type CanvasPaint } from '../../src/canvasRendering.js';
 
 export interface TransportOptions {
   port?: number;
@@ -154,6 +156,8 @@ export async function startTransport(options: TransportOptions): Promise<{
   controlToken: string | null;
   rotate: () => string;
   dispose: () => Promise<void>;
+  rendered: () => CanvasPaint | null;
+  capture: () => Promise<string>;
 }> {
   // The browser origin is intentionally canonical; never resolve hostnames or bind all interfaces.
   if (options.host !== undefined && options.host !== '127.0.0.1') {
@@ -182,9 +186,10 @@ export async function startTransport(options: TransportOptions): Promise<{
   let port = 0;
   const sockets = new Set<Socket>();
   const cleanups = new Map<WebSocket, () => void>();
+  const renderers = new Set<CanvasRendering>();
   const wss = new WebSocketServer({
     noServer: true,
-    maxPayload: MAX_INBOUND,
+    maxPayload: options.canvas ? SNAPSHOT_FRAME : MAX_INBOUND,
     perMessageDeflate: false,
     clientTracking: true,
   });
@@ -417,6 +422,8 @@ export async function startTransport(options: TransportOptions): Promise<{
     let unsubscribe: (() => void) | undefined;
     let sendTimer: ReturnType<typeof setTimeout> | undefined;
     let readTimer: ReturnType<typeof setTimeout> | undefined;
+    const rendering = options.canvas ? new CanvasRendering(frame => sendFrame(frame)) : undefined;
+    if (rendering) renderers.add(rendering);
     const cleanup = () => {
       if (!active) { return; }
       active = false;
@@ -426,6 +433,7 @@ export async function startTransport(options: TransportOptions): Promise<{
       pending = [];
       queued = 0;
       cleanups.delete(ws);
+      if (rendering) { renderers.delete(rendering); rendering.dispose(); }
       try { unsubscribe?.(); }
       catch { console.error('Observer subscription cleanup failed; socket was closed.'); }
     };
@@ -522,7 +530,7 @@ export async function startTransport(options: TransportOptions): Promise<{
       if (now - windowStart >= 1000) { windowStart = now; received = 0; }
       if (++received > 32) { error('RATE_LIMIT'); stop(); return; }
       if (binary) { error('INVALID_MESSAGE'); return; }
-      if (Buffer.byteLength(data.toString()) > (control ? MAX_CONTROL_FRAME : MAX_INBOUND)) {
+      if (Buffer.byteLength(data.toString()) > (control ? MAX_CONTROL_FRAME : options.canvas ? SNAPSHOT_FRAME : MAX_INBOUND)) {
         cleanup();
         ws.close(1009, 'Office frame exceeds limit');
         const closing = setTimeout(() => ws.terminate(), 1000);
@@ -533,6 +541,11 @@ export async function startTransport(options: TransportOptions): Promise<{
       let payload: unknown;
       try { payload = JSON.parse(data.toString()); }
       catch { error('INVALID_MESSAGE'); return; }
+      if (record(payload) && (payload.kind === 'rendered' || payload.kind === 'snapshotResult')) {
+        if (!ready || !rendering || !rendering.receive(payload)) error('INVALID_MESSAGE');
+        return;
+      }
+      if (!control && Buffer.byteLength(data.toString()) > MAX_INBOUND) { error('INVALID_MESSAGE'); return; }
       if (record(payload) && payload.kind === 'control') {
         if (!control || !options.officeControl) { error('READ_ONLY'); return; }
         if (busy) { error('BUSY'); return; }
@@ -587,6 +600,11 @@ export async function startTransport(options: TransportOptions): Promise<{
   }
   return {
     port,
+    rendered: () => [...renderers].reverse().find(renderer => renderer.state())?.state() ?? null,
+    capture: () => {
+      const renderer = [...renderers].reverse().find(candidate => candidate.state());
+      return renderer ? renderer.capture() : Promise.reject(new Error('CANVAS_SNAPSHOT_UNAVAILABLE'));
+    },
     get token() { return token; },
     get terminalToken() { return terminalToken; },
     get controlToken() { return options.officeControl && !options.canvas ? controlToken : null; },

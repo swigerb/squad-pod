@@ -1,4 +1,5 @@
 import type { HostClient } from '../hostClient.js';
+import { observeOfficeDrawing } from '../canvas/rendering.js';
 import { STANDALONE_CONTROL_CAPABILITIES, STANDALONE_OBSERVER_CAPABILITIES } from '../../../src/core/hostCapabilities.js';
 import type { OutboundMessage, WebviewMessage } from '../../../src/types.js';
 import { decodeEvent, isObserverLayout } from '../../../standalone/src/events.js';
@@ -24,10 +25,12 @@ export function createBrowserClient(
   createSocket: (url: string) => WebSocket = url => new WebSocket(url),
   origin = window.location.origin,
   control?: BrowserControlOptions,
+  canvas = false,
   canvasHost?: CanvasHostBridge,
 ): BrowserHostClient {
   const listeners = new Set<(message: OutboundMessage) => void>();
   let socket: WebSocket | undefined;
+  let drawing: ReturnType<typeof observeOfficeDrawing> | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
   let requested = false;
@@ -107,6 +110,16 @@ export function createBrowserClient(
       preferencesRevision = undefined;
       status(control ? 'Connected - selected-project office control' : 'Connected - read-only');
       if (requested) current.send(encode({ type: 'webviewReady' }));
+      if (canvas) drawing = observeOfficeDrawing(frame => {
+        if (disposed || socket !== current || current.readyState !== WebSocket.OPEN) return;
+        try { current.send(frame); }
+        catch {
+          status('Office drawing observation failed - disconnected');
+          drawing?.dispose();
+          drawing = undefined;
+          current.close(1011, 'Drawing observation failed');
+        }
+      });
     };
     current.onmessage = event => {
       if (disposed || socket !== current) return;
@@ -114,6 +127,7 @@ export function createBrowserClient(
         if (typeof event.data !== 'string') throw new Error('Expected text office frame.');
         if (event.data.length > 8 * 1024 * 1024) throw new Error('Office frame exceeds limit.');
         const frame: unknown = JSON.parse(event.data);
+        if (drawing?.request(frame)) return;
         if (control && frame && typeof frame === 'object' && 'kind' in frame) {
           const value = frame as Record<string, unknown>;
           if (value.kind === 'controlState') {
@@ -170,6 +184,8 @@ export function createBrowserClient(
     current.onclose = () => {
       if (socket !== current) return;
       socket = undefined;
+      drawing?.dispose();
+      drawing = undefined;
       preferencesRevision = undefined;
       emit({ type: 'observedTasks', snapshot: { sessionId: null, tasks: [], limited: false } });
       if (inFlight !== undefined) {
@@ -183,6 +199,8 @@ export function createBrowserClient(
     };
   }
   function disconnect() {
+    drawing?.dispose();
+    drawing = undefined;
     if (retry) clearTimeout(retry);
     retry = undefined;
     const current = socket;

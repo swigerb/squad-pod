@@ -161,29 +161,42 @@ export async function startOfficeExtension(sdk: Sdk, paths: Omit<CanvasOfficeHos
       }
     },
     onClose: close,
-    actions: ['get_office_state', 'get_member_details'].map(name => ({
-      name, description: name === 'get_office_state' ? 'Bounded office members, layout, source status and requests-observed readiness.'
+    actions: ['get_office_state', 'get_member_details', 'get_office_snapshot'].map(name => ({
+      name, description: name === 'get_office_snapshot' ? 'Fresh bounded office PNG readback for this instance only; not compositor visibility or native acceptance.'
+        : name === 'get_office_state' ? 'Bounded office members, layout, source status, requests-observed readiness and application-reported drawing.'
         : 'Exact-member charter summary, expertise and declared model provenance.',
-      inputSchema: name === 'get_office_state' ? empty : { ...empty,
+      inputSchema: name !== 'get_member_details' ? empty : { ...empty,
         properties: { slug: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,128}$' } }, required: ['slug'] },
       async handler(ctx) {
         const entry = validate(ctx);
         if (!entry?.host || !entry.root || entry.pending) fail('canvas_instance_unavailable');
         const { host, root, generation } = entry;
         const input = ctx.input === undefined ? {} : ctx.input;
-        if (ctx.actionName !== name || !object(input) || (name === 'get_office_state'
+        if (ctx.actionName !== name || !object(input) || (name !== 'get_member_details'
           ? Object.keys(input).length !== 0 : Object.keys(input).length !== 1 || typeof input.slug !== 'string'
             || !/^[A-Za-z0-9_-]{1,128}$/.test(input.slug))) fail('canvas_input_invalid');
         try {
           active(ctx, entry, generation);
+          if (name === 'get_office_snapshot') {
+            if (!host.capture) fail('canvas_snapshot_unavailable');
+            const png = await host.capture();
+            active(ctx, entry, generation);
+            if (entry.pending) fail('canvas_instance_unavailable');
+            const result: SDK.ToolResultObject = {
+              resultType: 'success',
+              textResultForLlm: 'Current office canvas PNG readback (application-reported drawing, not compositor visibility or native acceptance).',
+              binaryResultsForLlm: [{ type: 'image', mimeType: 'image/png', data: png }],
+            };
+            return result;
+          }
           const messages = await host.snapshot();
           active(ctx, entry, generation);
           if (entry.pending) fail('canvas_instance_unavailable');
-          return name === 'get_office_state' ? officeState(messages, host.readiness?.())
+          return name === 'get_office_state' ? officeState(messages, host.readiness?.(), host.rendered?.() ?? null)
             : memberDetails(root.path, input.slug as string, messages);
         } catch (error) {
           if (error instanceof sdk.CanvasError) throw error;
-          return fail('canvas_action_unavailable');
+          return fail(name === 'get_office_snapshot' ? 'canvas_snapshot_unavailable' : 'canvas_action_unavailable');
         }
       },
     })),

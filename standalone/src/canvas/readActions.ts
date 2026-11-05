@@ -3,6 +3,7 @@ import { readMemberCharter } from '../../../src/memberCharter.js';
 import { parseCharterModel, readModelConfig } from '../../../src/declaredModels.js';
 import type { OutboundMessage } from '../../../src/types.js';
 import type { ReadinessSnapshot } from './readiness.js';
+import type { CanvasPaint } from '../../../src/canvasRendering.js';
 
 const text = (value: string | null, limit = 512) => value === null ? null
   : value.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, limit);
@@ -10,10 +11,11 @@ const members = (messages: OutboundMessage[]) =>
   messages.find(message => message.type === 'existingAgents')?.agents.slice(0, 128) ?? [];
 
 /** Bounded projections only: never return credentials, absolute paths or raw diagnostics. */
-export function officeState(messages: OutboundMessage[], readiness?: ReadinessSnapshot) {
+export function officeState(messages: OutboundMessage[], readiness?: ReadinessSnapshot, rendered: CanvasPaint | null = null) {
   const layout = messages.find(message => message.type === 'layoutLoaded')?.layout;
   const source = messages.find(message => message.type === 'sourceStatus')?.status;
   return {
+    rendering: { semantics: 'application-reported-drawing-not-compositor-visibility' as const, firstFrame: rendered },
     ...(readiness ? { readiness } : {}),
     members: members(messages).map(member => ({
       slug: text(member.id, 128), name: text(member.name, 256), role: text(member.role, 256),
