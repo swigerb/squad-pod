@@ -40,7 +40,7 @@ const layout: Check = v => isValidLayout(v) && object({
   areaTiles: optional(array(nullable(short), 65536)),
   areaMappings: optional(dictionary(array(short, 100), 500)),
 })(v);
-export const isObserverLayout = layout;
+export const isObserverLayout = (value: unknown): value is Extract<OutboundMessage, { type: 'layoutLoaded' }>['layout'] => layout(value);
 const agent = {
   id: short, name: short, role: short, paletteIndex: integer, seatId: nullable(short),
   status: oneOf('active', 'idle', 'waiting'), currentTask: nullable(text),

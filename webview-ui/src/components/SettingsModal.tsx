@@ -3,6 +3,7 @@ import { useHostClient } from '../HostClientContext.js';
 import type { PodSettings, SourceStatus } from '../../../src/types.js';
 import { SourceStatusView } from './SourceStatusView.js';
 import { AssetDirectories, type AssetStatusData } from './AssetStatus.js';
+import { ProjectLayoutImport } from '../canvas/ProjectLayoutImport.js';
 
 interface SettingsModalProps {
   canvas?: boolean;
@@ -132,7 +133,7 @@ export function SettingsModal({ canvas = false, standalone = false, assetStatus,
           </div>}
           <SourceStatusView status={sourceStatus} readOnly={standalone} canvas={canvas} />
           {(!standalone || canvas) && <AssetDirectories status={assetStatus} />}
-          {canvas ? <p role="status">Only this selected project is available. Directory navigation, CLI launch, terminals and opening local files are unavailable: Canvas has no native filesystem or terminal authority.</p>
+          {canvas ? <p role="status">Only this selected project is available. Directory navigation, CLI launch and terminals are unavailable. Declared charters may open through the host editor when supported; no arbitrary file-opening authority is granted.</p>
             : standalone ? <p role="status">Selected-project settings only. Native dialogs, directory management, external assets and browser-granted private/live log consent are unavailable. Live observation requires local CLI --live-activity opt-in.</p> : <p style={{ fontSize: '12px', margin: 0 }}>
             Automatic launch on startup/refocus: Off. Directory launches require an explicit click and use VS Code&apos;s normal terminal and Copilot permission prompts.
             Live tools and context use an undocumented, best-effort Copilot CLI session format.
@@ -140,6 +141,7 @@ export function SettingsModal({ canvas = false, standalone = false, assetStatus,
 
           <div style={{ borderTop: '1px solid var(--vscode-panel-border)', paddingTop: '16px' }}>
             <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>Layout</div>
+            {canvas && canImport && <ProjectLayoutImport />}
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 disabled={!canExport}
@@ -181,7 +183,9 @@ export function SettingsModal({ canvas = false, standalone = false, assetStatus,
             {!canExport && <p role="status">Layout export is unavailable in this host.</p>}
             {!canImport && <p role="status">Layout import is unavailable in this host.</p>}
             {standalone && (canImport || canExport) && <p role="status">
-              {canImport && 'Import selects a browser file. '}{canExport && 'Export downloads validated JSON. '}
+              {canImport && 'Import selects a browser file. '}{canExport && (client.canvasHost?.export
+                ? 'Export writes validated JSON to this session workspace when accepted; browser download is the fallback. '
+                : 'Export downloads validated JSON. ')}
               Neither grants filesystem or terminal access.
             </p>}
           </div>

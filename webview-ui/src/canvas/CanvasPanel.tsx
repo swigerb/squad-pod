@@ -41,7 +41,7 @@ export function CanvasPanel({ bootstrap }: { bootstrap?: () => Promise<CanvasHos
   return <section className="canvas-panel" aria-label="Squad Pod canvas">
     <p className="canvas-scope">{editing
       ? 'Editing enabled for this Canvas instance. Layout, seats and local settings use revision-checked project storage; unacknowledged drafts stay in this instance’s browser storage.'
-      : 'Read-only Canvas by default. Enable editing to change the project office with separate control authority.'} Directory management, file opening and live logs are unavailable.</p>
+      : 'Read-only Canvas by default. Enable editing to change the project office with separate control authority.'} Directory management, terminals and private CLI logs are unavailable. Host-mediated charter, session usage and transfers are candidates pending native acceptance.</p>
     {client?.enableEditing && !editing && <button disabled={enabling || !!editError} onClick={() => void enableEditing()}>
       {enabling ? 'Enabling editing…' : 'Enable editing'}
     </button>}

@@ -1,4 +1,5 @@
 import type { CliUsageSnapshot } from '../../../src/cliUsage.js';
+import { SessionUsage } from '../canvas/SessionUsage.js';
 
 export function CliUsage({ snapshot, readOnly, canvas = false, onAction }: {
   snapshot: CliUsageSnapshot | null;
@@ -7,6 +8,14 @@ export function CliUsage({ snapshot, readOnly, canvas = false, onAction }: {
   onAction: (type: 'selectCliUsage' | 'refreshCliUsage' | 'clearCliUsage') => void;
 }) {
   const report = snapshot?.report;
+  if (canvas) return <>
+    <SessionUsage />
+    <section aria-label="Imported CLI usage">
+      <h3>External CLI usage export</h3>
+      <p>CLI usage import is unavailable in Canvas. Refresh selected export and Forget export remain unavailable.
+        Joined-session SDK usage is a different source, not an imported export.</p>
+    </section>
+  </>;
   return <section aria-label="Imported CLI usage" style={{ padding: '8px 12px', borderBottom: '1px solid var(--vscode-panel-border)', overflowWrap: 'anywhere' }}>
     <h3 style={{ margin: 0, fontSize: 12 }}>Copilot CLI usage export - {snapshot?.state ?? 'unselected'}</h3>
     <p>Separate historical snapshot; never added to Squad ledger totals. Not USD, billing-grade accounting, current model or live context.</p>

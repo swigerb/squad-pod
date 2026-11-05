@@ -22,7 +22,7 @@ The package contains Agent Plugins 1.0 metadata, the existing icon as
 licenses. `ws`, `pngjs`, React/React DOM and Scheduler are bundled; native ws
 accelerators are disabled in favor of its JS fallbacks. Only Node builtins and
 the **host-injected** `@github/copilot-sdk/extension` (experimental v1.0.28
-development contract) remain external. No `node_modules`, SDK install, VS Code
+baseline plus optional, narrowly typed runtime RPC methods) remain external. No `node_modules`, SDK install, VS Code
 runtime or `node-pty` is required. Runtime code must never write to stdout.
 
 `build-info.json` records actual esbuild/Vite inputs, imports, exact dependency
@@ -78,6 +78,64 @@ The automated smoke uses only a synthetic project and an injected SDK stub. It
 proves dependency-free ESM startup and static UI serving, **not** native app
 acceptance, SDK compatibility, real-session observation or editor behavior.
 These checks do not install the plugin or change app configuration.
+
+## Optional host-mediated capabilities (#223; source/unreleased)
+
+This section describes unshipped source candidates, **not the published 0.1.1
+ZIP/catalog pin**. Installing 0.1.1 does not provide these capabilities. Its
+charter/CLI-import OPEN rows and browser-transfer gates remain unchanged.
+
+`standalone/src/canvas/hostCapabilities.ts` owns each instance's optional bridge.
+The installed experimental SDK's generated RPC declarations document
+`canvas.list/open`, `usage.getMetrics()` and `workspaces.createFile({path,content})`.
+The shim types only those used methods; it does not claim general SDK parity.
+All browser requests pass the existing exact loopback Host/Origin and viewer
+cookie boundary. Imports/exports additionally require the per-instance editing
+cookie. A missing method or rejection never grants permission; failures use a
+stable sanitized reason, never raw SDK exceptions, paths, prompts or credentials.
+Host RPC rejections disable that host path for the instance without retries.
+Each SDK await has a one-second deadline; timed-out paths are quarantined for
+the instance even if the underlying SDK promise settles later. The operation
+slot is released so an unresponsive usage RPC cannot disable unrelated imports
+or exports. This does not cancel an in-flight host write/open or automatically
+retry it; a timed-out export remains outcome-unconfirmed.
+Outcomes can be unconfirmed if the host completed a side effect before rejection
+or revocation; no rollback or success is invented.
+
+Charter opening is a user gesture, limited to a current visible member whose
+roster declares the fixed `.squad/agents/<slug>/charter.md` (or `.ai-team` only
+when `.squad` is absent). `ProjectFiles` rejects symlinks/junctions, traversal and
+changed roots. `canvas.list()` must advertise exactly one editor and a compatible
+repo-scope/path schema; its provider ID is passed back, not guessed.
+A bounded, fixed read-only `git -C <joined-root> rev-parse --show-toplevel`
+metadata query determines the worktree root; the verified charter path is
+translated to that root, including a nested joined-project prefix.
+There is no arbitrary command, terminal or directory-management entry point.
+If Git or the host schema is unavailable, opening fails closed.
+
+Joined-session usage is fetched only by its explicit Refresh button. It exposes
+only supplied session-level requests, multiplier-applied premium-request cost,
+API milliseconds and nano-AI units. It is separate from imported CLI exports
+and ledger totals; missing quantities are not zero. No private CLI logs,
+cross-session queries, model attribution or billing conversion are introduced.
+
+After editing opt-in, Export (including retained layout copies) writes **exact
+validated JSON**, not Markdown, to a generated `squad-pod-layout-<uuid>.json`
+session-workspace file and displays its filename. Browser download remains the
+fallback; after a rejection the user must explicitly export again to use it.
+Import project JSON accepts a slash-separated `.json` path relative to the
+joined project; guarded UTF-8 reads and the existing 2 MiB/schema limits precede
+draft replacement. It never saves automatically. The browser JSON picker remains
+available separately. Native accessibility of exported workspace files and
+embedded browser transfers still need owner qualification.
+
+The new headless mocked-SDK smoke in `officeHost.test.ts` exercises a real
+provider/loopback listener, auth refusals, session metrics, editing-gated export,
+exact JSON bytes and disposal on all three CI operating systems. It does not
+run the app, install a plugin, authorize terminal execution or establish native
+acceptance. All these capabilities are **Candidate; pending native**. See the
+[feature matrix](canvas-feature-matrix.md#platform-investigation-static-only-223)
+for the static URL/loopback findings and explicit unsupported WSL/remote disposition.
 
 ## Immutable preview publication
 

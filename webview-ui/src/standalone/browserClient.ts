@@ -5,6 +5,8 @@ import type { OutboundMessage, WebviewMessage } from '../../../src/types.js';
 import { decodeEvent, isObserverLayout } from '../../../standalone/src/events.js';
 import { LayoutDraft } from '../office/editor/layoutDraft.js';
 import { validPreferences, validPreferenceMutation, type OfficePreferences, type PreferenceMutation } from '../../../standalone/src/officePreferences.js';
+import type { CanvasHostBridge } from '../../../src/core/canvasHost.js';
+import { HOST_UNAVAILABLE } from '../canvas/hostBridge.js';
 
 export interface BrowserControlOptions {
   recoveryKey: string;
@@ -24,6 +26,7 @@ export function createBrowserClient(
   origin = window.location.origin,
   control?: BrowserControlOptions,
   canvas = false,
+  canvasHost?: CanvasHostBridge,
 ): BrowserHostClient {
   const listeners = new Set<(message: OutboundMessage) => void>();
   let socket: WebSocket | undefined;
@@ -212,14 +215,38 @@ export function createBrowserClient(
   }
   return {
     capabilities: control ? STANDALONE_CONTROL_CAPABILITIES : STANDALONE_OBSERVER_CAPABILITIES,
+    ...(canvasHost ? { canvasHost: {
+      ...canvasHost,
+      get charter() { return canvasHost.charter; },
+      get usage() { return canvasHost.usage; },
+      get export() { return canvasHost.export; },
+      async importLayout(path: string) {
+        if (!control || disposed) throw new Error(HOST_UNAVAILABLE);
+        const layout = await canvasHost.importLayout(path);
+        if (disposed) throw new Error(HOST_UNAVAILABLE);
+        emit({ type: 'layoutLoaded', layout, revision: null, workspaceRoot: '', source: 'import' });
+        return layout;
+      },
+    } } : {}),
     send(message) {
       if (disposed) { status('Disconnected'); return; }
+      if (canvasHost && message.type === 'openSquadAgent') {
+        if (!canvasHost.charter) { status(HOST_UNAVAILABLE); return; }
+        void canvasHost.openCharter(message.agentId).catch(() => status(HOST_UNAVAILABLE));
+        return;
+      }
       if (control && (message.type === 'exportLayout' || message.type === 'exportLayoutSnapshot')) {
         const state = recovery as { draft?: unknown } | undefined;
         const layout = message.type === 'exportLayoutSnapshot' ? message.layout : state?.draft;
         if (!isObserverLayout(layout)) { failure('No valid layout draft to export.'); return; }
         const bytes = JSON.stringify(layout, null, 2);
         if (new TextEncoder().encode(bytes).length > 2 * 1024 * 1024) { failure('Layout exceeds export limit.'); return; }
+        if (canvasHost?.export) {
+          void canvasHost.exportLayout(bytes).then(path => {
+            if (!disposed) status(`Layout JSON exported to this session's workspace files: ${path}`);
+          }, () => { if (!disposed) failure(`${HOST_UNAVAILABLE} Use Export again for the browser download fallback.`); });
+          return;
+        }
         const url = URL.createObjectURL(new Blob([bytes], { type: 'application/json' }));
         const link = document.createElement('a');
         link.href = url; link.download = 'squad-pod-layout.json'; link.click();
