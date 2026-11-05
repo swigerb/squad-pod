@@ -238,6 +238,7 @@ export function AgentCard({
 
       <div style={{ marginBottom: '12px', overflowWrap: 'anywhere' }}>
         <RuntimeModelStatus
+          canvas={canvas}
           label="Member runtime model"
           observation={runtimeModel}
           unavailableReason={liveModelUnavailableReason(liveActivity, readOnly, canvas)}

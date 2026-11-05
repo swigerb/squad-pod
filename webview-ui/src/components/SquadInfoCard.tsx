@@ -202,6 +202,7 @@ export function SquadInfoCard({
 
         <div style={{ marginBottom: '16px', overflowWrap: 'anywhere' }} aria-label="Current-session model">
           <RuntimeModelStatus
+            canvas={canvas}
             label="Current-session model"
             observation={liveModels?.session}
             unavailableReason={liveModelUnavailableReason(liveActivity, readOnly, canvas)}
@@ -295,6 +296,7 @@ export function SquadInfoCard({
                       <>
                         <section aria-label="Model metadata" style={{ marginTop: '8px', overflowWrap: 'anywhere' }}>
                           <RuntimeModelStatus
+                            canvas={canvas}
                             label="Member runtime model"
                             observation={memberRuntimeModel(liveModels, m.id)}
                             unavailableReason={liveModelUnavailableReason(liveActivity, readOnly, canvas)}

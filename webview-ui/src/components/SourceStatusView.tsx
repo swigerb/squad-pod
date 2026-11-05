@@ -14,13 +14,21 @@ export function SourceStatusView({ status, readOnly = false, canvas = false }: {
         </>
       ) : <div>Awaiting host source status...</div>}
       <div>Live CLI observer: {canvas ? 'Unavailable in Canvas' : status?.liveActivity?.state ?? 'Unavailable (no live source status)'}
-        {status?.liveActivity?.sessionId ? ` (${status.liveActivity.sessionId})` : ''}</div>
+        {!canvas && status?.liveActivity?.sessionId ? ` (${status.liveActivity.sessionId})` : ''}</div>
+      {canvas && <>
+        <div>Joined-session SDK observer: {status?.liveActivity?.state ?? 'Unavailable (no joined-session source status)'}
+          {status?.liveActivity?.sessionId ? ` (${status.liveActivity.sessionId})` : ''}</div>
+        {status?.liveActivity?.selection && <div>Selection: {status.liveActivity.selection}</div>}
+        {status?.liveActivity?.reason && <div role="status">{status.liveActivity.reason}</div>}
+        <p>Exact joined-session SDK observations only, when available. Bounded live evidence, not history replay,
+          durable tasks, automatic roster promotion or billing. Missing observations do not mean zero activity or usage.</p>
+      </>}
       {readOnly && !canvas && <p>Live observation requires server startup opt-in (--live-activity).
         {' '}{status?.liveActivity?.selection && `Selection: ${status.liveActivity.selection}. `}
         {status?.liveActivity?.reason
           ?? 'Selects the newest matching-project Squad session; not an owned-terminal correlation.'}</p>}
       <p>File observations are activity hints, not authoritative lifecycle, tool or context events.</p>
-      <div>EventBus / WebSocket bridge: Not connected (no producer).</div>
+      {!canvas && <div>EventBus / WebSocket bridge: Not connected (no producer).</div>}
     </section>
   );
 }

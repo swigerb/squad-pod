@@ -9,5 +9,6 @@ webview-ui/public/assets/furniture/**/manifest.json text eol=lf
 webview-ui/public/assets/pets/**/manifest.json text eol=lf
 webview-ui/public/assets/pixel-agents-source.json text eol=lf
 webview-ui/public/assets/**/*.png binary
-
-/plugins/squad-pod/** -text
+spikes/canvas-173/com.github.copilot/extensions/canvas-173/extension.mjs text eol=lf
+spikes/canvas-173/com.github.copilot/extensions/canvas-173/probe.mjs text eol=lf
+spikes/canvas-173/plugin.json text eol=lf

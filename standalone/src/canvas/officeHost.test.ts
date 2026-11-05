@@ -121,7 +121,7 @@ async function save(client: Awaited<ReturnType<typeof connect>>, message: unknow
   await vi.waitFor(() => expect(client.results.some(result => result.requestId === requestId)).toBe(true));
   return client.results.find(result => result.requestId === requestId)!.messages;
 }
-async function refused(host: CanvasOfficeHost, headers: Record<string, string>, path = '/office') {
+async function refused(host: Pick<CanvasOfficeHost, 'url'>, headers: Record<string, string>, path = '/office') {
   const url = new URL(host.url);
   return new Promise<number>((resolve, reject) => {
     const socket = new WebSocket(`ws://127.0.0.1:${url.port}${path}`, { headers });
@@ -135,6 +135,74 @@ async function refused(host: CanvasOfficeHost, headers: Record<string, string>, 
 }
 
 describe('isolated default read-only Canvas office host', () => {
+  it('exposes only instance-owned requests-observed counters through the authorized state action', async () => {
+    const options = await fixture();
+    await writeFile(join(options.staticRoot, 'app.js'), '/* bundled script */');
+    const provider = await startOfficeExtension({
+      CanvasError: class extends Error {},
+      createCanvas: definition => definition,
+      joinSession: async () => ({
+        sessionId: 'joined-session', on: () => () => {},
+        rpc: { metadata: { snapshot: async () => ({
+          sessionId: 'joined-session', workingDirectory: options.projectRoot,
+        }) } },
+      }),
+    }, options);
+    const ctx = { sessionId: 'joined-session', extensionId: 'provider', canvasId: 'squad-pod', instanceId: 'one' };
+    const state = (context = ctx, input?: unknown) =>
+      provider.canvas.actions[0].handler({ ...context, actionName: 'get_office_state', input }) as
+        Promise<{ readiness: NonNullable<ReturnType<NonNullable<CanvasOfficeHost['readiness']>>> }>;
+    try {
+      const first = await provider.canvas.open(ctx);
+      const secondCtx = { ...ctx, instanceId: 'two' };
+      await provider.canvas.open(secondCtx);
+      const zero = (await state()).readiness;
+      expect(Object.values(zero.counters)).toEqual(Array(9).fill(0));
+      expect((await http(first, '/')).status).toBe(200);
+      expect((await http(first, '/index.html', 'HEAD')).status).toBe(200);
+      expect((await http(first, '/app.js')).status).toBe(200);
+      expect((await http(first, '/app.js?SECRET')).status).toBe(404);
+      expect((await http(first, '/readiness')).status).toBe(404);
+      expect((await http(first, '/office-context')).status).toBe(403);
+      expect((await http(first, '/office-context', 'POST')).status).toBe(405);
+      expect((await auth(first, { Origin: 'null' })).status).toBe(403);
+      expect((await auth(first, { Host: 'evil.example' })).status).toBe(403);
+      expect((await http(first, '/auth', 'POST', '{SECRET', {
+        Origin: new URL(first.url).origin, 'Content-Type': 'application/json',
+      })).status).toBe(400);
+      const authenticated = await auth(first);
+      const cookie = authenticated.headers['set-cookie']![0].split(';')[0];
+      expect((await auth(first)).status).toBe(403);
+      const context = await http(first, '/office-context', 'GET', undefined, { Cookie: cookie });
+      expect(context.status).toBe(200);
+      expect(context.body).not.toContain('readiness');
+      expect(await refused(first, { Origin: new URL(first.url).origin })).toBe(403);
+      const client = await connect(first, cookie);
+      client.socket.send(JSON.stringify({ version: 1, kind: 'office',
+        message: { type: 'webviewReady', SECRET: true } }));
+      client.socket.send(JSON.stringify({ version: 1, kind: 'office', message: { type: 'webviewReady' } }));
+      const closed = waitForSocketClose(client.socket, 'readiness viewer');
+      client.socket.close(); await closed;
+      await vi.waitFor(async () => expect((await state()).readiness.counters.officeSocketClosures).toBe(1));
+      const snapshot = (await state()).readiness;
+      expect(snapshot).toEqual({ ...zero, counters: {
+        documentRequests: 2, scriptRequests: 1, officeContextSuccesses: 1, officeContextRefusals: 2,
+        viewerBootstrapSuccesses: 1, viewerBootstrapRefusals: 4,
+        officeSocketAdmissions: 1, officeSocketClosures: 1, webviewReady: 1,
+      } });
+      expect(JSON.stringify(snapshot)).not.toMatch(/SECRET|127\.0\.0\.1|joined-session|lisa/);
+      for (const secret of [options.projectRoot, first.url, cookie]) expect(JSON.stringify(snapshot)).not.toContain(secret);
+      await expect(state({ ...ctx, sessionId: 'foreign' })).rejects.toThrow();
+      await expect(state(ctx, { readiness: true })).rejects.toThrow();
+      expect((await state()).readiness).toEqual(snapshot);
+      expect((await state(secondCtx)).readiness).toEqual(zero);
+      await provider.canvas.onClose(ctx);
+      await expect(state()).rejects.toThrow();
+      await provider.canvas.open(ctx);
+      expect((await state()).readiness).toEqual(zero);
+    } finally { await provider.dispose(); }
+  });
+
   it('does not scan project activity folders or infer live work from historical files', async () => {
     const entries = vi.spyOn(ProjectFiles.prototype, 'entries');
     const options = await fixture();
@@ -389,6 +457,9 @@ describe('isolated default read-only Canvas office host', () => {
     expect(raw).toBe(JSON.stringify(layout, null, 2));
     expect(parseLayoutJson(raw)).toEqual(layout);
     const reloaded = await connect(host, cookie, true);
+    expect(host.readiness!()!.counters).toMatchObject({
+      officeSocketAdmissions: 1, officeSocketClosures: 0, webviewReady: 1,
+    });
     expect(reloaded.messages.find(message => message.type === 'layoutLoaded')).toMatchObject({ layout });
     expect((await http(host, '/office-context', 'GET', undefined, { Cookie: cookie })).body)
       .toContain('"controlAuthorized":true');
@@ -543,6 +614,7 @@ describe('isolated default read-only Canvas office host', () => {
     const { socket } = await connect(host, cookie);
     const closed = new Promise(resolve => socket.once('close', resolve));
     const first = host.dispose();
+    expect(host.readiness!()).toBeUndefined();
     expect(host.dispose()).toBe(first);
     await first;
     await closed;

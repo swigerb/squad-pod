@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "issue": 173,
+  "parentIssue": 172,
+  "status": "PARTIAL_NATIVE_MARKETPLACE_QUALIFICATION",
+  "recommendation": {
+    "issueCompletion": "NO-GO",
+    "fullGate": "NO-GO",
+    "publicationAuthorized": false
+  },
+  "identity": {
+    "repository": "swigerb/squad-pod",
+    "configuredNativeSourceCommit": "267fbd160d16abcb71059a0309025b6bd31e755a",
+    "sourcePath": "spikes/canvas-173",
+    "plugin": "squad-pod-canvas-173",
+    "installedUiVersion": "0.0.0",
+    "appVersion": "1.1.34",
+    "platform": "Windows",
+    "architecture": "x64",
+    "providerClass": "marketplace-plugin-not-project-local",
+    "installedFileDigests": "UNPROVEN",
+    "runtime": { "node": "v24.22.1", "platform": "win32", "architecture": "x64", "sdkVersion": "UNPROVEN", "cliVersion": "UNPROVEN" }
+  },
+  "provenance": {
+    "class": "ATTRIBUTED_NATIVE_OBSERVATION",
+    "source": "Owner-selected acceptance-summary.json and native-marketplace-render.png",
+    "method": "Sanitized transcription of the selected summary and exact document-only screenshot crop; no new native run.",
+    "limits": "Raw receipts, installed files, private catalog and unrelated external material were not inspected. A configured source SHA is not independently measured installed bytes.",
+    "historicalEvidence": "Unchanged; earlier gaps are newly observed only on this configured source and app scope, not rewritten as universal guarantees."
+  },
+  "claims": {
+    "localCatalogAcceptedByNativeUi": true,
+    "advertisedPluginCount": 1,
+    "nativeInstallSucceeded": true,
+    "initiallyEnabled": true,
+    "advertisedCanvasCount": 1,
+    "freshSyntheticRoot": true,
+    "projectLocalExtensionAbsent": true,
+    "remoteAbsent": true,
+    "explicitRootOpen": "PASS",
+    "readOnlySnapshot": "PASS",
+    "exactJoinedSession": true,
+    "rootMatch": "matched",
+    "rootScope": "explicit-synthetic-root-equality-only",
+    "nativeRender": "PASS",
+    "securityHeadersChanged": false,
+    "boundedSanitizedEventCount": 1,
+    "eventMeaning": "Subscription-only evidence; actual typed event, subagent identity and timestamp qualification remains unproved.",
+    "firstClose": { "listenersRemaining": 0, "tcpConnectionRefused": true },
+    "sameInstanceReopen": "PASS",
+    "secondClose": { "listenersRemaining": 0, "tcpConnectionRefused": true },
+    "scopeLimit": "One observed native local-catalog installation on this source/app; not a universal catalog syntax or supported-platform guarantee."
+  },
+  "cleanup": {
+    "disableAttempt": "UI Automation Toggle returned Unrecognized error",
+    "subsequentObservation": "After list refresh the QA entry was absent; an unrelated source update error was displayed.",
+    "causeAndInitiation": "UNKNOWN",
+    "separateDisableControl": "UNPROVEN",
+    "separateUninstallControl": "NOT_OBSERVED",
+    "normalQaMarketplaceRemoval": "PASS",
+    "forceRemovalUsed": false,
+    "syntheticRootTrustRevoked": true,
+    "providerExited": true,
+    "listenersRemaining": 0,
+    "installedQaEntriesRemaining": 0,
+    "qaMarketplaceAbsent": true,
+    "separatePluginTrustPromptObserved": false,
+    "meaning": "Final cleanup of observed QA additions passed; this does not establish independent disable or uninstall control passes."
+  },
+  "newCandidate": {
+    "status": "NATIVE_UNTESTED",
+    "preMergeHead": "9d293c167c79cf95d350744644721fbe4135d08b",
+    "integratedUpstream": "4909870e1c5568ccb94b9dbdd818030a1b27d133",
+    "artifactSourceCommit": "cb33f0379431cb523f84e222e89d8e2e5e582c1e",
+    "evidenceRevisionPolicy": "This evidence-only follow-up leaves artifact bytes unchanged. Derive the enclosing evidence revision from Git history, not a self-referential SHA stored in this document.",
+    "upstreamAttribution": "Already-merged #177 is integrated, not implemented by this evidence change.",
+    "lfContract": "Exact-path LF attributes preserve canonical candidate bytes under core.autocrlf=true and false; both isolated checkout modes matched canonical blobs.",
+    "artifactMeaning": "Expected canonical candidate bytes below are not installed-provider observations or baked commit proof. New diagnostics hash bounded actual own files on disk at observation time; that native observation has not run on this candidate.",
+    "canonicalSha256": {
+      "extension.mjs": "f2f47994b9ff9214946b3cd136c3c0a64f615ddf41243d04e3e0d78eab89c503",
+      "probe.mjs": "fbc40152a7b2a1950c4af12e2360ccc2d1c5984ed49874aaab80ce831d95a4c1",
+      "plugin.json": "26ab48a14f26bca07cb28c66f6db45dcff3194a995bdfe26ab878aeac854f1f5"
+    },
+    "reportedLocalChecks": {
+      "source": "Sequential implementation editor's integrated-candidate report; not rerun by this evidence editor",
+      "targetedTests": { "passed": 133, "failed": 0, "selectors": ["src/canvas173.test.ts", "src/copilotSessionActivity.test.ts", "src/observedTasks.test.ts", "webview-ui/src/office/engine/subagents.test.ts"] },
+      "typeChecks": "PASS",
+      "moduleSyntaxChecks": "PASS",
+      "packageAuditTests": { "passed": 5, "failed": 0 },
+      "nativeAcceptance": "NOT_RUN",
+      "releaseBuild": "NOT_RUN"
+    }
+  },
+  "evidenceEditorChecks": {
+    "actualVsceInventory": { "command": "vsce ls --no-dependencies", "entries": 191, "missingRequiredAssets": [], "forbiddenEvidenceOrSpikeEntries": [], "status": "PASS" },
+    "scope": "Actual inventory after adding these evidence files; existing dist assets only, not a release build or proof dist matches the new candidate.",
+    "jsonAndPublicPrivacyReview": "PASS",
+    "historicalEvidenceModified": false
+  },
+  "remaining": [
+    "Independent installed-artifact source digests, including native qualification of the new candidate diagnostics",
+    "Clean separate native disable and uninstall controls",
+    "Update and rollback between distinct approved versions",
+    "Session resume/replacement, app exit and abrupt process loss",
+    "Actual typed events, subagent identity and timestamps",
+    "Explicit production scope and minimum supported platform/version decisions"
+  ],
+  "image": {
+    "path": "native-marketplace-document.png",
+    "bytes": 37970,
+    "sha256": "d2dea392637798aa0e048acd442a9f3021c38d0af2cc6a75cb9e0079b3819e6a",
+    "cropBox": [0, 66, 1710, 560],
+    "dimensions": [1710, 494],
+    "method": "Lossless document-only crop of the actual selected PNG; application chrome excluded, no replacement pixels or synthetic render.",
+    "pixelEquality": "PASS: decoded RGB bytes exactly equal the same source rectangle after save/reopen",
+    "metadata": "Stripped; reopened image metadata empty",
+    "privacyReview": "Retained pixels contain generic synthetic read-only documentation only.",
+    "scope": "Visible document render only; screenshot does not independently prove summary lifecycle claims."
+  }
+}

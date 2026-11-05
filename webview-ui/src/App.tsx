@@ -1,5 +1,5 @@
 import './index.css';
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { Component, type ReactNode, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { OfficeState } from './office/engine/officeState.js';
 import { OfficeCanvas } from './office/components/OfficeCanvas.js';
 import { AgentLabels } from './components/AgentLabels.js';
@@ -25,8 +25,19 @@ import { DirectoryModal } from './components/DirectoryModal.js';
 import { HostClientProvider, useHostClient } from './HostClientContext.js';
 import { getDefaultHost, type HostClient } from './hostClient.js';
 import type { CameraRequest } from './office/engine/viewport.js';
+import { canvasDiagnostic } from './canvas/diagnostics.js';
 
 const unsupportedHostMessage = 'Squad Pod needs its supported VS Code host. Run “Squad Pod: Show Panel” from VS Code; standalone browser transport is not available in this build.';
+
+class CanvasOfficeBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    return this.state.failed
+      ? <p role="alert">{canvasDiagnostic('OFFICE_START_FAILED')}</p>
+      : this.props.children;
+  }
+}
 
 export default function App({
   client,
@@ -50,16 +61,17 @@ export default function App({
     return (
       <div role="alert" style={{ padding: '24px', color: 'var(--vscode-foreground)' }}>
         <h1>Host unavailable</h1>
-        <p>{canvas ? 'This Squad Pod canvas session expired. Reopen the canvas.' : hostError
+        <p>{canvas ? canvasDiagnostic('OFFICE_START_FAILED') : hostError
           ? `Squad Pod could not connect to its VS Code host: ${hostError}. ${unsupportedHostMessage}`
           : unsupportedHostMessage}</p>
       </div>
     );
   }
+  const office = <ConnectedApp readOnly={readOnly || (canvas && !client.capabilities.actions.includes('saveLayout'))}
+    standalone={standalone || canvas} canvas={canvas} />;
   return (
     <HostClientProvider client={client}>
-      <ConnectedApp readOnly={readOnly || (canvas && !client.capabilities.actions.includes('saveLayout'))}
-        standalone={standalone || canvas} canvas={canvas} />
+      {canvas ? <CanvasOfficeBoundary>{office}</CanvasOfficeBoundary> : office}
     </HostClientProvider>
   );
 }

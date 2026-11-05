@@ -2,6 +2,7 @@ import { relative } from 'node:path';
 import { readMemberCharter } from '../../../src/memberCharter.js';
 import { parseCharterModel, readModelConfig } from '../../../src/declaredModels.js';
 import type { OutboundMessage } from '../../../src/types.js';
+import type { ReadinessSnapshot } from './readiness.js';
 
 const text = (value: string | null, limit = 512) => value === null ? null
   : value.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, limit);
@@ -9,10 +10,11 @@ const members = (messages: OutboundMessage[]) =>
   messages.find(message => message.type === 'existingAgents')?.agents.slice(0, 128) ?? [];
 
 /** Bounded projections only: never return credentials, absolute paths or raw diagnostics. */
-export function officeState(messages: OutboundMessage[]) {
+export function officeState(messages: OutboundMessage[], readiness?: ReadinessSnapshot) {
   const layout = messages.find(message => message.type === 'layoutLoaded')?.layout;
   const source = messages.find(message => message.type === 'sourceStatus')?.status;
   return {
+    ...(readiness ? { readiness } : {}),
     members: members(messages).map(member => ({
       slug: text(member.id, 128), name: text(member.name, 256), role: text(member.role, 256),
       status: member.status, statusSource: source?.liveActivity?.state === 'following'

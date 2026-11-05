@@ -86,8 +86,8 @@ function validateInventory(inventory) {
   for (const entry of inventory) {
     assert.doesNotMatch(entry.name, /\.map$/i, `VSIX must not contain source maps: ${entry.name}`);
     assert.doesNotMatch(entry.name,
-      /(?:^|\/)(?:standalone|node_modules|terminal-licenses|acceptance(?:-evidence)?|artifacts|coverage|evidence|fixtures|playwright-report|scripts|src|test-results|webview-ui|tests?|__tests__|docs|\.github|\.squad|\.copilot)(?:\/|$)|(?:^|\/)(?:esbuild\.js|pixel-agents-source\.json|package-lock\.json|npm-shrinkwrap\.json|tsconfig(?:\.[^/]*)?\.json|eslint\.config\.[^/]+|vite\.config\.[^/]+|vitest\.config\.[^/]+)(?:$|\/)|(?:^|\/)[^/]+\.(?:test|spec)\.[^/]+$|node-pty|conpty|OpenConsole|TERMINAL_NOTICES|\.(?:[cm]?ts|tsx|node)$/i,
-      `VSIX must not contain source, tooling, acceptance-evidence, standalone, or native-terminal payloads: ${entry.name}`);
+      /(?:^|\/)(?:standalone|spikes|node_modules|terminal-licenses|acceptance(?:-evidence)?|artifacts|coverage|evidence|fixtures|playwright-report|scripts|src|test-results|webview-ui|tests?|__tests__|docs|\.github|\.squad|\.copilot)(?:\/|$)|(?:^|\/)(?:esbuild\.js|pixel-agents-source\.json|package-lock\.json|npm-shrinkwrap\.json|tsconfig(?:\.[^/]*)?\.json|eslint\.config\.[^/]+|vite\.config\.[^/]+|vitest\.config\.[^/]+)(?:$|\/)|(?:^|\/)[^/]+\.(?:test|spec)\.[^/]+$|node-pty|conpty|OpenConsole|TERMINAL_NOTICES|\.(?:[cm]?ts|tsx|node)$/i,
+      `VSIX must not contain source, tooling, acceptance-evidence, standalone, spikes, or native-terminal payloads: ${entry.name}`);
   }
 }
 

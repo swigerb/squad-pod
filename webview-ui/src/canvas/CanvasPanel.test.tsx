@@ -2,7 +2,8 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
 import { CanvasPanel } from './CanvasPanel.js';
-import { CANVAS_EDIT_FAILED, CANVAS_EXPIRED, type CanvasHostClient } from './bootstrap.js';
+import { CANVAS_EDIT_FAILED, type CanvasHostClient } from './bootstrap.js';
+import { CanvasBootstrapError, canvasDiagnostic, type CanvasDiagnosticCode } from './diagnostics.js';
 import { CANVAS_CONTROL_CAPABILITIES, CANVAS_OBSERVER_CAPABILITIES } from '../../../src/core/hostCapabilities.js';
 import type { PreferenceMutation } from '../../../standalone/src/officePreferences.js';
 
@@ -12,19 +13,34 @@ vi.mock('../App.js', () => ({
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
-it('shows a neutral expired-session state with no credential form or raw errors', async () => {
+it.each([null, 'NETWORK_FAILED', 'VIEWER_BOOTSTRAP_MISSING', 'VIEWER_BOOTSTRAP_INVALID',
+  'AUTH_REJECTED', 'AUTH_UNAVAILABLE', 'OFFICE_CONTEXT_UNAVAILABLE', 'OFFICE_CONTEXT_INVALID',
+  'OFFICE_START_FAILED'] as const)('shows safe startup classification %s without private data or expiration claims', async code => {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const root = createRoot(host);
-  const bootstrap = vi.fn().mockRejectedValue(new Error('private credential'));
+  const error = code ? new CanvasBootstrapError(code) : new Error('private credential Cookie=secret http://private/path C:\\private prompt');
+  if (code) error.message = 'private credential';
+  const bootstrap = vi.fn().mockRejectedValue(error);
   try {
     await act(async () => root.render(<CanvasPanel bootstrap={bootstrap} />));
-    expect(host.querySelector('[role="alert"]')?.textContent).toBe(CANVAS_EXPIRED);
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(canvasDiagnostic(code ?? 'BOOTSTRAP_FAILED'));
+    expect(host.textContent).not.toMatch(/expired|Cookie=|http:|C:\\|prompt/);
     expect(host.textContent).not.toContain('private credential');
     expect(host.textContent).not.toContain('VS Code');
     expect(host.querySelector('input, form')).toBeNull();
     expect(bootstrap).toHaveBeenCalledOnce();
   } finally { act(() => root.unmount()); host.remove(); }
+});
+
+it('does not render a forged diagnostic code or message', async () => {
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  const error = new CanvasBootstrapError('private credential' as CanvasDiagnosticCode);
+  try {
+    await act(async () => root.render(<CanvasPanel bootstrap={async () => { throw error; }} />));
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(canvasDiagnostic('BOOTSTRAP_FAILED'));
+  } finally { act(() => root.unmount()); }
 });
 
 function client(): CanvasHostClient {

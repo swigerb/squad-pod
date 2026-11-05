@@ -9880,6 +9880,9 @@ async function startTransport(options) {
     throw new Error("Canvas does not support terminal authority");
   }
   const files = await indexStatic(options.staticRoot);
+  const observe = (event) => {
+    if (options.canvas) options.canvasReadiness?.(event);
+  };
   let token = credential();
   let session = credential();
   let terminalToken = credential();
@@ -9962,6 +9965,17 @@ async function startTransport(options) {
   };
   const server = createServer({ maxHeaderSize: MAX_INBOUND }, (request, response) => {
     headers(response);
+    if (options.canvas) {
+      const resource = files.get(staticPath(request.url ?? "") ?? "");
+      if (request.method === "GET" || request.method === "HEAD") {
+        if (resource?.mime.startsWith("text/html")) observe("documentRequests");
+        if (resource?.mime.startsWith("text/javascript")) observe("scriptRequests");
+      }
+      const outcome = request.url === "/auth" ? "viewerBootstrap" : request.url === "/office-context" ? "officeContext" : void 0;
+      if (outcome) response.once("finish", () => observe(
+        `${outcome}${response.statusCode === (outcome === "viewerBootstrap" ? 204 : 200) ? "Successes" : "Refusals"}`
+      ));
+    }
     if (!validHost(request)) {
       reply(response, 403, "FORBIDDEN");
       return;
@@ -10106,6 +10120,10 @@ async function startTransport(options) {
     ws.once("close", () => cleanups.delete(ws));
   });
   const handleOffice = (ws, control) => {
+    if (!control) {
+      observe("officeSocketAdmissions");
+      ws.once("close", () => observe("officeSocketClosures"));
+    }
     const admittedGeneration = generation;
     let lastMutationId = 0;
     let active = true;
@@ -10235,6 +10253,7 @@ async function startTransport(options) {
       if (message.type === "webviewReady") {
         ready = true;
         initializing = true;
+        if (!control) observe("webviewReady");
       }
       readTimer = setTimeout(() => {
         error("TIMEOUT");
@@ -10796,6 +10815,42 @@ var CanvasActivity = class {
   }
 };
 
+// src/canvas/readiness.ts
+var initial = () => ({
+  documentRequests: 0,
+  scriptRequests: 0,
+  officeContextSuccesses: 0,
+  officeContextRefusals: 0,
+  viewerBootstrapSuccesses: 0,
+  viewerBootstrapRefusals: 0,
+  officeSocketAdmissions: 0,
+  officeSocketClosures: 0,
+  webviewReady: 0
+});
+var CanvasReadiness = class {
+  counters = initial();
+  disposed = false;
+  /** Accept only allowlisted facts, saturating independently at 65535. */
+  observe(event) {
+    if (!this.disposed && Object.hasOwn(this.counters, event)) {
+      this.counters[event] = Math.min(65535, this.counters[event] + 1);
+    }
+  }
+  /** Return a detached safe projection for the authorized Canvas action only. */
+  snapshot() {
+    return this.disposed ? void 0 : {
+      semantics: "requests-observed-not-visible-renderer-or-host-defect",
+      counterLimit: 65535,
+      counters: { ...this.counters }
+    };
+  }
+  /** Erase observations and ignore late transport callbacks. */
+  dispose() {
+    this.disposed = true;
+    this.counters = initial();
+  }
+};
+
 // src/canvas/officeHost.ts
 function localAbsolute(root) {
   return isAbsolute5(root) && !/^[\\/]{2}|^\\|^\/(?:mnt\/[a-z](?:\/|$)|wsl(?:\/|$))/i.test(root) && !root.includes("\0");
@@ -10830,6 +10885,7 @@ async function validateRoot(selected) {
 }
 async function startCanvasOfficeHost(options) {
   const root = await validateRoot(options.projectRoot);
+  const readiness = new CanvasReadiness();
   let observer;
   let transport;
   const listeners = /* @__PURE__ */ new Set();
@@ -10849,6 +10905,7 @@ async function startCanvasOfficeHost(options) {
     transport = await startTransport({
       staticRoot: options.staticRoot,
       canvas: true,
+      canvasReadiness: (event) => readiness.observe(event),
       officeControl: createOfficeControl(root),
       snapshot,
       subscribe: (listener) => {
@@ -10865,6 +10922,7 @@ async function startCanvasOfficeHost(options) {
       }
     });
   } catch {
+    readiness.dispose();
     try {
       await transport?.dispose();
     } finally {
@@ -10878,10 +10936,12 @@ async function startCanvasOfficeHost(options) {
   return {
     url: `http://127.0.0.1:${ownedTransport.port}/#c=${ownedTransport.token}`,
     snapshot,
+    readiness: () => readiness.snapshot(),
     acceptActivity: (event) => live?.accept(event),
     clearActivity: () => live?.clear(),
     dispose() {
       if (!disposal) {
+        readiness.dispose();
         live?.clear();
         listeners.clear();
         ownedObserver.dispose();
@@ -11197,10 +11257,11 @@ function readModelConfig(workspaceRoot, agentName) {
 // src/canvas/readActions.ts
 var text5 = (value, limit = 512) => value === null ? null : value.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, limit);
 var members = (messages) => messages.find((message) => message.type === "existingAgents")?.agents.slice(0, 128) ?? [];
-function officeState(messages) {
+function officeState(messages, readiness) {
   const layout2 = messages.find((message) => message.type === "layoutLoaded")?.layout;
   const source = messages.find((message) => message.type === "sourceStatus")?.status;
   return {
+    ...readiness ? { readiness } : {},
     members: members(messages).map((member) => ({
       slug: text5(member.id, 128),
       name: text5(member.name, 256),
@@ -11417,7 +11478,7 @@ async function startOfficeExtension(sdk2, paths, lifecycle = process) {
     onClose: close,
     actions: ["get_office_state", "get_member_details"].map((name) => ({
       name,
-      description: name === "get_office_state" ? "Bounded office members, layout and source status." : "Exact-member charter summary, expertise and declared model provenance.",
+      description: name === "get_office_state" ? "Bounded office members, layout, source status and requests-observed readiness." : "Exact-member charter summary, expertise and declared model provenance.",
       inputSchema: name === "get_office_state" ? empty : {
         ...empty,
         properties: { slug: { type: "string", pattern: "^[A-Za-z0-9_-]{1,128}$" } },
@@ -11434,7 +11495,7 @@ async function startOfficeExtension(sdk2, paths, lifecycle = process) {
           const messages = await host.snapshot();
           active(ctx, entry, generation);
           if (entry.pending) fail("canvas_instance_unavailable");
-          return name === "get_office_state" ? officeState(messages) : memberDetails(root.path, input.slug, messages);
+          return name === "get_office_state" ? officeState(messages, host.readiness?.()) : memberDetails(root.path, input.slug, messages);
         } catch (error) {
           if (error instanceof sdk2.CanvasError) throw error;
           return fail("canvas_action_unavailable");

@@ -166,18 +166,17 @@ export function TelemetryDrawer({ canvas = false, readOnly = false, events, reco
         ) : null}
         <RecordedUsage snapshot={recordedUsage} />
         <CliUsage snapshot={cliUsage} readOnly={readOnly} canvas={canvas} onAction={type => onCliUsageAction?.(type)} />
-        {canvas ? <p role="status" style={{ padding: '6px 12px' }}>Live logs and session tasks are unavailable in Canvas. File observations are activity hints, not authoritative lifecycle events.</p> : <>
         <div style={{ padding: '6px 12px', overflowWrap: 'anywhere' }}>
-          {readOnly ? <p role="status">Browser settings cannot grant live-log consent. Live observation requires explicit local CLI --live-activity opt-in; opening this drawer enables nothing.</p>
+          {canvas ? <p role="status">Canvas displays bounded live observations from the exact joined SDK session. Private CLI-log scanning is unavailable; office editing grants no log access.</p>
+            : readOnly ? <p role="status">Browser settings cannot grant live-log consent. Live observation requires explicit local CLI --live-activity opt-in; opening this drawer enables nothing.</p>
             : <><button onClick={onOpenSettings} style={smallButtonStyle}>Observation settings and consent</button>
               <p>Review live CLI observation in Settings; opening Settings enables nothing and does not populate recorded usage.</p></>}
           <details>
             <summary>Activity source diagnostics</summary>
-            <SourceStatusView status={sourceStatus} readOnly={readOnly} />
+            <SourceStatusView status={sourceStatus} readOnly={readOnly} canvas={canvas} />
           </details>
         </div>
-        {isOpen && <ObservedTasks readOnly={readOnly} snapshot={observedTasks} source={liveSource} />}
-        </>}
+        {isOpen && <ObservedTasks canvas={canvas} readOnly={readOnly} snapshot={observedTasks} source={liveSource} />}
         {events.length > 0 && (
           events.map((event) => {
             const isExpanded = expandedIds.has(event.id);

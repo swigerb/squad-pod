@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "c1a0df7ca66b8c0f50a42b83758f9c8e1572e66e",
+  "sourceCommit": "0f4f08bbfdfc7c6c3a8c3bf8715847c130df5967",
   "sourceDirty": false,
   "sdk": {
     "name": "@github/copilot-sdk/extension",
@@ -82,6 +82,7 @@
     "standalone/src/canvas/officeHost.ts",
     "standalone/src/canvas/provider.ts",
     "standalone/src/canvas/readActions.ts",
+    "standalone/src/canvas/readiness.ts",
     "standalone/src/events.ts",
     "standalone/src/events.ts",
     "standalone/src/observer.ts",
@@ -108,6 +109,7 @@
     "webview-ui/src/canvas/CanvasPanel.tsx",
     "webview-ui/src/canvas/bootstrap.ts",
     "webview-ui/src/canvas/canvas.css",
+    "webview-ui/src/canvas/diagnostics.ts",
     "webview-ui/src/canvas/main.tsx",
     "webview-ui/src/components/AgentCard.tsx",
     "webview-ui/src/components/AgentLabels.tsx",
@@ -545,5 +547,5 @@
       "licensePath": "licenses/ws-8.22.0.txt"
     }
   ],
-  "extensionSha256": "cbaf674f6ae6e5a9f8d114721d08eaaba0f77a274457a797ec8c60f9a5ce713b"
+  "extensionSha256": "caa39af2efdabdb6531c8865b9313f4d3e02b3c349a7cd9c6b0dc662f2a0b3b1"
 }
