@@ -1,17 +1,19 @@
 # Install Squad Pod in the GitHub Copilot app
 
-**Canvas plugin 0.1.1 is an owner-approved Windows preview, not generally
-available.** It brings the pixel-art Squad office into a GitHub Copilot app
-session. This is separate from the [VS Code Marketplace extension](../README.md#install)
+**Canvas 0.1.2 is being prepared.** The currently published pre-release and
+marketplace pin remain at plugin **0.1.1**, an owner-approved Windows preview,
+not generally available. It brings the pixel-art Squad office into a GitHub
+Copilot app session. This is separate from the [VS Code Marketplace extension](../README.md#install)
 and the source-only [standalone browser companion](../standalone/README.md).
 Installing a VSIX or updating Copilot CLI does not install or update this plugin.
 The **GitHub Copilot app** is the native agent desktop application, **not GitHub
 Desktop** (the Git client) and not VS Code.
 
-**Native 0.1.1 qualification is pending** in
+**Native 0.1.1 and 0.1.2 qualification is pending** in
 [#218](https://github.com/swigerb/squad-pod/issues/218). All prior native PASS
 records below remain pinned to 0.1.0; automated packaging checks do not extend
-them to the new artifact.
+them to either newer artifact. The 0.1.2 candidate is not yet available through
+the published catalog.
 
 ## Compatibility
 
@@ -28,14 +30,15 @@ them to the new artifact.
   Your organization must allow the plugin; do not bypass managed policy or trust
   prompts. See GitHub's [marketplace prerequisites](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/create-and-share-plugin-marketplaces#share-the-marketplace).
 
-## Agent-runnable qualification (C14 source candidate)
+## Agent-runnable qualification (C14 0.1.2 candidate)
 
-The source now adds application-reported first-frame evidence and a read-only
-`get_office_snapshot` action. This is **not a new published version**, an
-installation instruction for an unapproved artifact, or a claim that the
-0.1.1 native gates passed. No native app execution is required to build/test
-these changes. Only run the procedure below later against an **owner-approved,
-installed artifact** with these capabilities.
+The 0.1.2 source candidate adds application-reported first-frame evidence and a
+read-only `get_office_snapshot` action. The published 0.1.1 artifact does not
+include these capabilities. This is not an installation instruction for an
+unapproved artifact, or a claim that the 0.1.2 native gates passed. No native
+app execution is required to build/test these changes. Only run the procedure
+below later against an **owner-approved, installed artifact** with these
+capabilities.
 
 Keep evidence classes distinct: **CI/unit/synthetic harness**, **native app
 agent-tool observation using synthetic project data**, **human native UI

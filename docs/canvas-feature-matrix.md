@@ -3,8 +3,11 @@
 Release truth for Canvas plugin **0.1.1**, an owner-approved **Windows
 local-session preview**, not generally available or a VSIX/CLI replacement
 (#214, epic #172). Prior **0.1.0** evidence qualified app **1.1.34**; this is
-not 0.1.1 acceptance, a minimum or a broad compatibility promise.
+not acceptance of 0.1.1 or 0.1.2, a minimum or a broad compatibility promise.
 Native 0.1.1 checks remain pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
+The published artifact and catalog pin remain at 0.1.1 while this source PR
+prepares 0.1.2. The C14/C15 candidate rows below describe 0.1.2 and remain
+pending native acceptance; they do not alter the published 0.1.1 rows.
 macOS, Linux, WSL and remote sessions
 are unsupported. See the [install and lifecycle guide](canvas-install.md).
 It observes only the exact joined session/project. No directory browsing,
@@ -17,12 +20,12 @@ separate, explicit per-instance office-control opt-in; viewer access alone canno
 write. Editing authorizes project layout, declared-member seats/appearance and
 settings, not arbitrary files, launches, logs or other projects.
 
-In the tables, **Candidate** means implemented in the preview, not a promise of
-full native parity; **OPEN** marks unavailable capabilities/remaining parity work.
-The owner-approved preview does not close those broader capability gaps.
-**Transfer gate** means implemented browser behavior, embedded transfer unverified.
-Explicit **source/unreleased** sections describe code not present in the published
-0.1.1 ZIP/catalog pin. Their candidates do not replace the shipping rows below.
+In the 0.1.1 tables, **Candidate** means implemented in that preview, not a
+promise of full native parity; **OPEN** marks unavailable capabilities/remaining
+parity work. The owner-approved preview does not close those broader capability
+gaps. **Transfer gate** means implemented browser behavior, embedded transfer
+unverified. The separate 0.1.2 section describes candidate features not present
+in the published 0.1.1 ZIP/catalog pin.
 
 ## Office, editor and preferences
 
@@ -80,57 +83,59 @@ Explicit **source/unreleased** sections describe code not present in the publish
 | Nested directory add/remove/rename/navigation; directory CLI launch; terminal open/input/reconnect/close | Inaccessible through disabled directory entry point; no launch/terminal action offered. | No native filesystem, CLI-launch or terminal authority. | OPEN |
 | Startup diagnostic report | Unsupported request capability-gated; no visible button. | Host must advertise the action. | Candidate |
 | `get_office_state` readiness | Bounded per-instance request/handshake counters via the authorized Canvas action only. | Requests observed are not visible-renderer acceptance or host-fault evidence; no public diagnostics endpoint. | Candidate; 0.1.1 native checks pending |
-| `get_office_state` rendering (C14 source candidate) | `rendering.firstFrame` is null (unknown) until an authenticated webview reports a completed nonzero-area office draw. Reports first draw time (Unix milliseconds), frame count (saturates at 65535), backing-store pixel width/height, document visibility and IntersectionObserver intersection (`null` until known/unavailable). | Application-reported drawing, not compositor visibility, human observation or host-defect diagnosis. Request counters retain their separate meaning. | Source implementation; not published or native-qualified |
-| `get_office_snapshot` (C14 source candidate) | Read-only agent action returns one fresh PNG through SDK `ToolResultObject.binaryResultsForLlm` for the exact authorized requesting instance. On-demand next-draw readback; maximum 1024 x 768 pixels (aspect ratio preserved, no upscaling), 1 MiB decoded PNG, 2-second response deadline, one pending request per viewer socket. | Random request correlation, authenticated instance socket, PNG signature/dimensions/full decode/CRC checks. No image cache, cross-project lookup, control opt-in, filesystem writes or diagnostics endpoint. Missing frame, malformed/stale/oversized image, disconnect or timeout cannot return an image; action errors are sanitized. | Source implementation; application readback is not native acceptance |
 
-These C14 source changes do **not** change plugin version 0.1.1 or its catalog pin,
-and do not extend historical native results. First-frame evidence is a bounded
-first observation for the live viewer connection, not a continuous visibility
-monitor. `onScreen: true` means IntersectionObserver reported intersection,
-not that the window was unobscured or its pixels reached a display. PNG readback
-shows canvas contents, not the native compositor or other app UI. A hidden or
-stalled panel can have historical drawing evidence while a fresh snapshot times
-out. Disconnect discards that connection's evidence and pending reads.
-A deliberate retry replaces a timed-out request still queued in a stalled
-webview; resuming drawing returns only the latest nonce without disconnecting
-the office. The server continues to reject old/unsolicited snapshot results.
+## Canvas 0.1.2 candidates (C14/C15; native acceptance pending #218)
 
-See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-source-candidate)
-for the subset of #218 that can be investigated without UI automation; no result
-automatically changes a native gate to PASS.
+The C14 renderer diagnostics and snapshot action and the C15 host-mediated
+capabilities are included in the 0.1.2 source candidate. They are **absent from
+the published 0.1.1 ZIP and catalog pin**. The shipping charter/CLI-import OPEN
+rows and browser-transfer gates above remain the release truth.
 
-## C15 source/unreleased candidates (#223)
-
-These features are implemented in source only: **absent from the published
-0.1.1 ZIP and catalog pin**. No version bump, publication or native acceptance
-is implied. The shipping charter/CLI-import OPEN rows and browser-transfer gates
-above remain the release truth.
-
-| Control | Source/unreleased behavior | Boundary | Release decision |
+| Control | 0.1.2 candidate behavior | Boundary | Release decision |
 |---|---|---|---|
-| Agent View Charter; member Open charter | Explicit click attempts the host `editor` only when its discovered schema supports repo scope. Missing/rejected capability disables opening with one sanitized reason; inline text stays readable. | Current declared member only; guarded `.squad`/`.ai-team` charter translated from the actual Git worktree root, including nested joined-project prefixes. No arbitrary opening authority. | Candidate; pending native (source only) |
-| Joined-session usage Refresh | Explicit click calls joined-session `usage.getMetrics()` when available. Displays only supplied finite nonnegative session quantities and units. | New separate source, not external CLI export Select/Refresh/Forget, ledger totals, USD billing or model observation. The CLI-import OPEN row stays OPEN. Missing is not zero. | Candidate; pending native (source only) |
-| Import project JSON | After editing opt-in, a project-relative `.json` path receives guarded UTF-8 read, 2 MiB and layout-schema validation, replacing the draft only. | Exact joined project; no links, absolute paths or traversal. No automatic save. Browser picker remains the fallback and is still unqualified natively. | Candidate; pending native (source only) |
-| Export Layout | After editing opt-in, attempts `workspaces.createFile` with exact validated JSON (2 MiB), a generated filename in this session's workspace files, and a success filename disclosure. | Presence is not permission. No caller-supplied destination or Markdown substitute. Missing method uses browser download; after rejection the user must explicitly export again to use the browser fallback. | Candidate; pending native (source only) |
-| Export local draft/snapshot/retained layout copy | Uses the same exact-JSON host export path with browser fallback. | Instance/project-scoped recovery, not a durable backup. Workspace file accessibility and embedded transfer remain native gates. | Candidate; pending native (source only) |
+| `get_office_state` rendering (C14) | `rendering.firstFrame` is null (unknown) until an authenticated webview reports a completed nonzero-area office draw. Reports first draw time (Unix milliseconds), frame count (saturates at 65535), backing-store pixel width/height, document visibility and IntersectionObserver intersection (`null` until known/unavailable). | Application-reported drawing, not compositor visibility, human observation or host-defect diagnosis. Request counters retain their separate meaning. | Candidate; pending native acceptance (#218) |
+| `get_office_snapshot` (C14) | Read-only agent action returns one fresh PNG through SDK `ToolResultObject.binaryResultsForLlm` for the exact authorized requesting instance. On-demand next-draw readback; maximum 1024 x 768 pixels (aspect ratio preserved, no upscaling), 1 MiB decoded PNG, 2-second response deadline, one pending request per viewer socket. | Random request correlation, authenticated instance socket, PNG signature/dimensions/full decode/CRC checks. No image cache, cross-project lookup, control opt-in, filesystem writes or diagnostics endpoint. Missing frame, malformed/stale/oversized image, disconnect or timeout cannot return an image; action errors are sanitized. | Candidate; pending native acceptance (#218) |
+| Agent View Charter; member Open charter | Explicit click attempts the host `editor` only when its discovered schema supports repo scope. Missing/rejected capability disables opening with one sanitized reason; inline text stays readable. | Current declared member only; guarded `.squad`/`.ai-team` charter translated from the actual Git worktree root, including nested joined-project prefixes. No arbitrary opening authority. | Candidate; pending native acceptance (#218) |
+| Joined-session usage Refresh | Explicit click calls joined-session `usage.getMetrics()` when available. Displays only supplied finite nonnegative session quantities and units. | New separate source, not external CLI export Select/Refresh/Forget, ledger totals, USD billing or model observation. The CLI-import OPEN row stays OPEN. Missing is not zero. | Candidate; pending native acceptance (#218) |
+| Import project JSON | After editing opt-in, a project-relative `.json` path receives guarded UTF-8 read, 2 MiB and layout-schema validation, replacing the draft only. | Exact joined project; no links, absolute paths or traversal. No automatic save. Browser picker remains the fallback and is still unqualified natively. | Candidate; pending native acceptance (#218) |
+| Export Layout | After editing opt-in, attempts `workspaces.createFile` with exact validated JSON (2 MiB), a generated filename in this session's workspace files, and a success filename disclosure. | Presence is not permission. No caller-supplied destination or Markdown substitute. Missing method uses browser download; after rejection the user must explicitly export again to use the browser fallback. | Candidate; pending native acceptance (#218) |
+| Export local draft/snapshot/retained layout copy | Uses the same exact-JSON host export path with browser fallback. | Instance/project-scoped recovery, not a durable backup. Workspace file accessibility and embedded transfer remain native gates. | Candidate; pending native acceptance (#218) |
 
 SDK awaits have one-second deadlines. A timed-out path is quarantined for the
 instance, and unrelated operations can continue. A timeout does not cancel an
 underlying write/open, permit automatic retry or prove a successful outcome.
 Late results cannot turn the unavailable response into success.
 
+These C14 features do not extend historical native results. First-frame
+evidence is a bounded first observation for the live viewer connection, not a
+continuous visibility monitor. `onScreen: true` means IntersectionObserver
+reported intersection, not that the window was unobscured or its pixels reached
+a display. PNG readback shows canvas contents, not the native compositor or
+other app UI. A hidden or stalled panel can have historical drawing evidence
+while a fresh snapshot times out. Disconnect discards that connection's
+evidence and pending reads. A deliberate retry replaces a timed-out request
+still queued in a stalled webview; resuming drawing returns only the latest
+nonce without disconnecting the office. The server continues to reject
+old/unsolicited snapshot results.
+
+See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-012-candidate)
+for the subset of #218 that can be investigated without UI automation; no result
+automatically changes a native gate to PASS.
+
 ## Remaining — OPEN release gates
 
 - Historical 0.1.0 Windows qualification is recorded in #182 and the public
-  marketplace install in #216. Neither qualifies 0.1.1. Its update/rollback,
+  marketplace install in #216. Neither qualifies 0.1.1 or 0.1.2. Their
+  update/rollback,
   repeated lifecycle, fault handling and separate native VS Code checks remain
   pending #218; local catalog checks and browser tests do not establish them.
 - Retain exact project/session and host-build evidence for read-only/enabled
   editing, narrow labels/editor, keyboard/focus, system theme and panel resize;
   qualification of one build is not cross-platform or general parity evidence.
 - Verify embedded JSON picker/download and recovery exports end-to-end; browser
-  tests do not establish native embedded file-transfer support. Host-mediated
-  source/unreleased charter, joined-session metrics and JSON transfers are **Candidate; pending native**,
+  tests do not establish native embedded file-transfer support. The 0.1.2
+  host-mediated charter, joined-session metrics and JSON transfers are
+  **Candidate; pending native acceptance (#218)**,
   not PASS. Method detection and successful mocked calls are not permission grants.
 - OPEN capabilities remain disclosed preview limitations, not parity claims.
   Any broader release needs its own owner disposition and native evidence.
