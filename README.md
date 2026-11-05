@@ -9,9 +9,14 @@
 
 **Your Squad AI team, but make it pixel art.**
 
-Bring your [Squad](https://github.com/bradygaster/squad) agent team into an animated pixel-art office in VS Code. See who's working, explore your agents, follow their tasks, and build an office with its own layout, furniture, colors, and pets.
+Bring your [Squad](https://github.com/bradygaster/squad) agent team into an animated pixel-art office in VS Code or the native **GitHub Copilot desktop app** (Windows Canvas preview). See who's working, explore your agents, follow their tasks, and build an office with its own layout, furniture, colors, and pets.
 
 **Squad Pod 1.0** is the stable, Squad-native office experience from [Brian Swiger](https://marketplace.visualstudio.com/publishers/brianswiger).
+
+Choose your host: [VS Code installation](#install) or
+[GitHub Copilot app installation](docs/canvas-install.md). The Copilot app is
+**not GitHub Desktop**, the Git client. Canvas has its own preview version and
+marketplace; a VSIX does not install it.
 
 ## Features
 
@@ -28,6 +33,7 @@ Bring your [Squad](https://github.com/bradygaster/squad) agent team into an anim
 | Telemetry and usage | Browse observed events, historical Squad usage and model reports, and explicitly selected Copilot CLI usage exports. |
 | Accessible office navigation | Use keyboard-accessible agent details, pan and zoom, Fit office, off-screen Locate controls, and a crowded-label list. |
 | Local browser companion | Run the same office renderer outside VS Code, with separately authenticated office editing and owned-terminal options. |
+| GitHub Copilot desktop app preview | Open the exact joined local project's office as a Canvas plugin, read-only by default with opt-in layout editing. See the [Canvas scope and limits](docs/canvas-feature-matrix.md). |
 
 ## See Squad Pod in action
 
@@ -141,18 +147,27 @@ Responsive controls provide touch pan/zoom, page navigation and deliberate clipb
 
 See the [build/run and security instructions](standalone/README.md). The companion is separate from the Marketplace extension and is not published as an npm product.
 
-### GitHub Copilot app Canvas plugin — Windows preview
+## GitHub Copilot app Canvas plugin — Windows preview
 
-**Canvas plugin 0.1.0** is an owner-approved Windows local-session preview, not
-generally available or the VS Code Marketplace/VSIX extension. App **1.1.34** was
-tested; this is not a minimum-version promise. macOS, Linux, WSL and remote
-sessions are unsupported. No source checkout or build is needed.
+**Canvas plugin 0.1.1** is an owner-approved Windows local-session preview, not
+generally available or the VS Code Marketplace/VSIX extension. Prior **0.1.0**
+native evidence used app **1.1.34** / runtime **1.0.102** on Windows x64; it is
+not 0.1.1 acceptance or a minimum-version promise. Native 0.1.1 checks are
+pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
+macOS, Linux, WSL and remote sessions are unsupported. No source checkout,
+Node.js installation or build is needed by plugin users.
 
-In the app: **Customize → Add extension → Manage marketplaces** → add
-**`swigerb/squad-pod`** → **Install Squad Pod**. In a local project session,
-ask Copilot to open the Squad Pod canvas or use **Open canvas**.
-The [install guide's quick links](docs/canvas-install.md#install-and-open)
-prefill confirmation forms; they never install silently.
+In the **GitHub Copilot app**: **Customize** → marketplace settings next to the
+marketplace dropdown → add **`swigerb/squad-pod`** and confirm. Find **Squad Pod**
+in Browse and choose **Install**, reviewing the trust prompt. Open a local
+project session containing `.squad/team.md` (or `.ai-team/team.md`) and ask
+Copilot to **open the Squad Pod canvas**. The office uses that exact joined
+project, not another checkout or a directory selected in the office.
+
+[Add the marketplace](ghapp://plugins/marketplace/add?source=swigerb%2Fsquad-pod)
+then [install Squad Pod](ghapp://plugins/install?source=squad-pod%40squad-pod-plugins).
+Both links prefill confirmation forms; they never install silently. See the
+[complete setup and troubleshooting instructions](docs/canvas-install.md).
 
 The canvas starts read-only; **Enable editing** is opt-in per instance. It shows
 the joined session's live Squad member activity without replaying history.
@@ -162,6 +177,13 @@ on **2026-11-03**, on **Windows x64** with app **1.1.34** / runtime **1.0.102**
 ([#216](https://github.com/swigerb/squad-pod/issues/216)); this does not verify
 updates, plugin uninstall or rollback. Local checks are not native install proof.
 VSIX versions, defaults and behavior are unchanged.
+
+The owner-hosted **`squad-pod-plugins`** GitHub marketplace is the desktop
+distribution hub. **Awesome Copilot** is a separate central discovery route;
+[github/awesome-copilot#6270](https://github.com/github/awesome-copilot/issues/6270)
+submits the native-qualified **0.1.0** artifact. Acceptance and listing are
+pending, not a verified listing or featured placement.
+The desktop Canvas plugin is not a Visual Studio Marketplace product.
 
 #### Canvas browser client (source-only)
 

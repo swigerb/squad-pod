@@ -4,6 +4,16 @@ This guide is the entry point for trying and verifying Squad Pod. It covers the
 VS Code extension and the private `standalone/` browser observer; the observer is
 part of this repository, not a published npm package.
 
+The **GitHub Copilot desktop app** has a separate owner-approved **Canvas 0.1.1
+Windows x64 local-session preview**. Use the [desktop setup guide](canvas-install.md),
+[feature matrix](canvas-feature-matrix.md) and
+[build/publication checks](canvas-development.md). This is not GitHub Desktop
+or the VSIX. Native PASS evidence in #182/#216 belongs to **0.1.0** only.
+**0.1.1 native qualification is pending #218**, including distinct-version
+update/rollback, native VS Code regression, ten lifecycle cycles across two
+projects, faults and separate disable/uninstall/reinstall. Synthetic tests and
+green CI do not close those gates or authorize native/REAL/paid tasks.
+
 ## Quick start: try the observer
 
 Requires Node.js 22.13+ and the repository's configured npm feed. From the
