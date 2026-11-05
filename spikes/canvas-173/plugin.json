@@ -1,0 +1,8 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "squad-pod-canvas-173",
+  "description": "Staged read-only native Canvas feasibility probe; not a production plugin.",
+  "version": "0.0.0",
+  "license": "MIT",
+  "keywords": ["canvas"]
+}
