@@ -21,7 +21,7 @@ function fixture(rpc?: JoinedSession['rpc']) {
   const list = vi.fn(async () => ({ canvases: [{ canvasId: 'editor', extensionId: 'builtin', inputSchema: schema }] }));
   const getMetrics = vi.fn(async () => ({ totalUserRequests: 7, totalPremiumRequestCost: 0.5,
     totalApiDurationMs: 120, totalNanoAiu: 0, currentModel: 'PRIVATE', codeChanges: { path: 'PRIVATE' } }));
-  const createFile = vi.fn(async () => undefined);
+  const createFile = vi.fn<NonNullable<NonNullable<JoinedSession['rpc']>['workspaces']>['createFile']>(async () => undefined);
   const session: JoinedSession = { sessionId: 'joined', on: () => () => {},
     rpc: rpc ?? { canvas: { open, list }, usage: { getMetrics }, workspaces: { createFile } } };
   const active = vi.fn(() => 0);
@@ -41,7 +41,7 @@ beforeEach(async () => {
   await writeFile(join(root, '.squad', 'agents', 'test-bot', 'charter.md'), '# TestBot\nDeclared charter.');
   await writeFile(join(root, 'layout.json'), content);
 });
-afterEach(async () => { await rm(repo, { recursive: true, force: true }); });
+afterEach(async () => { vi.useRealTimers(); await rm(repo, { recursive: true, force: true }); });
 
 describe('instance-owned host capabilities', () => {
   it('translates nested joined-project paths to editor repo scope only after discovering its schema', async () => {
@@ -123,6 +123,40 @@ describe('instance-owned host capabilities', () => {
     expect(await f.handle({ operation: 'usage' }, false)).toEqual(denied);
     expect(f.getMetrics).toHaveBeenCalledOnce();
     expect(f.handle.available!().usage).toBe(false);
+  });
+  it('bounds a never-settling usage RPC, releases unrelated import and ignores late metrics', async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    let resolve!: (value: Awaited<ReturnType<typeof f.getMetrics>>) => void;
+    f.getMetrics.mockImplementation(() => new Promise(done => { resolve = done; }));
+    const result = f.handle({ operation: 'usage' }, false);
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(await result).toEqual(denied);
+    expect(f.handle.available!().usage).toBe(false);
+    expect(await f.handle({ operation: 'import', path: 'layout.json' }, true)).toEqual({ ok: true, layout });
+    resolve({ totalUserRequests: 7, totalPremiumRequestCost: 0.5, totalApiDurationMs: 120, totalNanoAiu: 0,
+      currentModel: 'PRIVATE', codeChanges: { path: 'PRIVATE' } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await result).toEqual(denied);
+    expect(await f.handle({ operation: 'usage' }, false)).toEqual(denied);
+    expect(f.getMetrics).toHaveBeenCalledOnce();
+  });
+  it('quarantines a timed-out export without claiming cancellation, retrying or blocking imports', async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    let settle!: () => void;
+    f.createFile.mockImplementation(() => new Promise<void>(resolve => { settle = resolve; }));
+    const result = f.handle({ operation: 'export', content }, true);
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(await result).toEqual(denied);
+    expect((await result).ok).toBe(false);
+    expect(f.handle.available!().export).toBe(false);
+    expect(await f.handle({ operation: 'import', path: 'layout.json' }, true)).toEqual({ ok: true, layout });
+    settle();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await result).toEqual(denied);
+    expect(await f.handle({ operation: 'export', content }, true)).toEqual(denied);
+    expect(f.createFile).toHaveBeenCalledOnce();
   });
   it('exports exact validated JSON to a generated session-workspace filename only after editing opt-in', async () => {
     const f = fixture();

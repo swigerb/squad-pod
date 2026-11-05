@@ -15,7 +15,7 @@ export function createHostBridge(request: typeof fetch, isDisposed: () => boolea
       });
       if (!response.ok || isDisposed()) throw new Error();
       const value: CanvasHostResult = await response.json();
-      if (!value || value.ok !== true) throw new Error();
+      if (isDisposed() || !value || value.ok !== true) throw new Error();
       return value;
     } catch { throw new Error(HOST_UNAVAILABLE); }
   }

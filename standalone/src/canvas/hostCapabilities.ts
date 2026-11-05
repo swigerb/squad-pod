@@ -17,6 +17,7 @@ export type CanvasHostHandler = ((input: unknown, editing: boolean) => Promise<C
 };
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
 const MAX_BYTES = 2 * 1024 * 1024;
+const HOST_RPC_TIMEOUT_MS = 1000;
 const reason = 'Host capability unavailable or rejected. Outcome unconfirmed; no automatic retry.';
 
 /** Never accept a session ID, root, canvas ID or export destination from the browser. */
@@ -37,6 +38,19 @@ export function createHostCapabilities(session: JoinedSession, root: string, ins
     try {
       const generation = assertActive();
       const check = () => { if (assertActive() !== generation) throw new Error(); };
+      async function invoke<T>(call: () => Promise<T>): Promise<T> {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        invoked = true;
+        try {
+          // A timeout retires this operation, not the SDK request or its side effects.
+          return await Promise.race([
+            Promise.resolve().then(() => { check(); return call(); }),
+            new Promise<never>((_resolve, reject) => {
+              timer = setTimeout(() => reject(new Error()), HOST_RPC_TIMEOUT_MS);
+            }),
+          ]);
+        } finally { clearTimeout(timer); }
+      }
       if (!object(input) || typeof input.operation !== 'string') throw new Error();
       operation = input.operation;
       const field = operation === 'charter' ? 'slug' : operation === 'export' ? 'content' : operation === 'import' ? 'path' : null;
@@ -50,19 +64,19 @@ export function createHostCapabilities(session: JoinedSession, root: string, ins
         if (operation === 'charter') {
           if (!available().charter || typeof input.slug !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(input.slug)) throw new Error();
           const slug = input.slug;
-          const messages = await snapshot();
+          const messages = await invoke(snapshot);
           check();
           const roster = messages.find(message => message.type === 'existingAgents')?.agents ?? [];
           const charter = readMemberCharter({ workspaceRoot: root, isCurrentMember: id => roster.some(m => m.id === id) }, slug);
           if (charter.charterStatus !== 'available') throw new Error();
           const path = join(selectTeamSourceDirectory(files), 'agents', slug, 'charter.md');
-          invoked = true;
-          const catalog = await session.rpc!.canvas!.list!();
+          const catalog = await invoke(() => session.rpc!.canvas!.list!());
           if (!object(catalog) || !Array.isArray(catalog.canvases)) throw new Error();
           const editors = catalog.canvases.filter(c => object(c) && c.canvasId === 'editor');
           if (editors.length !== 1) throw new Error();
           const editor: unknown = editors[0];
           if (!object(editor) || typeof editor.extensionId !== 'string' || !object(editor.inputSchema)) throw new Error();
+          const editorProvider = editor.extensionId;
           const schema = editor.inputSchema;
           if (!object(schema.properties) || !object(schema.properties.scope) || !object(schema.properties.path)
             || schema.properties.path.type !== 'string' || !Array.isArray(schema.properties.scope.enum)
@@ -81,20 +95,18 @@ export function createHostCapabilities(session: JoinedSession, root: string, ins
           if (declared.length !== 1 || declared[0].charterPath.replace(/\\/g, '/') !== path.split(sep).join('/')) throw new Error();
           const repoPath = relative(repo, target).split(sep).join('/');
           check();
-          invoked = true;
           const targetInstance = `squad-charter-${instanceId}-${slug}`;
-          const opened = await session.rpc!.canvas!.open({ extensionId: editor.extensionId, canvasId: 'editor',
+          const opened = await invoke(() => session.rpc!.canvas!.open({ extensionId: editorProvider, canvasId: 'editor',
             instanceId: targetInstance,
-            input: { scope: 'repo', path: repoPath } });
+            input: { scope: 'repo', path: repoPath } }));
           check();
-          if (!object(opened) || opened.canvasId !== 'editor' || opened.extensionId !== editor.extensionId
+          if (!object(opened) || opened.canvasId !== 'editor' || opened.extensionId !== editorProvider
             || opened.instanceId !== targetInstance) throw new Error();
           return { ok: true };
         }
         if (operation === 'usage') {
           if (!available().usage) throw new Error();
-          invoked = true;
-          const metrics = await session.rpc!.usage!.getMetrics();
+          const metrics = await invoke(() => session.rpc!.usage!.getMetrics());
           check();
           if (!object(metrics)) throw new Error();
           const quantities: CanvasUsageQuantity[] = [];
@@ -114,8 +126,8 @@ export function createHostCapabilities(session: JoinedSession, root: string, ins
             || !isObserverLayout(JSON.parse(input.content))) throw new Error();
           const path = `squad-pod-layout-${randomUUID()}.json`;
           check();
-          invoked = true;
-          await session.rpc!.workspaces!.createFile({ path, content: input.content });
+          const content = input.content;
+          await invoke(() => session.rpc!.workspaces!.createFile({ path, content }));
           check();
           return { ok: true, path };
         }

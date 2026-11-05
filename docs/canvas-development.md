@@ -90,6 +90,11 @@ cookie boundary. Imports/exports additionally require the per-instance editing
 cookie. A missing method or rejection never grants permission; failures use a
 stable sanitized reason, never raw SDK exceptions, paths, prompts or credentials.
 Host RPC rejections disable that host path for the instance without retries.
+Each SDK await has a one-second deadline; timed-out paths are quarantined for
+the instance even if the underlying SDK promise settles later. The operation
+slot is released so an unresponsive usage RPC cannot disable unrelated imports
+or exports. This does not cancel an in-flight host write/open or automatically
+retry it; a timed-out export remains outcome-unconfirmed.
 Outcomes can be unconfirmed if the host completed a side effect before rejection
 or revocation; no rollback or success is invented.
 

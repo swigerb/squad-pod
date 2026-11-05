@@ -66,4 +66,18 @@ describe('host bridge explicit-gesture RPC boundary', () => {
     await expect(bridge.exportLayout(JSON.stringify(layout))).rejects.toThrow(HOST_UNAVAILABLE);
     expect(bridge.export).toBe(false);
   });
+  it('rechecks disposal after asynchronous JSON decoding and rejects the late result', async () => {
+    let disposed = false;
+    let resolve!: (value: unknown) => void;
+    const request = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true, json: () => new Promise(done => { resolve = done; }),
+    } as Response);
+    const bridge = createHostBridge(request, () => disposed, vi.fn(), capabilities);
+    const result = bridge.getUsage();
+    await vi.waitFor(() => expect(resolve).toBeTypeOf('function'));
+    disposed = true;
+    resolve({ ok: true, quantities: [] });
+    await expect(result).rejects.toThrow(HOST_UNAVAILABLE);
+    expect(bridge.usage).toBe(false);
+  });
 });
