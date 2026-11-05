@@ -91,7 +91,9 @@ the stable VSIX `v1.0.0` release.
 discovery and plugin catalogs. Squad Pod was submitted in
 [github/awesome-copilot#6270](https://github.com/github/awesome-copilot/issues/6270)
 for the native-qualified **0.1.0** artifact at `16d33ae623f82b7c10a5d46f892bcc98b97b39d6`,
-not for unqualified 0.1.1. Intake acceptance and listing are **pending**: do not
+not for unqualified 0.1.1.
+[Automated intake passed](https://github.com/github/awesome-copilot/actions/runs/42086032096);
+maintainer acceptance and listing are **pending**: do not
 assume it is listed, featured or GitHub-verified. Use the owner marketplace above
 now. Adding that marketplace is not publication to Visual Studio Marketplace;
 the latter distributes only the separate VS Code extension.
@@ -215,6 +217,38 @@ These are **requests observed, not proof of visible rendering or a host defect**
 They reset with the instance; they are not a public HTTP diagnostics endpoint.
 Share only sanitized results, never credentials, private URLs, private logs,
 authentication screens or unrelated project content.
+
+## Published 0.1.1 preview provenance
+
+The [Canvas 0.1.1 GitHub pre-release](https://github.com/swigerb/squad-pod/releases/tag/canvas-v0.1.1)
+is separate from stable VSIX `v1.0.0` (which remains Latest).
+The catalog pins this exact distribution; installation is not a local build.
+**Native 0.1.1 qualification remains pending #218.**
+
+| Field | Canvas 0.1.1 preview value |
+|---|---|
+| Marketplace / plugin | `squad-pod-plugins` / `squad-pod` |
+| Plugin version | `0.1.1` (VSIX `1.0.0` and private standalone `0.1.0` unchanged) |
+| Source repository / plugin path | `swigerb/squad-pod` / `plugins/squad-pod` |
+| Immutable distribution tag | `canvas-v0.1.1` |
+| Distribution commit | `dbf62801cc480cceef6b8cc072cc6091866cc74f` |
+| Built from approved clean source | `0f4f08bbfdfc7c6c3a8c3bf8715847c130df5967` (`sourceDirty: false`) |
+| Source tree | `973388f1e307ad7d24edd6956f3aa442445fe669` |
+| Source approval and CI | [#220](https://github.com/swigerb/squad-pod/pull/220), [exact-head run 42087252555](https://github.com/swigerb/squad-pod/actions/runs/42087252555), all three jobs successful |
+| Plugin manifest SHA-256 | `7f74c6c6a460a417f0f31eb2b555cf12f2a907b425871b4ab6d05d7eec17e46a` |
+| Extension entry SHA-256 | `caa39af2efdabdb6531c8865b9313f4d3e02b3c349a7cd9c6b0dc662f2a0b3b1` |
+| Build-info SHA-256 | `73b71bf8a8f40bd1736413602033fa6a5b4d0696f82b5377ef3e222d33520144` |
+| Checksums SHA-256 | `2ee42f9f15fc84a702cef5f70dc408518887e3324df5927e0a7300183eff8425` |
+| Receipt payload | 103 files, 1,548,634 bytes (excludes `checksums.json`) |
+| Complete plugin | 104 files, 1,571,007 bytes (includes `checksums.json`) |
+| [Downloadable ZIP](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.1/squad-pod-canvas-0.1.1.zip) | 564,758 bytes; contains `squad-pod/` |
+| ZIP SHA-256 | `80ebd8f14e2e4d0b5cf6c585eee2fc42113b64af9754bebb37d8c43786589ad4` |
+
+The release also carries `SHA256SUMS`, `canvas-0.1.1-checksums.json`,
+`canvas-0.1.1-build-info.json` and `canvas-0.1.1-freeze.json`.
+The downloaded published ZIP was checked against every payload receipt entry.
+Integrity and green CI establish artifact identity and automated checks, not
+native install/update/rollback success.
 
 ## Historical 0.1.0 provenance (unchanged evidence)
 
