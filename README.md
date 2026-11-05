@@ -164,10 +164,9 @@ project session containing `.squad/team.md` (or `.ai-team/team.md`) and ask
 Copilot to **open the Squad Pod canvas**. The office uses that exact joined
 project, not another checkout or a directory selected in the office.
 
-[Add the marketplace](ghapp://plugins/marketplace/add?source=swigerb%2Fsquad-pod)
-then [install Squad Pod](ghapp://plugins/install?source=squad-pod%40squad-pod-plugins).
-Both links prefill confirmation forms; they never install silently. See the
-[complete setup and troubleshooting instructions](docs/canvas-install.md).
+Use the [add-marketplace and install confirmation links in the setup guide](docs/canvas-install.md#install-and-open).
+Both prefill confirmation forms; they never install silently. The guide also
+includes the manual setup flow and troubleshooting.
 
 The canvas starts read-only; **Enable editing** is opt-in per instance. It shows
 the joined session's live Squad member activity without replaying history.
