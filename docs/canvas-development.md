@@ -181,5 +181,6 @@ git -c core.autocrlf=false archive --format=zip --prefix=squad-pod/ --output squ
 
 Default `git archive` settings can otherwise convert text despite byte-exact
 Git blobs, invalidating the packaged checksums. The
-[published provenance](canvas-install.md#published-011-preview-provenance)
-records the verified 0.1.1 archive, not an unverified source ZIP.
+[published 0.1.2 provenance](canvas-install.md#published-012-preview-provenance)
+records the verified archive, not an unverified source ZIP. Historical 0.1.1
+provenance remains in the same install guide.

@@ -1,19 +1,18 @@
 # Install Squad Pod in the GitHub Copilot app
 
-**Canvas 0.1.2 is being prepared.** The currently published pre-release and
-marketplace pin remain at plugin **0.1.1**, an owner-approved Windows preview,
-not generally available. It brings the pixel-art Squad office into a GitHub
+**Canvas plugin 0.1.2 is the current owner-approved Windows preview, not
+generally available.** It brings the pixel-art Squad office into a GitHub
 Copilot app session. This is separate from the [VS Code Marketplace extension](../README.md#install)
 and the source-only [standalone browser companion](../standalone/README.md).
 Installing a VSIX or updating Copilot CLI does not install or update this plugin.
 The **GitHub Copilot app** is the native agent desktop application, **not GitHub
 Desktop** (the Git client) and not VS Code.
 
-**Native 0.1.1 and 0.1.2 qualification is pending** in
+**Native 0.1.1 and 0.1.2 qualification remains pending** in
 [#218](https://github.com/swigerb/squad-pod/issues/218). All prior native PASS
 records below remain pinned to 0.1.0; automated packaging checks do not extend
-them to either newer artifact. The 0.1.2 candidate is not yet available through
-the published catalog.
+them to either newer artifact. The marketplace pins the published 0.1.2
+artifact; the catalog pin and release provenance are listed below.
 
 ## Compatibility
 
@@ -30,15 +29,13 @@ the published catalog.
   Your organization must allow the plugin; do not bypass managed policy or trust
   prompts. See GitHub's [marketplace prerequisites](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/create-and-share-plugin-marketplaces#share-the-marketplace).
 
-## Agent-runnable qualification (C14 0.1.2 candidate)
+## Agent-runnable qualification (C14 0.1.2 preview)
 
-The 0.1.2 source candidate adds application-reported first-frame evidence and a
-read-only `get_office_snapshot` action. The published 0.1.1 artifact does not
-include these capabilities. This is not an installation instruction for an
-unapproved artifact, or a claim that the 0.1.2 native gates passed. No native
-app execution is required to build/test these changes. Only run the procedure
-below later against an **owner-approved, installed artifact** with these
-capabilities.
+The published 0.1.2 artifact includes application-reported first-frame evidence
+and a read-only `get_office_snapshot` action. This procedure is not a claim that
+the 0.1.2 native gates passed. No native app execution is required to build/test
+these changes. Only run the procedure against an **owner-approved, installed
+artifact** with these capabilities.
 
 Keep evidence classes distinct: **CI/unit/synthetic harness**, **native app
 agent-tool observation using synthetic project data**, **human native UI
@@ -60,7 +57,7 @@ human/compositor acceptance or proof of a real paid task.
 2. Discover this installation's `squad-pod` canvas capabilities using
    `list_canvas_capabilities`; use its actual provider identifier if ambiguous.
    Verify `get_office_snapshot` exists. If it does not, record **BLOCKED** for
-   this candidate procedure, not a defect in the installed 0.1.1 release.
+   this candidate procedure, not a defect in the installed 0.1.2 release.
 3. In session A, invoke the following tools (examples show their JSON inputs):
 
    ```text
@@ -311,11 +308,48 @@ They reset with the instance; they are not a public HTTP diagnostics endpoint.
 Share only sanitized results, never credentials, private URLs, private logs,
 authentication screens or unrelated project content.
 
+## Published 0.1.2 preview provenance
+
+The [Canvas 0.1.2 GitHub pre-release](https://github.com/swigerb/squad-pod/releases/tag/canvas-v0.1.2)
+is a pre-release, not Latest; stable VSIX `v1.0.0` remains Latest. The
+marketplace pins this exact immutable distribution. **Native 0.1.2
+qualification remains pending #218; no native acceptance is claimed.**
+
+| Field | Canvas 0.1.2 preview value |
+|---|---|
+| Marketplace / plugin | `squad-pod-plugins` / `squad-pod` |
+| Plugin version | `0.1.2` (VSIX `1.0.0` and private standalone `0.1.0` unchanged) |
+| Source repository / plugin path | `swigerb/squad-pod` / `plugins/squad-pod` |
+| Catalog `source.ref` | `canvas-v0.1.2` |
+| Catalog `source.sha` / distribution commit | `e9fc5d745940680f63ca33bfd4c449f97dc7aef3` |
+| Distribution tree | `826fb53b56be180044f421a848d06a636c108c6e` |
+| Annotated tag object | `df650839fa7c05f04afd07ba839aebf5b4236866` |
+| Built from approved clean source | `5bd74603b8ce40edb16af519dca281438c56a652` (`sourceDirty: false`) |
+| Source tree | `9c60279b6c73c32e59e7d35469ae2bcdcbbb521c` |
+| Source PR and exact-head CI | [#226](https://github.com/swigerb/squad-pod/pull/226), reviewed head `41df98c94644d34f2778e7d93a565801da954ea4`, [run 42100907961](https://github.com/swigerb/squad-pod/actions/runs/42100907961), all three jobs successful |
+| Post-merge exact-source CI | [run 42101950104](https://github.com/swigerb/squad-pod/actions/runs/42101950104), all three jobs successful on the source commit |
+| Plugin manifest SHA-256 | `3b14adac87cab6d9af99fbb3093ea0cd60a4f3e6191f657a9a637a2eb4546923` |
+| Extension entry SHA-256 | `0b2e9819175942669b21e5ac32e5a38e0335cf5c4c1c5c5dc7b57e317c4747c9` |
+| Build-info SHA-256 | `b00f2b9dd213d656888467157f84906f3e99d3a6b5ad6bd6e40277c0b6a04a8c` |
+| Checksums SHA-256 | `7a45f3ad970ec0d5ee9169d8ca9ee5cacf89dd58a28b929b640e74c570b90644` |
+| Receipt payload | 103 files, 1,572,698 bytes (excludes `checksums.json`) |
+| Complete plugin | 104 files, 1,595,071 bytes (includes `checksums.json`) |
+| [Downloadable ZIP](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.2/squad-pod-canvas-0.1.2.zip) | 571,115 bytes; contains `squad-pod/` |
+| ZIP SHA-256 | `af44ff6e3883464626ea7e00052976b6b4e53654c5bdac067bb38413ef17520d` |
+
+The release also carries [freeze receipt](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.2/canvas-0.1.2-freeze.json),
+[build-info](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.2/canvas-0.1.2-build-info.json),
+[checksums](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.2/canvas-0.1.2-checksums.json)
+and [SHA256SUMS](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.2/SHA256SUMS).
+The published ZIP was checked against every payload receipt entry, and the
+distribution Git blobs match the receipt. Integrity and green CI establish
+artifact identity and automated checks, not native install/update/rollback success.
+
 ## Published 0.1.1 preview provenance
 
 The [Canvas 0.1.1 GitHub pre-release](https://github.com/swigerb/squad-pod/releases/tag/canvas-v0.1.1)
 is separate from stable VSIX `v1.0.0` (which remains Latest).
-The catalog pins this exact distribution; installation is not a local build.
+The 0.1.1 release pinned this exact distribution; installation is not a local build.
 **Native 0.1.1 qualification remains pending #218.**
 
 | Field | Canvas 0.1.1 preview value |

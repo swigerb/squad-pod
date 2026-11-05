@@ -1,13 +1,13 @@
 # Canvas feature matrix
 
-Release truth for Canvas plugin **0.1.1**, an owner-approved **Windows
+Release truth for Canvas plugin **0.1.2**, an owner-approved **Windows
 local-session preview**, not generally available or a VSIX/CLI replacement
 (#214, epic #172). Prior **0.1.0** evidence qualified app **1.1.34**; this is
-not acceptance of 0.1.1 or 0.1.2, a minimum or a broad compatibility promise.
-Native 0.1.1 checks remain pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
-The published artifact and catalog pin remain at 0.1.1 while this source PR
-prepares 0.1.2. The C14/C15 candidate rows below describe 0.1.2 and remain
-pending native acceptance; they do not alter the published 0.1.1 rows.
+not acceptance of 0.1.2, a minimum or a broad compatibility promise.
+Native 0.1.2 checks remain pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
+The catalog pins the published 0.1.2 artifact. The 0.1.1 tables below preserve
+the prior release truth; the 0.1.2 C14/C15 rows describe current candidates and
+remain pending native acceptance.
 macOS, Linux, WSL and remote sessions
 are unsupported. See the [install and lifecycle guide](canvas-install.md).
 It observes only the exact joined session/project. No directory browsing,
@@ -20,14 +20,13 @@ separate, explicit per-instance office-control opt-in; viewer access alone canno
 write. Editing authorizes project layout, declared-member seats/appearance and
 settings, not arbitrary files, launches, logs or other projects.
 
-In the 0.1.1 tables, **Candidate** means implemented in that preview, not a
+In the 0.1.1 tables, **Candidate** means implemented in that prior preview, not a
 promise of full native parity; **OPEN** marks unavailable capabilities/remaining
 parity work. The owner-approved preview does not close those broader capability
 gaps. **Transfer gate** means implemented browser behavior, embedded transfer
-unverified. The separate 0.1.2 section describes candidate features not present
-in the published 0.1.1 ZIP/catalog pin.
+unverified. The separate 0.1.2 section describes current candidate features.
 
-## Office, editor and preferences
+## Previous published 0.1.1: office, editor and preferences
 
 | Control (including subcontrols) | Canvas behavior | Reason | Release decision |
 |---|---|---|---|
@@ -53,7 +52,7 @@ in the published 0.1.1 ZIP/catalog pin.
 | Settings open/close; Sound Notifications; Show Named Areas; Debug View | Settings unavailable read-only; project preferences after opt-in. | Explicit office-control authorization. | Candidate |
 | VS Code Live Activity checkbox / CLI-log observation | Checkbox disabled; private CLI-log scanning unavailable. Joined-session activity works independently. | Office editing does not grant private CLI-log access; Canvas receives exact-session SDK events. | OPEN for CLI-log observation only |
 
-## Information, assets and telemetry
+## Previous published 0.1.1: information, assets and telemetry
 
 | Control (including subcontrols) | Canvas behavior | Reason | Release decision |
 |---|---|---|---|
@@ -70,7 +69,7 @@ in the published 0.1.1 ZIP/catalog pin.
 | CLI usage Select JSON, Refresh selected export, Forget export | Action controls absent; explicit Canvas-unavailable explanation replaces import/launch instructions. | Canvas does not import CLI usage files or launch CLI. | OPEN |
 | Joined-session live activity: Squad member sub-agents, tools, task bubbles | Available from the exact current session, with exact roster attribution and no historical event replay (#209/#210). | Bounded SDK projection; no cross-session discovery or private CLI-log reads. Missing/unmatched data is not invented. | Candidate |
 
-## Files, recovery and host-bound operations
+## Previous published 0.1.1: files, recovery and host-bound operations
 
 | Control (including subcontrols) | Canvas behavior | Reason | Release decision |
 |---|---|---|---|
@@ -84,12 +83,11 @@ in the published 0.1.1 ZIP/catalog pin.
 | Startup diagnostic report | Unsupported request capability-gated; no visible button. | Host must advertise the action. | Candidate |
 | `get_office_state` readiness | Bounded per-instance request/handshake counters via the authorized Canvas action only. | Requests observed are not visible-renderer acceptance or host-fault evidence; no public diagnostics endpoint. | Candidate; 0.1.1 native checks pending |
 
-## Canvas 0.1.2 candidates (C14/C15; native acceptance pending #218)
+## Canvas 0.1.2 release truth (C14/C15; native acceptance pending #218)
 
 The C14 renderer diagnostics and snapshot action and the C15 host-mediated
-capabilities are included in the 0.1.2 source candidate. They are **absent from
-the published 0.1.1 ZIP and catalog pin**. The shipping charter/CLI-import OPEN
-rows and browser-transfer gates above remain the release truth.
+capabilities are included in the published 0.1.2 artifact. The charter/CLI-import
+OPEN rows and browser-transfer gates in the prior 0.1.1 tables remain unchanged.
 
 | Control | 0.1.2 candidate behavior | Boundary | Release decision |
 |---|---|---|---|
@@ -118,7 +116,7 @@ still queued in a stalled webview; resuming drawing returns only the latest
 nonce without disconnecting the office. The server continues to reject
 old/unsolicited snapshot results.
 
-See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-012-candidate)
+See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-012-preview)
 for the subset of #218 that can be investigated without UI automation; no result
 automatically changes a native gate to PASS.
 
