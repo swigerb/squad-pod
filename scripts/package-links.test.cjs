@@ -124,10 +124,10 @@ test('allows valid repository issues, PRs, releases, pinned content and master r
   assert.doesNotThrow(() => validatePackagedMarkdown(`${packagedReadme}\n${validDestinations}`, 'README.md'));
 });
 
-test('storefront leads with the pitch, showcase and three-step onboarding within the copy budget', () => {
+test('storefront leads with the pitch, showcase and separate host onboarding within the copy budget', () => {
   const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
   const wordCount = readme.trim().split(/\s+/).length;
-  assert(wordCount >= 500 && wordCount <= 700, `README word count: ${wordCount}`);
+  assert(wordCount >= 500 && wordCount <= 850, `README word count: ${wordCount}`);
   const sections = [
     'Your Squad AI team, brought to life in a pixel-art office.',
     'Squad-Pod-Sizzle-preview.gif',
@@ -139,11 +139,49 @@ test('storefront leads with the pitch, showcase and three-step onboarding within
   ].map(text => readme.indexOf(text));
   assert(sections.every((position, index) => position >= 0 && (index === 0 || position > sections[index - 1])));
   const onboarding = readme.slice(sections[2], sections[3]);
-  assert.deepEqual([...onboarding.matchAll(/^(\d+)\. /gm)].map(match => match[1]), ['1', '2', '3']);
+  const appStart = onboarding.indexOf('### GitHub Copilot app');
+  const vscodeStart = onboarding.indexOf('### VS Code');
+  assert(appStart >= 0 && vscodeStart > appStart);
+  assert(onboarding.includes('### Choose your host'));
+  assert(onboarding.includes('canvas-v0.1.3'));
+  assert(onboarding.includes('releases/tag/v1.0.1'));
+  assert(onboarding.includes('releases/download/v1.0.1/squad-pod-1.0.1.vsix'));
+  assert(onboarding.includes('swigerb/squad-pod'));
+  assert(onboarding.includes('squad-pod-plugins'));
+  assert(onboarding.includes('not GitHub Desktop'));
+  assert(onboarding.includes('**Enable editing** is a separate opt-in'));
+  assert(onboarding.includes('issuecomment-6689294756'));
+  for (const section of [onboarding.slice(appStart, vscodeStart), onboarding.slice(vscodeStart)]) {
+    assert.deepEqual([...section.matchAll(/^(\d+)\. /gm)].map(match => match[1]), ['1', '2', '3']);
+  }
   const features = readme.slice(sections[3], sections[4]);
   const featureCount = [...features.matchAll(/^- \*\*/gm)].length;
   assert(featureCount >= 5 && featureCount <= 6, `Feature count: ${featureCount}`);
   assert(!readme.includes('## Preview release scope'));
+});
+
+test('current Canvas installation and feature guidance distinguish preview waiver from native acceptance', () => {
+  const install = fs.readFileSync(path.join(root, 'docs', 'canvas-install.md'), 'utf8');
+  const matrix = fs.readFileSync(path.join(root, 'docs', 'canvas-feature-matrix.md'), 'utf8');
+  const currentInstall = install.split('## Published 0.1.2 preview provenance')[0];
+  const currentFeatures = matrix.split('## Canvas 0.1.3 published features')[1];
+  assert(install.indexOf('## Quick installation') < install.indexOf('## Agent-runnable qualification'));
+  for (const text of [currentInstall, matrix]) {
+    assert(text.includes('issuecomment-6689294756'));
+    assert(text.includes('issuecomment-6689750551'));
+  }
+  assert(currentInstall.includes('COPILOT_HOME'));
+  assert(currentInstall.includes('ghapp://plugins/marketplace/add?source=swigerb%2Fsquad-pod'));
+  assert(currentInstall.includes('ghapp://plugins/install?source=squad-pod%40squad-pod-plugins'));
+  assert(currentInstall.includes('1bc0d4165bea309715bd8c7ec5fc5cbf7c2cee8e'));
+  assert(currentInstall.includes('1bea647a596fd6c55db7c8240693db978b3cfdf6aed385a3319214f3c98aef25'));
+  assert.doesNotMatch(currentInstall, /remains pending #218|v1\.0\.0` remains Latest/);
+  assert(matrix.includes('## What ships in the current preview'));
+  assert(matrix.includes('## Unverified native coverage and preview limits'));
+  assert(matrix.includes('id="canvas-013-published-candidates-native-acceptance-pending-218"'));
+  assert(matrix.includes('id="remaining--open-release-gates"'));
+  assert(currentFeatures.includes('native coverage unverified; owner waiver applies'));
+  assert.doesNotMatch(currentFeatures, /native retest pending|native retesting in #218/);
 });
 
 test('storefront settings reflect the manifest and preserve consent and explicit launch boundaries', () => {

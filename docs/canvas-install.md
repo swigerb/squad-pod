@@ -8,11 +8,37 @@ Installing a VSIX or updating Copilot CLI does not install or update this plugin
 The **GitHub Copilot app** is the native agent desktop application, **not GitHub
 Desktop** (the Git client) and not VS Code.
 
-**Native 0.1.1, 0.1.2 and 0.1.3 qualification remains pending** in
-[#218](https://github.com/swigerb/squad-pod/issues/218). All prior native PASS
-records below remain pinned to 0.1.0; automated packaging checks do not extend
-them to any newer artifact. The marketplace pins the published 0.1.3
-artifact; the catalog pin and release provenance are listed below.
+**Canvas 0.1.3 is approved for preview use by an
+[explicit owner waiver](https://github.com/swigerb/squad-pod/issues/218#issuecomment-6689294756).**
+The remaining native checks were waived as prerequisites to this exact preview;
+[#218 was closed as not planned](https://github.com/swigerb/squad-pod/issues/218#issuecomment-6689750551),
+not passed. No manual qualification campaign is required to use this preview.
+Native coverage remains unverified, and historical 0.1.0 PASS records do not
+transfer. Future candidates or broader platform claims need a separate decision.
+
+## Quick installation
+
+1. Install or open the [**GitHub Copilot app**](https://github.com/github/app#install)
+   on Windows x64. This release contains the Squad Pod plugin, not the host app.
+2. Choose **Customize**, open marketplace settings next to the marketplace
+   dropdown, and add **`swigerb/squad-pod`**. Confirm the normal app prompt.
+3. In **Browse**, find **Squad Pod** from **`squad-pod-plugins`** and choose
+   **Install**. Existing users should use the offered **Update** action and
+   verify **0.1.3** in **Installed**, not just in the catalog.
+4. Open a **local** project containing `.squad/team.md`, then ask Copilot to
+   **open the Squad Pod canvas**. Each instance starts read-only.
+5. Choose **Enable editing** only when you want to change that project's office.
+
+[Add the marketplace](ghapp://plugins/marketplace/add?source=swigerb%2Fsquad-pod),
+then [install Squad Pod](ghapp://plugins/install?source=squad-pod%40squad-pod-plugins).
+These links prefill confirmation forms; they never install silently. If a link
+does not open, use the Customize steps above. See [installation details](#install-and-open).
+
+**Looking for VS Code instead?** Install stable **VSIX 1.0.1** from
+[Marketplace](https://marketplace.visualstudio.com/items?itemName=brianswiger.squad-pod)
+or its [GitHub release](https://github.com/swigerb/squad-pod/releases/tag/v1.0.1).
+That is a separate installation. Version 1.0.1 preserves the 1.0.0 runtime;
+it changes documentation and metadata, not the Canvas plugin or newer `master` code.
 
 ## Compatibility
 
@@ -32,6 +58,9 @@ artifact; the catalog pin and release provenance are listed below.
 <a id="agent-runnable-qualification-c14-012-preview"></a>
 
 ## Agent-runnable qualification (C14 0.1.3 preview)
+
+This is an optional evidence procedure for future qualification work, not an
+installation prerequisite for the owner-waived 0.1.3 preview.
 
 The published 0.1.3 artifact retains the 0.1.2 application-reported first-frame
 evidence and a read-only `get_office_snapshot` action. This procedure is not a claim that
@@ -169,8 +198,9 @@ on **Windows x64**. These are tested versions, not minimum requirements.
 This evidence does not establish 0.1.1, 0.1.2 or 0.1.3 native acceptance, support for other
 platforms/builds, updates, plugin uninstall or rollback. Local metadata, link and
 documentation checks are not native install evidence. The owner closed the
-0.1.0 preview epic under reduced scope; the deferred native gates remain in
-[#218](https://github.com/swigerb/squad-pod/issues/218), not retroactively passed.
+0.1.0 preview epic under reduced scope. The historical deferred checks remain
+recorded in [#218](https://github.com/swigerb/squad-pod/issues/218); its later
+0.1.3 waiver and closure did not retroactively pass them.
 
 ## Distribution and discovery
 
@@ -179,7 +209,9 @@ in **`swigerb/squad-pod`** is the distribution hub for the desktop plugin.
 It pins an immutable distribution tag, commit and plugin version, rather than
 requiring a local build. The [Canvas GitHub releases](https://github.com/swigerb/squad-pod/releases)
 provide downloadable preview artifacts and integrity information separately from
-the stable VSIX `v1.0.0` release.
+the stable [VSIX 1.0.1 release](https://github.com/swigerb/squad-pod/releases/tag/v1.0.1).
+GitHub has one repository-wide **Latest** release; Canvas remains a separately
+featured **pre-release**, not a second stable Latest.
 
 [Awesome Copilot](https://github.com/github/awesome-copilot) provides central
 discovery and plugin catalogs. Squad Pod was submitted in
@@ -250,8 +282,9 @@ Update, plugin uninstall and rollback guidance remains unverified natively.
 - **Update:** close existing Squad Pod canvases after saving/exporting work.
   Refresh the `squad-pod-plugins` catalog in **Manage marketplaces**, then check
   Squad Pod under **Customize → Installed** for the offered plugin update.
-  If the app offers no update action, uninstall and reinstall from the refreshed
-  catalog, retaining project data. Reopen the canvas in a local session and
+  If the app offers no update action, stop and review the supported alternatives.
+  An explicitly approved uninstall/reinstall is replacement, not an in-place
+  update; retain project data. Reopen the canvas in a local session and
   authorize editing again if needed. Refreshing alone does not change a pinned
   distribution; a future release must publish a new catalog ref/SHA/version.
 - **Disable / Enable:** in **Customize → Installed**, use Squad Pod's toggle to
@@ -272,7 +305,7 @@ describes marketplaces and the Installed toggle.
 For a distinct-version comparison with current 0.1.3, the historical
 `canvas-v0.1.2`, `canvas-v0.1.1` and `canvas-v0.1.0` releases remain
 available at the exact distribution SHAs in the historical provenance tables
-below. **Native update/rollback and saved-data compatibility are pending #218**;
+below. **Native update/rollback and saved-data compatibility remain unverified**;
 tag availability is not a successful downgrade test. Owner-operated procedure:
 
 1. Back up `.squad-pod/` and export unresolved drafts before closing canvases.
@@ -297,6 +330,7 @@ for catalog structure.
 | Marketplace missing or fetch failed | Confirm repository `swigerb/squad-pod`; use marketplace **Refresh catalog** or **Retry** if offered. If policy blocks it, ask your administrator rather than changing permissions. |
 | Quick link does not open | Use the manual Customize flow; allow/deny prompts still apply. |
 | Squad Pod is absent or disabled | Check **Customize → Installed**, its toggle and marketplace name. A VSIX installation or CLI upgrade is not a Canvas installation. |
+| App and CLI/file checks show different versions | Confirm which profile and plugin location the app uses. `COPILOT_HOME` can differ from the default `.copilot` directory. CLI inventory reports its own home, not proof of the app's loaded provider. Verify the actual installation; do not overwrite or synchronize another profile to make versions agree. |
 | Empty or wrong team | Check the exact joined local session project has `.squad/team.md` or `.ai-team/team.md`. A sibling worktree's roster does not apply; the office cannot switch projects. |
 | Office does not load or loses its connection | Close and reopen the canvas in the supported session. Reopening starts read-only; preserve unresolved drafts first when possible. Do not copy its private viewer URL into a report. |
 | Layout/settings controls disabled | Choose **Enable editing** for this instance. This does not grant terminal, private-log or arbitrary-file authority. |
@@ -316,15 +350,15 @@ authentication screens or unrelated project content.
 ## Published 0.1.3 preview provenance
 
 The [Canvas 0.1.3 GitHub pre-release](https://github.com/swigerb/squad-pod/releases/tag/canvas-v0.1.3)
-is a pre-release, not Latest; stable VSIX `v1.0.0` remains Latest. The
-marketplace pins this exact immutable distribution. **Native 0.1.3
-qualification, including the #230/#232 fixes, remains pending #218;
-no native acceptance is claimed.**
+remains a pre-release, not GitHub's stable Latest. The marketplace already pins
+this exact immutable distribution. **Preview approval is by owner waiver;
+native 0.1.3 qualification, including the #230/#232 fixes, remains unverified.**
+The waiver and the installed-file checks do not turn native cases into PASS.
 
 | Field | Canvas 0.1.3 preview value |
 |---|---|
 | Marketplace / plugin | `squad-pod-plugins` / `squad-pod` |
-| Plugin version | `0.1.3` (VSIX `1.0.0` and private standalone `0.1.0` unchanged) |
+| Plugin version | `0.1.3`; separate stable VSIX `1.0.1` preserves the `1.0.0` runtime; private standalone `0.1.0` |
 | Source repository / plugin path | `swigerb/squad-pod` / `plugins/squad-pod` |
 | Catalog `source.ref` | `canvas-v0.1.3` |
 | Catalog `source.sha` / distribution commit | `1bc0d4165bea309715bd8c7ec5fc5cbf7c2cee8e` |
@@ -355,9 +389,9 @@ artifact identity and automated checks, not native install/update/rollback succe
 ## Published 0.1.2 preview provenance
 
 The [Canvas 0.1.2 GitHub pre-release](https://github.com/swigerb/squad-pod/releases/tag/canvas-v0.1.2)
-is a pre-release, not Latest; stable VSIX `v1.0.0` remains Latest. The
+was published as a pre-release, not Latest; stable VSIX `v1.0.0` was Latest at that time. The
 0.1.2 marketplace update pinned this exact immutable distribution. **Native 0.1.2
-qualification remains pending #218; no native acceptance is claimed.**
+qualification was deferred to #218 and remains unverified; no native acceptance is claimed.**
 
 | Field | Canvas 0.1.2 preview value |
 |---|---|
@@ -392,9 +426,9 @@ artifact identity and automated checks, not native install/update/rollback succe
 ## Published 0.1.1 preview provenance
 
 The [Canvas 0.1.1 GitHub pre-release](https://github.com/swigerb/squad-pod/releases/tag/canvas-v0.1.1)
-is separate from stable VSIX `v1.0.0` (which remains Latest).
+was published separately from stable VSIX `v1.0.0`, which was Latest at that time.
 The 0.1.1 release pinned this exact distribution; installation is not a local build.
-**Native 0.1.1 qualification remains pending #218.**
+**Native 0.1.1 qualification was deferred to #218 and remains unverified.**
 
 | Field | Canvas 0.1.1 preview value |
 |---|---|
