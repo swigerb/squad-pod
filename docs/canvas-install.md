@@ -1,6 +1,6 @@
 # Install Squad Pod in the GitHub Copilot app
 
-**Canvas plugin 0.1.2 is the current owner-approved Windows preview, not
+**Canvas plugin 0.1.3 is the current owner-approved Windows preview, not
 generally available.** It brings the pixel-art Squad office into a GitHub
 Copilot app session. This is separate from the [VS Code Marketplace extension](user-guide.md#install)
 and the source-only [standalone browser companion](../standalone/README.md).
@@ -8,10 +8,10 @@ Installing a VSIX or updating Copilot CLI does not install or update this plugin
 The **GitHub Copilot app** is the native agent desktop application, **not GitHub
 Desktop** (the Git client) and not VS Code.
 
-**Native 0.1.1 and 0.1.2 qualification remains pending** in
+**Native 0.1.1, 0.1.2 and 0.1.3 qualification remains pending** in
 [#218](https://github.com/swigerb/squad-pod/issues/218). All prior native PASS
 records below remain pinned to 0.1.0; automated packaging checks do not extend
-them to either newer artifact. The marketplace pins the published 0.1.2
+them to any newer artifact. The marketplace pins the published 0.1.3
 artifact; the catalog pin and release provenance are listed below.
 
 ## Compatibility
@@ -29,11 +29,13 @@ artifact; the catalog pin and release provenance are listed below.
   Your organization must allow the plugin; do not bypass managed policy or trust
   prompts. See GitHub's [marketplace prerequisites](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/create-and-share-plugin-marketplaces#share-the-marketplace).
 
-## Agent-runnable qualification (C14 0.1.2 preview)
+<a id="agent-runnable-qualification-c14-012-preview"></a>
 
-The published 0.1.2 artifact includes application-reported first-frame evidence
-and a read-only `get_office_snapshot` action. This procedure is not a claim that
-the 0.1.2 native gates passed. No native app execution is required to build/test
+## Agent-runnable qualification (C14 0.1.3 preview)
+
+The published 0.1.3 artifact retains the 0.1.2 application-reported first-frame
+evidence and a read-only `get_office_snapshot` action. This procedure is not a claim that
+the 0.1.3 native gates passed. No native app execution is required to build/test
 these changes. Only run the procedure against an **owner-approved, installed
 artifact** with these capabilities.
 
@@ -58,7 +60,7 @@ human/compositor acceptance or proof of a real paid task.
    `list_canvas_capabilities`; use its actual provider identifier if ambiguous.
    Verify `get_office_snapshot` exists. If it does not, record **BLOCKED** and
    investigate the actual provider, installed build and registration. Treat the
-   mismatch as unexpected for 0.1.2; do not dismiss it as an expected limitation
+   mismatch as unexpected for 0.1.3; do not dismiss it as an expected limitation
    or substitute an older artifact.
 3. In session A, invoke the following tools (examples show their JSON inputs):
 
@@ -164,7 +166,7 @@ on **Windows x64**. These are tested versions, not minimum requirements.
 - **Disable / Enable** worked both ways in **Customize → Installed**. Removing
   the marketplace through **Actions → Remove marketplace** removed it from the list.
 
-This evidence does not establish 0.1.1 native acceptance, support for other
+This evidence does not establish 0.1.1, 0.1.2 or 0.1.3 native acceptance, support for other
 platforms/builds, updates, plugin uninstall or rollback. Local metadata, link and
 documentation checks are not native install evidence. The owner closed the
 0.1.0 preview epic under reduced scope; the deferred native gates remain in
@@ -183,7 +185,7 @@ the stable VSIX `v1.0.0` release.
 discovery and plugin catalogs. Squad Pod was submitted in
 [github/awesome-copilot#6270](https://github.com/github/awesome-copilot/issues/6270)
 for the native-qualified **0.1.0** artifact at `16d33ae623f82b7c10a5d46f892bcc98b97b39d6`,
-not for unqualified 0.1.1.
+not for unqualified 0.1.1, 0.1.2 or 0.1.3.
 [Automated intake passed](https://github.com/github/awesome-copilot/actions/runs/42086032096);
 maintainer acceptance and listing are **pending**: do not
 assume it is listed, featured or GitHub-verified. Use the owner marketplace above
@@ -267,8 +269,9 @@ describes marketplaces and the Installed toggle.
 
 ### Roll back with your own marketplace
 
-For the distinct-version 0.1.1-to-0.1.0 comparison, `canvas-v0.1.0` remains
-available at the exact distribution SHA in the historical provenance table
+For a distinct-version comparison with current 0.1.3, the historical
+`canvas-v0.1.2`, `canvas-v0.1.1` and `canvas-v0.1.0` releases remain
+available at the exact distribution SHAs in the historical provenance tables
 below. **Native update/rollback and saved-data compatibility are pending #218**;
 tag availability is not a successful downgrade test. Owner-operated procedure:
 
@@ -298,7 +301,7 @@ for catalog structure.
 | Office does not load or loses its connection | Close and reopen the canvas in the supported session. Reopening starts read-only; preserve unresolved drafts first when possible. Do not copy its private viewer URL into a report. |
 | Layout/settings controls disabled | Choose **Enable editing** for this instance. This does not grant terminal, private-log or arbitrary-file authority. |
 | No task bubbles or runtime model | Only matching exact-session events appear; missing producer fields are unavailable, not zero or guessed activity. |
-| Import/export or native file action unavailable | Check the [feature matrix](canvas-feature-matrix.md). Embedded transfers are unqualified; native charter opening, directory/terminal management and CLI usage imports are unavailable. |
+| Import/export or native file action unavailable | Check the [feature matrix](canvas-feature-matrix.md). Host-mediated charter opening and JSON transfers are candidates pending native acceptance; embedded browser transfers remain unqualified. Directory/terminal management and CLI usage imports remain unavailable. |
 
 For a report, retain the installed plugin version/marketplace, app build, Windows
 architecture, source/dist pins and the exact operation and visible error.
@@ -310,11 +313,50 @@ They reset with the instance; they are not a public HTTP diagnostics endpoint.
 Share only sanitized results, never credentials, private URLs, private logs,
 authentication screens or unrelated project content.
 
+## Published 0.1.3 preview provenance
+
+The [Canvas 0.1.3 GitHub pre-release](https://github.com/swigerb/squad-pod/releases/tag/canvas-v0.1.3)
+is a pre-release, not Latest; stable VSIX `v1.0.0` remains Latest. The
+marketplace pins this exact immutable distribution. **Native 0.1.3
+qualification, including the #230/#232 fixes, remains pending #218;
+no native acceptance is claimed.**
+
+| Field | Canvas 0.1.3 preview value |
+|---|---|
+| Marketplace / plugin | `squad-pod-plugins` / `squad-pod` |
+| Plugin version | `0.1.3` (VSIX `1.0.0` and private standalone `0.1.0` unchanged) |
+| Source repository / plugin path | `swigerb/squad-pod` / `plugins/squad-pod` |
+| Catalog `source.ref` | `canvas-v0.1.3` |
+| Catalog `source.sha` / distribution commit | `1bc0d4165bea309715bd8c7ec5fc5cbf7c2cee8e` |
+| Distribution tree | `1b1f4a7bcfdc23024c0544f8b9e83d1d93ec193a` |
+| Annotated tag object | `7eb3efdf3176b41477aef6b1ff8870505a983a38` |
+| Previous distribution commit | `e9fc5d745940680f63ca33bfd4c449f97dc7aef3` |
+| Built from approved clean source | `8402f6d2f6cc3153f00afe246597ae40a1cb5d1e` (`sourceDirty: false`) |
+| Source tree | `3c0c1886d3c182f252d55231179ec0a0903ceb69` |
+| Source PR and exact-head CI | [#233](https://github.com/swigerb/squad-pod/pull/233), reviewed head `418707cfd742662711703c23b0735cf720d37c12`, [run 42161858994](https://github.com/swigerb/squad-pod/actions/runs/42161858994), all three jobs successful |
+| Post-merge exact-source CI | [run 42162420878](https://github.com/swigerb/squad-pod/actions/runs/42162420878), all three jobs successful on the source commit |
+| Plugin manifest SHA-256 | `a58baeb50b00ab8a6b7f9ca7f5987121be25466c163dff02151bcd6284173358` |
+| Extension entry SHA-256 | `8a22cb1be2ad241d5ed2d78f62c4875698b32618da8dc665acb14754134f3e1f` |
+| Build-info SHA-256 | `49803d867bf330fd9276ab9b0fe0a300b325652fcfea4415a7172ebfc48b7e9a` |
+| Checksums SHA-256 | `b7a13b2cff1b4001af8749a6aebec0051a4d8d629a4ecce96775c8724f034ba8` |
+| Receipt payload | 103 files, 1,576,000 bytes (excludes `checksums.json`) |
+| Complete plugin | 104 files, 1,598,373 bytes (includes `checksums.json`) |
+| [Downloadable ZIP](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.3/squad-pod-canvas-0.1.3.zip) | 571,977 bytes; contains `squad-pod/` |
+| ZIP SHA-256 | `1bea647a596fd6c55db7c8240693db978b3cfdf6aed385a3319214f3c98aef25` |
+
+The release also carries [freeze receipt](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.3/canvas-0.1.3-freeze.json),
+[build-info](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.3/canvas-0.1.3-build-info.json),
+[checksums](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.3/canvas-0.1.3-checksums.json)
+and [SHA256SUMS](https://github.com/swigerb/squad-pod/releases/download/canvas-v0.1.3/SHA256SUMS).
+The downloaded published ZIP was checked against every payload receipt entry,
+and the distribution Git blobs match the receipt. Integrity and green CI establish
+artifact identity and automated checks, not native install/update/rollback success.
+
 ## Published 0.1.2 preview provenance
 
 The [Canvas 0.1.2 GitHub pre-release](https://github.com/swigerb/squad-pod/releases/tag/canvas-v0.1.2)
 is a pre-release, not Latest; stable VSIX `v1.0.0` remains Latest. The
-marketplace pins this exact immutable distribution. **Native 0.1.2
+0.1.2 marketplace update pinned this exact immutable distribution. **Native 0.1.2
 qualification remains pending #218; no native acceptance is claimed.**
 
 | Field | Canvas 0.1.2 preview value |
@@ -322,8 +364,8 @@ qualification remains pending #218; no native acceptance is claimed.**
 | Marketplace / plugin | `squad-pod-plugins` / `squad-pod` |
 | Plugin version | `0.1.2` (VSIX `1.0.0` and private standalone `0.1.0` unchanged) |
 | Source repository / plugin path | `swigerb/squad-pod` / `plugins/squad-pod` |
-| Catalog `source.ref` | `canvas-v0.1.2` |
-| Catalog `source.sha` / distribution commit | `e9fc5d745940680f63ca33bfd4c449f97dc7aef3` |
+| Historical catalog `source.ref` | `canvas-v0.1.2` |
+| Historical catalog `source.sha` / distribution commit | `e9fc5d745940680f63ca33bfd4c449f97dc7aef3` |
 | Distribution tree | `826fb53b56be180044f421a848d06a636c108c6e` |
 | Annotated tag object | `df650839fa7c05f04afd07ba839aebf5b4236866` |
 | Built from approved clean source | `5bd74603b8ce40edb16af519dca281438c56a652` (`sourceDirty: false`) |

@@ -1,15 +1,15 @@
 # Canvas feature matrix
 
-Release truth for Canvas plugin **0.1.2**, an owner-approved **Windows
+Release truth for Canvas plugin **0.1.3**, an owner-approved **Windows
 local-session preview**, not generally available or a VSIX/CLI replacement
 (#214, epic #172). Prior **0.1.0** evidence qualified app **1.1.34**; this is
-not acceptance of 0.1.2, a minimum or a broad compatibility promise.
-Native 0.1.2 checks remain pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
-The catalog pins the published 0.1.2 artifact. It retains the prior 0.1.1
+not acceptance of 0.1.3, a minimum or a broad compatibility promise.
+Native 0.1.1, 0.1.2 and 0.1.3 checks remain pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
+The catalog pins the published 0.1.3 artifact. It retains the prior 0.1.1
 office, editor and preferences behavior. The 0.1.1 tables below preserve
-historical release truth; the 0.1.2 C14/C15 rows describe current candidates
-and supersede the corresponding charter and import/export rows. All 0.1.2
-candidates remain pending native acceptance.
+historical release truth; the historical 0.1.2 C14/C15 rows describe inherited
+capabilities and defects. The published 0.1.3 rows supersede the corresponding
+charter and busy-request behavior. All candidates remain pending native acceptance.
 macOS, Linux, WSL and remote sessions
 are unsupported. See the [install and lifecycle guide](canvas-install.md).
 It observes only the exact joined session/project. No directory browsing,
@@ -24,9 +24,9 @@ settings, not arbitrary files, launches, logs or other projects.
 
 In the 0.1.1 tables, **Candidate** means implemented in that prior preview, not a
 promise of full native parity; **OPEN** marks unavailable capabilities/remaining
-parity work at that release. These decisions are historical, not current 0.1.2
+parity work at that release. These decisions are historical, not current 0.1.3
 availability. **Transfer gate** means implemented browser behavior, embedded
-transfer unverified. The separate 0.1.2 section describes current candidate
+transfer unverified. The separate 0.1.2 and 0.1.3 sections describe candidate
 features; CLI usage import, terminal and directory management remain OPEN or
 excluded.
 
@@ -87,7 +87,7 @@ excluded.
 | Startup diagnostic report | Unsupported request capability-gated; no visible button. | Host must advertise the action. | Candidate |
 | `get_office_state` readiness | Bounded per-instance request/handshake counters via the authorized Canvas action only. | Requests observed are not visible-renderer acceptance or host-fault evidence; no public diagnostics endpoint. | Candidate; 0.1.1 native checks pending |
 
-## Canvas 0.1.2 release truth (C14/C15; native acceptance pending #218)
+## Historical Canvas 0.1.2 release truth (C14/C15; native acceptance pending #218)
 
 The C14 renderer diagnostics and snapshot action and the C15 host-mediated
 capabilities are included in the published 0.1.2 artifact. This release retains
@@ -95,6 +95,8 @@ the prior office, editor and preferences behavior. The C15 charter and
 import/export rows below supersede their corresponding 0.1.1 rows; CLI usage
 import, terminal and directory management remain OPEN or excluded. Browser
 transfer remains a fallback, and native embedded transfer is still unqualified.
+The defect descriptions below apply to 0.1.2; the published 0.1.3 fixes are
+described separately below and still require native retesting.
 
 | Control | 0.1.2 candidate behavior | Boundary | Release decision |
 |---|---|---|---|
@@ -123,26 +125,25 @@ still queued in a stalled webview; resuming drawing returns only the latest
 nonce without disconnecting the office. The server continues to reject
 old/unsolicited snapshot results.
 
-See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-012-preview)
+See the [agent-runnable qualification procedure](canvas-install.md#agent-runnable-qualification-c14-013-preview)
 for the subset of #218 that can be investigated without UI automation; no result
 automatically changes a native gate to PASS.
 
-## Canvas 0.1.3 source candidates (not published; native acceptance pending #218)
+## Canvas 0.1.3 published candidates (native acceptance pending #218)
 
-These rows describe repository source only. They are not included in
-the published 0.1.2 artifact or current catalog pin. They are 0.1.3 candidates,
-not accepted native behavior, and need a new immutable candidate plus native
-retest before any release decision.
+These rows describe the published immutable 0.1.3 artifact and current catalog
+pin. They are not included in the historical 0.1.2 artifact. They remain
+candidates, not accepted native behavior, and need native retesting in #218.
 
-| Control | Source behavior | Boundary | Release decision |
+| Control | 0.1.3 candidate behavior | Boundary | Release decision |
 |---|---|---|---|
-| Agent View Charter; member Open charter (NA-012-CHARTER-001 fix, #230) | A known local refusal for one member (missing, unreadable or undeclared charter) is reported as that member's charter being unavailable, makes no Editor call and leaves other members' charters available in the same office. Host rejection, timeout, malformed, unrecognized or late results still disable opening for the instance with one sanitized reason and no automatic retry. | Current declared member only, validated before Editor discovery and rechecked against the roster declaration and charter file immediately before opening; a change during discovery fails closed. Same guarded path translation as 0.1.2. | 0.1.3 candidate; requires new immutable artifact and native retest (#230, #218) |
-| Host request overlap (busy; #232) | One host request runs at a time per office instance, shared by every viewer. A request refused only because another is in flight makes no host call, quarantines nothing and is reported as a typed request refusal; every capability stays available, and the status says nothing was sent. A repeated View Charter for the same member while its open is in flight joins that request: one Editor open, no error status. Every joined caller receives the actual operation result, including failure or disposal; none can hang or receive a success-shaped fallback. In one browser, other operations are refused locally while busy without sending anything; a busy export keeps the host path rather than falling back. | Busy is accepted only as an exact three-key request refusal after the disposal checks. Malformed, forged, extra-key, late or post-disposal busy-shaped results, unauthorized or revoked requests, and genuine rejection or timeout still fail closed and quarantine as before. No automatic retry. | 0.1.3 candidate; requires new immutable artifact and native retest including a double-click step (#232, #218) |
+| Agent View Charter; member Open charter (NA-012-CHARTER-001 fix, #230) | A known local refusal for one member (missing, unreadable or undeclared charter) is reported as that member's charter being unavailable, makes no Editor call and leaves other members' charters available in the same office. Host rejection, timeout, malformed, unrecognized or late results still disable opening for the instance with one sanitized reason and no automatic retry. | Current declared member only, validated before Editor discovery and rechecked against the roster declaration and charter file immediately before opening; a change during discovery fails closed. Same guarded path translation as 0.1.2. | Published 0.1.3 candidate; native retest pending (#230, #218) |
+| Host request overlap (busy; #232) | One host request runs at a time per office instance, shared by every viewer. A request refused only because another is in flight makes no host call, quarantines nothing and is reported as a typed request refusal; every capability stays available, and the status says nothing was sent. A repeated View Charter for the same member while its open is in flight joins that request: one Editor open, no error status. Every joined caller receives the actual operation result, including failure or disposal; none can hang or receive a success-shaped fallback. In one browser, other operations are refused locally while busy without sending anything; a busy export keeps the host path rather than falling back. | Busy is accepted only as an exact three-key request refusal after the disposal checks. Malformed, forged, extra-key, late or post-disposal busy-shaped results, unauthorized or revoked requests, and genuine rejection or timeout still fail closed and quarantine as before. No automatic retry. | Published 0.1.3 candidate; native retest including a double-click step pending (#232, #218) |
 
 ## Remaining — OPEN release gates
 
 - Historical 0.1.0 Windows qualification is recorded in #182 and the public
-  marketplace install in #216. Neither qualifies 0.1.1 or 0.1.2. Their
+  marketplace install in #216. Neither qualifies 0.1.1, 0.1.2 or 0.1.3. Their
   update/rollback,
   repeated lifecycle, fault handling and separate native VS Code checks remain
   pending #218; local catalog checks and browser tests do not establish them.

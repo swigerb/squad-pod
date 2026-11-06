@@ -13,10 +13,10 @@ node --test scripts\verify-canvas-plugin.test.mjs
 `plugins/squad-pod/` is generated, gitignored, ready to run and excluded from
 the VSIX. Do not commit it to master. Distribution commits/catalog publication
 are separate release work (#181/C11); end users must not run npm builds.
-The source candidate version is **0.1.3**, sourced only from
+The published Canvas version is **0.1.3**, sourced only from
 `standalone/canvas-plugin.json`, independently of VSIX **1.0.0** and the private
-standalone observer **0.1.0**. The published artifact, catalog and provenance
-remain at **0.1.2** until the separate post-publication catalog PR. Do not bump
+standalone observer **0.1.0**. The owner catalog pins the immutable **0.1.3**
+distribution; native acceptance remains pending #218. Do not bump
 those other products for Canvas.
 
 The package contains Agent Plugins 1.0 metadata, the existing icon as
@@ -83,7 +83,7 @@ These checks do not install the plugin or change app configuration.
 
 ## Canvas 0.1.2 host-mediated candidates (#223)
 
-Canvas 0.1.2 is the current published preview; 0.1.1 is historical. The 0.1.2
+Canvas 0.1.2 is a historical published preview; 0.1.3 is current. The 0.1.2
 artifact adds host-mediated charter opening, joined-session usage metrics and
 JSON transfers. Native acceptance for 0.1.2 remains pending in #218. CLI usage
 import remains OPEN, and browser-transfer gates remain unchanged where native
@@ -98,6 +98,8 @@ cookie boundary. Imports/exports additionally require the per-instance editing
 cookie. A missing method or rejection never grants permission; failures use a
 stable sanitized reason, never raw SDK exceptions, paths, prompts or credentials.
 Host RPC rejections disable that host path for the instance without retries.
+The 0.1.3 local-charter and typed-busy exceptions are described below; neither
+is a host RPC rejection.
 Each SDK await has a one-second deadline; timed-out paths are quarantined for
 the instance even if the underlying SDK promise settles later. The operation
 slot is released so an unresponsive usage RPC cannot disable unrelated imports
@@ -141,16 +143,17 @@ acceptance. All these capabilities are **Candidate; pending native acceptance (#
 [feature matrix](canvas-feature-matrix.md#platform-investigation-static-only-223)
 for the static URL/loopback findings and explicit unsupported WSL/remote disposition.
 
-## Canvas 0.1.3 source candidates (#230/#232)
+## Canvas 0.1.3 published candidates (#230/#232)
 
-The 0.1.3 source candidate isolates a known local charter refusal to its member,
+The published 0.1.3 artifact isolates a known local charter refusal to its member,
 keeps capabilities available after typed busy refusals, joins duplicate
 same-member charter opens, and propagates the actual failure or disposal outcome
 to every joined caller. These changes are **Candidate; pending native
-acceptance (#218)**. They are not in the published 0.1.2 artifact, do not change
-the current catalog pin or historical provenance, and require a new immutable
-distribution followed by the separate catalog PR before the catalog can point
-to 0.1.3. CI and packaging checks are not native acceptance.
+acceptance (#218)**. They are not in the historical 0.1.2 artifact. The current
+catalog pins immutable `canvas-v0.1.3`; its
+[publication receipt](canvas-install.md#published-013-preview-provenance)
+records the exact distribution and source identities. Native retesting remains
+pending; CI and packaging checks are not native acceptance.
 
 ## Immutable preview publication
 
@@ -180,7 +183,7 @@ master.
 
 Record source SHA/tree, dist SHA/tag, plugin entry/build-info/checksum hashes,
 receipt payload byte/file counts, downloadable archive URL/hash and CI run IDs.
-Keep the 0.1.0 evidence pins unchanged. New 0.1.2 native checks, including
+Keep the 0.1.0 evidence pins unchanged. New 0.1.3 native checks, including
 update/rollback between distinct releases with retained data, belong to #218.
 Only the designated owner/Scout should install or qualify the native candidate.
 
@@ -195,6 +198,6 @@ git -c core.autocrlf=false archive --format=zip --prefix=squad-pod/ --output "sq
 
 Default `git archive` settings can otherwise convert text despite byte-exact
 Git blobs, invalidating the packaged checksums. The
-[published 0.1.2 provenance](canvas-install.md#published-012-preview-provenance)
+[published 0.1.3 provenance](canvas-install.md#published-013-preview-provenance)
 records the verified archive, not an unverified source ZIP. Historical 0.1.1
-provenance remains in the same install guide.
+and 0.1.2 provenance remains in the same install guide.
