@@ -6,10 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JoinedSession } from '@github/copilot-sdk/extension';
 import type { OutboundMessage } from '../../../src/types.js';
 import { createHostCapabilities } from './hostCapabilities.js';
+import { createCharterOffice } from './charterOffice.fixture.js';
+import { CANVAS_CHARTER_UNAVAILABLE } from '../../../src/core/canvasHost.js';
 
 const layout = { version: 2, cols: 1, rows: 1, tiles: [1], furniture: [] };
 const content = JSON.stringify(layout, null, 2);
 const denied = { ok: false, reason: 'Host capability unavailable or rejected. Outcome unconfirmed; no automatic retry.' };
+const refused = { ok: false, reason: CANVAS_CHARTER_UNAVAILABLE, failure: 'request' };
 let repo: string;
 let root: string;
 const team = (path = '.squad/agents/test-bot/charter.md') =>
@@ -51,15 +54,24 @@ describe('instance-owned host capabilities', () => {
       instanceId: 'squad-charter-office-test-bot', input: { scope: 'repo', path: 'nested project/.squad/agents/test-bot/charter.md' } });
     expect(f.list).toHaveBeenCalledOnce();
   });
-  it.each(['../test-bot', 'test-bot/../../x', 'unknown', 'TEST-BOT', 'test-bot\\x'])('refuses non-member/path slug %s', async slug => {
+  it.each(['../test-bot', 'test-bot/../../x', 'test-bot\\x'])('refuses malformed path slug %s before any host call', async slug => {
     const f = fixture();
     expect(await f.handle({ operation: 'charter', slug }, false)).toEqual(denied);
+    expect(f.snapshot).not.toHaveBeenCalled();
     expect(f.open).not.toHaveBeenCalled();
+  });
+  it.each(['unknown', 'TEST-BOT'])('refuses non-member %s locally without exact-ID aliasing or disabling charters', async slug => {
+    const f = fixture();
+    expect(await f.handle({ operation: 'charter', slug }, false)).toEqual(refused);
+    expect(f.list).not.toHaveBeenCalled();
+    expect(f.open).not.toHaveBeenCalled();
+    expect(f.handle.available!().charter).toBe(true);
   });
   it('requires the roster-declared charter, not just a matching directory', async () => {
     await writeFile(join(root, '.squad', 'team.md'), team('../../outside/agents/test-bot/charter.md'));
     const f = fixture();
-    expect(await f.handle({ operation: 'charter', slug: 'test-bot' }, false)).toEqual(denied);
+    expect(await f.handle({ operation: 'charter', slug: 'test-bot' }, false)).toEqual(refused);
+    expect(f.list).not.toHaveBeenCalled();
     expect(f.open).not.toHaveBeenCalled();
   });
   it('rejects changed editor schemas and ambiguous providers without opening', async () => {
@@ -84,7 +96,7 @@ describe('instance-owned host capabilities', () => {
     await symlink(outside, join(root, '.squad', 'agents', 'test-bot'), process.platform === 'win32' ? 'junction' : 'dir');
     await symlink(outside, join(root, 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
     const f = fixture();
-    expect(await f.handle({ operation: 'charter', slug: 'test-bot' }, false)).toEqual(denied);
+    expect(await f.handle({ operation: 'charter', slug: 'test-bot' }, false)).toEqual(refused);
     expect(await f.handle({ operation: 'import', path: 'linked/layout.json' }, true)).toEqual(denied);
     expect(f.open).not.toHaveBeenCalled();
   });
@@ -213,5 +225,70 @@ describe('instance-owned host capabilities', () => {
     expect(await f.handle({ operation: 'export', content }, true)).toEqual(denied);
     expect(f.getMetrics).not.toHaveBeenCalled();
     expect(f.createFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('NA-012-CHARTER-001 same-office member fault isolation', () => {
+  const amber = { operation: 'charter', slug: 'amber-a' };
+  const cedar = { operation: 'charter', slug: 'cedar-a' };
+  const amberOpen = { instanceId: 'squad-charter-project-a-amber-a', path: 'project-a/.squad/agents/amber-a/charter.md' };
+  let office: Awaited<ReturnType<typeof createCharterOffice>>;
+  beforeEach(async () => { office = await createCharterOffice(repo); });
+  afterEach(async () => { await office.cleanup(); });
+
+  it('opens valid Amber, refuses missing Cedar locally without any Editor RPC, then opens Amber again', async () => {
+    expect(await office.handle(amber, false)).toEqual({ ok: true });
+    expect([office.state.lists, office.state.opens]).toEqual([1, [amberOpen]]);
+    expect(await office.handle(cedar, false)).toEqual(refused);
+    expect([office.state.lists, office.state.opens]).toEqual([1, [amberOpen]]);
+    expect(office.handle.available!().charter).toBe(true);
+    expect(await office.handle({ operation: 'capabilities' }, false))
+      .toEqual({ ok: true, capabilities: { charter: true, usage: false, export: false } });
+    expect(await office.handle(amber, false)).toEqual({ ok: true });
+    expect([office.state.lists, office.state.opens]).toEqual([2, [amberOpen, amberOpen]]);
+    expect(office.state.snapshots).toBe(3);
+  });
+
+  it.each([
+    ['removed', '# Team\n## Members\n| Name | Role | Charter | Status |\n|---|---|---|---|\n| Cedar A | Dev | .squad/agents/cedar-a/charter.md | Active |\n'],
+    ['redirected', '# Team\n## Members\n| Name | Role | Charter | Status |\n|---|---|---|---|\n| Amber A | Dev | ../outside/amber-a/charter.md | Active |\n'],
+  ])('rechecks the declaration at the open boundary when Amber is %s while list() is pending', async (_case, teamMd) => {
+    office.state.onList = () => writeFile(join(office.root, '.squad', 'team.md'), teamMd);
+    expect(await office.handle(amber, false)).toEqual(denied);
+    expect(office.state.lists).toBe(1);
+    expect(office.state.opens).toEqual([]);
+  });
+
+  it('still quarantines a genuine Editor rejection after a local refusal, with no retry or later open', async () => {
+    expect(await office.handle(cedar, false)).toEqual(refused);
+    office.state.openBehavior = 'reject';
+    expect(await office.handle(amber, false)).toEqual(denied);
+    expect(office.handle.available!().charter).toBe(false);
+    office.state.openBehavior = 'open';
+    expect(await office.handle(amber, false)).toEqual(denied);
+    expect(await office.handle(cedar, false)).toEqual(denied);
+    expect(office.state.opens).toEqual([amberOpen]);
+  });
+
+  it('quarantines a timed-out Editor open as uncertain and never retries it', async () => {
+    office.state.openBehavior = 'hang';
+    const started = Date.now();
+    expect(await office.handle(amber, false)).toEqual(denied);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(900);
+    expect(office.handle.available!().charter).toBe(false);
+    expect(await office.handle(cedar, false)).toEqual(denied);
+    expect(office.state.opens).toEqual([amberOpen]);
+  }, 10_000);
+
+  it('does not report a local refusal once the instance is revoked during member validation', async () => {
+    const f = fixture();
+    await rm(join(root, '.squad', 'agents', 'test-bot', 'charter.md'));
+    f.snapshot.mockImplementation(async () => [{ type: 'existingAgents', agents: [{
+      get id() { f.active.mockImplementation(() => { throw new Error('revoked'); }); return 'test-bot'; },
+      name: 'TestBot', role: 'Dev', status: 'idle', paletteIndex: 0, seatId: null, currentTask: null,
+    }] }]);
+    expect(await f.handle({ operation: 'charter', slug: 'test-bot' }, false)).toEqual(denied);
+    expect(f.list).not.toHaveBeenCalled();
+    expect(f.open).not.toHaveBeenCalled();
   });
 });

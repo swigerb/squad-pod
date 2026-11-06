@@ -2,7 +2,7 @@ import { CANVAS_CONTROL_CAPABILITIES, CANVAS_OBSERVER_CAPABILITIES } from '../..
 import { createBrowserClient, type BrowserHostClient } from '../standalone/browserClient.js';
 import type { PreferenceMutation } from '../../../standalone/src/officePreferences.js';
 import { CanvasBootstrapError, canvasDiagnostic, canvasTransportStatus, type CanvasDiagnosticCode } from './diagnostics.js';
-import { createHostBridge, HOST_UNAVAILABLE } from './hostBridge.js';
+import { CANVAS_CHARTER_UNAVAILABLE, createHostBridge, HOST_UNAVAILABLE } from './hostBridge.js';
 
 export const CANVAS_EDIT_FAILED = 'Editing authority or recovery storage unavailable. No office changes were sent; existing drafts were kept. Reopen the canvas or recover its browser storage.';
 export interface CanvasHostClient extends BrowserHostClient {
@@ -25,7 +25,7 @@ export function createCanvasBootstrap(
       try { return await request(...args); }
       catch { throw new CanvasBootstrapError('NETWORK_FAILED'); }
     };
-    const onStatus = (state: string) => status(state === HOST_UNAVAILABLE
+    const onStatus = (state: string) => status(state === HOST_UNAVAILABLE || state === CANVAS_CHARTER_UNAVAILABLE
       || /^Layout JSON exported to this session's workspace files: squad-pod-layout-[a-f0-9-]{36}\.json$/.test(state)
       ? state : canvasTransportStatus(state));
     const observe = (client: BrowserHostClient): BrowserHostClient => ({

@@ -6,7 +6,7 @@ import { decodeEvent, isObserverLayout } from '../../../standalone/src/events.js
 import { LayoutDraft } from '../office/editor/layoutDraft.js';
 import { validPreferences, validPreferenceMutation, type OfficePreferences, type PreferenceMutation } from '../../../standalone/src/officePreferences.js';
 import type { CanvasHostBridge } from '../../../src/core/canvasHost.js';
-import { HOST_UNAVAILABLE } from '../canvas/hostBridge.js';
+import { CANVAS_CHARTER_UNAVAILABLE, HOST_UNAVAILABLE } from '../canvas/hostBridge.js';
 
 export interface BrowserControlOptions {
   recoveryKey: string;
@@ -232,7 +232,8 @@ export function createBrowserClient(
       if (disposed) { status('Disconnected'); return; }
       if (canvasHost && message.type === 'openSquadAgent') {
         if (!canvasHost.charter) { status(HOST_UNAVAILABLE); return; }
-        void canvasHost.openCharter(message.agentId).catch(() => status(HOST_UNAVAILABLE));
+        void canvasHost.openCharter(message.agentId).catch((error: unknown) => status(
+          error instanceof Error && error.message === CANVAS_CHARTER_UNAVAILABLE ? CANVAS_CHARTER_UNAVAILABLE : HOST_UNAVAILABLE));
         return;
       }
       if (control && (message.type === 'exportLayout' || message.type === 'exportLayoutSnapshot')) {

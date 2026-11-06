@@ -1,7 +1,11 @@
-import type { CanvasHostBridge, CanvasHostRequest, CanvasHostResult } from '../../../src/core/canvasHost.js';
+import { CANVAS_CHARTER_UNAVAILABLE, type CanvasHostBridge, type CanvasHostRequest, type CanvasHostResult } from '../../../src/core/canvasHost.js';
 import { isObserverLayout } from '../../../standalone/src/events.js';
 
 export const HOST_UNAVAILABLE = 'Host capability unavailable or rejected. Outcome unconfirmed; no automatic retry.';
+export { CANVAS_CHARTER_UNAVAILABLE };
+
+/** The server confirmed a local per-member charter refusal; the host capability is unaffected. */
+class CharterRefusal extends Error {}
 
 export function createHostBridge(request: typeof fetch, isDisposed: () => boolean,
   failure: (reason: string) => void, capabilities?: unknown): CanvasHostBridge {
@@ -15,15 +19,22 @@ export function createHostBridge(request: typeof fetch, isDisposed: () => boolea
       });
       if (!response.ok || isDisposed()) throw new Error();
       const value: CanvasHostResult = await response.json();
-      if (isDisposed() || !value || value.ok !== true) throw new Error();
+      if (isDisposed() || !value) throw new Error();
+      // Exact known shape only; any other refusal stays an uncertain host failure.
+      if (input.operation === 'charter' && value.ok === false && value.failure === 'request'
+        && value.reason === CANVAS_CHARTER_UNAVAILABLE && Object.keys(value).length === 3) throw new CharterRefusal();
+      if (value.ok !== true) throw new Error();
       return value;
-    } catch { throw new Error(HOST_UNAVAILABLE); }
+    } catch (error) { throw error instanceof CharterRefusal ? error : new Error(HOST_UNAVAILABLE); }
   }
   const bridge: CanvasHostBridge = {
     charter: false, usage: false, export: false,
     async openCharter(slug) {
       try { await call({ operation: 'charter', slug }); }
-      catch { bridge.charter = false; failure(HOST_UNAVAILABLE); throw new Error(HOST_UNAVAILABLE); }
+      catch (error) {
+        if (error instanceof CharterRefusal) { failure(CANVAS_CHARTER_UNAVAILABLE); throw new Error(CANVAS_CHARTER_UNAVAILABLE); }
+        bridge.charter = false; failure(HOST_UNAVAILABLE); throw new Error(HOST_UNAVAILABLE);
+      }
     },
     async getUsage() {
       try {
