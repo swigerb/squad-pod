@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "leaseKey": "session-pod-docs-published-20261106-1ce86",
+  "sessionId": "pod-docs-published-20261106-1ce86",
+  "repository": "swigerb/squad-pod",
+  "issueNumber": null,
+  "dispatchSource": "local-cli",
+  "route": "aca-job",
+  "executionMode": "aca-job",
+  "state": "claimed",
+  "attempts": 1,
+  "startedAt": "2026-11-06T17:08:44.921Z",
+  "lastHeartbeatAt": "2026-11-06T17:08:44.921Z",
+  "updatedAt": "2026-11-06T17:08:44.921Z",
+  "terminalReason": null,
+  "executionRef": null
+}
