@@ -191,20 +191,29 @@ describe('#232 busy refusals keep every capability', () => {
     expect(failed).not.toHaveBeenCalled();
     expect(bridge.charter).toBe(true);
   });
-  it('reports a joined duplicate failure once, through the original request', async () => {
+  it.each([
+    ['host rejection', { ok: false, reason: 'rejected' }, false, HOST_UNAVAILABLE, false],
+    ['malformed response', { ok: 'yes' }, false, HOST_UNAVAILABLE, false],
+    ['disposal before the result', { ok: true }, true, HOST_UNAVAILABLE, false],
+    ['local member refusal', { ok: false, reason: CANVAS_CHARTER_UNAVAILABLE, failure: 'request' }, false, CANVAS_CHARTER_UNAVAILABLE, true],
+  ])('rejects every joined caller after a %s, with one request and one report', async (_case, body, dispose, reason, kept) => {
+    let disposed = false;
     const pending = pendingResponse();
     const request = vi.fn<typeof fetch>().mockReturnValueOnce(pending.promise);
     const failed = vi.fn();
-    const bridge = createHostBridge(request, () => false, failed, capabilities);
+    const bridge = createHostBridge(request, () => disposed, failed, capabilities);
     const first = bridge.openCharter('amber-a');
     const second = bridge.openCharter('amber-a');
-    pending.resolve({ ok: false, reason: 'rejected' });
-    await expect(first).rejects.toThrow(HOST_UNAVAILABLE);
-    await expect(second).resolves.toBeUndefined();
-    expect(failed).toHaveBeenCalledExactlyOnceWith(HOST_UNAVAILABLE);
+    const third = bridge.openCharter('amber-a');
+    expect(second).toBe(first);
+    if (dispose) disposed = true;
+    pending.resolve(body);
+    const results = await Promise.allSettled([first, second, third]);
+    expect(results).toEqual(Array(3).fill({ status: 'rejected', reason: new Error(reason) }));
+    expect(failed).toHaveBeenCalledExactlyOnceWith(reason);
     expect(request).toHaveBeenCalledOnce();
-  });
-  it('refuses other operations locally while a host request is in flight, sending nothing', async () => {
+    expect(bridge.charter).toBe(kept);
+  });  it('refuses other operations locally while a host request is in flight, sending nothing', async () => {
     const pending = pendingResponse();
     const request = vi.fn<typeof fetch>().mockReturnValueOnce(pending.promise).mockResolvedValue(response({ ok: true }));
     const failed = vi.fn();

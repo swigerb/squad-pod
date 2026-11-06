@@ -13,26 +13,28 @@ class RequestRefusal extends Error {}
 export function createHostBridge(request: typeof fetch, isDisposed: () => boolean,
   failure: (reason: string) => void, capabilities?: unknown): CanvasHostBridge {
   // Single flight per bridge; the server's typed busy refusal covers other bridges and viewers.
-  let pending: { slug?: string; settled: Promise<void> } | undefined;
-  function track<T>(slug: string | undefined, run: () => Promise<T>): Promise<T> {
-    const promise = run();
-    const settled = promise.then(() => undefined, () => undefined);
-    const entry = { slug, settled };
+  let pending: { slug?: string; outcome: Promise<unknown> } | undefined;
+  /**
+   * Runs one host operation. Its outcome is classified, reported and quarantined exactly once, and a
+   * same-member charter caller joins that same outcome, success or failure. Any other overlap is
+   * refused before sending anything. After disposal nothing joins, so the call fails closed.
+   */
+  function operate<T>(slug: string | undefined, run: () => Promise<T>, quarantine: () => void): Promise<T> {
+    if (pending && !isDisposed()) {
+      if (slug !== undefined && pending.slug === slug) return pending.outcome as Promise<T>;
+      failure(CANVAS_HOST_BUSY);
+      return Promise.reject(new Error(CANVAS_HOST_BUSY));
+    }
+    const outcome = run().catch((error: unknown) => {
+      if (error instanceof RequestRefusal) { failure(error.message); throw new Error(error.message); }
+      quarantine(); failure(HOST_UNAVAILABLE); throw new Error(HOST_UNAVAILABLE);
+    });
+    const entry = { slug, outcome };
     pending = entry;
-    void settled.then(() => { if (pending === entry) pending = undefined; });
-    return promise;
-  }
-  /** Overlap refused before sending anything. After disposal, fall through so the call fails closed. */
-  function overlapping(slug?: string): Promise<void> | undefined {
-    if (!pending || isDisposed()) return undefined;
-    if (slug !== undefined && pending.slug === slug) return pending.settled;
-    throw new RequestRefusal(CANVAS_HOST_BUSY);
-  }
-  function refused(error: unknown): never {
-    if (error instanceof RequestRefusal) { failure(error.message); throw new Error(error.message); }
-    throw error;
-  }
-  async function call(input: CanvasHostRequest): Promise<Extract<CanvasHostResult, { ok: true }>> {
+    const release = () => { if (pending === entry) pending = undefined; };
+    void outcome.then(release, release);
+    return outcome;
+  }  async function call(input: CanvasHostRequest): Promise<Extract<CanvasHostResult, { ok: true }>> {
     try {
       if (isDisposed()) throw new Error();
       const response = await request('/canvas-host', {
@@ -54,54 +56,33 @@ export function createHostBridge(request: typeof fetch, isDisposed: () => boolea
   }
   const bridge: CanvasHostBridge = {
     charter: false, usage: false, export: false,
-    async openCharter(slug) {
-      try {
-        // A duplicate click on the member already opening joins that request; its outcome is reported once.
-        const joined = overlapping(slug);
-        if (joined) return await joined;
-        await track(slug, () => call({ operation: 'charter', slug }));
-      } catch (error) {
-        if (error instanceof RequestRefusal) refused(error);
-        bridge.charter = false; failure(HOST_UNAVAILABLE); throw new Error(HOST_UNAVAILABLE);
-      }
+    openCharter(slug) {
+      return operate(slug, async () => { await call({ operation: 'charter', slug }); }, () => { bridge.charter = false; });
     },
-    async getUsage() {
-      try {
-        overlapping();
-        const result = await track(undefined, () => call({ operation: 'usage' }));
+    getUsage() {
+      return operate(undefined, async () => {
+        const result = await call({ operation: 'usage' });
         if (!Array.isArray(result.quantities) || result.quantities.length > 4
           || result.quantities.some(q => !q || typeof q.label !== 'string' || typeof q.unit !== 'string'
             || q.label.length > 128 || q.unit.length > 64 || !Number.isFinite(q.value) || q.value < 0)) throw new Error();
         return result.quantities;
-      } catch (error) {
-        if (error instanceof RequestRefusal) refused(error);
-        bridge.usage = false; failure(HOST_UNAVAILABLE); throw new Error(HOST_UNAVAILABLE);
-      }
+      }, () => { bridge.usage = false; });
     },
-    async exportLayout(content) {
-      try {
-        overlapping();
-        const result = await track(undefined, () => call({ operation: 'export', content }));
+    exportLayout(content) {
+      return operate(undefined, async () => {
+        const result = await call({ operation: 'export', content });
         if (typeof result.path !== 'string' || !/^squad-pod-layout-[a-f0-9-]{36}\.json$/.test(result.path)) throw new Error();
         return result.path;
-      } catch (error) {
-        if (error instanceof RequestRefusal) refused(error);
-        bridge.export = false; failure(HOST_UNAVAILABLE); throw new Error(HOST_UNAVAILABLE);
-      }
+      }, () => { bridge.export = false; });
     },
-    async importLayout(path) {
-      try {
-        overlapping();
-        const result = await track(undefined, () => call({ operation: 'import', path }));
+    importLayout(path) {
+      return operate(undefined, async () => {
+        const result = await call({ operation: 'import', path });
         if (!isObserverLayout(result.layout)) throw new Error();
         return result.layout;
-      } catch (error) {
-        if (error instanceof RequestRefusal) refused(error);
-        failure(HOST_UNAVAILABLE); throw new Error(HOST_UNAVAILABLE);
-      }
+      }, () => {});
     },
-  };
-  if (capabilities && typeof capabilities === 'object') {
+  };  if (capabilities && typeof capabilities === 'object') {
     bridge.charter = 'charter' in capabilities && capabilities.charter === true;
     bridge.usage = 'usage' in capabilities && capabilities.usage === true;
     bridge.export = 'export' in capabilities && capabilities.export === true;

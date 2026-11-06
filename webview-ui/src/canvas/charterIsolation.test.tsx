@@ -181,6 +181,23 @@ describe('Canvas charter fault isolation across members of one office', () => {
     expect(statuses).toEqual([]);
   });
 
+  it('#232 A: a double-click on a rejected open fails both clicks with one Editor call and one status', async () => {
+    const editor = gate();
+    office.state.onOpen = editor.wait;
+    office.state.openBehavior = 'reject';
+    const button = select('amber-a');
+    act(() => { button.click(); button.click(); });
+    await act(async () => { await vi.waitFor(() => expect(office.state.opens).toHaveLength(1)); });
+    editor.open();
+    await act(async () => { await vi.waitFor(() => expect(statuses).toHaveLength(1)); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)); });
+    expect(statuses).toEqual([HOST_UNAVAILABLE]);
+    expect(reported).toEqual([HOST_UNAVAILABLE]);
+    expect(office.state.opens).toHaveLength(1);
+    expect(office.handle.available!().charter).toBe(false);
+    expect(browser.canvasHost!.charter).toBe(false);
+    expect(select('amber-a').disabled).toBe(true);
+  });
   it('#232 B: View Charter while a usage Refresh is in flight sends nothing and keeps every capability', async () => {
     const metrics = gate();
     office.state.onMetrics = metrics.wait;

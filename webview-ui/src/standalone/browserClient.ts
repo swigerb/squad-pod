@@ -38,6 +38,7 @@ export function createBrowserClient(
   let preferencesRevision: string | null | undefined;
   let requestId = 0;
   let inFlight: number | undefined;
+  let charterOpening: Promise<void> | undefined;
   let inFlightPreference = false;
   let preferenceDraft: PreferenceMutation | null = null;
   let recovery: unknown;
@@ -232,9 +233,13 @@ export function createBrowserClient(
       if (disposed) { status('Disconnected'); return; }
       if (canvasHost && message.type === 'openSquadAgent') {
         if (!canvasHost.charter) { status(HOST_UNAVAILABLE); return; }
-        void canvasHost.openCharter(message.agentId).catch((error: unknown) => status(
+        // A joined duplicate click returns the same outcome promise; report it once.
+        const opening = canvasHost.openCharter(message.agentId);
+        if (opening === charterOpening) return;
+        charterOpening = opening;
+        void opening.catch((error: unknown) => status(
           error instanceof Error && (error.message === CANVAS_CHARTER_UNAVAILABLE || error.message === CANVAS_HOST_BUSY)
-            ? error.message : HOST_UNAVAILABLE));
+            ? error.message : HOST_UNAVAILABLE)).finally(() => { if (charterOpening === opening) charterOpening = undefined; });
         return;
       }
       if (control && (message.type === 'exportLayout' || message.type === 'exportLayoutSnapshot')) {
