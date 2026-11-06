@@ -6,7 +6,7 @@ import { decodeEvent, isObserverLayout } from '../../../standalone/src/events.js
 import { LayoutDraft } from '../office/editor/layoutDraft.js';
 import { validPreferences, validPreferenceMutation, type OfficePreferences, type PreferenceMutation } from '../../../standalone/src/officePreferences.js';
 import type { CanvasHostBridge } from '../../../src/core/canvasHost.js';
-import { HOST_UNAVAILABLE } from '../canvas/hostBridge.js';
+import { CANVAS_CHARTER_UNAVAILABLE, CANVAS_HOST_BUSY, HOST_UNAVAILABLE } from '../canvas/hostBridge.js';
 
 export interface BrowserControlOptions {
   recoveryKey: string;
@@ -38,6 +38,7 @@ export function createBrowserClient(
   let preferencesRevision: string | null | undefined;
   let requestId = 0;
   let inFlight: number | undefined;
+  let charterOpening: Promise<void> | undefined;
   let inFlightPreference = false;
   let preferenceDraft: PreferenceMutation | null = null;
   let recovery: unknown;
@@ -232,7 +233,13 @@ export function createBrowserClient(
       if (disposed) { status('Disconnected'); return; }
       if (canvasHost && message.type === 'openSquadAgent') {
         if (!canvasHost.charter) { status(HOST_UNAVAILABLE); return; }
-        void canvasHost.openCharter(message.agentId).catch(() => status(HOST_UNAVAILABLE));
+        // A joined duplicate click returns the same outcome promise; report it once.
+        const opening = canvasHost.openCharter(message.agentId);
+        if (opening === charterOpening) return;
+        charterOpening = opening;
+        void opening.catch((error: unknown) => status(
+          error instanceof Error && (error.message === CANVAS_CHARTER_UNAVAILABLE || error.message === CANVAS_HOST_BUSY)
+            ? error.message : HOST_UNAVAILABLE)).finally(() => { if (charterOpening === opening) charterOpening = undefined; });
         return;
       }
       if (control && (message.type === 'exportLayout' || message.type === 'exportLayoutSnapshot')) {
@@ -244,7 +251,12 @@ export function createBrowserClient(
         if (canvasHost?.export) {
           void canvasHost.exportLayout(bytes).then(path => {
             if (!disposed) status(`Layout JSON exported to this session's workspace files: ${path}`);
-          }, () => { if (!disposed) failure(`${HOST_UNAVAILABLE} Use Export again for the browser download fallback.`); });
+          }, (error: unknown) => {
+            if (disposed) return;
+            // Busy sent nothing: the host path stays available for the next Export.
+            failure(error instanceof Error && error.message === CANVAS_HOST_BUSY ? CANVAS_HOST_BUSY
+              : `${HOST_UNAVAILABLE} Use Export again for the browser download fallback.`);
+          });
           return;
         }
         const url = URL.createObjectURL(new Blob([bytes], { type: 'application/json' }));
