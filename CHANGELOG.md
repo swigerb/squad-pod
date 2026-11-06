@@ -4,10 +4,10 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
-## Canvas plugin 0.1.3 — source candidate — 2026-11-05
+## Canvas plugin 0.1.3 — Windows preview — 2026-11-05
 
-The published artifact and marketplace pin remain 0.1.2. These source changes
-are candidates only; native acceptance remains pending in #218.
+The published artifact and marketplace pin are 0.1.3. These changes remain
+candidates for native acceptance in #218; publication is not native acceptance.
 
 - Bump only the Canvas plugin version to 0.1.3; keep the VSIX at 1.0.0 and
   private standalone observer at 0.1.0.
@@ -16,14 +16,18 @@ are candidates only; native acceptance remains pending in #218.
 - Preserve host capabilities after typed busy refusals, share duplicate
   same-member charter opens, and propagate the actual operation failure or
   disposal outcome to every joined caller.
-- Require a new immutable candidate and native retest; this source PR does not
-  change the published 0.1.2 catalog or provenance.
+- Pin the owner catalog to immutable `canvas-v0.1.3` at
+  `1bc0d4165bea309715bd8c7ec5fc5cbf7c2cee8e`, built from clean source
+  `8402f6d2f6cc3153f00afe246597ae40a1cb5d1e`; retain the historical
+  0.1.0 evidence and 0.1.1/0.1.2 publication receipts.
+- Publish as a GitHub pre-release, not Latest; native retesting of the
+  #230/#232 fixes remains pending #218.
 
 ## Canvas plugin 0.1.2 — Windows preview — 2026-11-05
 
 This is the separate GitHub Copilot app plugin, not a VSIX release or version
-bump. The pre-release and marketplace now pin Canvas plugin 0.1.2; native
-acceptance remains pending in #218.
+bump. This historical pre-release and marketplace update pinned Canvas plugin
+0.1.2; native acceptance remains pending in #218.
 
 - Bump only the Canvas plugin version to 0.1.2; the VSIX and private standalone
   observer versions remain unchanged.
