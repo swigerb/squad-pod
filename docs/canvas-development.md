@@ -52,7 +52,7 @@ Create a separate local marketplace directory with
   "name": "squad-pod-local",
   "owner": { "name": "Brian Swiger" },
   "plugins": [{
-    "name": "squad-pod", "version": "0.1.2",
+    "name": "squad-pod", "version": "0.1.3",
     "description": "Experimental read-only Squad Pod Canvas",
     "source": "./plugins/squad-pod"
   }]
