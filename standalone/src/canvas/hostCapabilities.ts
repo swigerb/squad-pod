@@ -10,7 +10,7 @@ import { parseTeamRoster } from '../../../src/teamParser.js';
 import { readMemberCharter } from '../../../src/memberCharter.js';
 import { isObserverLayout } from '../events.js';
 import type { OutboundMessage } from '../../../src/types.js';
-import { CANVAS_CHARTER_UNAVAILABLE, type CanvasHostResult, type CanvasUsageQuantity } from '../../../src/core/canvasHost.js';
+import { CANVAS_CHARTER_UNAVAILABLE, CANVAS_HOST_BUSY, type CanvasHostResult, type CanvasUsageQuantity } from '../../../src/core/canvasHost.js';
 
 export type CanvasHostHandler = ((input: unknown, editing: boolean) => Promise<CanvasHostResult>) & {
   available?: () => { charter: boolean; usage: boolean; export: boolean };
@@ -62,9 +62,11 @@ export function createHostCapabilities(session: JoinedSession, root: string, ins
       const field = operation === 'charter' ? 'slug' : operation === 'export' ? 'content' : operation === 'import' ? 'path' : null;
       if (!['capabilities', 'usage', 'charter', 'export', 'import'].includes(operation)
         || Object.keys(input).length !== (field ? 2 : 1) || (field && typeof input[field] !== 'string')
-        || failed.has(operation) || busy) throw new Error();
+        || failed.has(operation)) throw new Error();
       if (operation === 'capabilities') return { ok: true, capabilities: available() };
       if ((operation === 'import' || operation === 'export') && !editing) throw new Error();
+      // Shared by every viewer of this instance: a refused overlap made no host call, so nothing is quarantined.
+      if (busy) return { ok: false, reason: CANVAS_HOST_BUSY, failure: 'request' };
       busy = true;
       try {
         if (operation === 'charter') {

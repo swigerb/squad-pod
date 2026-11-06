@@ -30,6 +30,13 @@ export type CanvasHostRequest =
 export const CANVAS_CHARTER_UNAVAILABLE =
   'Charter unavailable for this member: missing, unreadable or not declared. Nothing was opened; other charters remain available.';
 
+/**
+ * A known request refusal: another host request for this canvas instance was in flight,
+ * so this request made no host call. Every capability stays available.
+ */
+export const CANVAS_HOST_BUSY =
+  'Another host request is still in progress. Nothing was sent; capabilities remain available. Try again when it finishes.';
+
 export type CanvasHostResult = {
   ok: true;
   capabilities?: { charter: boolean; usage: boolean; export: boolean };
@@ -39,6 +46,6 @@ export type CanvasHostResult = {
 } | {
   ok: false;
   reason: string;
-  /** `request` only for a confirmed local refusal; absent means host unavailable/uncertain. */
+  /** `request` only for a confirmed local refusal with no host call; absent means host unavailable/uncertain. */
   failure?: 'request';
 };

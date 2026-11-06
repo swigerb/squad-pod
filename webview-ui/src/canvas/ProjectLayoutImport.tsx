@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useHostClient } from '../HostClientContext.js';
-import { HOST_UNAVAILABLE } from './hostBridge.js';
+import { CANVAS_HOST_BUSY, HOST_UNAVAILABLE } from './hostBridge.js';
 
 export function ProjectLayoutImport() {
   const { canvasHost } = useHostClient();
@@ -14,7 +14,11 @@ export function ProjectLayoutImport() {
     try {
       await canvasHost.importLayout(path);
       setNotice('Project JSON imported into the draft only. Review before saving.');
-    } catch { setFailed(true); setNotice(`${HOST_UNAVAILABLE} Use the browser JSON picker fallback.`); }
+    } catch (error) {
+      // Busy sent nothing; the project path stays available.
+      if (error instanceof Error && error.message === CANVAS_HOST_BUSY) setNotice(CANVAS_HOST_BUSY);
+      else { setFailed(true); setNotice(`${HOST_UNAVAILABLE} Use the browser JSON picker fallback.`); }
+    }
     finally { setBusy(false); }
   }
   return <div>

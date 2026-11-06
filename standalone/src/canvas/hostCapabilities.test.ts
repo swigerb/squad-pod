@@ -7,12 +7,13 @@ import type { JoinedSession } from '@github/copilot-sdk/extension';
 import type { OutboundMessage } from '../../../src/types.js';
 import { createHostCapabilities } from './hostCapabilities.js';
 import { createCharterOffice } from './charterOffice.fixture.js';
-import { CANVAS_CHARTER_UNAVAILABLE } from '../../../src/core/canvasHost.js';
+import { CANVAS_CHARTER_UNAVAILABLE, CANVAS_HOST_BUSY } from '../../../src/core/canvasHost.js';
 
 const layout = { version: 2, cols: 1, rows: 1, tiles: [1], furniture: [] };
 const content = JSON.stringify(layout, null, 2);
 const denied = { ok: false, reason: 'Host capability unavailable or rejected. Outcome unconfirmed; no automatic retry.' };
 const refused = { ok: false, reason: CANVAS_CHARTER_UNAVAILABLE, failure: 'request' };
+const busy = { ok: false, reason: CANVAS_HOST_BUSY, failure: 'request' };
 let repo: string;
 let root: string;
 const team = (path = '.squad/agents/test-bot/charter.md') =>
@@ -243,7 +244,7 @@ describe('NA-012-CHARTER-001 same-office member fault isolation', () => {
     expect([office.state.lists, office.state.opens]).toEqual([1, [amberOpen]]);
     expect(office.handle.available!().charter).toBe(true);
     expect(await office.handle({ operation: 'capabilities' }, false))
-      .toEqual({ ok: true, capabilities: { charter: true, usage: false, export: false } });
+      .toEqual({ ok: true, capabilities: { charter: true, usage: true, export: false } });
     expect(await office.handle(amber, false)).toEqual({ ok: true });
     expect([office.state.lists, office.state.opens]).toEqual([2, [amberOpen, amberOpen]]);
     expect(office.state.snapshots).toBe(3);
@@ -290,5 +291,78 @@ describe('NA-012-CHARTER-001 same-office member fault isolation', () => {
     expect(await f.handle({ operation: 'charter', slug: 'test-bot' }, false)).toEqual(denied);
     expect(f.list).not.toHaveBeenCalled();
     expect(f.open).not.toHaveBeenCalled();
+  });
+});
+
+describe('#232 shared busy gate: overlapping requests are typed refusals with no host call', () => {
+  const amber = { operation: 'charter', slug: 'amber-a' };
+  const amberOpen = { instanceId: 'squad-charter-project-a-amber-a', path: 'project-a/.squad/agents/amber-a/charter.md' };
+  const gate = () => { let open!: () => void; const wait = new Promise<void>(resolve => { open = resolve; }); return { wait: () => wait, open }; };
+  const viewer = async (office: Awaited<ReturnType<typeof createCharterOffice>>, input: unknown) =>
+    (await office.request('/canvas-host', { method: 'POST', body: JSON.stringify(input) })).json();
+  let office: Awaited<ReturnType<typeof createCharterOffice>>;
+  beforeEach(async () => { office = await createCharterOffice(repo); });
+  afterEach(async () => { await office.cleanup(); });
+
+  it('refuses a second viewer while a charter open is in flight, without host calls or quarantine', async () => {
+    const editor = gate();
+    office.state.onOpen = editor.wait;
+    const first = viewer(office, amber);
+    await vi.waitFor(() => expect(office.state.opens).toHaveLength(1));
+    expect(await viewer(office, amber)).toEqual(busy);
+    expect(await viewer(office, { operation: 'charter', slug: 'cedar-a' })).toEqual(busy);
+    expect(await viewer(office, { operation: 'usage' })).toEqual(busy);
+    expect(await viewer(office, { operation: 'capabilities' }))
+      .toEqual({ ok: true, capabilities: { charter: true, usage: true, export: false } });
+    expect([office.state.snapshots, office.state.lists, office.state.opens.length, office.state.metrics]).toEqual([1, 1, 1, 0]);
+    editor.open();
+    expect(await first).toEqual({ ok: true });
+    office.state.onOpen = undefined;
+    expect(await viewer(office, amber)).toEqual({ ok: true });
+    expect(await viewer(office, { operation: 'usage' })).toMatchObject({ ok: true });
+    expect(office.state.opens).toEqual([amberOpen, amberOpen]);
+    expect(office.state.metrics).toBe(1);
+    expect(office.handle.available!()).toEqual({ charter: true, usage: true, export: false });
+  });
+
+  it('refuses charter while usage is in flight before any snapshot, list or open', async () => {
+    const metrics = gate();
+    office.state.onMetrics = metrics.wait;
+    const usage = office.handle({ operation: 'usage' }, false);
+    await vi.waitFor(() => expect(office.state.metrics).toBe(1));
+    expect(await office.handle(amber, false)).toEqual(busy);
+    expect([office.state.snapshots, office.state.lists, office.state.opens.length]).toEqual([0, 0, 0]);
+    metrics.open();
+    expect(await usage).toMatchObject({ ok: true });
+    expect(await office.handle(amber, false)).toEqual({ ok: true });
+    expect(office.state.opens).toEqual([amberOpen]);
+    expect(office.handle.available!()).toEqual({ charter: true, usage: true, export: false });
+  });
+
+  it('keeps malformed, unauthorized, quarantined and revoked requests generic even while busy', async () => {
+    const metrics = gate();
+    office.state.onMetrics = metrics.wait;
+    const usage = office.handle({ operation: 'usage' }, false);
+    await vi.waitFor(() => expect(office.state.metrics).toBe(1));
+    expect(await office.handle({ operation: 'charter' }, false)).toEqual(denied);
+    expect(await office.handle({ operation: 'charter', slug: 'amber-a', extra: 1 }, false)).toEqual(denied);
+    expect(await office.handle({ operation: 'nope' }, false)).toEqual(denied);
+    expect(await office.handle({ operation: 'export', content }, false)).toEqual(denied);
+    office.state.disposed = true;
+    expect(await office.handle(amber, false)).toEqual(denied);
+    office.state.disposed = false;
+    metrics.open();
+    expect(await usage).toMatchObject({ ok: true });
+    expect(office.handle.available!()).toEqual({ charter: true, usage: true, export: false });
+    office.state.openBehavior = 'reject';
+    expect(await office.handle(amber, false)).toEqual(denied);
+    const again = gate();
+    office.state.onMetrics = again.wait;
+    const second = office.handle({ operation: 'usage' }, false);
+    await vi.waitFor(() => expect(office.state.metrics).toBe(2));
+    expect(await office.handle(amber, false)).toEqual(denied);
+    again.open();
+    expect(await second).toMatchObject({ ok: true });
+    expect(office.state.opens).toEqual([amberOpen]);
   });
 });

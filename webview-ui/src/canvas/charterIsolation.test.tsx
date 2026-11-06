@@ -7,7 +7,7 @@ import { createHostClientFixture, type HostClientFixture } from '../__tests__/ho
 import { CANVAS_OBSERVER_CAPABILITIES } from '../../../src/core/hostCapabilities.js';
 import type { OutboundMessage } from '../../../src/types.js';
 import { createBrowserClient } from '../standalone/browserClient.js';
-import { CANVAS_CHARTER_UNAVAILABLE, createHostBridge, HOST_UNAVAILABLE } from './hostBridge.js';
+import { CANVAS_CHARTER_UNAVAILABLE, CANVAS_HOST_BUSY, createHostBridge, HOST_UNAVAILABLE } from './hostBridge.js';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -15,7 +15,8 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 interface CharterOffice {
   handle: { available?: () => { charter: boolean; usage: boolean; export: boolean } };
   request: (url: string | URL | Request, init?: RequestInit) => Promise<Response>;
-  state: { opens: Array<{ instanceId: string; path: string }>; lists: number; openBehavior: 'open' | 'reject' | 'hang' };
+  state: { opens: Array<{ instanceId: string; path: string }>; lists: number; snapshots: number; metrics: number;
+    openBehavior: 'open' | 'reject' | 'hang'; onOpen?: () => Promise<void>; onMetrics?: () => Promise<void> };
   agents: Array<Extract<OutboundMessage, { type: 'existingAgents' }>['agents'][number]>;
   root: string;
   cleanup: () => Promise<void>;
@@ -153,6 +154,104 @@ describe('Canvas charter fault isolation across members of one office', () => {
     expect(JSON.stringify(statuses) + host.textContent).not.toContain('SECRET');
   });
 
+  const gate = () => { let open!: () => void; const wait = new Promise<void>(resolve => { open = resolve; }); return { wait: () => wait, open }; };
+  const amberPath = 'project-a/.squad/agents/amber-a/charter.md';
+  function expectAllAvailable() {
+    expect(office.handle.available!()).toEqual({ charter: true, usage: true, export: false });
+    expect([browser.canvasHost!.charter, browser.canvasHost!.usage]).toEqual([true, true]);
+    expect(select('amber-a').disabled).toBe(false);
+    expect(select('cedar-a').disabled).toBe(false);
+  }
+
+  it('#232 A: a double-click on Amber View Charter opens one Editor with no error and keeps View Charter enabled', async () => {
+    const editor = gate();
+    office.state.onOpen = editor.wait;
+    const button = select('amber-a');
+    act(() => { button.click(); button.click(); });
+    await act(async () => { await vi.waitFor(() => expect(office.state.opens).toHaveLength(1)); });
+    editor.open();
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)); });
+    expect(office.state.opens.map(open => open.path)).toEqual([amberPath]);
+    expect([office.state.snapshots, office.state.lists]).toEqual([1, 1]);
+    expect(statuses).toEqual([]);
+    expect(reported).toEqual([]);
+    expectAllAvailable();
+    office.state.onOpen = undefined;
+    await view('amber-a', 2);
+    expect(statuses).toEqual([]);
+  });
+
+  it('#232 B: View Charter while a usage Refresh is in flight sends nothing and keeps every capability', async () => {
+    const metrics = gate();
+    office.state.onMetrics = metrics.wait;
+    const usage = browser.canvasHost!.getUsage();
+    await vi.waitFor(() => expect(office.state.metrics).toBe(1));
+    const amber = select('amber-a'); act(() => amber.click());
+    await act(async () => { await vi.waitFor(() => expect(statuses).toHaveLength(1)); });
+    expect(statuses).toEqual([CANVAS_HOST_BUSY]);
+    expect(reported).toEqual([CANVAS_HOST_BUSY]);
+    expect(host.querySelector('[data-testid="host-status"]')?.textContent).toBe(CANVAS_HOST_BUSY);
+    expect([office.state.snapshots, office.state.lists, office.state.opens.length]).toEqual([0, 0, 0]);
+    metrics.open();
+    await expect(usage).resolves.toEqual([{ label: 'User-initiated API requests', value: 3, unit: 'requests' }]);
+    expectAllAvailable();
+    await view('amber-a', 2);
+    expect(office.state.opens.map(open => open.path)).toEqual([amberPath]);
+  });
+
+  it('#232 C: usage Refresh while a charter open is in flight is refused without disabling usage', async () => {
+    const editor = gate();
+    office.state.onOpen = editor.wait;
+    const amber = select('amber-a'); act(() => amber.click());
+    await act(async () => { await vi.waitFor(() => expect(office.state.opens).toHaveLength(1)); });
+    const panel = () => {
+      if (!host.querySelector('[aria-label="Joined-session usage"]')) {
+        act(() => [...host.querySelectorAll('button')].find(b => b.textContent === 'Telemetry')!.click());
+      }
+      return host.querySelector<HTMLElement>('[aria-label="Joined-session usage"]')!;
+    };
+    const usage = panel();
+    expect(usage).not.toBeNull();
+    const refresh = () => [...usage.querySelectorAll('button')].find(b => b.textContent === 'Refresh joined-session usage')!;
+    act(() => refresh().click());
+    await act(async () => { await vi.waitFor(() => expect(reported).toHaveLength(1)); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    expect(usage.querySelector('[role="status"]')?.textContent).toBe(CANVAS_HOST_BUSY);
+    expect(usage.querySelector('[role="alert"]')).toBeNull();
+    expect(refresh().disabled).toBe(false);
+    expect(office.state.metrics).toBe(0);
+    editor.open();
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)); });
+    expect(reported).toEqual([CANVAS_HOST_BUSY]);
+    expect(statuses).toEqual([]);
+    expectAllAvailable();
+    const again = panel();
+    act(() => [...again.querySelectorAll('button')].find(b => b.textContent === 'Refresh joined-session usage')!.click());
+    await act(async () => { await vi.waitFor(() => expect(office.state.metrics).toBe(1)); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    expect(again.textContent).toContain('User-initiated API requests: 3 requests');
+  });
+
+  it('#232 another viewer of the same instance gets a typed server busy refusal and keeps its capabilities', async () => {
+    const editor = gate();
+    office.state.onOpen = editor.wait;
+    const amber = select('amber-a'); act(() => amber.click());
+    await act(async () => { await vi.waitFor(() => expect(office.state.opens).toHaveLength(1)); });
+    const otherReports: string[] = [];
+    const other = createHostBridge((url, init) => office.request(url, init), () => false,
+      reason => otherReports.push(reason), office.handle.available!());
+    await expect(other.openCharter('amber-a')).rejects.toThrow(CANVAS_HOST_BUSY);
+    await expect(other.getUsage()).rejects.toThrow(CANVAS_HOST_BUSY);
+    expect(otherReports).toEqual([CANVAS_HOST_BUSY, CANVAS_HOST_BUSY]);
+    expect([other.charter, other.usage]).toEqual([true, true]);
+    expect([office.state.snapshots, office.state.opens.length, office.state.metrics]).toEqual([1, 1, 0]);
+    editor.open();
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)); });
+    expect(statuses).toEqual([]);
+    expectAllAvailable();
+    await expect(other.openCharter('amber-a')).resolves.toBeUndefined();
+    expect(office.state.opens).toHaveLength(2);
+  });
   it('treats a refusal that lands after disposal as a host failure, not a member refusal', async () => {
     const button = select('cedar-a');
     const pending = office.request;

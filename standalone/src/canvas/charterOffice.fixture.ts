@@ -22,9 +22,11 @@ export async function createCharterOffice(base: string) {
   await writeFile(join(root, '.squad', 'agents', 'amber-a', 'charter.md'), '# Amber A\nValid charter.');
   const agents = ['amber-a', 'cedar-a'].map((id, paletteIndex) => ({ id, name: id === 'amber-a' ? 'Amber A' : 'Cedar A',
     role: 'Dev', status: 'idle' as const, paletteIndex, seatId: null, currentTask: null }));
-  const state = { opens: [] as Array<{ instanceId: string; path: string }>, lists: 0, snapshots: 0,
+  const state = { opens: [] as Array<{ instanceId: string; path: string }>, lists: 0, snapshots: 0, metrics: 0,
     openBehavior: 'open' as 'open' | 'reject' | 'hang', disposed: false,
-    onList: undefined as undefined | (() => Promise<void>) };
+    onList: undefined as undefined | (() => Promise<void>),
+    onOpen: undefined as undefined | (() => Promise<void>),
+    onMetrics: undefined as undefined | (() => Promise<void>) };
   const schema = { type: 'object', properties: { scope: { enum: ['workspace', 'repo'] }, path: { type: 'string' } }, required: ['scope'] };
   const session: JoinedSession = { sessionId: 'joined', on: () => () => {}, rpc: { canvas: {
     list: async () => {
@@ -34,11 +36,16 @@ export async function createCharterOffice(base: string) {
     },
     open: async params => {
       state.opens.push({ instanceId: params.instanceId, path: params.input.path });
+      await state.onOpen?.();
       if (state.openBehavior === 'reject') throw new Error('SECRET C:\\private host diagnostic');
       if (state.openBehavior === 'hang') return new Promise(() => {});
       return { canvasId: params.canvasId, instanceId: params.instanceId, extensionId: params.extensionId };
     },
-  } } };
+  }, usage: { getMetrics: async () => {
+    state.metrics++;
+    await state.onMetrics?.();
+    return { totalUserRequests: 3 };
+  } } } };
   const handle = createHostCapabilities(session, root, 'project-a', () => {
     if (state.disposed) throw new Error('disposed');
     return 0;
