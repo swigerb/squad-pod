@@ -127,16 +127,17 @@ See the [agent-runnable qualification procedure](canvas-install.md#agent-runnabl
 for the subset of #218 that can be investigated without UI automation; no result
 automatically changes a native gate to PASS.
 
-## Unreleased source changes (not in any published artifact)
+## Canvas 0.1.3 source candidates (not published; native acceptance pending #218)
 
 These rows describe repository source only. They are not included in
-the published 0.1.2 artifact, are not assigned to a version and need a new
-immutable candidate plus native retest before any release decision.
+the published 0.1.2 artifact or current catalog pin. They are 0.1.3 candidates,
+not accepted native behavior, and need a new immutable candidate plus native
+retest before any release decision.
 
 | Control | Source behavior | Boundary | Release decision |
 |---|---|---|---|
-| Agent View Charter; member Open charter (NA-012-CHARTER-001 fix, #230) | A known local refusal for one member (missing, unreadable or undeclared charter) is reported as that member's charter being unavailable, makes no Editor call and leaves other members' charters available in the same office. Host rejection, timeout, malformed, unrecognized or late results still disable opening for the instance with one sanitized reason and no automatic retry. | Current declared member only, validated before Editor discovery and rechecked against the roster declaration and charter file immediately before opening; a change during discovery fails closed. Same guarded path translation as 0.1.2. | Unreleased source; requires new candidate and native retest (#230, #218) |
-| Host request overlap (busy; #232) | One host request runs at a time per office instance, shared by every viewer. A request refused only because another is in flight makes no host call, quarantines nothing and is reported as a typed request refusal; every capability stays available, and the status says nothing was sent. A repeated View Charter for the same member while its open is in flight joins that request: one Editor open, no error status. In one browser, other operations are refused locally while busy without sending anything; a busy export keeps the host path rather than falling back. | Busy is accepted only as an exact three-key request refusal after the disposal checks. Malformed, forged, extra-key, late or post-disposal busy-shaped results, unauthorized or revoked requests, and genuine rejection or timeout still fail closed and quarantine as before. No automatic retry. | Unreleased source; requires new candidate and native retest including a double-click step (#232, #218) |
+| Agent View Charter; member Open charter (NA-012-CHARTER-001 fix, #230) | A known local refusal for one member (missing, unreadable or undeclared charter) is reported as that member's charter being unavailable, makes no Editor call and leaves other members' charters available in the same office. Host rejection, timeout, malformed, unrecognized or late results still disable opening for the instance with one sanitized reason and no automatic retry. | Current declared member only, validated before Editor discovery and rechecked against the roster declaration and charter file immediately before opening; a change during discovery fails closed. Same guarded path translation as 0.1.2. | 0.1.3 candidate; requires new immutable artifact and native retest (#230, #218) |
+| Host request overlap (busy; #232) | One host request runs at a time per office instance, shared by every viewer. A request refused only because another is in flight makes no host call, quarantines nothing and is reported as a typed request refusal; every capability stays available, and the status says nothing was sent. A repeated View Charter for the same member while its open is in flight joins that request: one Editor open, no error status. Every joined caller receives the actual operation result, including failure or disposal; none can hang or receive a success-shaped fallback. In one browser, other operations are refused locally while busy without sending anything; a busy export keeps the host path rather than falling back. | Busy is accepted only as an exact three-key request refusal after the disposal checks. Malformed, forged, extra-key, late or post-disposal busy-shaped results, unauthorized or revoked requests, and genuine rejection or timeout still fail closed and quarantine as before. No automatic retry. | 0.1.3 candidate; requires new immutable artifact and native retest including a double-click step (#232, #218) |
 
 ## Remaining — OPEN release gates
 
