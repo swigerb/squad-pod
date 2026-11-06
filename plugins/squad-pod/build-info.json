@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "5bd74603b8ce40edb16af519dca281438c56a652",
+  "sourceCommit": "8402f6d2f6cc3153f00afe246597ae40a1cb5d1e",
   "sourceDirty": false,
   "sdk": {
     "name": "@github/copilot-sdk/extension",
@@ -19,6 +19,8 @@
     "src/copilotSessionActivity.ts",
     "src/copilotSessionState.ts",
     "src/core/agentIdentity.ts",
+    "src/core/canvasHost.ts",
+    "src/core/canvasHost.ts",
     "src/core/hostCapabilities.ts",
     "src/core/layoutState.ts",
     "src/core/officeChannel.ts",
@@ -585,5 +587,5 @@
       "licensePath": "licenses/ws-8.22.0.txt"
     }
   ],
-  "extensionSha256": "0b2e9819175942669b21e5ac32e5a38e0335cf5c4c1c5c5dc7b57e317c4747c9"
+  "extensionSha256": "8a22cb1be2ad241d5ed2d78f62c4875698b32618da8dc665acb14754134f3e1f"
 }

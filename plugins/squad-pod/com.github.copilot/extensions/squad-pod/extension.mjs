@@ -11474,10 +11474,23 @@ import { execFile } from "node:child_process";
 import { realpathSync as realpathSync5 } from "node:fs";
 import { isAbsolute as isAbsolute7, join as join14, relative as relative5, sep as sep5 } from "node:path";
 import { promisify } from "node:util";
+
+// ../src/core/canvasHost.ts
+var CANVAS_CHARTER_UNAVAILABLE = "Charter unavailable for this member: missing, unreadable or not declared. Nothing was opened; other charters remain available.";
+var CANVAS_HOST_BUSY = "Another host request is still in progress. Nothing was sent; capabilities remain available. Try again when it finishes.";
+
+// src/canvas/hostCapabilities.ts
 var object5 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 var MAX_BYTES = 2 * 1024 * 1024;
 var HOST_RPC_TIMEOUT_MS = 1e3;
 var reason = "Host capability unavailable or rejected. Outcome unconfirmed; no automatic retry.";
+var LocalRefusal = class extends Error {
+  generation;
+  constructor(generation) {
+    super();
+    this.generation = generation;
+  }
+};
 function createHostCapabilities(session, root, instanceId, assertActive, snapshot) {
   const files = new ProjectFiles(root);
   const failed = /* @__PURE__ */ new Set();
@@ -11487,6 +11500,13 @@ function createHostCapabilities(session, root, instanceId, assertActive, snapsho
     export: !failed.has("export") && typeof session.rpc?.workspaces?.createFile === "function"
   });
   let busy = false;
+  const current = (generation) => {
+    try {
+      return assertActive() === generation;
+    } catch {
+      return false;
+    }
+  };
   const handle = async (input, editing) => {
     let operation = "";
     let invoked = false;
@@ -11515,9 +11535,10 @@ function createHostCapabilities(session, root, instanceId, assertActive, snapsho
       if (!object5(input) || typeof input.operation !== "string") throw new Error();
       operation = input.operation;
       const field = operation === "charter" ? "slug" : operation === "export" ? "content" : operation === "import" ? "path" : null;
-      if (!["capabilities", "usage", "charter", "export", "import"].includes(operation) || Object.keys(input).length !== (field ? 2 : 1) || field && typeof input[field] !== "string" || failed.has(operation) || busy) throw new Error();
+      if (!["capabilities", "usage", "charter", "export", "import"].includes(operation) || Object.keys(input).length !== (field ? 2 : 1) || field && typeof input[field] !== "string" || failed.has(operation)) throw new Error();
       if (operation === "capabilities") return { ok: true, capabilities: available() };
       if ((operation === "import" || operation === "export") && !editing) throw new Error();
+      if (busy) return { ok: false, reason: CANVAS_HOST_BUSY, failure: "request" };
       busy = true;
       try {
         if (operation === "charter") {
@@ -11527,8 +11548,16 @@ function createHostCapabilities(session, root, instanceId, assertActive, snapsho
           check();
           const roster = messages.find((message) => message.type === "existingAgents")?.agents ?? [];
           const charter = readMemberCharter({ workspaceRoot: root, isCurrentMember: (id2) => roster.some((m) => m.id === id2) }, slug);
-          if (charter.charterStatus !== "available") throw new Error();
+          if (charter.charterStatus !== "available") throw new LocalRefusal(generation);
           const path12 = join14(selectTeamSourceDirectory(files), "agents", slug, "charter.md");
+          const declaredHere = () => {
+            const source = readTeamSource(files);
+            if (source.status !== "available") return false;
+            const declared = parseTeamRoster(source.content).filter((member) => member.slug === slug);
+            return declared.length === 1 && declared[0].charterPath.replace(/\\/g, "/") === path12.split(sep5).join("/");
+          };
+          if (!declaredHere()) throw new LocalRefusal(generation);
+          check();
           const catalog = await invoke(() => session.rpc.canvas.list());
           if (!object5(catalog) || !Array.isArray(catalog.canvases)) throw new Error();
           const editors = catalog.canvases.filter((c) => object5(c) && c.canvasId === "editor");
@@ -11547,12 +11576,9 @@ function createHostCapabilities(session, root, instanceId, assertActive, snapsho
           const prefix = relative5(repo, files.root);
           if (isAbsolute7(prefix) || prefix.split(sep5).includes("..")) throw new Error();
           const target = files.resolve(path12);
-          const source = readTeamSource(files);
-          if (source.status !== "available") throw new Error();
-          const declared = parseTeamRoster(source.content).filter((member) => member.slug === slug);
-          if (declared.length !== 1 || declared[0].charterPath.replace(/\\/g, "/") !== path12.split(sep5).join("/")) throw new Error();
           const repoPath = relative5(repo, target).split(sep5).join("/");
           check();
+          if (!declaredHere() || readMemberCharter({ workspaceRoot: root, isCurrentMember: (id2) => roster.some((m) => m.id === id2) }, slug).charterStatus !== "available") throw new Error();
           const targetInstance = `squad-charter-${instanceId}-${slug}`;
           const opened = await invoke(() => session.rpc.canvas.open({
             extensionId: editorProvider,
@@ -11600,7 +11626,8 @@ function createHostCapabilities(session, root, instanceId, assertActive, snapsho
       } finally {
         busy = false;
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof LocalRefusal && current(error.generation)) return { ok: false, reason: CANVAS_CHARTER_UNAVAILABLE, failure: "request" };
       if (invoked) failed.add(operation);
       return { ok: false, reason };
     }
