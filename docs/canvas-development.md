@@ -13,9 +13,11 @@ node --test scripts\verify-canvas-plugin.test.mjs
 `plugins/squad-pod/` is generated, gitignored, ready to run and excluded from
 the VSIX. Do not commit it to master. Distribution commits/catalog publication
 are separate release work (#181/C11); end users must not run npm builds.
-The plugin version is **0.1.2**, sourced only from
+The source candidate version is **0.1.3**, sourced only from
 `standalone/canvas-plugin.json`, independently of VSIX **1.0.0** and the private
-standalone observer **0.1.0**. Do not bump those other products for Canvas.
+standalone observer **0.1.0**. The published artifact, catalog and provenance
+remain at **0.1.2** until the separate post-publication catalog PR. Do not bump
+those other products for Canvas.
 
 The package contains Agent Plugins 1.0 metadata, the existing icon as
 `assets/preview.png`, namespaced Canvas ESM/UI/sprites, notices and full dependency
@@ -139,6 +141,17 @@ acceptance. All these capabilities are **Candidate; pending native acceptance (#
 [feature matrix](canvas-feature-matrix.md#platform-investigation-static-only-223)
 for the static URL/loopback findings and explicit unsupported WSL/remote disposition.
 
+## Canvas 0.1.3 source candidates (#230/#232)
+
+The 0.1.3 source candidate isolates a known local charter refusal to its member,
+keeps capabilities available after typed busy refusals, joins duplicate
+same-member charter opens, and propagates the actual failure or disposal outcome
+to every joined caller. These changes are **Candidate; pending native
+acceptance (#218)**. They are not in the published 0.1.2 artifact, do not change
+the current catalog pin or historical provenance, and require a new immutable
+distribution followed by the separate catalog PR before the catalog can point
+to 0.1.3. CI and packaging checks are not native acceptance.
+
 ## Immutable preview publication
 
 Use the repository's manual Canvas path, not the retired Squad/npm release
@@ -155,10 +168,10 @@ master.
    `canvas-dist`, retaining its prior release history. Preserve payload bytes;
    verify Git blobs match the checksum receipt (including on Windows).
 4. Create a new immutable `canvas-v<version>` tag at that distribution commit.
-   Never move an existing tag. Publish a GitHub **pre-release**, explicitly
-   **not Latest**, with `squad-pod-canvas-0.1.2.zip`,
-   `canvas-0.1.2-freeze.json`, `canvas-0.1.2-build-info.json`,
-   `canvas-0.1.2-checksums.json` and `SHA256SUMS`. Keep stable VSIX `v1.0.0`
+   Never move an existing tag. For 0.1.3, publish a GitHub **pre-release**,
+   explicitly **not Latest**, with `squad-pod-canvas-0.1.3.zip`,
+   `canvas-0.1.3-freeze.json`, `canvas-0.1.3-build-info.json`,
+   `canvas-0.1.3-checksums.json` and `SHA256SUMS`. Keep stable VSIX `v1.0.0`
    as Latest.
 5. In a separate focused PR, update `.github/plugin/marketplace.json` version,
    `source.ref` and full `source.sha` together. Include the exact provenance in
@@ -176,7 +189,8 @@ conversion for that command, then compare the ZIP's decompressed payload bytes
 to every receipt entry before publication. For example:
 
 ```powershell
-git -c core.autocrlf=false archive --format=zip --prefix=squad-pod/ --output squad-pod-canvas-0.1.2.zip canvas-v0.1.2:plugins/squad-pod
+$version = "0.1.3"
+git -c core.autocrlf=false archive --format=zip --prefix=squad-pod/ --output "squad-pod-canvas-$version.zip" "canvas-v${version}:plugins/squad-pod"
 ```
 
 Default `git archive` settings can otherwise convert text despite byte-exact

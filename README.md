@@ -58,7 +58,8 @@ Read the full [compatibility and privacy notes](docs/user-guide.md#compatibility
 ## Learn more
 
 - [User guide](docs/user-guide.md): editing, live activity, launching, usage and the [CLI import contract](docs/native-acceptance.md#cli-import-contract).
-- [GitHub Copilot app preview](docs/canvas-install.md): the separate Canvas plugin for Windows, not GitHub Desktop.
+- [GitHub Copilot app preview](docs/canvas-install.md): the separate Canvas plugin for Windows, not GitHub Desktop. The published artifact remains 0.1.2; 0.1.3 source fixes are candidates pending native acceptance in
+  [#218](https://github.com/swigerb/squad-pod/issues/218).
 - [Local browser observer](standalone/README.md): a source-only companion; see its [live activity opt-in](standalone/README.md#optional-live-activity).
 - [Build and contribute](docs/contributing.md) and the [testing guide](docs/testing.md).
 
