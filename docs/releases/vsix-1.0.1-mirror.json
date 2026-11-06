@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "publicationKind": "mirror-of-existing-marketplace-artifact",
+  "identity": "brianswiger.squad-pod",
+  "version": "1.0.1",
+  "channel": "stable",
+  "marketplaceUrl": "https://marketplace.visualstudio.com/items?itemName=brianswiger.squad-pod",
+  "marketplacePublishedUtc": "2026-11-05T22:20:33.59Z",
+  "artifact": {
+    "name": "squad-pod-1.0.1.vsix",
+    "bytes": 3196977,
+    "sha256": "b2217d8b7f1a0592ce03a2c3a5a153fcf45bd683e5f16323d87e46dd874c2a60"
+  },
+  "baseline": {
+    "version": "1.0.0",
+    "tag": "v1.0.0",
+    "tagCommit": "9e04905bb9213441e611d4ed72d0c89221ddfe0d",
+    "runtimeSourceCommit": "24f6b341b686f31a12231d954ed58e2273cc53ed",
+    "archiveSha256": "1684acc0c56f3f7401961a1da122636a3c27b73e2b133993ce5a7bb72702ddec"
+  },
+  "comparison": {
+    "archiveEntries": 193,
+    "changedArchiveEntries": [
+      "extension.vsixmanifest",
+      "extension/changelog.md",
+      "extension/package.json",
+      "extension/readme.md"
+    ],
+    "unchangedRuntimeAndAssetEntries": 186,
+    "runtimeAndAssetEntriesByteIdentical": true,
+    "packageJsonOnlyVersionChanged": true
+  },
+  "provenanceSnapshot": {
+    "baseCommit": "9e04905bb9213441e611d4ed72d0c89221ddfe0d",
+    "purpose": "Record the already-published metadata on the stable source line, not newer master runtime.",
+    "sourceTextNormalization": "Git normalizes CRLF to LF in source text; archive hashes and the mirrored VSIX retain the exact published bytes.",
+    "publishedMetadataFiles": {
+      "package.json": {
+        "archiveEntry": "extension/package.json",
+        "archiveSha256": "9dbafeb74e10db23e469ab50ea2766f9e2eb681ee2d3505fcddaa544919ea95b",
+        "sourceBlobSha256": "877ea2f9271d181d01633c65e1ce2862c2cda83ea1981cfd94f9dbfd74c22990"
+      },
+      "README.md": {
+        "archiveEntry": "extension/readme.md",
+        "archiveSha256": "321279e60371a07a6fdb1cea7eaf202c356a1cdd6963fb3c1007a973284cbee4",
+        "sourceBlobSha256": "321279e60371a07a6fdb1cea7eaf202c356a1cdd6963fb3c1007a973284cbee4"
+      },
+      "CHANGELOG.md": {
+        "archiveEntry": "extension/changelog.md",
+        "archiveSha256": "e6fc405505b02070ad35a46429b89492863b81410f75deb08ddf40dcab72f2e0",
+        "sourceBlobSha256": "c1d7a07d352c3c9a471729ec92c6c0fc86288ca59e57e65732ee2e3fbcf45a66"
+      }
+    },
+    "lockfileChanges": [
+      "version",
+      "packages[''].version"
+    ],
+    "artifactRebuilt": false,
+    "runtimeBuiltFromThisSnapshot": false,
+    "newNativeQualificationClaimed": false
+  }
+}

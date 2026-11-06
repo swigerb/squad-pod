@@ -4,6 +4,19 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-05
+
+### Documentation
+
+- Lead the Marketplace overview with the product pitch, existing animated showcase, and three-step setup.
+- Present six benefit-led features and the three actual VS Code settings with their defaults.
+- Keep project-file observation, opt-in live CLI logs, directory-metadata suggestions, and explicit launches distinct.
+- Preserve detailed usage, compatibility notes, contributor instructions, and showcase credits in linked documentation.
+
+This documentation-only update preserves every runtime and asset file from the
+published 1.0.0 VSIX byte-for-byte. It does not include subsequent runtime changes
+on `master` or update the separate Canvas plugin.
+
 ## [1.0.0] - 2026-11-02
 
 ### Stable Squad-native release
@@ -57,7 +70,7 @@ Earlier release notes below describe their original implementation checkpoints.
 - Custom character sheets from local asset directories, with validation, live reload, saved appearances and a stable fallback when sheets are removed.
 - VS Code setting `squad-pod.autoShowPanel` (default `false`) optionally focuses the office once on extension activation, skipping an already-visible panel. Roster/history replay and visibility changes never trigger it; no Squad, terminal, process, server or bridge is launched (#52).
 - Reconnect snapshots now refresh existing roster names and roles and restore observed current-task text alongside status without changing saved appearance or seats.
-- A typed webview client seam for outbound requests, inbound subscriptions and protected recovery state, backed by the existing VS Code API. Missing hosts and recovery-read/write failures are surfaced without replacing protected drafts; this is foundation only, not standalone/browser support, and #8 remains open.
+- A typed webview client seam for outbound requests, inbound subscriptions and protected recovery state, backed by the existing VS Code API. Missing hosts and recovery-read/write failures are surfaced without replacing protected drafts; this is foundation only, not standalone/browser support, and [#8](https://github.com/swigerb/squad-pod/issues/8) remains open.
 - Legacy sprite payloads are validated and ignored with a diagnostic when they do not match the renderer format, retaining existing assets.
 - Three source-pinned auto-tiling carpet styles with main/accent colors, style/color eyedropper, single-transaction paint/right-erase undo/redo, and resize/save/import/export preservation. Carpets are an optional visual layer: floor/wall IDs, walkability, furniture and Squad displays are unchanged. Separate PR316 asset provenance, exact blob checks and MIT contributor notices retained. Directory launch and full upstream parity remain separate slices.
 - Layout editor furniture color controls: tint selected furniture or choose a color for new placements, clear colors, and copy a furniture color with a color-only eyedropper; overlapping surface items take priority and each color edit/eyedrop is independently undoable. Furniture tint is baked into manifest/placeholder sprites; the production tileset metadata rendering bypass remains inactive and is not covered.
@@ -65,7 +78,7 @@ Earlier release notes below describe their original implementation checkpoints.
 - Dirty-layout conflict protection: retain full local/incoming snapshots, queue distinct file/import/cross-window updates, inspect/export both sides, confirm canvas replacement, and retain recovery copies after resolution/save. Imports stage until Save; per-webview recovery state has explicit lifecycle limits (see README). Pet edits use the same draft, undo, import/export and save-acknowledgement path.
 - Added animated Claudio and Gitcat pets from the pinned Pixel Agents v1.5.0 pet sheets. The editor persists pet placement IDs/types, restores legacy layouts with an empty pet list, and renders timed heart responses and wander/follow animation without generating Squad lifecycle or telemetry events.
 - Settings → Add Asset Directory / Unload for validated local furniture manifests, independent failure diagnostics and one-second live reload. New placements persist their dimensions; changed/removed assets cannot silently expand saved furniture. Static group variants are supported; animation and other external pack kinds remain deferred.
-- Persisted sound/Debug View preferences, host-reported team file and native/polling observer status, and missing-team setup guidance. Launch remains off/unavailable; EventBus / WebSocket has no connected producer, and file observations do not supply authoritative tool/context events. Issue #7 remains partial.
+- Persisted sound/Debug View preferences, host-reported team file and native/polling observer status, and missing-team setup guidance. Launch remains off/unavailable; EventBus / WebSocket has no connected producer, and file observations do not supply authoritative tool/context events. Issue [#7](https://github.com/swigerb/squad-pod/issues/7) remains partial.
 - Alt-drag furniture copies with fresh IDs and preserved colors; atomic desk + PC/lamp moves and rotations, group previews, and single-step undo/redo.
 - Reconnect-safe office snapshot: reopening the panel restores characters, statuses and seats without duplicates.
 - Stable per-member appearance and persisted seat reassignment (with swap).
