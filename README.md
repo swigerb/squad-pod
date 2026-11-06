@@ -17,6 +17,25 @@ The showcase uses staged activity, not private session logs or customer data. Se
 
 ## Get started
 
+### Choose your host
+
+These are separate installations. A VSIX does not install the GitHub Copilot app plugin.
+
+| Where you use Squad Pod | Current published build | Install |
+|---|---|---|
+| **GitHub Copilot app** | [Canvas 0.1.3](https://github.com/swigerb/squad-pod/releases/tag/canvas-v0.1.3), Windows x64 local-session **preview** | [App installation guide](docs/canvas-install.md) |
+| **VS Code** | [VSIX 1.0.1](https://github.com/swigerb/squad-pod/releases/tag/v1.0.1), **stable** | [Marketplace](https://marketplace.visualstudio.com/items?itemName=brianswiger.squad-pod) or [download the VSIX](https://github.com/swigerb/squad-pod/releases/download/v1.0.1/squad-pod-1.0.1.vsix) |
+
+### GitHub Copilot app
+
+1. Install or open the [GitHub Copilot app](https://github.com/github/app#install). In **Customize**, open marketplace settings and add **`swigerb/squad-pod`**.
+2. Find **Squad Pod** in **Browse**, choose **Install**, and review the confirmation. The marketplace is **`squad-pod-plugins`**.
+3. Open a local project with `.squad/team.md`, then ask Copilot to **open the Squad Pod canvas**.
+
+Use the **GitHub Copilot app**, not GitHub Desktop. Canvas starts read-only; **Enable editing** is a separate opt-in. The [owner-approved 0.1.3 waiver](https://github.com/swigerb/squad-pod/issues/218#issuecomment-6689294756) permits preview use; it does not claim native tests passed or support other platforms.
+
+### VS Code
+
 1. Install [Squad Pod from Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=brianswiger.squad-pod), or run:
 
    ```powershell
@@ -28,7 +47,11 @@ The showcase uses staged activity, not private session logs or customer data. Se
 
 Squad Pod needs VS Code 1.107 or later. You don't need Node.js or Copilot authentication to view the office.
 
+VSIX 1.0.1 updates documentation and metadata only; its runtime matches 1.0.0. It is not a release of newer code on `master`.
+
 ## What you can do
+
+**In VS Code:**
 
 - **Watch your team work.** Your roster loads from `.squad/team.md`, and characters walk, type, and read at their desks.
 - **Inspect your agents.** Open roles, charters, models, and recent activity in Squad Info.
@@ -37,7 +60,11 @@ Squad Pod needs VS Code 1.107 or later. You don't need Node.js or Copilot authen
 - **Keep your layouts.** Import and export JSON layouts, with recovery copies for conflicting edits.
 - **Launch when you choose.** Save project directories and start `copilot --agent squad` in a new terminal.
 
+**In the GitHub Copilot app:** view the office and exact-session activity, inspect declared charters, refresh joined-session usage, and opt into layout/preferences editing and JSON transfers. Canvas 0.1.3 includes the charter-isolation and busy-request fixes. Read the [current feature matrix](docs/canvas-feature-matrix.md) for host-dependent capabilities and unverified native coverage; directory management, terminal launch and private CLI-log imports are not Canvas features.
+
 ## Settings
+
+These settings apply to the **VS Code extension**, not the Canvas plugin.
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -49,7 +76,7 @@ Sound notifications are in the office **Settings** panel, not in VS Code setting
 
 ## Compatibility and privacy
 
-Squad Pod is local-first. Basic observation reads your project's Squad files. Live activity is opt-in: enabling it asks for consent, then reads matching local Copilot CLI session logs. Recent-directory suggestions read only the working-directory field of session metadata; turn them off with the setting above.
+Squad Pod is local-first. Basic observation reads your project's Squad files. In VS Code, Live activity is opt-in: enabling it asks for consent, then reads matching local Copilot CLI session logs. Recent-directory suggestions read only the working-directory field of session metadata; turn them off with the setting above. Canvas instead receives exact joined-session events and does not scan private CLI logs.
 
 Opening the panel never starts a task. Squad Pod submits `copilot --agent squad` only when you select **Launch**.
 
@@ -58,8 +85,7 @@ Read the full [compatibility and privacy notes](docs/user-guide.md#compatibility
 ## Learn more
 
 - [User guide](docs/user-guide.md): editing, live activity, launching, usage and the [CLI import contract](docs/native-acceptance.md#cli-import-contract).
-- [GitHub Copilot app preview](docs/canvas-install.md): the separate Canvas plugin for Windows, not GitHub Desktop. The published artifact is 0.1.3; its charter and busy-request fixes remain candidates pending native acceptance in
-  [#218](https://github.com/swigerb/squad-pod/issues/218).
+- [GitHub Copilot app preview](docs/canvas-install.md): installation, updates, exact release pins and the scope of the 0.1.3 preview waiver.
 - [Local browser observer](standalone/README.md): a source-only companion; see its [live activity opt-in](standalone/README.md#optional-live-activity).
 - [Build and contribute](docs/contributing.md) and the [testing guide](docs/testing.md).
 

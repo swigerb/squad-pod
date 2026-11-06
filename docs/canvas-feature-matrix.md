@@ -4,16 +4,36 @@ Release truth for Canvas plugin **0.1.3**, an owner-approved **Windows
 local-session preview**, not generally available or a VSIX/CLI replacement
 (#214, epic #172). Prior **0.1.0** evidence qualified app **1.1.34**; this is
 not acceptance of 0.1.3, a minimum or a broad compatibility promise.
-Native 0.1.1, 0.1.2 and 0.1.3 checks remain pending in [#218](https://github.com/swigerb/squad-pod/issues/218).
+Canvas 0.1.3 is approved for preview use by an
+[explicit owner waiver](https://github.com/swigerb/squad-pod/issues/218#issuecomment-6689294756).
+[#218 is closed as not planned](https://github.com/swigerb/squad-pod/issues/218#issuecomment-6689750551)
+for that preview, not as successful native qualification. Native evidence remains
+unverified; no historical results or unchecked items became PASS.
 The catalog pins the published 0.1.3 artifact. It retains the prior 0.1.1
 office, editor and preferences behavior. The 0.1.1 tables below preserve
 historical release truth; the historical 0.1.2 C14/C15 rows describe inherited
 capabilities and defects. The published 0.1.3 rows supersede the corresponding
-charter and busy-request behavior. All candidates remain pending native acceptance.
+charter and busy-request behavior. Implemented behavior is not a claim of native acceptance.
 macOS, Linux, WSL and remote sessions
 are unsupported. See the [install and lifecycle guide](canvas-install.md).
 It observes only the exact joined session/project. No directory browsing,
 terminal authority or private CLI-log consent is implied.
+
+## What ships in the current preview
+
+| Area | Canvas 0.1.3 |
+|---|---|
+| Office and team | Pixel-art office, roster/member selection, details and exact joined-session activity when supplied by the host. |
+| Editing | Explicit per-instance opt-in for layout, floors/walls/carpets, furniture, named Areas, pets, seats/appearance and project preferences. |
+| Host integration | Declared-member charter opening, joined-session usage Refresh, guarded project JSON import/export and fresh bounded PNG readback, when the host supports them. |
+| Protection | Project isolation, revision-checked saves, retained conflict/recovery copies, and the published member-local charter and busy-request fixes below. |
+| Excluded | Directory browsing/management, terminal or CLI launch, private CLI-log scanning/import, and claims of native parity or unsupported-platform support. |
+
+This describes the published artifact, not every feature on `master` or in the
+VS Code extension. Stable VSIX 1.0.1 is separate and preserves the 1.0.0 runtime.
+The detailed historical tables below explain inheritance and limitations.
+Their OPEN states and issue-status descriptions refer to those older releases,
+not the current issue tracker or the 0.1.3 preview-approval decision.
 
 ## Authority and release decisions
 
@@ -96,7 +116,7 @@ import/export rows below supersede their corresponding 0.1.1 rows; CLI usage
 import, terminal and directory management remain OPEN or excluded. Browser
 transfer remains a fallback, and native embedded transfer is still unqualified.
 The defect descriptions below apply to 0.1.2; the published 0.1.3 fixes are
-described separately below and still require native retesting.
+described separately below and remain unverified natively.
 
 | Control | 0.1.2 candidate behavior | Boundary | Release decision |
 |---|---|---|---|
@@ -129,24 +149,31 @@ See the [agent-runnable qualification procedure](canvas-install.md#agent-runnabl
 for the subset of #218 that can be investigated without UI automation; no result
 automatically changes a native gate to PASS.
 
-## Canvas 0.1.3 published candidates (native acceptance pending #218)
+<a id="canvas-013-published-candidates-native-acceptance-pending-218"></a>
+
+## Canvas 0.1.3 published features (native coverage unverified)
 
 These rows describe the published immutable 0.1.3 artifact and current catalog
-pin. They are not included in the historical 0.1.2 artifact. They remain
-candidates, not accepted native behavior, and need native retesting in #218.
+pin. They are not included in the historical 0.1.2 artifact. The owner waived
+native retesting as a prerequisite to this preview approval; these rows describe
+implemented behavior, not newly accepted native results.
 
 | Control | 0.1.3 candidate behavior | Boundary | Release decision |
 |---|---|---|---|
-| Agent View Charter; member Open charter (NA-012-CHARTER-001 fix, #230) | A known local refusal for one member (missing, unreadable or undeclared charter) is reported as that member's charter being unavailable, makes no Editor call and leaves other members' charters available in the same office. Host rejection, timeout, malformed, unrecognized or late results still disable opening for the instance with one sanitized reason and no automatic retry. | Current declared member only, validated before Editor discovery and rechecked against the roster declaration and charter file immediately before opening; a change during discovery fails closed. Same guarded path translation as 0.1.2. | Published 0.1.3 candidate; native retest pending (#230, #218) |
-| Host request overlap (busy; #232) | One host request runs at a time per office instance, shared by every viewer. A request refused only because another is in flight makes no host call, quarantines nothing and is reported as a typed request refusal; every capability stays available, and the status says nothing was sent. A repeated View Charter for the same member while its open is in flight joins that request: one Editor open, no error status. Every joined caller receives the actual operation result, including failure or disposal; none can hang or receive a success-shaped fallback. In one browser, other operations are refused locally while busy without sending anything; a busy export keeps the host path rather than falling back. | Busy is accepted only as an exact three-key request refusal after the disposal checks. Malformed, forged, extra-key, late or post-disposal busy-shaped results, unauthorized or revoked requests, and genuine rejection or timeout still fail closed and quarantine as before. No automatic retry. | Published 0.1.3 candidate; native retest including a double-click step pending (#232, #218) |
+| Agent View Charter; member Open charter (NA-012-CHARTER-001 fix, #230) | A known local refusal for one member (missing, unreadable or undeclared charter) is reported as that member's charter being unavailable, makes no Editor call and leaves other members' charters available in the same office. Host rejection, timeout, malformed, unrecognized or late results still disable opening for the instance with one sanitized reason and no automatic retry. | Current declared member only, validated before Editor discovery and rechecked against the roster declaration and charter file immediately before opening; a change during discovery fails closed. Same guarded path translation as 0.1.2. | Published 0.1.3 preview; native coverage unverified; owner waiver applies. |
+| Host request overlap (busy; #232) | One host request runs at a time per office instance, shared by every viewer. A request refused only because another is in flight makes no host call, quarantines nothing and is reported as a typed request refusal; every capability stays available, and the status says nothing was sent. A repeated View Charter for the same member while its open is in flight joins that request: one Editor open, no error status. Every joined caller receives the actual operation result, including failure or disposal; none can hang or receive a success-shaped fallback. In one browser, other operations are refused locally while busy without sending anything; a busy export keeps the host path rather than falling back. | Busy is accepted only as an exact three-key request refusal after the disposal checks. Malformed, forged, extra-key, late or post-disposal busy-shaped results, unauthorized or revoked requests, and genuine rejection or timeout still fail closed and quarantine as before. No automatic retry. | Published 0.1.3 preview; native coverage unverified; owner waiver applies. |
 
-## Remaining — OPEN release gates
+<a id="remaining--open-release-gates"></a>
+
+## Unverified native coverage and preview limits
 
 - Historical 0.1.0 Windows qualification is recorded in #182 and the public
   marketplace install in #216. Neither qualifies 0.1.1, 0.1.2 or 0.1.3. Their
   update/rollback,
   repeated lifecycle, fault handling and separate native VS Code checks remain
-  pending #218; local catalog checks and browser tests do not establish them.
+  unverified in the historical #218 record; local catalog checks and browser
+  tests do not establish them. Their omission is explicitly waived for this
+  exact 0.1.3 preview, not for future releases or platform claims.
 - Retain exact project/session and host-build evidence for read-only/enabled
   editing, narrow labels/editor, keyboard/focus, system theme and panel resize;
   qualification of one build is not cross-platform or general parity evidence.
@@ -157,8 +184,8 @@ candidates, not accepted native behavior, and need native retesting in #218.
   not PASS. Method detection and successful mocked calls are not permission grants.
 - OPEN capabilities remain disclosed preview limitations, not parity claims.
   Any broader release needs its own owner disposition and native evidence.
-- Independent final code/documentation review remains required. Local
-  tests/builds and synthetic fixtures are not native app passes.
+- The preview waiver does not establish native evidence. Local tests/builds
+  and synthetic fixtures are not native app passes.
 
 ## Platform investigation (static only; #223)
 
