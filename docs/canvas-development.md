@@ -19,7 +19,8 @@ standalone observer **0.1.0**. The owner catalog pins the immutable **0.1.3**
 distribution; native acceptance remains pending #218. Do not bump
 those other products for Canvas.
 
-The package contains Agent Plugins 1.0 metadata, the existing icon as
+The package contains Agent Plugins 1.0 metadata, a Canvas-specific `README.md`
+copied byte-for-byte from `standalone/README.canvas.md`, the existing icon as
 `assets/preview.png`, namespaced Canvas ESM/UI/sprites, notices and full dependency
 licenses. `ws`, `pngjs`, React/React DOM and Scheduler are bundled; native ws
 accelerators are disabled in favor of its JS fallbacks. Only Node builtins and
@@ -36,6 +37,18 @@ non-relative resources, modified sprites/manifests, forbidden imports and files
 over 10 MiB or packages over 40 MiB. This is a bounded artifact audit, not a
 general secret scanner or a signature. Rebuild after source changes; release
 provenance must come from an approved clean source commit.
+
+The strict root-file allowlist includes and requires `README.md`. It must be
+non-empty, at most 512 KiB and byte-identical to its committed source. Markdown
+links/images (inline or reference-style) must use HTTPS or resolve to a file
+inside the package, without traversal, absolute paths or other schemes. Keep
+the README's relative targets to `assets/preview.png`, `LICENSE` and
+`THIRD_PARTY_NOTICES.md`; link repository docs using absolute HTTPS URLs.
+The source README, LICENSE and notices are pinned to LF in `.gitattributes`,
+as is the generated README, so Windows builds and Git blobs agree with the
+checksum receipt. Future `canvas-dist` publication must preserve these bytes
+and attributes and compare every Git blob with the receipt; this source-only
+change does not publish or re-pin a release.
 
 ## Optional local marketplace test — owner-operated only
 

@@ -3,6 +3,7 @@ import { builtinModules, createRequire } from 'node:module';
 import { lstatSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { lexer, walkTokens } from 'marked';
 import { readCanvasVersion } from './canvas-version.mjs';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
@@ -15,6 +16,28 @@ const assert = (condition, message) => { if (!condition) fail(message); };
 const safe = path => typeof path === 'string' && /^[A-Za-z0-9_@./-]+$/.test(path)
   && !path.startsWith('/') && path.split('/').every(part => part && part !== '.' && part !== '..');
 const builtin = name => builtinModules.includes(name.replace(/^node:/, ''));
+
+function verifyReadme(bytes, files) {
+  assert(bytes.length > 0 && bytes.toString().trim(), 'README.md is empty');
+  assert(bytes.length <= 512 * 1024, 'README.md exceeds 512 KiB');
+  assert(!bytes.includes(13), 'README.md must use LF line endings');
+  walkTokens(lexer(bytes.toString()), token => {
+    if (token.type !== 'link' && token.type !== 'image') return;
+    const target = token.href;
+    if (/^https:\/\//i.test(target)) {
+      const url = new URL(target);
+      assert(url.protocol === 'https:' && url.hostname, `unsafe README.md link: ${target}`);
+      return;
+    }
+    let decoded;
+    try { decoded = decodeURIComponent(target); }
+    catch { fail(`invalid README.md link encoding: ${target}`); }
+    assert(!/[\\:\x00-\x20\x7f]/.test(decoded), `unsafe README.md link: ${target}`);
+    const path = decoded.split(/[?#]/)[0].replace(/^\.\//, '');
+    assert(safe(path) && files.has(path), `broken/unsafe README.md relative link: ${target}`);
+  });
+  assert(bytes.equals(readFileSync(join(repo, 'standalone/README.canvas.md'))), 'README.md source mismatch');
+}
 
 /** Audit a generated local artifact without executing its extension or installing it. */
 export async function verifyCanvasPlugin(directory = join(repo, 'plugins/squad-pod'), versionSource) {
@@ -34,7 +57,7 @@ export async function verifyCanvasPlugin(directory = join(repo, 'plugins/squad-p
     assert(stat.size <= 10 * 1024 * 1024, `file size limit: ${name}`);
     total += stat.size;
     assert(total <= 40 * 1024 * 1024, 'total size limit');
-    const allowed = /^(plugin\.json|build-info\.json|checksums\.json|LICENSE|THIRD_PARTY_NOTICES\.md|assets\/preview\.png|licenses\/[\w@.-]+\.txt)$/.test(name)
+    const allowed = /^(plugin\.json|build-info\.json|checksums\.json|README\.md|LICENSE|THIRD_PARTY_NOTICES\.md|assets\/preview\.png|licenses\/[\w@.-]+\.txt)$/.test(name)
       || (name.startsWith(`${extensionPath}/`) && /^(extension\.mjs|canvas-browser\/index\.html|canvas-browser\/assets\/[\w.-]+\.(js|css)|assets\/[\w./-]+\.(png|json))$/.test(name.slice(extensionPath.length + 1)));
     assert(allowed && !/(^|\/)(node_modules|evidence|fixtures|secrets|sessions|artifacts|coverage)(\/|$)/i.test(name),
       `unexpected/private file: ${name}`);
@@ -69,6 +92,7 @@ export async function verifyCanvasPlugin(directory = join(repo, 'plugins/squad-p
   assert(get('assets/preview.png').subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex')), 'preview PNG');
   assert(get('assets/preview.png').equals(readFileSync(join(repo, 'assets/squad-pod-icon.png'))), 'preview artwork mismatch');
   get('LICENSE'); get('THIRD_PARTY_NOTICES.md');
+  verifyReadme(get('README.md'), files);
   // The runtime resolves both directories relative to extension.mjs, never the build cwd.
   const entry = `${extensionPath}/extension.mjs`;
   const code = get(entry).toString();

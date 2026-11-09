@@ -66,6 +66,7 @@ const manifest = {
 };
 mkdirSync(join(output, 'assets'), { recursive: true });
 cpSync(join(repo, 'assets/squad-pod-icon.png'), join(output, 'assets/preview.png'));
+cpSync(join(repo, 'standalone/README.canvas.md'), join(output, 'README.md'));
 for (const name of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) cpSync(join(repo, name), join(output, name));
 writeFileSync(join(output, 'THIRD_PARTY_NOTICES.md'),
   readFileSync(join(output, 'THIRD_PARTY_NOTICES.md'), 'utf8')

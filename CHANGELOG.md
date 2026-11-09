@@ -4,6 +4,10 @@ All notable changes to Squad Pod are documented here.
 
 ## [Unreleased]
 
+- Add a Canvas-specific plugin-root README to generated packages, with
+  byte-exact source, size and package-local link checks. No version bump,
+  distribution publication or marketplace change.
+
 ## Canvas plugin 0.1.3 — Windows preview — 2026-11-05
 
 The published artifact and marketplace pin are 0.1.3. These changes remain
