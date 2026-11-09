@@ -5,6 +5,10 @@
 .squad/orchestration-log/** merge=union
 
 # Preserve source-pinned asset bytes and checksums across Windows/Linux checkouts.
+LICENSE text eol=lf
+THIRD_PARTY_NOTICES.md text eol=lf
+standalone/README.canvas.md text eol=lf
+/plugins/squad-pod/README.md text eol=lf
 webview-ui/public/assets/furniture/**/manifest.json text eol=lf
 webview-ui/public/assets/pets/**/manifest.json text eol=lf
 webview-ui/public/assets/pixel-agents-source.json text eol=lf

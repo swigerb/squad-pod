@@ -47,6 +47,13 @@ test('real artifact has checksums, pinned bundled licenses and source identity',
   }
   assert.ok(receipt.files.some(item => item.path.endsWith('/characters/char_0.png')));
   assert.ok(receipt.files.some(item => item.path.endsWith('/pets/gitcat/manifest.json')));
+  const readme = readFileSync(join(root, 'README.md'));
+  assert.deepEqual(readme, readFileSync(join(repo, 'standalone/README.canvas.md')));
+  assert.ok(readme.length > 0 && readme.length <= 512 * 1024);
+  assert.ok(!readme.includes(13), 'README source and package use LF on every OS');
+  assert.ok(receipt.files.some(item => item.path === 'README.md'
+    && item.bytes === readme.length
+    && item.sha256 === createHash('sha256').update(readme).digest('hex')));
   assert.ok(!receipt.files.some(item => item.path === 'checksums.json'));
   assert.deepEqual(JSON.parse(readFileSync(join(root, 'checksums.json'))), receipt);
   assert.deepEqual(await verifyCanvasPlugin(root), receipt, 'receipt is deterministic');
@@ -67,9 +74,10 @@ function isolatedBuildFixture(version) {
   };
   for (const name of ['standalone/build.canvas.mjs', 'scripts/canvas-version.mjs',
     'scripts/verify-canvas-plugin.mjs', 'package.json', 'standalone/package.json',
-    'LICENSE', 'THIRD_PARTY_NOTICES.md', 'assets/squad-pod-icon.png']) {
+    'LICENSE', 'THIRD_PARTY_NOTICES.md', 'standalone/README.canvas.md', 'assets/squad-pod-icon.png']) {
     put(name, readFileSync(join(repo, name)));
   }
+  cpSync(join(repo, 'node_modules/marked'), join(root, 'node_modules/marked'), { recursive: true });
   put('standalone/canvas-plugin.json', JSON.stringify({ version }));
   put('webview-ui/public/assets/pixel-agents-source.json', '{}');
   for (const name of ['ws', 'react']) {
@@ -190,6 +198,14 @@ test('alternate Canvas source version is required in the artifact and receipt', 
 });
 
 for (const [label, mutate, expected] of [
+  ['missing README', root => rmSync(join(root, 'README.md')), /missing resource: README.md/],
+  ['empty README', root => writeFileSync(join(root, 'README.md'), ''), /README.md is empty/],
+  ['blank README', root => writeFileSync(join(root, 'README.md'), ' \r\n\t'), /README.md is empty/],
+  ['oversized README', root => writeFileSync(join(root, 'README.md'), 'x'.repeat(512 * 1024 + 1)), /README.md exceeds 512 KiB/],
+  ['mismatched README', root => writeFileSync(join(root, 'README.md'),
+    readFileSync(join(root, 'README.md'), 'utf8') + '\nChanged source.'), /README.md source mismatch/],
+  ['CRLF README', root => writeFileSync(join(root, 'README.md'),
+    readFileSync(join(root, 'README.md'), 'utf8').replaceAll('\n', '\r\n')), /README.md must use LF/],
   ['missing entry', root => rmSync(join(root, entry)), /missing resource.*extension.mjs/],
   ['unknown manifest field', root => update(root, 'plugin.json', value => { value.preview = true; }), /manifest fields/],
   ['VSIX version', root => update(root, 'plugin.json', value => { value.version = '1.0.0'; }), /identity\/version/],
@@ -241,6 +257,66 @@ for (const [label, mutate, expected] of [
     await assert.rejects(verifyCanvasPlugin(root), expected);
   });
 }
+
+for (const target of [
+  'missing.md', '../LICENSE', 'assets/../LICENSE', '/LICENSE', '//example.com/LICENSE',
+  'C:\\LICENSE', 'assets\\preview.png', '%2e%2e/LICENSE', 'assets/%2e%2e/LICENSE',
+  '%2fLICENSE', 'https%3a%2f%2fexample.com', '%ZZ', 'http://example.com',
+  'javascript:alert(1)', 'data:text/plain,hello', 'mailto:test@example.com',
+  'LICENSE%00', 'LICENSE%5c', '#missing-file',
+]) {
+  for (const [kind, markdown] of [
+    ['link', `[target](${target})`],
+    ['image', `![target](${target})`],
+    ['reference', `[target][ref]\n\n[ref]: <${target}>`],
+    ['quoted reference', `> [target][ref]\n>\n> [ref]: <${target}>`],
+  ]) {
+    test(`verifier rejects README ${kind} target ${JSON.stringify(target)}`, async () => {
+      const root = fixture();
+      writeFileSync(join(root, 'README.md'), markdown);
+      await assert.rejects(verifyCanvasPlugin(root), /README.md (?:relative )?link|README.md link encoding/);
+    });
+  }
+}
+
+test('README links accept packaged files and HTTPS in inline and reference syntax', async () => {
+  const root = fixture();
+  writeFileSync(join(root, 'README.md'), [
+    '[license](LICENSE "Code license")', '![preview](<assets/preview.png>)',
+    '[notice](./THIRD_PARTY_NOTICES.md#assets)', '[web](https://example.com/path_(nested))',
+    '[license][ref]', '![preview][image]', '[web][external]',
+    '[ref]: LICENSE', '[image]: <assets/preview.png> "Office"',
+    '[external]: https://example.com/docs',
+  ].join('\n'));
+  await assert.rejects(verifyCanvasPlugin(root), /README.md source mismatch/,
+    'all destinations pass before the independent byte-identity check');
+});
+
+test('README links nested inside images are checked and code examples are not links', async () => {
+  const root = fixture();
+  writeFileSync(join(root, 'README.md'), '[![preview](assets/preview.png)](missing.md)');
+  await assert.rejects(verifyCanvasPlugin(root), /README.md relative link/);
+  writeFileSync(join(root, 'README.md'), '`[example](missing.md)`\n\n```\n![example](missing.png)\n```');
+  await assert.rejects(verifyCanvasPlugin(root), /README.md source mismatch/);
+});
+
+test('README at exactly 512 KiB passes the size gate, but still must match source', async () => {
+  const root = fixture();
+  writeFileSync(join(root, 'README.md'), 'x'.repeat(512 * 1024));
+  await assert.rejects(verifyCanvasPlugin(root), /README.md source mismatch/);
+});
+
+test('README Git blob bytes agree with source, output and receipt on every OS', () => {
+  const path = 'plugins/squad-pod/README.md';
+  const bytes = readFileSync(join(repo, path));
+  const hash = args => {
+    const result = spawnSync('git', ['hash-object', ...args], { cwd: repo, input: bytes, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  assert.equal(hash(['--path', path, '--stdin']), hash(['--no-filters', '--stdin']),
+    'distribution staging must not transform the checksummed bytes');
+});
 
 test('copied artifact starts ESM, opens synthetic project and serves UI with only injected SDK', () => {
   const root = fixture();
